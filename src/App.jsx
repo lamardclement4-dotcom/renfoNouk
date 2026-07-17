@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from './lib'
+import NutritionSpace from './features/nutrition/Nutrition'
 
 // ============================================================
 // Hook d'authentification
@@ -614,18 +615,34 @@ function App() {
     if (!onboardingDone) {
       return <Onboarding userId={profile.id} onDone={refreshProfile} />
     }
-    return (
-      <div style={{ padding: 40 }}>
-        <h2>Bienvenue dans Renfo, {profile?.first_name || ''}</h2>
-        <p style={{ color: '#666' }}>
-          {profile?.phys?.sports?.join(', ')} · Niveau {profile?.phys?.niveau}
-        </p>
-        <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
-      </div>
-    )
+    return <Home profile={profile} signOut={signOut} />
   }
 
   return null
+}
+
+function Home({ profile, signOut }) {
+  const [space, setSpace] = useState(null)
+
+  if (space === 'nutrition') {
+    return <NutritionSpace userId={profile.id} onClose={() => setSpace(null)} />
+  }
+
+  return (
+    <div style={{ padding: 40 }}>
+      <h2>Bienvenue dans Renfo, {profile?.first_name || ''}</h2>
+      <p style={{ color: '#666' }}>
+        {profile?.phys?.sports?.join(', ')} · Niveau {profile?.phys?.niveau}
+      </p>
+      <button
+        onClick={() => setSpace('nutrition')}
+        style={{ marginTop: 20, padding: '12px 20px', borderRadius: 10, border: 'none', background: '#c25a3f', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}
+      >
+        Nutrition
+      </button>
+      <button onClick={signOut} style={{ marginTop: 20, marginLeft: 12 }}>Se déconnecter</button>
+    </div>
+  )
 }
 
 export default App
