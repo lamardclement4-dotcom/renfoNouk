@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from './lib'
 import NutritionSpace from './features/nutrition/Nutrition'
+import HydrationSpace from './features/hydration/Hydration'
 
 // ============================================================
 // Hook d'authentification
@@ -627,6 +628,11 @@ function Home({ profile, signOut }) {
   if (space === 'nutrition') {
     return <NutritionSpace userId={profile.id} onClose={() => setSpace(null)} />
   }
+  if (space === 'hydratation') {
+    return <HydrationSpace userId={profile.id} onClose={() => setSpace(null)} />
+  }
+
+  const navBtn = { marginTop: 20, marginRight: 12, padding: '12px 20px', borderRadius: 10, border: 'none', background: '#c25a3f', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }
 
   return (
     <div style={{ padding: 40 }}>
@@ -634,13 +640,9 @@ function Home({ profile, signOut }) {
       <p style={{ color: '#666' }}>
         {profile?.phys?.sports?.join(', ')} · Niveau {profile?.phys?.niveau}
       </p>
-      <button
-        onClick={() => setSpace('nutrition')}
-        style={{ marginTop: 20, padding: '12px 20px', borderRadius: 10, border: 'none', background: '#c25a3f', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}
-      >
-        Nutrition
-      </button>
-      <button onClick={signOut} style={{ marginTop: 20, marginLeft: 12 }}>Se déconnecter</button>
+      <button onClick={() => setSpace('nutrition')} style={navBtn}>Nutrition</button>
+      <button onClick={() => setSpace('hydratation')} style={navBtn}>Hydratation</button>
+      <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
     </div>
   )
 }

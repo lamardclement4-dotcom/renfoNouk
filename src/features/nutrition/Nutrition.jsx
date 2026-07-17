@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FOODS, BOISSONS, COURSE_REF, DIAG_QUESTIONS, PILIERS } from './nutritionData'
+import { FOODS, COURSE_REF, DIAG_QUESTIONS, PILIERS } from './nutritionData'
 import { buildConseils } from './diagEngine'
 import { useNutritionStore } from './useNutritionStore'
 
@@ -334,101 +334,21 @@ function TimingTab({ body }) {
 }
 
 // ============================================================
-// Onglet Hydratation
+// Utilitaires date (journal alimentaire)
 // ============================================================
 const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 const todayISO = () => new Date().toISOString().slice(0, 10)
+// Reconstruit la date en UTC pur : new Date(iso+'T00:00:00') est interprété en
+// heure locale, et .toISOString() reconvertit en UTC — dans un fuseau en avance
+// sur UTC, ça décalait le résultat d'un jour en arrière.
 function shiftISO(iso, d) {
-  const x = new Date(iso + 'T00:00:00')
-  x.setDate(x.getDate() + d)
+  const [y, m, day] = iso.split('-').map(Number)
+  const x = new Date(Date.UTC(y, m - 1, day))
+  x.setUTCDate(x.getUTCDate() + d)
   return x.toISOString().slice(0, 10)
 }
 function dateLabel(iso) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-}
-
-function HydrationTab({ db, store, body }) {
-  body = body || {}
-  const sp = db.hydroSport || {}
-  const [min, setMin] = useState(sp.min != null ? sp.min : 0)
-  const [intensite, setIntensite] = useState(sp.intensite || 'modere')
-  const [climat, setClimat] = useState(sp.climat || 'tempere')
-  const persist = (patch) => store.set((st) => ({ hydroSport: { min, intensite, climat, ...patch } }))
-  const today = todayISO()
-  const log = (db.hydroLog && db.hydroLog[today]) || []
-  const eff = log.reduce((a, e) => a + e.ml * (e.factor != null ? e.factor : 1), 0)
-  const totalMl = log.reduce((a, e) => a + e.ml, 0)
-  const caf = log.reduce((a, e) => a + (e.caf || 0), 0)
-  const sucre = log.reduce((a, e) => a + (e.sucre || 0), 0)
-  const sugarMax = 40
-  const poids = Number(body.poids) || 70
-  const rate = intensite === 'leger' ? 400 : intensite === 'intense' ? 850 : 600
-  let base = 30 * poids
-  let effort = (Number(min) || 0) / 60 * rate
-  if (climat === 'chaud') { base *= 1.1; effort *= 1.25 }
-  const objectif = Math.round((base + effort) / 50) * 50
-  const hasBody = !!body.poids
-  const addDrink = (b) => store.set((st) => {
-    const h = { ...st.hydroLog || {} }
-    h[today] = [...(h[today] || []), { id: 'h' + Date.now(), n: b.n, ml: b.ml, factor: b.factor, caf: b.caf, sucre: b.sucre, ic: b.ic }]
-    return { hydroLog: h }
-  })
-  const removeDrink = (id) => store.set((st) => {
-    const h = { ...st.hydroLog || {} }
-    h[today] = (h[today] || []).filter((e) => e.id !== id)
-    return { hydroLog: h }
-  })
-  const days = []
-  for (let i = 6; i >= 0; i--) days.push(shiftISO(today, -i))
-  const dayEff = (iso) => ((db.hydroLog && db.hydroLog[iso]) || []).reduce((a, e) => a + e.ml * (e.factor != null ? e.factor : 1), 0)
-  const maxV = Math.max(objectif, ...days.map(dayEff), 1)
-  return React.createElement('div', null,
-    React.createElement(SpaceBanner, { ic: 'leaf', tint: NUTRI, title: 'Hydratation', text: "Ton objectif s'ajuste à ton poids et à ta séance. L'eau reste la référence ; café, thé, jus comptent presque autant." }),
-    React.createElement('div', { style: { padding: '18px 16px 8px', borderRadius: RADIUS, background: `color-mix(in srgb, ${NUTRI} 9%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${NUTRI} 26%, ${LINE})`, marginBottom: 14 } },
-      React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 } },
-        React.createElement('span', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Objectif du jour'),
-        React.createElement('span', { style: { fontWeight: 800, fontSize: 20, color: NUTRI } }, (objectif / 1000).toFixed(1), ' L')),
-      React.createElement(Bar, { lab: 'Bu aujourd’hui', val: eff, target: objectif, unit: 'ml', tint: NUTRI }),
-      React.createElement('div', { style: { fontSize: 12, color: INK3, marginTop: 2 } }, 'Base ', Math.round(base), ' ml', effort > 0 ? ` + effort ${Math.round(effort)} ml` : '', climat === 'chaud' ? ' · chaleur prise en compte' : '', '.'),
-      React.createElement('div', { style: { marginTop: 13, paddingTop: 13, borderTop: `1px solid color-mix(in srgb, ${NUTRI} 18%, ${LINE})` } },
-        React.createElement(Bar, { lab: 'Sucre des boissons', val: sucre, target: sugarMax, unit: 'g', tint: '#c2863c' }),
-        React.createElement('div', { style: { fontSize: 12, color: INK3, marginTop: 2 } }, 'Repère : sucres des boissons à garder bas (~25–50 g/jour).')),
-      !hasBody && React.createElement('div', { style: { fontSize: 12.5, color: '#b5566a', marginTop: 6 } }, 'Renseigne ton poids dans Calories/Macros pour un objectif personnalisé (défaut : 70 kg).')),
-    React.createElement(SecLab, null, 'Ta séance du jour'),
-    React.createElement('div', { style: { marginBottom: 6 } }, React.createElement(NumField, { label: 'Durée de sport', unit: 'min', value: min, set: (v) => { setMin(v); persist({ min: v }) }, min: 0, max: 300 })),
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 600, color: INK3, margin: '8px 0 6px' } }, 'Intensité'),
-    React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 } },
-      [['leger', 'Léger'], ['modere', 'Modéré'], ['intense', 'Intense']].map(([v, l]) => React.createElement('button', { key: v, onClick: () => { setIntensite(v); persist({ intensite: v }) }, style: chipBtn(intensite === v) }, l))),
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 600, color: INK3, margin: '4px 0 6px' } }, 'Météo'),
-    React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } },
-      [['tempere', 'Tempéré'], ['chaud', 'Chaud']].map(([v, l]) => React.createElement('button', { key: v, onClick: () => { setClimat(v); persist({ climat: v }) }, style: chipBtn(climat === v) }, l))),
-    React.createElement(SecLab, null, 'Ajouter une boisson'),
-    React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } },
-      BOISSONS.map((b, i) => React.createElement('button', { key: i, onClick: () => addDrink(b), style: { ...chipBtn(false), display: 'inline-flex', alignItems: 'center', gap: 6 } },
-        React.createElement(Icon, { name: b.ic, size: 14, color: INK3 }), React.createElement('span', null, b.n), React.createElement('span', { style: { color: INK3, fontWeight: 600 } }, b.ml, ' ml', b.sucre ? ` · ${b.sucre} g` : '')))),
-    log.length > 0 && React.createElement(React.Fragment, null,
-      React.createElement(SecLab, null, 'Aujourd’hui · ', Math.round(totalMl), ' ml', sucre > 0 ? ` · ${Math.round(sucre)} g sucre` : '', caf > 0 ? ` · ${Math.round(caf)} mg caféine` : ''),
-      React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 } },
-        log.map((e) => React.createElement('div', { key: e.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px 10px 14px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}` } },
-          React.createElement(Icon, { name: e.ic || 'drop', size: 16, color: INK3 }),
-          React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-            React.createElement('div', { style: { fontWeight: 600, fontSize: 14 } }, e.n),
-            React.createElement('div', { style: { fontSize: 12, color: INK3 } }, e.ml, ' ml', e.sucre ? ` · ${e.sucre} g sucre` : '', e.caf ? ` · ${e.caf} mg caféine` : '')),
-          React.createElement('button', { onClick: () => removeDrink(e.id), 'aria-label': 'Retirer', style: { width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', color: INK3, background: 'transparent', border: 'none', cursor: 'pointer' } },
-            React.createElement(Icon, { name: 'close', size: 16 })))))),
-    caf > 400 && React.createElement(NoteBox, { tint: '#b5566a' }, 'Plus de 400 mg de caféine aujourd’hui : au-delà, mieux vaut lever le pied, surtout en fin de journée.'),
-    sucre > 50 && React.createElement(NoteBox, { tint: '#b5566a' }, Math.round(sucre), " g de sucre via les boissons aujourd'hui : les boissons sucrées sont la source la plus facile à réduire (repère : viser plutôt sous ~25–50 g de sucres ajoutés/jour)."),
-    React.createElement(SecLab, null, '7 derniers jours'),
-    React.createElement('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 6, height: 90, padding: '0 2px', marginBottom: 4 } },
-      days.map((iso) => {
-        const v = dayEff(iso)
-        const h = Math.max(3, v / maxV * 74)
-        const isT = iso === today
-        return React.createElement('div', { key: iso, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, justifyContent: 'flex-end' } },
-          React.createElement('div', { style: { width: '100%', height: h, borderRadius: 6, background: isT ? NUTRI : `color-mix(in srgb, ${NUTRI} 30%, ${SURFACE2})` } }),
-          React.createElement('span', { style: { fontSize: 10, color: isT ? NUTRI : INK3, fontWeight: isT ? 700 : 600 } }, new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'narrow' })))
-      })),
-    React.createElement(NoteBox, { tint: NUTRI }, 'Avant : bois ~300–500 ml dans les 2 h. Pendant : ~400–800 ml/h si l’effort dépasse 1 h ou s’il fait chaud, avec des électrolytes (boisson d’effort, pincée de sel). Après : rebois 1,5× ce que tu as perdu. Repère simple : urines claires = bonne hydratation.'))
 }
 
 // ============================================================
@@ -935,7 +855,6 @@ export default function NutritionSpace({ userId, onClose }) {
     { id: 'macros', lab: 'Macros', ic: 'layers' },
     { id: 'course', lab: 'Course', ic: 'route' },
     { id: 'timing', lab: 'Timing', ic: 'clock' },
-    { id: 'hydratation', lab: 'Hydratation', ic: 'droplet' },
     { id: 'diag', lab: 'Diagnostic', ic: 'search' },
   ]
 
@@ -961,6 +880,5 @@ export default function NutritionSpace({ userId, onClose }) {
       tab === 'macros' && React.createElement(MacrosTab, { body, setBody }),
       tab === 'course' && React.createElement(CourseTab, { body, setBody }),
       tab === 'timing' && React.createElement(TimingTab, { body }),
-      tab === 'hydratation' && React.createElement(HydrationTab, { db, store, body }),
       tab === 'diag' && React.createElement(DiagTab, { db, store, onGoToJournal: () => setTab('aliments') })))
 }

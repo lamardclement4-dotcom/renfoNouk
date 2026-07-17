@@ -85,6 +85,7 @@ export function useNutritionStore(userId) {
     foodFav: phys.nutrition?.foodFav || [],
     foodTargets: phys.nutrition?.foodTargets || null,
     hydroSport: phys.nutrition?.hydroSport || {},
+    hydroPrefs: phys.nutrition?.hydroPrefs || {},
     diagHistory: phys.nutrition?.diagHistory || [],
     foodLog: Object.fromEntries(Object.entries(dayRows).map(([d, v]) => [d, v.food || []])),
     hydroLog: Object.fromEntries(Object.entries(dayRows).map(([d, v]) => [d, v.hydration || []])),
@@ -96,7 +97,7 @@ export function useNutritionStore(userId) {
     set: (patchOrFn) => {
       const patch = typeof patchOrFn === 'function' ? patchOrFn(db) : patchOrFn
       if ('profilePhys' in patch) savePhys(() => patch.profilePhys)
-      const nutritionKeys = ['foodFav', 'foodTargets', 'hydroSport', 'diagHistory']
+      const nutritionKeys = ['foodFav', 'foodTargets', 'hydroSport', 'hydroPrefs', 'diagHistory']
       if (nutritionKeys.some((k) => k in patch)) {
         savePhys((prev) => ({
           ...prev,
