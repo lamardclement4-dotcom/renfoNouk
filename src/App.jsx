@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from './lib'
 import NutritionSpace from './features/nutrition/Nutrition'
 import HydrationSpace from './features/hydration/Hydration'
+import PhysicalTestsSpace from './features/physical-tests/PhysicalTests'
 
 // ============================================================
 // Hook d'authentification
@@ -631,6 +632,9 @@ function Home({ profile, signOut }) {
   if (space === 'hydratation') {
     return <HydrationSpace userId={profile.id} onClose={() => setSpace(null)} />
   }
+  if (space === 'tests') {
+    return <PhysicalTestsSpace userId={profile.id} onClose={() => setSpace(null)} />
+  }
 
   const navBtn = { marginTop: 20, marginRight: 12, padding: '12px 20px', borderRadius: 10, border: 'none', background: '#c25a3f', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }
 
@@ -642,6 +646,7 @@ function Home({ profile, signOut }) {
       </p>
       <button onClick={() => setSpace('nutrition')} style={navBtn}>Nutrition</button>
       <button onClick={() => setSpace('hydratation')} style={navBtn}>Hydratation</button>
+      <button onClick={() => setSpace('tests')} style={navBtn}>Tests physiques</button>
       <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
     </div>
   )
