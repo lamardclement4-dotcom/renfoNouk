@@ -211,6 +211,9 @@ export function useNutritionStore(userId) {
     addPeakGoal: (goal) => store.set({ peakGoals: [...db.peakGoals, { id: 'pk' + Date.now(), ...goal }] }),
     updatePeakGoal: (id, patch) => store.set({ peakGoals: db.peakGoals.map((g) => g.id === id ? { ...g, ...patch } : g) }),
     removePeakGoal: (id) => store.set({ peakGoals: db.peakGoals.filter((g) => g.id !== id) }),
+    addGoal: (label) => store.set({ customGoals: [...db.customGoals, { id: 'g' + Date.now(), label, done: false }] }),
+    updateGoal: (id, patch) => store.set({ customGoals: db.customGoals.map((g) => g.id === id ? { ...g, ...patch } : g) }),
+    removeGoal: (id) => store.set({ customGoals: db.customGoals.filter((g) => g.id !== id) }),
   }
 
   return { db, store, loading }

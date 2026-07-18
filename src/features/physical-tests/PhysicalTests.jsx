@@ -86,7 +86,7 @@ function makeInterpret(testId) {
   }
 }
 
-const TESTS_DEF = [
+export const TESTS_DEF = [
   { id: 'cooper', label: 'Test de Cooper', unit: 'm', icon: 'route', color: '#e07b54', input: { type: 'number', min: 500, max: 5000, step: 50, placeholder: 'Distance en mètres' },
     protocol: "Courir 12 minutes à allure maximale sur terrain plat. Mesurer la distance. VO₂max ≈ (d – 504,9) / 44,73. Source : Cooper (1968), ACSM Guidelines (2021).",
     interpret: makeInterpret('cooper'), vo2max: (val) => Math.round((Number(val) - 504.9) / 44.73) },

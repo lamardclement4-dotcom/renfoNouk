@@ -21,9 +21,9 @@ import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
 // et l'ouverture/lecture d'une séance (Detail/Player), pour rester
 // un module autonome comme HealthHome.
 // ============================================================
-export default function TrainSpace({ userId, onClose }) {
+export default function TrainSpace({ userId, onClose, initialTile }) {
   const { db, store, loading } = useNutritionStore(userId)
-  const [tile, setTile] = useState(null)
+  const [tile, setTile] = useState(initialTile || null)
   const [openId, setOpenId] = useState(null)
   const [playId, setPlayId] = useState(null)
 

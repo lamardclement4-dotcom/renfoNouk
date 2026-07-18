@@ -320,7 +320,7 @@ function daysBetween(fromISO, toISO) {
 }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-function computePeakPlan(goal, todayStr) {
+export function computePeakPlan(goal, todayStr) {
   todayStr = todayStr || todayISO();
   var profile = EFFORT_PROFILES[goal.effortType] || EFFORT_PROFILES.mixte;
   var daysRemaining = daysBetween(todayStr, goal.eventDate);
