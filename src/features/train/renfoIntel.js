@@ -6,11 +6,15 @@
 // localStorage lisent désormais db.planningSessions / db.exerciseHistory.
 // L'ACWR (charge aiguë/chronique) est désormais calculable depuis que le
 // Calendrier persiste db.planningSessions en base (fini le sondage
-// localStorage de l'ancienne app) — voir acwrRisk() plus bas. Les
-// recommandations() elles-mêmes restent volontairement sans croisement
-// ACWR/Pic de forme pour limiter le risque de régression sur Coach.
+// localStorage de l'ancienne app) — voir acwrRisk() plus bas.
+// recommendations() est la version complète (fidèle à l'ancienne app) :
+// croise nutrition/hydratation/sommeil/prévention/mobilité/tests avec la
+// charge réelle (ACWR), le ressenti des séances, le cycle et Pic de forme.
 // ============================================================
 import { SPORTS } from './trainData'
+import { TESTS_DEF } from '../physical-tests/PhysicalTests'
+import { computePeakPlan } from './PeakSpace'
+import { cycleInfo } from '../health/Cycle'
 
 function num(v, def) { const n = Number(v); return Number.isFinite(n) ? n : (def || 0) }
 function round(v) { return Math.round(v) }
@@ -44,9 +48,27 @@ export function hydroDay(db, iso) {
 
 export function nutritionDay(db, iso) {
   const log = (db.foodLog || {})[iso] || []
-  const t = { k: 0, p: 0, entries: log.length }
-  for (const e of log) { t.k += num(e.k, 0); t.p += num(e.p, 0) }
+  const t = { k: 0, p: 0, g: 0, l: 0, entries: log.length }
+  for (const e of log) { t.k += num(e.k, 0); t.p += num(e.p, 0); t.g += num(e.g, 0); t.l += num(e.l, 0) }
   return t
+}
+
+// Jours écoulés depuis la dernière séance de récupération guidée
+// enregistrée (module Récupération). null si aucune trace dans les 30
+// derniers jours.
+function daysSinceLastRecovery(db, iso) {
+  const log = db.recoveryLog || {}
+  const d0 = new Date(iso + 'T00:00:00')
+  for (let k = 0; k <= 30; k++) {
+    const dk = new Date(d0); dk.setDate(dk.getDate() - k)
+    const isoK = todayISOFrom(dk)
+    if (log[isoK] && log[isoK].length > 0) return k
+  }
+  return null
+}
+function todayISOFrom(d) {
+  const p = (n) => n < 10 ? '0' + n : '' + n
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
 }
 
 // Minutes de séance planning correspondant à un libellé de durée pilule
@@ -359,18 +381,23 @@ export function trainingStats(db) {
 }
 
 // Recommandations : ne se déclenchent que si la donnée existe (aucune
-// donnée fabriquée). Sous-ensemble des règles de l'ancienne app,
-// centré sur ce qui est mesurable sans le planificateur legacy/ACWR.
+// donnée fabriquée). Version complète — croise nutrition/hydratation,
+// charge réelle (ACWR), sommeil, prévention/douleur, mobilité, tests
+// physiques, planning (ressenti, séances à venir), cycle, compléments
+// et Pic de forme pour des conseils aussi précis que possible sur ce
+// qui est réellement mesurable dans l'app.
 export function recommendations(db) {
   const iso = todayISO()
   const recos = []
   const push = (level, ic, text) => recos.push({ level, icon: ic, text })
 
+  // --- Protéines ---
   const nut = pillarNutrition(db, iso)
   if (nut.status === 'ok' && nut.extra.protTarget && nut.extra.prot < nut.extra.protTarget * 0.7) {
     push('warn', 'apple', `Ta consommation de protéines est trop faible pour ton objectif (${nut.extra.prot} / ${nut.extra.protTarget} g).`)
   }
 
+  // --- Hydratation / caféine ---
   const hyd = pillarHydration(db, iso)
   if (hyd.status === 'ok' && hyd.extra.ml < hyd.extra.target * 0.6) {
     push('warn', 'drop', `Hydratation en retard : ${hyd.extra.ml} / ${hyd.extra.target} ml aujourd'hui.`)
@@ -379,14 +406,29 @@ export function recommendations(db) {
     push(hyd.extra.caf >= 400 ? 'alert' : 'warn', 'bolt', `Ta consommation de caféine (${hyd.extra.caf} mg) est proche de la limite recommandée (400 mg/j).`)
   }
 
+  // --- Charge d'entraînement : ACWR (historique réel) prioritaire sur le
+  // simple ratio hebdo/objectif, qui se déclenchait trop facilement seul.
   const load = pillarLoad(db)
-  if (load.status === 'ok' && load.extra.spike) {
+  const acwr = acwrRisk(db)
+  if (acwr.available) {
+    const ul2 = acwr.userLevel
+    if (acwr.ratio > ul2.acwrAlert) {
+      push('warn', 'chart', ul2.id === 'debutant'
+        ? "Ta charge augmente trop vite pour ton niveau débutant — réduis le volume et insère un jour de repos."
+        : ul2.id === 'confirme'
+          ? 'Charge très élevée même pour ton niveau confirmé — semaine de récupération active conseillée.'
+          : "Ta charge d'entraînement augmente trop rapidement cette semaine.")
+    } else if (acwr.ratio > ul2.acwrWarn && load.status === 'ok' && load.extra.spike) {
+      push('warn', 'chart', 'Grosse séance isolée : pense à équilibrer ta charge sur la semaine.')
+    }
+  } else if (load.status === 'ok' && load.extra.spike) {
     push('warn', 'chart', 'Grosse séance isolée : pense à équilibrer ta charge sur la semaine.')
   }
   if (load.extra && load.extra.plannerPlanned > 0 && load.extra.plannerCount === 0) {
     push('info', 'calendar', `${load.extra.plannerPlanned} séance(s) planifiée(s) cette semaine — pense à les marquer comme réalisées.`)
   }
 
+  // --- Sommeil ---
   const slp = pillarSleep(db)
   if (slp.status === 'ok' && slp.extra.hours) {
     const h = slp.extra.hours
@@ -394,12 +436,16 @@ export function recommendations(db) {
     else if (h < 7) push('warn', 'moon', `${h.toFixed(1)} h de sommeil cette nuit — vise 7–9 h pour une récupération optimale.`)
   }
 
+  // --- Prévention / douleur ---
   const prev = pillarPrevention(db)
   if (prev.status === 'ok' && prev.extra.pain && prev.extra.pain.active) {
     push(prev.extra.pain.urgent ? 'alert' : 'warn', 'shield',
       prev.extra.pain.urgent
         ? 'Douleur signalée comme préoccupante lors de ton dernier bilan de prévention — arrête les impacts et consulte un professionnel de santé.'
         : 'Douleur active signalée dans ton bilan de prévention — adapte tes séances tant qu\'elle n\'est pas résolue.')
+    if (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
+      push('alert', 'shield', 'Douleur active et charge d\'entraînement élevée en même temps — combinaison à risque, priorise la récupération avant de reprendre l\'intensité.')
+    }
   } else if (prev.status === 'absent') {
     push('info', 'shield', 'Tu n\'as pas encore fait ton bilan de prévention — utile pour repérer tes facteurs de risque de blessure avant qu\'ils ne posent problème.')
   } else if (prev.status === 'ok' && prev.extra.date) {
@@ -407,6 +453,7 @@ export function recommendations(db) {
     if (days > 60) push('info', 'shield', `Ton dernier bilan de prévention date de ${days} jours — refais-le pour un état des lieux à jour.`)
   }
 
+  // --- Mobilité ---
   const mob = pillarMobility(db)
   if (mob.status === 'ok' && mob.extra.weak.length) {
     const ankle = mob.extra.weak.some((l) => /cheville/i.test(l))
@@ -421,14 +468,174 @@ export function recommendations(db) {
     }
   }
 
+  // --- Combo sommeil + charge : signal renforcé quand les deux se dégradent ---
+  const sleepLow = slp.status === 'ok' && slp.extra.hours && slp.extra.hours < 7
+  const loadHigh = (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) || (load.status === 'ok' && load.extra.ratio > 1.3)
+  if (sleepLow && loadHigh) {
+    push('alert', 'shield', "Sommeil insuffisant et charge d'entraînement élevée en même temps — combinaison qui augmente le risque de blessure et de baisse de performance.")
+  }
+
+  // --- Tests physiques : points faibles précis (pas juste "fais un test") ---
   const tests = db.physTests || []
   if (tests.length === 0) {
     push('info', 'route', 'Tu n\'as encore fait aucun test physique — utile pour cibler tes séances de renfo et mobilité selon tes vrais points faibles.')
   } else {
+    const byId = {}
+    tests.forEach((t) => { if (!byId[t.testId] || t.date > byId[t.testId].date) byId[t.testId] = t })
+    const pp = db.profilePhys || {}
+    const sexe = pp.sexe === 'f' ? 'f' : 'h'
+    const age = Number(pp.age) || 30
+    const TEST_LABELS = { gai_max: 'gainage (stabilité du core)', souplesse: 'souplesse', squat30: 'force des jambes', push30: 'force du haut du corps', cooper: 'endurance aérobie' }
+    const weak = []
+    Object.keys(byId).forEach((tid) => {
+      const def = TESTS_DEF.find((d) => d.id === tid)
+      if (!def) return
+      const lv = def.interpret(byId[tid].value, sexe, age)
+      if (lv.score <= 2) weak.push(TEST_LABELS[tid] || tid)
+    })
+    if (weak.length) {
+      push('warn', 'chart', `Tests physiques : niveau faible en ${weak.join(', ')}. Tes séances de renfo et mobilité devraient cibler ces zones en priorité.`)
+    }
     const lastDate = tests.reduce((max, t) => (!max || t.date > max) ? t.date : max, null)
     if (lastDate) {
       const days = Math.floor((new Date(iso + 'T00:00:00') - new Date(lastDate + 'T00:00:00')) / 86400000)
       if (days > 60) push('info', 'route', `Ton dernier test physique date de ${days} jours — refais-en un pour voir ta progression et ajuster tes séances.`)
+    }
+  }
+
+  // --- Stress/charge élevée sans outil de régulation récent ---
+  if (acwr.available && acwr.level === 'Vigilance renforcée') {
+    push('warn', 'wave', "Charge d'entraînement élevée — une courte séance de respiration ou de préparation mentale peut t'aider à mieux gérer cette période.")
+  }
+
+  // --- Cycle menstruel : repère phase lutéale (preuve modérée, variabilité individuelle) ---
+  if (db.cycle && db.cycle.enabled && db.cycle.startDate) {
+    const cyc = cycleInfo(db.cycle)
+    if (cyc.phase === 'luteale') {
+      push('info', 'wave', "Phase lutéale de ton cycle — la perception d'effort peut être légèrement plus élevée chez certaines personnes. Repère individuel, pas une règle universelle.")
+    }
+  }
+
+  const sessions = db.planningSessions || []
+
+  // --- Hydratation avant une sortie course longue planifiée aujourd'hui ---
+  const longRunToday = sessions.some((s) => s && s.date === iso && s.statut === 'planifie' && s.sport === 'course' && dureeToMins(s.duree) >= 60)
+  if (longRunToday && hyd.status === 'ok' && hyd.extra.ml < hyd.extra.target * 0.3) {
+    push('warn', 'drop', "Sortie course longue prévue aujourd'hui et hydratation encore faible — anticipe avant de partir.")
+  }
+
+  // --- Ressenti des 3 dernières séances réalisées (signal direct de l'utilisateur) ---
+  const doneWithRessenti = sessions.filter((s) => s && s.statut === 'realise' && s.date && typeof s.ressenti === 'number').sort((a, b) => a.date.localeCompare(b.date))
+  if (doneWithRessenti.length >= 3) {
+    const lastThree = doneWithRessenti.slice(-3)
+    if (lastThree.every((s) => s.ressenti <= 2)) {
+      push('warn', 'heart', 'Tes 3 dernières séances ont un ressenti faible — signe possible de fatigue accumulée. Une séance plus légère ou un jour de repos peut aider.')
+    } else if (lastThree.every((s) => s.ressenti >= 4)) {
+      push('info', 'flame', 'Tes 3 dernières séances ont un très bon ressenti — continue sur cette dynamique, c\'est un bon signal de récupération adaptée.')
+    }
+  }
+
+  // --- Glucides bas + séance d'endurance longue planifiée aujourd'hui ---
+  const nDay = nutritionDay(db, iso)
+  if (nDay.entries > 0) {
+    const longEnduranceToday = sessions.some((s) => s && s.date === iso && s.statut === 'planifie' && (s.sport === 'course' || s.sport === 'velo') && dureeToMins(s.duree) >= 90)
+    if (longEnduranceToday && nDay.g < 80) {
+      push('warn', 'apple', `Séance d'endurance longue prévue aujourd'hui et apport en glucides encore faible (${Math.round(nDay.g)} g) — pense à en ajouter avant de partir.`)
+    }
+  }
+
+  // --- Régularité du suivi nutrition : 3 jours consécutifs sans saisie ---
+  const foodLog = db.foodLog || {}
+  const d0 = new Date(iso + 'T00:00:00')
+  let emptyDays = 0
+  for (let k = 1; k <= 3; k++) {
+    const dk = new Date(d0); dk.setDate(dk.getDate() - k)
+    const isoK = todayISOFrom(dk)
+    if (!foodLog[isoK] || foodLog[isoK].length === 0) emptyDays++
+  }
+  if (emptyDays === 3) {
+    push('info', 'apple', 'Aucune saisie nutrition depuis 3 jours — reprends le suivi si tu veux des conseils plus précis.')
+  }
+
+  // --- Répartition lipides anormalement élevée (> 40 % des calories du jour) ---
+  if (nDay.entries > 0 && nDay.k > 0) {
+    const lipRatio = nDay.l * 9 / nDay.k
+    if (lipRatio > 0.40) {
+      push('info', 'apple', `Les lipides représentent une grosse part de tes calories aujourd'hui (${Math.round(lipRatio * 100)} %) — repère général à surveiller, pas une règle stricte.`)
+    }
+  }
+
+  // --- Compléments : plan défini mais aucune prise récente ; créatine ---
+  const suppPlan = db.suppPlan || []
+  if (suppPlan.length) {
+    const suppTaken = db.suppTaken || {}
+    let anyTakenLast3 = false
+    for (let k = 0; k <= 2; k++) {
+      const dk = new Date(d0); dk.setDate(dk.getDate() - k)
+      const isoK = todayISOFrom(dk)
+      if (suppTaken[isoK] && suppTaken[isoK].length > 0) { anyTakenLast3 = true; break }
+    }
+    if (!anyTakenLast3) {
+      push('info', 'spark', 'Tu as un plan de compléments mais aucune prise enregistrée depuis 3 jours — coche-les au fur et à mesure pour garder un suivi utile.')
+    }
+    if (suppPlan.includes('creatine')) {
+      let creatineDaysTaken = 0
+      for (let k = 0; k <= 6; k++) {
+        const dk = new Date(d0); dk.setDate(dk.getDate() - k)
+        const isoK = todayISOFrom(dk)
+        if (suppTaken[isoK] && suppTaken[isoK].includes('creatine')) creatineDaysTaken++
+      }
+      if (creatineDaysTaken > 0 && creatineDaysTaken < 4) {
+        push('info', 'spark', `Créatine prise seulement ${creatineDaysTaken} jour(s) sur les 7 derniers — son effet dépend d'une prise quotidienne régulière, pas du moment précis.`)
+      }
+    }
+  }
+
+  // --- Pic de forme : croise le plan d'affûtage avec la charge réelle (ACWR) ---
+  const peakGoals = db.peakGoals || []
+  if (peakGoals.length) {
+    let upcoming = null
+    peakGoals.forEach((g) => {
+      const pl = computePeakPlan(g, iso)
+      if (pl.phase === 'past') return
+      if (!upcoming || g.eventDate < upcoming.goal.eventDate) upcoming = { goal: g, plan: pl }
+    })
+    if (upcoming) {
+      const pk = upcoming.plan, pkGoal = upcoming.goal
+      if (pk.phase === 'today') {
+        push('info', 'target', `C'est le jour J pour « ${pkGoal.label} » — fais confiance au travail effectué.`)
+      } else if (pk.phase === 'taper') {
+        push('warn', 'target', `Affûtage en cours pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — réduis le volume tout en gardant l'intensité.`)
+        if (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
+          push('alert', 'shield', `Ta charge d'entraînement reste élevée alors que tu es en affûtage pour « ${pkGoal.label} » — c'est le moment de vraiment lever le pied.`)
+        }
+      } else if (pk.phase === 'build' && pk.daysRemaining <= 21) {
+        push('info', 'route', `Phase de développement spécifique pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — rapproche tes séances de l'intensité cible.`)
+      }
+    }
+  }
+
+  // --- Récupération active suggérée : charge élevée ou douleur active, sans
+  // séance de récupération guidée récente (Dupuy et al. 2018, preuve modérée).
+  const daysSinceRecov = daysSinceLastRecovery(db, iso)
+  const loadHighForRecov = acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')
+  const painActiveForRecov = prev.status === 'ok' && prev.extra.pain && prev.extra.pain.active && !prev.extra.pain.urgent
+  if ((loadHighForRecov || painActiveForRecov) && (daysSinceRecov == null || daysSinceRecov >= 5)) {
+    push('info', 'leaf', 'Charge élevée ou douleur active sans séance de récupération récente — une routine guidée (étirements, auto-massage) peut réduire la sensation de fatigue et de courbatures.')
+  }
+
+  // --- Séance planifiée dans les 48h alors qu'un risque est actif ---
+  const windowDates = [0, 1, 2].map((k) => { const d = new Date(d0); d.setDate(d.getDate() + k); return todayISOFrom(d) })
+  const upcomingSessions = sessions.filter((s) => s && s.statut === 'planifie' && s.date && windowDates.includes(s.date))
+  if (upcomingSessions.length) {
+    const painNow = prev.status === 'ok' && prev.extra.pain && prev.extra.pain.active
+    const loadRisky = acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')
+    if (painNow || loadRisky) {
+      const soonest = upcomingSessions.slice().sort((a, b) => a.date.localeCompare(b.date))[0]
+      const when = soonest.date === iso ? "aujourd'hui" : (soonest.date === windowDates[1] ? 'demain' : 'dans 2 jours')
+      const sportLabel = (SPORTS.find((sp) => sp.id === soonest.sport) || { label: soonest.sport || 'Séance' }).label
+      const reason = painNow && loadRisky ? 'douleur active et charge élevée' : (painNow ? 'douleur active' : "charge d'entraînement élevée")
+      push(painNow ? 'alert' : 'warn', 'shield', `Séance planifiée ${when} (${sportLabel}) malgré ${reason} — envisage d'alléger l'intensité ou de la déplacer dans le Planning.`)
     }
   }
 

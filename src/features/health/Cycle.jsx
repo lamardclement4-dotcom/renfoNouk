@@ -10,7 +10,7 @@ function isoDate(d) {
 }
 
 // Position dans le cycle + phase courante + prédictions.
-function cycleInfo(cycle, today = new Date()) {
+export function cycleInfo(cycle, today = new Date()) {
   const len = cycle.cycleLen || 28
   const pl = cycle.periodLen || 5
   const start = new Date(cycle.startDate + 'T00:00:00')
