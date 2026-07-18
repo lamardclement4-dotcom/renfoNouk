@@ -46,6 +46,7 @@ const ICONS = {
   search: '🔍', heart: '❤', battery: '🔋', bell: '🔔', calendar: '📅', plus: '+',
   pill: '💊', sun: '☀️', bed: '🛏️', wind: '🍃', brain: '🧠', alert: '⚠',
   info: 'ℹ️', star: '★', run: '🏃', stretch: '🤸', snow: '❄️', trophy: '🏆',
+  pause: '⏸', prev: '‹', mountain: '⛰️', ball: '⚽',
 }
 export function Icon({ name, size = 16, color, style }) {
   return React.createElement('span', { style: { fontSize: size, lineHeight: 1, color, display: 'inline-block', ...style } }, ICONS[name] || '•')
@@ -89,8 +90,21 @@ export function SegTabs({ tabs, value, onChange, tint = C.primary }) {
     }))
 }
 
-export function Pill({ tint = C.primary, children }) {
-  return React.createElement('span', { style: { display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600, color: tint, background: `color-mix(in srgb, ${tint} 12%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${tint} 30%, ${C.line})` } }, children)
+export function Pill({ tint = C.primary, solid, style, children }) {
+  return React.createElement('span', { style: solid
+    ? { display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, color: '#fff', background: tint, ...style }
+    : { display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600, color: tint, background: `color-mix(in srgb, ${tint} 12%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${tint} 30%, ${C.line})`, ...style } }, children)
+}
+
+// Anneau de progression SVG (utilisé par le lecteur de séance et le suivi de cycle).
+export function Ring({ size = 250, stroke = 12, progress = 0, track = C.surface2, color = C.primary, pulse, children }) {
+  const r = (size - stroke) / 2
+  const circ = 2 * Math.PI * r
+  return React.createElement('div', { style: { position: 'relative', width: size, height: size, flex: '0 0 auto', animation: pulse ? 'ringPulse 3s ease-in-out infinite' : 'none' } },
+    React.createElement('svg', { width: size, height: size, style: { transform: 'rotate(-90deg)' } },
+      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: track, strokeWidth: stroke }),
+      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: color, strokeWidth: stroke, strokeLinecap: 'round', strokeDasharray: circ, strokeDashoffset: circ * (1 - Math.max(0, Math.min(1, progress))), style: { transition: 'stroke-dashoffset .4s linear' } })),
+    React.createElement('div', { style: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }, children))
 }
 
 // Bouton d'action pleine largeur.

@@ -33,6 +33,7 @@ export function useNutritionStore(userId) {
   const [loading, setLoading] = useState(true)
   const [phys, setPhys] = useState({})
   const [cycle, setCycle] = useState({})
+  const [sensitiveZones, setSensitiveZones] = useState([])
   const [dayRows, setDayRows] = useState({}) // { [date]: { food, hydration } }
   const rowIds = useRef({})
   // Miroirs synchrones de l'état, pour calculer le "next" en dehors des
@@ -49,7 +50,7 @@ export function useNutritionStore(userId) {
     async function load() {
       const since = isoDaysAgo(DAYS_HISTORY)
       const [{ data: profileRow }, { data: logRows }] = await Promise.all([
-        supabase.from('profiles').select('phys,cycle').eq('id', userId).single(),
+        supabase.from('profiles').select('phys,cycle,sensitive_zones').eq('id', userId).single(),
         supabase.from('nutrition_logs').select('id,date,data').eq('user_id', userId).gte('date', since),
       ])
       if (!active) return
@@ -57,6 +58,7 @@ export function useNutritionStore(userId) {
       cycleRef.current = profileRow?.cycle || {}
       setPhys(physRef.current)
       setCycle(cycleRef.current)
+      setSensitiveZones(profileRow?.sensitive_zones || [])
       const rows = {}
       for (const r of logRows || []) {
         rows[r.date] = { food: r.data?.food || [], hydration: r.data?.hydration || [] }
@@ -111,6 +113,8 @@ export function useNutritionStore(userId) {
   // Reconstitue le "db" plat attendu par les composants portés de l'ancienne app.
   // `...phys` expose toutes les clés racine (physTests, sleepLog, suppPlan…) ;
   // les entrées ci-dessous surchargent avec les valeurs dérivées/imbriquées.
+  const todayISO = new Date().toISOString().slice(0, 10)
+
   const db = {
     ...phys,
     profilePhys: phys,
@@ -123,6 +127,19 @@ export function useNutritionStore(userId) {
     physTests: phys.physTests || [],
     foodLog: Object.fromEntries(Object.entries(dayRows).map(([d, v]) => [d, v.food || []])),
     hydroLog: Object.fromEntries(Object.entries(dayRows).map(([d, v]) => [d, v.hydration || []])),
+    week: phys.week || [0, 0, 0, 0, 0, 0, 0],
+    streak: phys.streak || 0,
+    sessionsTotal: phys.sessionsTotal || 0,
+    minutesTotal: phys.minutesTotal || 0,
+    record: phys.record || 0,
+    completedToday: phys.lastSessionISO === todayISO,
+    customGoals: phys.customGoals || [],
+    mobility: phys.mobility || null,
+    mobilityHistory: phys.mobilityHistory || [],
+    program: phys.program || null,
+    peakGoals: phys.peakGoals || [],
+    recoveryLog: phys.recoveryLog || {},
+    sensitiveZones,
   }
 
   const store = {
@@ -156,6 +173,43 @@ export function useNutritionStore(userId) {
         }
       }
     },
+
+    // Actions dédiées au module Entraîner — équivalents des méthodes du store
+    // local-only de l'ancienne app (Store.completeSession, Store.saveMobility…),
+    // réécrites en termes de store.set pour rester compatibles Supabase.
+    completeSession: (mins) => {
+      const day = (new Date().getDay() + 6) % 7 // 0=lundi … 6=dimanche
+      const week = [...db.week]
+      week[day] = (week[day] || 0) + mins
+      const newStreak = db.completedToday ? db.streak : db.streak + 1
+      store.set({
+        week,
+        sessionsTotal: db.sessionsTotal + 1,
+        minutesTotal: db.minutesTotal + mins,
+        streak: newStreak,
+        record: Math.max(db.record, newStreak),
+        lastSessionISO: todayISO,
+      })
+    },
+    saveMobility: (m) => {
+      const hist = db.mobilityHistory.filter((h) => h.date !== m.date)
+      store.set({ mobility: m, mobilityHistory: [...hist, m].slice(-30) })
+    },
+    saveProgram: (p) => store.set({ program: p }),
+    clearProgram: () => store.set({ program: null }),
+    markProgramDone: (id) => {
+      if (!db.program) return
+      store.set({ program: { ...db.program, done: { ...(db.program.done || {}), [id]: true } } })
+    },
+    logRecovery: (id) => {
+      const log = { ...db.recoveryLog }
+      const day = log[todayISO] || []
+      log[todayISO] = day.includes(id) ? day : [...day, id]
+      store.set({ recoveryLog: log })
+    },
+    addPeakGoal: (goal) => store.set({ peakGoals: [...db.peakGoals, { id: 'pk' + Date.now(), ...goal }] }),
+    updatePeakGoal: (id, patch) => store.set({ peakGoals: db.peakGoals.map((g) => g.id === id ? { ...g, ...patch } : g) }),
+    removePeakGoal: (id) => store.set({ peakGoals: db.peakGoals.filter((g) => g.id !== id) }),
   }
 
   return { db, store, loading }
