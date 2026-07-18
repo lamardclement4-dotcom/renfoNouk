@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, MODULE_TINTS, FlowSpace } from '../health/kit'
+import { C, Icon, MODULE_TINTS } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { getSession } from './trainData'
 import Detail from './Detail'
@@ -12,15 +12,8 @@ import RecoverySpace from './RecoverySpace'
 import PliometrieSpace from './PliometrieSpace'
 import CoachSpace from './CoachSpace'
 import PeakSpace from './PeakSpace'
+import PlannerSpace from './PlannerSpace'
 import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
-
-function ComingSoon({ title, onClose }) {
-  return React.createElement(FlowSpace, { title, onClose },
-    React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 10, minHeight: '50vh' } },
-      React.createElement(Icon, { name: 'calendar', size: 32, color: C.ink3 }),
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 17 } }, 'Bientôt disponible'),
-      React.createElement('p', { style: { fontSize: 14, color: C.ink2, maxWidth: 260 } }, "Le calendrier d'entraînement arrive dans une prochaine mise à jour.")))
-}
 
 // ============================================================
 // "S'entraîner" — hub central du module Entraîner, porté depuis
@@ -66,7 +59,7 @@ export default function TrainSpace({ userId, onClose }) {
   if (tile === 'coach') return React.createElement(CoachSpace, { db, onClose: () => setTile(null) })
   if (tile === 'peak') return React.createElement(PeakSpace, { db, store, onClose: () => setTile(null), onMobility: () => setTile('mobility'), onProgram: () => setTile('program'), onRecovery: () => setTile('recovery') })
   if (tile === 'tests') return React.createElement(PhysicalTestsSpace, { userId, onClose: () => setTile(null) })
-  if (tile === 'planner') return React.createElement(ComingSoon, { title: 'Calendrier', onClose: () => setTile(null) })
+  if (tile === 'planner') return React.createElement(PlannerSpace, { db, store, onClose: () => setTile(null) })
 
   const tiles = [
     { ic: 'target', tint: MODULE_TINTS.mobilite, lab: 'Test de mobilité', sub: db.mobility ? `Score : ${db.mobility.score}/100` : '9 questions', on: 'mobility' },
