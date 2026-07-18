@@ -13,7 +13,7 @@ function isoDaysAgo(n) {
 // pour éviter d'encombrer le niveau racine de phys).
 const NUTRITION_KEYS = ['foodFav', 'foodTargets', 'hydroSport', 'hydroPrefs', 'diagHistory']
 // Clés à routage spécial : ni top-level phys, ni phys.nutrition.
-const SPECIAL_KEYS = ['profilePhys', 'foodLog', 'hydroLog', 'cycle']
+const SPECIAL_KEYS = ['profilePhys', 'foodLog', 'hydroLog', 'cycle', 'goals', 'sensitiveZones']
 
 function pick(obj, keys) {
   return Object.fromEntries(keys.filter((k) => k in obj).map((k) => [k, obj[k]]))
@@ -33,6 +33,7 @@ export function useNutritionStore(userId) {
   const [loading, setLoading] = useState(true)
   const [phys, setPhys] = useState({})
   const [cycle, setCycle] = useState({})
+  const [goals, setGoals] = useState({})
   const [sensitiveZones, setSensitiveZones] = useState([])
   const [dayRows, setDayRows] = useState({}) // { [date]: { food, hydration } }
   const rowIds = useRef({})
@@ -42,6 +43,8 @@ export function useNutritionStore(userId) {
   // à l'intérieur du callback passé à setState.
   const physRef = useRef({})
   const cycleRef = useRef({})
+  const goalsRef = useRef({})
+  const sensitiveZonesRef = useRef([])
   const dayRowsRef = useRef({})
 
   useEffect(() => {
@@ -50,15 +53,18 @@ export function useNutritionStore(userId) {
     async function load() {
       const since = isoDaysAgo(DAYS_HISTORY)
       const [{ data: profileRow }, { data: logRows }] = await Promise.all([
-        supabase.from('profiles').select('phys,cycle,sensitive_zones').eq('id', userId).single(),
+        supabase.from('profiles').select('phys,cycle,sensitive_zones,goals').eq('id', userId).single(),
         supabase.from('nutrition_logs').select('id,date,data').eq('user_id', userId).gte('date', since),
       ])
       if (!active) return
       physRef.current = profileRow?.phys || {}
       cycleRef.current = profileRow?.cycle || {}
+      goalsRef.current = profileRow?.goals || {}
+      sensitiveZonesRef.current = profileRow?.sensitive_zones || []
       setPhys(physRef.current)
       setCycle(cycleRef.current)
-      setSensitiveZones(profileRow?.sensitive_zones || [])
+      setGoals(goalsRef.current)
+      setSensitiveZones(sensitiveZonesRef.current)
       const rows = {}
       for (const r of logRows || []) {
         rows[r.date] = { food: r.data?.food || [], hydration: r.data?.hydration || [] }
@@ -89,6 +95,26 @@ export function useNutritionStore(userId) {
     setCycle(next)
     supabase.from('profiles').update({ cycle: next }).eq('id', userId).then(({ error }) => {
       if (error) console.error('[store] échec sauvegarde cycle', error.message)
+    })
+  }, [userId])
+
+  const saveGoals = useCallback((patchFn) => {
+    const prev = goalsRef.current
+    const next = typeof patchFn === 'function' ? patchFn(prev) : { ...prev, ...patchFn }
+    goalsRef.current = next
+    setGoals(next)
+    supabase.from('profiles').update({ goals: next }).eq('id', userId).then(({ error }) => {
+      if (error) console.error('[store] échec sauvegarde objectifs', error.message)
+    })
+  }, [userId])
+
+  const saveSensitiveZones = useCallback((patchFn) => {
+    const prev = sensitiveZonesRef.current
+    const next = typeof patchFn === 'function' ? patchFn(prev) : patchFn
+    sensitiveZonesRef.current = next
+    setSensitiveZones(next)
+    supabase.from('profiles').update({ sensitive_zones: next }).eq('id', userId).then(({ error }) => {
+      if (error) console.error('[store] échec sauvegarde zones sensibles', error.message)
     })
   }, [userId])
 
@@ -132,7 +158,7 @@ export function useNutritionStore(userId) {
     sessionsTotal: phys.sessionsTotal || 0,
     minutesTotal: phys.minutesTotal || 0,
     record: phys.record || 0,
-    goals: phys.goals || { dailyMin: 10, weeklySessions: 4 },
+    goals: { dailyMin: 10, weeklySessions: 4, ...goals },
     completedToday: phys.lastSessionISO === todayISO,
     customGoals: phys.customGoals || [],
     mobility: phys.mobility || null,
@@ -150,6 +176,8 @@ export function useNutritionStore(userId) {
 
       if ('profilePhys' in patch) savePhys(() => patch.profilePhys)
       if ('cycle' in patch) saveCycle(() => patch.cycle)
+      if ('goals' in patch) saveGoals(() => patch.goals)
+      if ('sensitiveZones' in patch) saveSensitiveZones(() => patch.sensitiveZones)
 
       const nutriInPatch = NUTRITION_KEYS.filter((k) => k in patch)
       if (nutriInPatch.length) {
@@ -214,6 +242,8 @@ export function useNutritionStore(userId) {
     addGoal: (label) => store.set({ customGoals: [...db.customGoals, { id: 'g' + Date.now(), label, done: false }] }),
     updateGoal: (id, patch) => store.set({ customGoals: db.customGoals.map((g) => g.id === id ? { ...g, ...patch } : g) }),
     removeGoal: (id) => store.set({ customGoals: db.customGoals.filter((g) => g.id !== id) }),
+    setGoal: (key, val) => store.set({ goals: { ...db.goals, [key]: val } }),
+    setSensitiveZones: (zones) => store.set({ sensitiveZones: zones }),
   }
 
   return { db, store, loading }

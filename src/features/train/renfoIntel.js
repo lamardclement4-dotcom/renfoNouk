@@ -195,6 +195,31 @@ export function pillarLoad(db) {
   return { id: 'load', label: "Charge d'entraîn.", score: round(clamp(score, 0, 100)), status: 'ok', detail: `${sum} / ${target} min`, extra: { weekMin: sum, targetMin: target, ratio, spike, plannerCount: plannerData.count, plannerPlanned: plannerData.planned } }
 }
 
+// Niveau utilisateur déduit du profil (ou fixé manuellement via
+// profilePhys.levelOverride) — sert de repère d'expérience sur le Profil.
+// Les seuils acwrWarn/acwrAlert sont conservés pour rester compatibles avec
+// l'ancien format même si l'ACWR lui-même n'est pas porté ici.
+const LEVEL_PRESETS = {
+  debutant: { id: 'debutant', label: 'Débutant', acwrWarn: 1.20, acwrAlert: 1.35 },
+  intermediaire: { id: 'intermediaire', label: 'Intermédiaire', acwrWarn: 1.30, acwrAlert: 1.50 },
+  confirme: { id: 'confirme', label: 'Confirmé', acwrWarn: 1.40, acwrAlert: 1.60 },
+}
+
+export function inferUserLevel(db) {
+  const override = db.profilePhys && db.profilePhys.levelOverride
+  if (override && LEVEL_PRESETS[override]) {
+    return { ...LEVEL_PRESETS[override], manual: true }
+  }
+  const g = db.goals || {}
+  const mob = db.mobility || null
+  const total = db.sessionsTotal || 0
+  const perWeek = g.weeklySessions || 3
+  const mobScore = mob && mob.score != null ? mob.score : null
+  if (total < 20 || perWeek < 3) return { ...LEVEL_PRESETS.debutant, manual: false }
+  if (total >= 80 && perWeek >= 5 && (mobScore == null || mobScore >= 60)) return { ...LEVEL_PRESETS.confirme, manual: false }
+  return { ...LEVEL_PRESETS.intermediaire, manual: false }
+}
+
 export function pillars(db, iso) {
   iso = iso || todayISO()
   return [pillarHydration(db, iso), pillarNutrition(db, iso), pillarSleep(db), pillarLoad(db), pillarMobility(db), pillarPrevention(db)]

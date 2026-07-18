@@ -3,6 +3,7 @@ import { supabase } from './lib'
 import HealthHome from './features/health/HealthHome'
 import TrainSpace from './features/train/TrainSpace'
 import ProgressSpace from './features/progress/ProgressSpace'
+import ProfilSpace from './features/profil/ProfilSpace'
 
 // ============================================================
 // Hook d'authentification
@@ -617,13 +618,13 @@ function App() {
     if (!onboardingDone) {
       return <Onboarding userId={profile.id} onDone={refreshProfile} />
     }
-    return <Home profile={profile} signOut={signOut} />
+    return <Home profile={profile} signOut={signOut} refreshProfile={refreshProfile} />
   }
 
   return null
 }
 
-function Home({ profile, signOut }) {
+function Home({ profile, signOut, refreshProfile }) {
   const [space, setSpace] = useState(null)
 
   if (space === 'entrainer') {
@@ -634,6 +635,9 @@ function Home({ profile, signOut }) {
   }
   if (space === 'progres') {
     return <ProgressSpace userId={profile.id} onClose={() => setSpace(null)} />
+  }
+  if (space === 'profil') {
+    return <ProfilSpace userId={profile.id} profile={profile} refreshProfile={refreshProfile} signOut={signOut} onClose={() => setSpace(null)} />
   }
 
   const navBtn = { marginTop: 20, marginRight: 12, padding: '12px 20px', borderRadius: 10, border: 'none', background: '#c25a3f', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }
@@ -647,6 +651,7 @@ function Home({ profile, signOut }) {
       <button onClick={() => setSpace('entrainer')} style={navBtn}>Entraîner</button>
       <button onClick={() => setSpace('sante')} style={navBtn}>Santé</button>
       <button onClick={() => setSpace('progres')} style={navBtn}>Progrès</button>
+      <button onClick={() => setSpace('profil')} style={navBtn}>Profil</button>
       <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
     </div>
   )

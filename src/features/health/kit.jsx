@@ -46,7 +46,7 @@ const ICONS = {
   search: '🔍', heart: '❤', battery: '🔋', bell: '🔔', calendar: '📅', plus: '+',
   pill: '💊', sun: '☀️', bed: '🛏️', wind: '🍃', brain: '🧠', alert: '⚠',
   info: 'ℹ️', star: '★', run: '🏃', stretch: '🤸', snow: '❄️', trophy: '🏆',
-  pause: '⏸', prev: '‹', mountain: '⛰️', ball: '⚽',
+  pause: '⏸', prev: '‹', mountain: '⛰️', ball: '⚽', edit: '✏️', pin: '📌',
 }
 export function Icon({ name, size = 16, color, style }) {
   return React.createElement('span', { style: { fontSize: size, lineHeight: 1, color, display: 'inline-block', ...style } }, ICONS[name] || '•')
