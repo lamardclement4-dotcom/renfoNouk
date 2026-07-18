@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from './lib'
 import HealthHome from './features/health/HealthHome'
 import TrainSpace from './features/train/TrainSpace'
+import ProgressSpace from './features/progress/ProgressSpace'
 
 // ============================================================
 // Hook d'authentification
@@ -631,6 +632,9 @@ function Home({ profile, signOut }) {
   if (space === 'sante') {
     return <HealthHome userId={profile.id} onClose={() => setSpace(null)} />
   }
+  if (space === 'progres') {
+    return <ProgressSpace userId={profile.id} onClose={() => setSpace(null)} />
+  }
 
   const navBtn = { marginTop: 20, marginRight: 12, padding: '12px 20px', borderRadius: 10, border: 'none', background: '#c25a3f', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }
 
@@ -642,6 +646,7 @@ function Home({ profile, signOut }) {
       </p>
       <button onClick={() => setSpace('entrainer')} style={navBtn}>Entraîner</button>
       <button onClick={() => setSpace('sante')} style={navBtn}>Santé</button>
+      <button onClick={() => setSpace('progres')} style={navBtn}>Progrès</button>
       <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
     </div>
   )

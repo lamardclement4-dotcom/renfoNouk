@@ -132,6 +132,7 @@ export function useNutritionStore(userId) {
     sessionsTotal: phys.sessionsTotal || 0,
     minutesTotal: phys.minutesTotal || 0,
     record: phys.record || 0,
+    goals: phys.goals || { dailyMin: 10, weeklySessions: 4 },
     completedToday: phys.lastSessionISO === todayISO,
     customGoals: phys.customGoals || [],
     mobility: phys.mobility || null,
