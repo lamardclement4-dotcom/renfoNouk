@@ -105,7 +105,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
   }
 
   if (flow === 'mobility' || flow === 'program' || flow === 'recovery') {
-    return h(TrainSpace, { userId, initialTile: flow, onClose: () => setFlow(null) })
+    return h(TrainSpace, { userId, initialTile: flow, embedded: true, onClose: () => setFlow(null) })
   }
 
   const g = db.goals
@@ -144,7 +144,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
 
   const filteredSports = SPORTS.filter((sp) => !sportQuery || sp.label.toLowerCase().includes(sportQuery.toLowerCase()))
 
-  return h(FlowSpace, { title: 'Profil', onClose },
+  return h(FlowSpace, { title: 'Profil', onClose, fixed: false },
     h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 8, marginBottom: 20 } },
       h('div', { style: { position: 'relative', marginBottom: 14 } },
         h('div', { style: { width: 80, height: 80, borderRadius: 999, background: C.ink, color: C.surface, fontFamily: C.font, fontWeight: 700, fontSize: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, initial)),

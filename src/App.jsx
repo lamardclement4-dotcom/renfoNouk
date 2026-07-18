@@ -4,6 +4,8 @@ import HealthHome from './features/health/HealthHome'
 import TrainSpace from './features/train/TrainSpace'
 import ProgressSpace from './features/progress/ProgressSpace'
 import ProfilSpace from './features/profil/ProfilSpace'
+import AccueilSpace from './features/home/AccueilSpace'
+import { Icon } from './features/health/kit'
 
 // ============================================================
 // Hook d'authentification
@@ -624,35 +626,46 @@ function App() {
   return null
 }
 
+// Barre de navigation basse persistante à 5 onglets, fidèle à la NAV de
+// l'ancienne app. Chaque onglet est monté/démonté (pas juste masqué) pour
+// n'avoir qu'un seul useNutritionStore(userId) actif à la fois. Les
+// sous-écrans de chaque onglet (Detail/Player/MobilityTest/Sleep…) gardent
+// leur position:fixed plein écran existante et couvrent donc naturellement
+// cette barre — elle ne reste visible qu'au niveau racine de chaque onglet.
+const NAV = [
+  { id: 'accueil', label: 'Accueil', ic: 'home' },
+  { id: 'entrainer', label: 'Entraîner', ic: 'route' },
+  { id: 'sante', label: 'Santé', ic: 'shield' },
+  { id: 'progres', label: 'Progrès', ic: 'chart' },
+  { id: 'profil', label: 'Profil', ic: 'user' },
+]
+
 function Home({ profile, signOut, refreshProfile }) {
-  const [space, setSpace] = useState(null)
-
-  if (space === 'entrainer') {
-    return <TrainSpace userId={profile.id} onClose={() => setSpace(null)} />
-  }
-  if (space === 'sante') {
-    return <HealthHome userId={profile.id} onClose={() => setSpace(null)} />
-  }
-  if (space === 'progres') {
-    return <ProgressSpace userId={profile.id} onClose={() => setSpace(null)} />
-  }
-  if (space === 'profil') {
-    return <ProfilSpace userId={profile.id} profile={profile} refreshProfile={refreshProfile} signOut={signOut} onClose={() => setSpace(null)} />
-  }
-
-  const navBtn = { marginTop: 20, marginRight: 12, padding: '12px 20px', borderRadius: 10, border: 'none', background: '#c25a3f', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }
+  const [space, setSpace] = useState('accueil')
+  const userId = profile.id
 
   return (
-    <div style={{ padding: 40 }}>
-      <h2>Bienvenue dans Renfo, {profile?.first_name || ''}</h2>
-      <p style={{ color: '#666' }}>
-        {profile?.phys?.sports?.join(', ')} · Niveau {profile?.phys?.niveau}
-      </p>
-      <button onClick={() => setSpace('entrainer')} style={navBtn}>Entraîner</button>
-      <button onClick={() => setSpace('sante')} style={navBtn}>Santé</button>
-      <button onClick={() => setSpace('progres')} style={navBtn}>Progrès</button>
-      <button onClick={() => setSpace('profil')} style={navBtn}>Profil</button>
-      <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: '#faf9f5' }}>
+      {space === 'accueil' && <AccueilSpace userId={userId} profile={profile} onProfil={() => setSpace('profil')} />}
+      {space === 'entrainer' && <TrainSpace userId={userId} onClose={() => setSpace('accueil')} />}
+      {space === 'sante' && <HealthHome userId={userId} onClose={() => setSpace('accueil')} />}
+      {space === 'progres' && <ProgressSpace userId={userId} onClose={() => setSpace('accueil')} />}
+      {space === 'profil' && <ProfilSpace userId={userId} profile={profile} refreshProfile={refreshProfile} signOut={signOut} onClose={() => setSpace('accueil')} />}
+      <nav style={{ display: 'flex', flexShrink: 0, width: '100%', maxWidth: 460, margin: '0 auto', borderTop: '1px solid #e6e3dd', background: '#fff', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {NAV.map((n) => {
+          const active = space === n.id
+          return (
+            <button key={n.id} onClick={() => setSpace(n.id)} style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              padding: '9px 0 8px', background: 'none', border: 'none', cursor: 'pointer',
+              color: active ? '#c25a3f' : '#999', fontWeight: active ? 700 : 600, fontSize: 11,
+            }}>
+              <Icon name={n.ic} size={19} />
+              <span>{n.label}</span>
+            </button>
+          )
+        })}
+      </nav>
     </div>
   )
 }

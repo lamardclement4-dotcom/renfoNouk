@@ -15,9 +15,9 @@ import { PHASES } from './cycleData'
 // vers ses 7 sous-espaces. Nutrition et Hydratation existaient déjà
 // comme modules séparés ; les 5 autres sont ajoutés ici.
 // ============================================================
-export default function HealthHome({ userId, onClose }) {
+export default function HealthHome({ userId, onClose, initialSpace, embedded }) {
   const { db, loading } = useNutritionStore(userId)
-  const [space, setSpace] = useState(null)
+  const [space, setSpace] = useState(initialSpace || null)
 
   if (space === 'nutrition') return React.createElement(NutritionSpace, { userId, onClose: () => setSpace(null) })
   if (space === 'hydratation') return React.createElement(HydrationSpace, { userId, onClose: () => setSpace(null) })
@@ -57,7 +57,9 @@ export default function HealthHome({ userId, onClose }) {
     { ic: 'spark', tint: MODULE_TINTS.complements, lab: 'Compléments', sub: 'Plan · rappels', on: 'complements' },
   ]
 
-  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font } },
+  return React.createElement('div', { style: embedded
+    ? { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font }
+    : { flex: 1, minHeight: 0, background: C.bg, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px 8px', flexShrink: 0 } },
       React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
         React.createElement(Icon, { name: 'back', size: 20 })),

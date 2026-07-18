@@ -46,15 +46,21 @@ const ICONS = {
   search: '🔍', heart: '❤', battery: '🔋', bell: '🔔', calendar: '📅', plus: '+',
   pill: '💊', sun: '☀️', bed: '🛏️', wind: '🍃', brain: '🧠', alert: '⚠',
   info: 'ℹ️', star: '★', run: '🏃', stretch: '🤸', snow: '❄️', trophy: '🏆',
-  pause: '⏸', prev: '‹', mountain: '⛰️', ball: '⚽', edit: '✏️', pin: '📌',
+  pause: '⏸', prev: '‹', mountain: '⛰️', ball: '⚽', edit: '✏️', pin: '📌', home: '🏠',
 }
 export function Icon({ name, size = 16, color, style }) {
   return React.createElement('span', { style: { fontSize: size, lineHeight: 1, color, display: 'inline-block', ...style } }, ICONS[name] || '•')
 }
 
-// Conteneur plein écran d'un "space" (flow) avec en-tête + zone scrollable.
-export function FlowSpace({ title, onClose, action, tint, children }) {
-  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font } },
+// Conteneur d'un "space" avec en-tête + zone scrollable. `fixed` (true par
+// défaut) le fait couvrir tout le viewport, comme un "flow" qui masque la
+// barre de navigation basse — utilisé par les sous-écrans. Les onglets
+// racine (Progrès, Profil) passent fixed=false pour rester un enfant flex
+// normal du cadre de App.jsx et laisser la barre de nav visible.
+export function FlowSpace({ title, onClose, action, tint, children, fixed = true }) {
+  return React.createElement('div', { style: fixed
+    ? { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font }
+    : { flex: 1, minHeight: 0, background: C.bg, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 8px', flexShrink: 0 } },
       React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
         React.createElement(Icon, { name: 'back', size: 20 })),

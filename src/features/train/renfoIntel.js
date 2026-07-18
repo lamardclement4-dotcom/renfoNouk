@@ -4,8 +4,11 @@
 // déterministe, pas une IA). Adapté à notre persistance Supabase :
 // les fonctions qui lisaient `renfo_planning_sessions_v2` en
 // localStorage lisent désormais db.planningSessions / db.exerciseHistory.
-// Reste volontairement sans ACWR (historique de charge 4 semaines non
-// collecté) ni recommandations croisant le Planificateur legacy.
+// L'ACWR (charge aiguë/chronique) est désormais calculable depuis que le
+// Calendrier persiste db.planningSessions en base (fini le sondage
+// localStorage de l'ancienne app) — voir acwrRisk() plus bas. Les
+// recommandations() elles-mêmes restent volontairement sans croisement
+// ACWR/Pic de forme pour limiter le risque de régression sur Coach.
 // ============================================================
 import { SPORTS } from './trainData'
 
@@ -49,7 +52,7 @@ export function nutritionDay(db, iso) {
 // Minutes de séance planning correspondant à un libellé de durée pilule
 // (identique à LOAD_BY_DUREE mais en vraies minutes, pas un score de charge).
 const DUREE_MINS = { '15 min': 15, '30 min': 30, '45 min': 45, '1 h': 60, '1 h 30': 90, '2 h': 120, '2 h 30': 150, '3 h': 180 }
-function dureeToMins(duree) {
+export function dureeToMins(duree) {
   if (!duree) return 0
   if (DUREE_MINS[duree]) return DUREE_MINS[duree]
   const n = parseInt(duree, 10)
@@ -196,9 +199,8 @@ export function pillarLoad(db) {
 }
 
 // Niveau utilisateur déduit du profil (ou fixé manuellement via
-// profilePhys.levelOverride) — sert de repère d'expérience sur le Profil.
-// Les seuils acwrWarn/acwrAlert sont conservés pour rester compatibles avec
-// l'ancien format même si l'ACWR lui-même n'est pas porté ici.
+// profilePhys.levelOverride) — sert de repère d'expérience sur le Profil,
+// et fournit les seuils acwrWarn/acwrAlert utilisés par acwrRisk().
 const LEVEL_PRESETS = {
   debutant: { id: 'debutant', label: 'Débutant', acwrWarn: 1.20, acwrAlert: 1.35 },
   intermediaire: { id: 'intermediaire', label: 'Intermédiaire', acwrWarn: 1.30, acwrAlert: 1.50 },
@@ -218,6 +220,69 @@ export function inferUserLevel(db) {
   if (total < 20 || perWeek < 3) return { ...LEVEL_PRESETS.debutant, manual: false }
   if (total >= 80 && perWeek >= 5 && (mobScore == null || mobScore >= 60)) return { ...LEVEL_PRESETS.confirme, manual: false }
   return { ...LEVEL_PRESETS.intermediaire, manual: false }
+}
+
+// ACWR (charge aiguë 7j / charge chronique moyenne 28j) — Gabbett 2016 (Br J
+// Sports Med) et littérature ultérieure ; zone repère 0.8–1.3, risque accru
+// au-delà de ~1.5. Indicateur statistique de population, pas un diagnostic
+// individuel (Impellizzeri et al.). Nécessite ≥14 jours d'historique réalisé.
+export function acwrRisk(db) {
+  const sessions = db.planningSessions || []
+  const now = new Date(); now.setHours(0, 0, 0, 0)
+  const nowMs = now.getTime()
+  function minsInWindow(daysBack) {
+    const startMs = nowMs - daysBack * 86400000
+    let sum = 0
+    for (const s of sessions) {
+      if (!s || s.statut !== 'realise' || !s.date) continue
+      const t = new Date(s.date + 'T00:00:00').getTime()
+      if (t > nowMs || t <= startMs) continue
+      sum += dureeToMins(s.duree)
+    }
+    return sum
+  }
+  const hasAny = sessions.some((s) => s && s.statut === 'realise' && s.date)
+  if (!hasAny) return { available: false, reason: 'no_data' }
+  const oldestMs = sessions.reduce((min, s) => {
+    if (!s || s.statut !== 'realise' || !s.date) return min
+    const t = new Date(s.date + 'T00:00:00').getTime()
+    return (min == null || t < min) ? t : min
+  }, null)
+  const daysOfHistory = oldestMs != null ? Math.floor((nowMs - oldestMs) / 86400000) : 0
+  if (daysOfHistory < 14) return { available: false, reason: 'not_enough_history', daysOfHistory }
+  const acuteMin = minsInWindow(7)
+  const chronicTotal = minsInWindow(28)
+  const chronicAvgWeek = chronicTotal / 4
+  if (chronicAvgWeek <= 0) return { available: false, reason: 'no_chronic_load' }
+  const ratio = acuteMin / chronicAvgWeek
+  const ratioR = Math.round(ratio * 100) / 100
+  const ul = inferUserLevel(db)
+  let level, color, advice
+  if (ratio < 0.8) {
+    level = 'Sous-charge'; color = '#6f8a3a'
+    advice = ul.id === 'debutant'
+      ? 'Charge basse — normal au démarrage. Augmente progressivement (+10 % max / semaine).'
+      : "Charge récente plus basse que d'habitude — marge pour reprendre progressivement."
+  } else if (ratio <= ul.acwrWarn) {
+    level = 'Zone optimale'; color = '#4a8a6a'
+    advice = `Charge cohérente avec ton profil ${ul.label.toLowerCase()} — progression bien maîtrisée.`
+  } else if (ratio <= ul.acwrAlert) {
+    level = 'Vigilance'; color = '#c4a03a'
+    advice = ul.id === 'debutant'
+      ? "Hausse rapide pour un profil débutant — ton corps a besoin de plus de temps pour s'adapter. Insère un jour de repos."
+      : ul.id === 'confirme'
+        ? 'Charge élevée mais dans ta zone de tolérance. Surveille : fatigue, raideurs, qualité du sommeil.'
+        : 'Charge sensiblement plus haute que ta moyenne. Surveille fatigue et douleurs, priorise le sommeil.'
+  } else {
+    level = 'Vigilance renforcée'; color = '#c4503a'
+    advice = (ul.id === 'debutant'
+      ? "Charge en forte hausse pour un profil débutant — laisse plus de temps à l'adaptation. Réduis le volume et repose-toi 1–2 jours."
+      : ul.id === 'confirme'
+        ? 'Augmentation marquée, même pour un profil confirmé. Bascule en récupération active cette semaine.'
+        : 'Augmentation marquée et rapide de la charge.')
+      + ' Cet indicateur est corrélationnel (preuve modérée, débattue dans la recherche récente) — combine-le avec tes sensations : douleur, fatigue, qualité du sommeil.'
+  }
+  return { available: true, ratio: ratioR, acuteMin: Math.round(acuteMin), chronicAvgWeek: Math.round(chronicAvgWeek), level, color, advice, userLevel: ul }
 }
 
 export function pillars(db, iso) {

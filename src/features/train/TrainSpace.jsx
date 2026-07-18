@@ -21,10 +21,10 @@ import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
 // et l'ouverture/lecture d'une séance (Detail/Player), pour rester
 // un module autonome comme HealthHome.
 // ============================================================
-export default function TrainSpace({ userId, onClose, initialTile }) {
+export default function TrainSpace({ userId, onClose, initialTile, initialOpenId, embedded }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [tile, setTile] = useState(initialTile || null)
-  const [openId, setOpenId] = useState(null)
+  const [openId, setOpenId] = useState(initialOpenId || null)
   const [playId, setPlayId] = useState(null)
 
   if (loading) {
@@ -76,7 +76,9 @@ export default function TrainSpace({ userId, onClose, initialTile }) {
     { ic: 'target', tint: '#a3526b', lab: 'Pic de forme', sub: db.peakGoals && db.peakGoals.length ? `${db.peakGoals.length} objectif${db.peakGoals.length > 1 ? 's' : ''} programmé${db.peakGoals.length > 1 ? 's' : ''}` : 'Programme tes échéances', on: 'peak' },
   ]
 
-  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font } },
+  return React.createElement('div', { style: embedded
+    ? { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font }
+    : { flex: 1, minHeight: 0, background: C.bg, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px 8px', flexShrink: 0 } },
       React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
         React.createElement(Icon, { name: 'back', size: 20 })),
