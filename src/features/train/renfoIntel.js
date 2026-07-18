@@ -7,9 +7,14 @@
 // L'ACWR (charge aiguë/chronique) est désormais calculable depuis que le
 // Calendrier persiste db.planningSessions en base (fini le sondage
 // localStorage de l'ancienne app) — voir acwrRisk() plus bas.
-// recommendations() est la version complète (fidèle à l'ancienne app) :
-// croise nutrition/hydratation/sommeil/prévention/mobilité/tests avec la
-// charge réelle (ACWR), le ressenti des séances, le cycle et Pic de forme.
+// recommendations() reprend d'abord fidèlement l'ancienne app (nutrition/
+// hydratation/sommeil/prévention/mobilité/tests × charge réelle ACWR,
+// ressenti des séances, cycle, Pic de forme), puis va plus loin avec des
+// règles inédites, rendues possibles par nos données réelles persistées :
+// croisement sport pratiqué × zone de mobilité faible (SPORTS[].focus),
+// tendance semaine vs semaine précédente (comble le trou avant que l'ACWR
+// ait 14 jours d'historique), régression de charge sur un exercice suivi
+// (db.exerciseHistory) et déséquilibre entre sports pratiqués.
 // ============================================================
 import { SPORTS } from './trainData'
 import { TESTS_DEF } from '../physical-tests/PhysicalTests'
@@ -468,6 +473,25 @@ export function recommendations(db) {
     }
   }
 
+  // --- Croisement sport × mobilité (nouveau, au-delà de l'ancienne app) :
+  // si une zone faible au test de mobilité correspond à une zone-clé du/des
+  // sport(s) pratiqués (SPORTS[].focus), le signal est bien plus précis
+  // qu'un simple "zones à travailler" générique.
+  if (mob.status === 'ok' && mob.extra.weak.length) {
+    const userSportIds = (db.profilePhys && db.profilePhys.sports) || []
+    const userSports = SPORTS.filter((sp) => userSportIds.includes(sp.id))
+    outer: for (const sp of userSports) {
+      const focusLower = (sp.focus || '').toLowerCase()
+      for (const wl of mob.extra.weak) {
+        const words = wl.toLowerCase().split(/[^a-zàâäéèêëïîôöùûüç]+/).filter((w) => w.length > 3)
+        if (words.some((w) => focusLower.includes(w))) {
+          push('warn', 'target', `En ${sp.label}, ${wl.toLowerCase()} est une zone clé de la discipline (${sp.focus.toLowerCase()}) — c'est justement ta zone la plus raide au test de mobilité. Priorise les exercices ciblés avant que ça ne devienne limitant.`)
+          break outer
+        }
+      }
+    }
+  }
+
   // --- Combo sommeil + charge : signal renforcé quand les deux se dégradent ---
   const sleepLow = slp.status === 'ok' && slp.extra.hours && slp.extra.hours < 7
   const loadHigh = (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) || (load.status === 'ok' && load.extra.ratio > 1.3)
@@ -503,6 +527,21 @@ export function recommendations(db) {
     }
   }
 
+  // --- Régression de charge sur un exercice suivi (nouveau) : la dernière
+  // séance est nettement sous le record (≥20%) et récente (≤14 jours) —
+  // signal de fatigue/deload sur ce mouvement précis plutôt qu'un ressenti
+  // global.
+  const exHist = db.exerciseHistory || {}
+  for (const name of Object.keys(exHist)) {
+    const h = exHist[name]
+    if (!h.record || !h.last || !h.last.charge || !h.last.date) continue
+    const daysSinceLast = Math.floor((new Date(iso + 'T00:00:00') - new Date(h.last.date + 'T00:00:00')) / 86400000)
+    if (daysSinceLast <= 14 && h.last.charge < h.record.charge * 0.8) {
+      push('info', 'dumbbell', `${name} : dernière charge ${h.last.charge} kg, nettement sous ton record de ${h.record.charge} kg — normal après une pause, mais surveille si ça persiste sur plusieurs séances.`)
+      break
+    }
+  }
+
   // --- Stress/charge élevée sans outil de régulation récent ---
   if (acwr.available && acwr.level === 'Vigilance renforcée') {
     push('warn', 'wave', "Charge d'entraînement élevée — une courte séance de respiration ou de préparation mentale peut t'aider à mieux gérer cette période.")
@@ -517,6 +556,49 @@ export function recommendations(db) {
   }
 
   const sessions = db.planningSessions || []
+
+  // --- Tendance semaine vs semaine précédente (nouveau) : ne se déclenche
+  // que quand l'ACWR n'est pas encore disponible (< 14 jours d'historique),
+  // pour donner un premier repère de charge aux nouveaux utilisateurs sans
+  // dupliquer le signal ACWR une fois qu'il devient fiable.
+  if (!acwr.available) {
+    const thisMonday = mondayOf(new Date())
+    const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7)
+    const weekMinutes = (monday) => {
+      const startMs = monday.getTime(), endMs = startMs + 7 * 86400000
+      let sum = 0
+      for (const s of sessions) {
+        if (!s || s.statut !== 'realise' || !s.date) continue
+        const t = new Date(s.date + 'T00:00:00').getTime()
+        if (t >= startMs && t < endMs) sum += dureeToMins(s.duree)
+      }
+      return sum
+    }
+    const thisWeekMin = weekMinutes(thisMonday)
+    const lastWeekMin = weekMinutes(lastMonday)
+    if (lastWeekMin >= 60 && thisWeekMin > 0) {
+      const change = (thisWeekMin - lastWeekMin) / lastWeekMin
+      if (change > 0.5) {
+        push('info', 'chart', `Volume en hausse de ${Math.round(change * 100)}% par rapport à la semaine dernière (${thisWeekMin} vs ${lastWeekMin} min) — progression rapide, veille à bien récupérer entre les séances.`)
+      }
+    }
+  }
+
+  // --- Déséquilibre entre sports pratiqués (nouveau) : si un sport
+  // représente ≥80% des séances réalisées alors que plusieurs sports sont
+  // enregistrés au profil, rappel à garder du temps pour les autres.
+  const userSportIds2 = (db.profilePhys && db.profilePhys.sports) || []
+  if (userSportIds2.length >= 2) {
+    const ts = trainingStats(db)
+    if (ts.hasData && ts.sports.length >= 2) {
+      const totalCount = ts.sports.reduce((a, s) => a + s.count, 0)
+      const top = ts.sports[0]
+      if (totalCount >= 5 && top.pct >= 80) {
+        const others = ts.sports.slice(1).map((s) => s.label).join(', ')
+        push('info', 'chart', `${top.pct}% de tes séances enregistrées sont en ${top.label} — pense à garder un peu de place pour ${others} pour rester équilibré entre tes sports.`)
+      }
+    }
+  }
 
   // --- Hydratation avant une sortie course longue planifiée aujourd'hui ---
   const longRunToday = sessions.some((s) => s && s.date === iso && s.statut === 'planifie' && s.sport === 'course' && dureeToMins(s.duree) >= 60)
