@@ -1,6 +1,9 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs } from '../health/kit'
 import { SPORTS } from './trainData'
+import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE } from './plannerData'
+
+const MUSCU_SPORTS = ['muscu', 'crossfit', 'callisthenie', 'gym', 'halterophilie']
 
 const SPORT_EMOJI = {
   course: '🏃', demi: '🏃', fond: '🏃', trail: '⛰️', marche: '🥾',
@@ -46,6 +49,7 @@ function SessionCard({ s, onOpen }) {
       React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 2 } }, meta),
       React.createElement('div', { style: { display: 'flex', gap: 6, marginTop: 6 } },
         React.createElement('span', { style: { fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: s.statut === 'realise' ? 'color-mix(in srgb, #5b8a72 15%, ' + C.surface + ')' : 'color-mix(in srgb, #6f8fa6 15%, ' + C.surface + ')', color: s.statut === 'realise' ? '#5b8a72' : '#6f8fa6' } }, s.statut === 'realise' ? '✅ Réalisé' : '📅 Planifié'),
+        s.exercises && s.exercises.length > 0 && React.createElement('span', { style: { fontSize: 11, color: C.ink3 } }, '💪 ' + s.exercises.length + ' ex.'),
         s.notes && React.createElement('span', { style: { fontSize: 11, color: C.ink3 } }, '📝'))),
     s.ressenti && React.createElement('div', { style: { fontSize: 20, flex: '0 0 auto' } }, RESSENTI[s.ressenti - 1].e))
 }
@@ -134,7 +138,179 @@ function MonthView({ date, sessions, onGoDay }) {
     })())
 }
 
-function SessionForm({ activeSports, initial, initialDate, onSave, onDelete, onClose }) {
+function fieldLabel() { return { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }
+const fieldInputStyle = { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }
+function pillStyle(active) { return { padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (active ? C.primary : C.line), background: active ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, color: active ? C.primary : C.ink } }
+
+function computeAllure(distance, temps) {
+  const dist = parseFloat(distance)
+  if (!dist || !temps) return ''
+  const p = String(temps).split(':')
+  if (p.length < 2) return ''
+  const sec = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0)
+  const as = sec / dist, min = Math.floor(as / 60), ss = Math.round(as % 60)
+  return `${min}'${String(ss).padStart(2, '0')}"`
+}
+
+function CourseFields({ sport, data, setData }) {
+  const allure = computeAllure(data.distance, data.temps)
+  const upd = (k, v) => setData({ ...data, [k]: v, allure: k === 'distance' || k === 'temps' ? computeAllure(k === 'distance' ? v : data.distance, k === 'temps' ? v : data.temps) : data.allure })
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('div', { style: fieldLabel() }, sport === 'sprint' ? '⚡ Sprint' : sport === 'trail' ? '⛰️ Trail' : '🏃 Course'),
+    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+      React.createElement('input', { type: 'number', step: '0.1', placeholder: 'Distance (km)', value: data.distance || '', onChange: (e) => upd('distance', e.target.value), style: fieldInputStyle }),
+      React.createElement('input', { type: 'text', placeholder: 'Temps (mm:ss)', value: data.temps || '', onChange: (e) => upd('temps', e.target.value), style: fieldInputStyle }),
+      React.createElement('input', { type: 'text', placeholder: 'Allure (auto)', value: allure, readOnly: true, style: { ...fieldInputStyle, color: C.ink3 } }),
+      React.createElement('input', { type: 'number', placeholder: 'FC moy. (bpm)', value: data.fc || '', onChange: (e) => upd('fc', e.target.value), style: fieldInputStyle }),
+      React.createElement('input', { type: 'number', placeholder: 'Dénivelé+ (m)', value: data.denivele || '', onChange: (e) => upd('denivele', e.target.value), style: { ...fieldInputStyle, gridColumn: '1 / -1' } })))
+}
+
+function PercheFields({ data, setData }) {
+  const tech = data.tech || []
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('div', { style: fieldLabel() }, '🏋️ Perche'),
+    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 } },
+      React.createElement('input', { type: 'number', step: '0.01', placeholder: 'Hauteur max (m)', value: data.hauteur || '', onChange: (e) => setData({ ...data, hauteur: e.target.value }), style: fieldInputStyle }),
+      React.createElement('input', { type: 'number', placeholder: 'Nb sauts', value: data.sauts || '', onChange: (e) => setData({ ...data, sauts: e.target.value }), style: fieldInputStyle }),
+      React.createElement('input', { type: 'text', placeholder: 'Perche utilisée (5.10m / 70kg)', value: data.perche || '', onChange: (e) => setData({ ...data, perche: e.target.value }), style: { ...fieldInputStyle, gridColumn: '1 / -1' } })),
+    React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, marginBottom: 8 } }, 'Travail technique'),
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7 } },
+      TECH_PERCHE.map((t) => {
+        const active = tech.includes(t)
+        return React.createElement('button', { key: t, onClick: () => setData({ ...data, tech: active ? tech.filter((x) => x !== t) : [...tech, t] }), style: pillStyle(active) }, t)
+      })))
+}
+
+function EscaladeFields({ data, setData }) {
+  const types = data.types || []
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('div', { style: fieldLabel() }, '🧗 Escalade'),
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 } },
+      ['Bloc', 'Voie', 'Dalle', 'Dévers', 'Vertical'].map((t) => {
+        const active = types.includes(t)
+        return React.createElement('button', { key: t, onClick: () => setData({ ...data, types: active ? types.filter((x) => x !== t) : [...types, t] }), style: pillStyle(active) }, t)
+      })),
+    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+      React.createElement('input', { type: 'text', placeholder: 'Niveau (6b+)', value: data.niveau || '', onChange: (e) => setData({ ...data, niveau: e.target.value }), style: fieldInputStyle }),
+      React.createElement('input', { type: 'number', placeholder: 'Nb voies', value: data.voies || '', onChange: (e) => setData({ ...data, voies: e.target.value }), style: fieldInputStyle }),
+      React.createElement('input', { type: 'number', placeholder: 'Nb blocs', value: data.blocs || '', onChange: (e) => setData({ ...data, blocs: e.target.value }), style: fieldInputStyle })))
+}
+
+function GenericSportFields({ sportId, data, setData }) {
+  const cfg = SPORT_FIELDS[sportId]
+  if (!cfg) return null
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('div', { style: fieldLabel() }, cfg.icon, ' ', cfg.label),
+    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+      cfg.fields.map((f) => {
+        const val = data[f.k]
+        if (f.t === 'num' || f.t === 'text' || f.t === 'time') {
+          return React.createElement('input', { key: f.k, type: f.t === 'num' ? 'number' : 'text', step: f.step, placeholder: f.lab + (f.ph ? ` (${f.ph})` : ''), value: val || '', onChange: (e) => setData({ ...data, [f.k]: e.target.value }), style: fieldInputStyle })
+        }
+        if (f.t === 'select1') {
+          return React.createElement('div', { key: f.k, style: { gridColumn: '1 / -1' } },
+            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab),
+            React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7 } },
+              f.opts.map((o) => React.createElement('button', { key: o, onClick: () => setData({ ...data, [f.k]: o }), style: pillStyle(val === o) }, o))))
+        }
+        if (f.t === 'pills') {
+          const cur = Array.isArray(val) ? val : []
+          return React.createElement('div', { key: f.k, style: { gridColumn: '1 / -1' } },
+            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab),
+            React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7 } },
+              f.opts.map((o) => { const on = cur.includes(o); return React.createElement('button', { key: o, onClick: () => setData({ ...data, [f.k]: on ? cur.filter((x) => x !== o) : [...cur, o] }), style: pillStyle(on) }, o) })))
+        }
+        if (f.t === 'bool') {
+          const cur = val === true
+          return React.createElement('div', { key: f.k, style: { gridColumn: '1 / -1' } },
+            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab),
+            React.createElement('div', { style: { display: 'flex', gap: 7 } },
+              React.createElement('button', { onClick: () => setData({ ...data, [f.k]: false }), style: pillStyle(!cur) }, 'Non'),
+              React.createElement('button', { onClick: () => setData({ ...data, [f.k]: true }), style: pillStyle(cur) }, 'Oui')))
+        }
+        return null
+      })))
+}
+
+function ExerciseSetRow({ exIdx, setIdx, set, onUpdate }) {
+  const mode = set.mode || 'reps'
+  return React.createElement('div', { style: { marginBottom: 10 } },
+    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 } },
+      React.createElement('div', null,
+        React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'Séries'),
+        React.createElement('input', { type: 'number', value: set.series || 3, onChange: (e) => onUpdate(exIdx, setIdx, 'series', e.target.value), style: { ...fieldInputStyle, padding: '8px 9px', fontSize: 13 } })),
+      React.createElement('div', null,
+        React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, mode === 'duree' ? 'Durée (s)' : 'Reps'),
+        React.createElement('input', { type: 'number', value: (mode === 'duree' ? set.duree : set.reps) || (mode === 'duree' ? 30 : 10), onChange: (e) => onUpdate(exIdx, setIdx, mode === 'duree' ? 'duree' : 'reps', e.target.value), style: { ...fieldInputStyle, padding: '8px 9px', fontSize: 13 } })),
+      React.createElement('div', null,
+        React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'Charge kg'),
+        React.createElement('input', { type: 'number', step: '0.5', placeholder: '0', value: set.charge || '', onChange: (e) => onUpdate(exIdx, setIdx, 'charge', e.target.value), style: { ...fieldInputStyle, padding: '8px 9px', fontSize: 13 } })),
+      React.createElement('div', null,
+        React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'RPE'),
+        React.createElement('input', { type: 'number', min: 1, max: 10, placeholder: '—', value: set.rpe || '', onChange: (e) => onUpdate(exIdx, setIdx, 'rpe', e.target.value), style: { ...fieldInputStyle, padding: '8px 9px', fontSize: 13 } }))),
+    React.createElement('div', { style: { display: 'flex', gap: 6, marginTop: 6 } },
+      React.createElement('button', { onClick: () => onUpdate(exIdx, setIdx, 'mode', 'reps'), style: { flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: mode === 'reps' ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface2, color: mode === 'reps' ? C.primary : C.ink3 } }, 'Répétitions'),
+      React.createElement('button', { onClick: () => onUpdate(exIdx, setIdx, 'mode', 'duree'), style: { flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: mode === 'duree' ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface2, color: mode === 'duree' ? C.primary : C.ink3 } }, 'Tenue chronométrée')))
+}
+
+function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemove }) {
+  const h = history && history[ex.name]
+  const last = h && h.last ? `Dernière : ${h.last.charge}kg × ${h.last.reps}` : ''
+  const record = h && h.record ? `🏆 ${h.record.charge}kg` : ''
+  return React.createElement('div', { style: { padding: 12, borderRadius: C.radiusSm, background: C.surface2, marginBottom: 10 } },
+    React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 } },
+      React.createElement('div', null,
+        React.createElement('div', { style: { fontWeight: 700, fontSize: 14.5 } }, ex.name),
+        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3 } }, ex.group)),
+      React.createElement('div', { style: { textAlign: 'right' } },
+        record && React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.primary } }, record),
+        last && React.createElement('div', { style: { fontSize: 10, color: C.ink3 } }, last),
+        React.createElement('button', { onClick: () => onRemove(idx), style: { fontSize: 11, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', marginTop: 3 } }, 'Retirer'))),
+    (ex.sets || []).map((set, si) => React.createElement(ExerciseSetRow, { key: si, exIdx: idx, setIdx: si, set, onUpdate: onUpdateSet })),
+    React.createElement('button', { onClick: () => onAddSet(idx), style: { width: '100%', padding: '8px 0', borderRadius: 8, background: 'transparent', border: `1px dashed ${C.line}`, color: C.ink3, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', marginTop: 4 } }, '+ Ajouter une série'))
+}
+
+function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
+  const [query, setQuery] = useState('')
+  const results = query.trim()
+    ? Object.entries(EXERCISES_DB).flatMap(([g, list]) => list.filter((e) => e.toLowerCase().includes(query.toLowerCase())).map((e) => ({ n: e, g }))).slice(0, 8)
+    : []
+
+  function addEx(name, group) {
+    const h = exerciseHistory && exerciseHistory[name]
+    const sc = h && h.last ? h.last.charge + 2.5 : ''
+    setExercises([...exercises, { name, group, sets: [{ mode: 'reps', series: 4, reps: 8, duree: 30, charge: sc, rpe: '', repos: 90 }] }])
+    setQuery('')
+  }
+  function removeEx(idx) { setExercises(exercises.filter((_, i) => i !== idx)) }
+  function addSet(idx) {
+    const next = [...exercises]
+    const last = next[idx].sets[next[idx].sets.length - 1] || {}
+    next[idx] = { ...next[idx], sets: [...next[idx].sets, { mode: last.mode || 'reps', series: 1, reps: last.reps || 8, duree: last.duree || 30, charge: last.charge || 0, rpe: '', repos: 90 }] }
+    setExercises(next)
+  }
+  function updateSet(exIdx, setIdx, field, value) {
+    const next = [...exercises]
+    const sets = [...next[exIdx].sets]
+    sets[setIdx] = { ...sets[setIdx], [field]: field === 'mode' ? value : (parseFloat(value) || 0) }
+    next[exIdx] = { ...next[exIdx], sets }
+    setExercises(next)
+  }
+
+  const sportLabels = { muscu: '💪 Musculation', crossfit: '🏋️ Crossfit', callisthenie: '🤸 Callisthénie', gym: '🤸 Gym', halterophilie: '🏋️ Haltérophilie' }
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('div', { style: fieldLabel() }, sportLabels[sport] || '💪 Musculation'),
+    React.createElement('div', { style: { position: 'relative', marginBottom: 12 } },
+      React.createElement('input', { type: 'text', placeholder: 'Rechercher un exercice…', value: query, onChange: (e) => setQuery(e.target.value), style: fieldInputStyle }),
+      results.length > 0 && React.createElement('div', { style: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', zIndex: 5, boxShadow: '0 8px 20px -8px rgba(0,0,0,.2)' } },
+        results.map((r, i) => React.createElement('button', { key: i, onClick: () => addEx(r.n, r.g), style: { width: '100%', display: 'flex', justifyContent: 'space-between', padding: '10px 13px', background: 'none', border: 'none', borderBottom: i < results.length - 1 ? `1px solid ${C.line}` : 'none', cursor: 'pointer', textAlign: 'left' } },
+          React.createElement('span', { style: { fontSize: 13.5, fontWeight: 600 } }, r.n),
+          React.createElement('span', { style: { fontSize: 11.5, color: C.ink3 } }, r.g))))),
+    exercises.map((ex, i) => React.createElement(ExerciseCard, { key: i, ex, idx: i, history: exerciseHistory, onUpdateSet: updateSet, onAddSet: addSet, onRemove: removeEx })),
+    exercises.length === 0 && React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, textAlign: 'center', padding: '10px 0' } }, 'Cherche et ajoute un exercice ci-dessus.'))
+}
+
+function SessionForm({ activeSports, initial, initialDate, exerciseHistory, onSave, onDelete, onClose }) {
   const [sport, setSport] = useState(initial?.sport || null)
   const [date, setDate] = useState(initial?.date || initialDate || isoDate(new Date()))
   const [heure, setHeure] = useState(initial?.heure || '')
@@ -143,6 +319,8 @@ function SessionForm({ activeSports, initial, initialDate, onSave, onDelete, onC
   const [statut, setStatut] = useState(initial?.statut || 'planifie')
   const [ressenti, setRessenti] = useState(initial?.ressenti || null)
   const [notes, setNotes] = useState(initial?.notes || '')
+  const [data, setData] = useState(initial?.data || {})
+  const [exercises, setExercises] = useState(initial?.exercises || [])
 
   const canSave = !!sport && !!date
   function handleSave() {
@@ -150,7 +328,7 @@ function SessionForm({ activeSports, initial, initialDate, onSave, onDelete, onC
       id: initial?.id || 's_' + Date.now(),
       date, heure, sport,
       duree: duree === 'Personnalisée' ? (dureeCustom || 'Personnalisée') : duree,
-      statut, ressenti, notes,
+      statut, ressenti, notes, data, exercises,
     })
   }
 
@@ -192,6 +370,12 @@ function SessionForm({ activeSports, initial, initialDate, onSave, onDelete, onC
         React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 16 } },
           RESSENTI.map((r) => React.createElement('button', { key: r.val, onClick: () => setRessenti(r.val), title: r.l, style: { flex: 1, padding: '10px 0', borderRadius: C.radiusSm, fontSize: 22, cursor: 'pointer', border: '1.5px solid ' + (ressenti === r.val ? C.primary : C.line), background: ressenti === r.val ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface } }, r.e)))),
 
+      (sport === 'course' || sport === 'sprint' || sport === 'trail') && React.createElement(CourseFields, { sport, data, setData }),
+      sport === 'perche' && React.createElement(PercheFields, { data, setData }),
+      sport === 'escalade' && React.createElement(EscaladeFields, { data, setData }),
+      sport && MUSCU_SPORTS.includes(sport) && React.createElement(MuscuFields, { sport, exercises, setExercises, exerciseHistory }),
+      sport && !MUSCU_SPORTS.includes(sport) && sport !== 'course' && sport !== 'sprint' && sport !== 'trail' && sport !== 'perche' && sport !== 'escalade' && React.createElement(GenericSportFields, { sportId: sport, data, setData }),
+
       React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Notes'),
       React.createElement('textarea', { value: notes, onChange: (e) => setNotes(e.target.value), placeholder: 'Objectifs, commentaires…', rows: 3, style: { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14, outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: C.font, marginBottom: 18 } }),
 
@@ -201,11 +385,13 @@ function SessionForm({ activeSports, initial, initialDate, onSave, onDelete, onC
 
 // ============================================================
 // Calendrier — planning des séances (créer/voir/modifier/supprimer),
-// vues jour/semaine/mois. Version resserrée du planificateur de
-// l'ancienne app : les fonctions avancées propres à la musculation
-// (suivi série par série, minuteur d'intervalles, calcul d'allure)
-// ne sont pas reprises ici, ce terrain étant déjà couvert par les
-// modules Programme/Catalogue/Lecteur de séance.
+// vues jour/semaine/mois, champs par sport (distance/allure/FC pour la
+// course, hauteur/technique pour la perche, voies/niveau pour l'escalade,
+// champs génériques pour les autres sports) et suivi série par série
+// pour la musculation. Le minuteur de repos guidé et le calculateur
+// d'allure "en direct" de l'ancienne app ne sont pas repris tels quels
+// (ce terrain de lecture guidée est déjà couvert par le Lecteur de
+// séance) — l'allure est recalculée à l'affichage à la place.
 // ============================================================
 export default function PlannerSpace({ db, store, onClose }) {
   const [view, setView] = useState('day')
@@ -214,6 +400,7 @@ export default function PlannerSpace({ db, store, onClose }) {
   const [newDate, setNewDate] = useState(null)
 
   const sessions = db.planningSessions || []
+  const exerciseHistory = db.exerciseHistory || {}
   const userSports = (db.profilePhys && db.profilePhys.sports) || []
   const activeSports = SPORTS.filter((sp) => (userSports.length ? userSports : DEFAULT_SPORTS).includes(sp.id))
 
@@ -228,7 +415,21 @@ export default function PlannerSpace({ db, store, onClose }) {
   function openEdit(s) { setForm(s) }
   function saveSession(sess) {
     const next = sessions.some((s) => s.id === sess.id) ? sessions.map((s) => s.id === sess.id ? sess : s) : [...sessions, sess]
-    store.set({ planningSessions: next })
+    const patch = { planningSessions: next }
+    if (MUSCU_SPORTS.includes(sess.sport) && sess.statut === 'realise' && sess.exercises && sess.exercises.length) {
+      const hist = { ...exerciseHistory }
+      sess.exercises.forEach((ex) => {
+        const maxCharge = Math.max(...ex.sets.map((st) => st.charge || 0))
+        const lastSet = ex.sets[0] || {}
+        const prevRecord = hist[ex.name] && hist[ex.name].record
+        hist[ex.name] = {
+          last: { charge: lastSet.charge || 0, reps: lastSet.reps || 0, date: sess.date },
+          record: (!prevRecord || maxCharge > prevRecord.charge) ? { charge: maxCharge, date: sess.date } : prevRecord,
+        }
+      })
+      patch.exerciseHistory = hist
+    }
+    store.set(patch)
     setForm(null)
   }
   function deleteSession(id) {
@@ -265,6 +466,7 @@ export default function PlannerSpace({ db, store, onClose }) {
       activeSports,
       initial: form === 'new' ? null : form,
       initialDate: newDate,
+      exerciseHistory,
       onSave: saveSession,
       onDelete: deleteSession,
       onClose: () => setForm(null),
