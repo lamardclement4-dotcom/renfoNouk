@@ -14,6 +14,7 @@ import CoachSpace from './CoachSpace'
 import PeakSpace from './PeakSpace'
 import PlannerSpace from './PlannerSpace'
 import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
+import HealthHome from '../health/HealthHome'
 
 // ============================================================
 // "S'entraîner" — hub central du module Entraîner, porté depuis
@@ -26,9 +27,23 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   const [tile, setTile] = useState(initialTile || null)
   const [openId, setOpenId] = useState(initialOpenId || null)
   const [playId, setPlayId] = useState(null)
+  const [healthTile, setHealthTile] = useState(null)
 
   if (loading) {
     return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font } }, 'Chargement...')
+  }
+
+  // Destinations Entraîner (tile interne) vs Santé (module cross-onglet,
+  // ouvert en overlay plein écran via HealthHome embedded) — utilisé par
+  // les cartes cliquables du Coach pour ouvrir directement le bon module.
+  const ENTRAINER_ACTIONS = new Set(['mobility', 'program', 'planner', 'recovery', 'peak', 'tests'])
+  function handleCoachAction(action) {
+    if (!action) return
+    if (ENTRAINER_ACTIONS.has(action)) { setTile(action); return }
+    setHealthTile(action)
+  }
+  if (healthTile) {
+    return React.createElement(HealthHome, { userId, initialSpace: healthTile, embedded: true, onClose: () => setHealthTile(null) })
   }
 
   function finishSession() {
@@ -56,7 +71,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   if (tile === 'mobcatalog') return React.createElement(MobilityCatalog, { onClose: () => setTile(null), onOpenSession: setOpenId })
   if (tile === 'recovery') return React.createElement(RecoverySpace, { onClose: () => setTile(null), onOpenSession: setOpenId })
   if (tile === 'plyo') return React.createElement(PliometrieSpace, { onClose: () => setTile(null), onOpenSession: setOpenId })
-  if (tile === 'coach') return React.createElement(CoachSpace, { db, onClose: () => setTile(null) })
+  if (tile === 'coach') return React.createElement(CoachSpace, { db, onClose: () => setTile(null), onAction: handleCoachAction })
   if (tile === 'peak') return React.createElement(PeakSpace, { db, store, onClose: () => setTile(null), onMobility: () => setTile('mobility'), onProgram: () => setTile('program'), onRecovery: () => setTile('recovery') })
   if (tile === 'tests') return React.createElement(PhysicalTestsSpace, { userId, onClose: () => setTile(null) })
   if (tile === 'planner') return React.createElement(PlannerSpace, { db, store, onClose: () => setTile(null) })

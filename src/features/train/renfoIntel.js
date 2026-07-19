@@ -394,21 +394,21 @@ export function trainingStats(db) {
 export function recommendations(db) {
   const iso = todayISO()
   const recos = []
-  const push = (level, ic, text) => recos.push({ level, icon: ic, text })
+  const push = (level, ic, text, action) => recos.push({ level, icon: ic, text, action })
 
   // --- Protéines ---
   const nut = pillarNutrition(db, iso)
   if (nut.status === 'ok' && nut.extra.protTarget && nut.extra.prot < nut.extra.protTarget * 0.7) {
-    push('warn', 'apple', `Ta consommation de protéines est trop faible pour ton objectif (${nut.extra.prot} / ${nut.extra.protTarget} g).`)
+    push('warn', 'apple', `Ta consommation de protéines est trop faible pour ton objectif (${nut.extra.prot} / ${nut.extra.protTarget} g).`, 'nutrition')
   }
 
   // --- Hydratation / caféine ---
   const hyd = pillarHydration(db, iso)
   if (hyd.status === 'ok' && hyd.extra.ml < hyd.extra.target * 0.6) {
-    push('warn', 'drop', `Hydratation en retard : ${hyd.extra.ml} / ${hyd.extra.target} ml aujourd'hui.`)
+    push('warn', 'drop', `Hydratation en retard : ${hyd.extra.ml} / ${hyd.extra.target} ml aujourd'hui.`, 'hydratation')
   }
   if (hyd.status === 'ok' && hyd.extra.caf >= 320) {
-    push(hyd.extra.caf >= 400 ? 'alert' : 'warn', 'bolt', `Ta consommation de caféine (${hyd.extra.caf} mg) est proche de la limite recommandée (400 mg/j).`)
+    push(hyd.extra.caf >= 400 ? 'alert' : 'warn', 'bolt', `Ta consommation de caféine (${hyd.extra.caf} mg) est proche de la limite recommandée (400 mg/j).`, 'hydratation')
   }
 
   // --- Charge d'entraînement : ACWR (historique réel) prioritaire sur le
@@ -422,23 +422,23 @@ export function recommendations(db) {
         ? "Ta charge augmente trop vite pour ton niveau débutant — réduis le volume et insère un jour de repos."
         : ul2.id === 'confirme'
           ? 'Charge très élevée même pour ton niveau confirmé — semaine de récupération active conseillée.'
-          : "Ta charge d'entraînement augmente trop rapidement cette semaine.")
+          : "Ta charge d'entraînement augmente trop rapidement cette semaine.", 'planner')
     } else if (acwr.ratio > ul2.acwrWarn && load.status === 'ok' && load.extra.spike) {
-      push('warn', 'chart', 'Grosse séance isolée : pense à équilibrer ta charge sur la semaine.')
+      push('warn', 'chart', 'Grosse séance isolée : pense à équilibrer ta charge sur la semaine.', 'planner')
     }
   } else if (load.status === 'ok' && load.extra.spike) {
-    push('warn', 'chart', 'Grosse séance isolée : pense à équilibrer ta charge sur la semaine.')
+    push('warn', 'chart', 'Grosse séance isolée : pense à équilibrer ta charge sur la semaine.', 'planner')
   }
   if (load.extra && load.extra.plannerPlanned > 0 && load.extra.plannerCount === 0) {
-    push('info', 'calendar', `${load.extra.plannerPlanned} séance(s) planifiée(s) cette semaine — pense à les marquer comme réalisées.`)
+    push('info', 'calendar', `${load.extra.plannerPlanned} séance(s) planifiée(s) cette semaine — pense à les marquer comme réalisées.`, 'planner')
   }
 
   // --- Sommeil ---
   const slp = pillarSleep(db)
   if (slp.status === 'ok' && slp.extra.hours) {
     const h = slp.extra.hours
-    if (h < 6) push('alert', 'moon', `Seulement ${h.toFixed(1)} h de sommeil cette nuit — en-dessous de 6 h, récupération et performances chutent significativement (AASM).`)
-    else if (h < 7) push('warn', 'moon', `${h.toFixed(1)} h de sommeil cette nuit — vise 7–9 h pour une récupération optimale.`)
+    if (h < 6) push('alert', 'moon', `Seulement ${h.toFixed(1)} h de sommeil cette nuit — en-dessous de 6 h, récupération et performances chutent significativement (AASM).`, 'sommeil')
+    else if (h < 7) push('warn', 'moon', `${h.toFixed(1)} h de sommeil cette nuit — vise 7–9 h pour une récupération optimale.`, 'sommeil')
   }
 
   // --- Prévention / douleur ---
@@ -447,15 +447,15 @@ export function recommendations(db) {
     push(prev.extra.pain.urgent ? 'alert' : 'warn', 'shield',
       prev.extra.pain.urgent
         ? 'Douleur signalée comme préoccupante lors de ton dernier bilan de prévention — arrête les impacts et consulte un professionnel de santé.'
-        : 'Douleur active signalée dans ton bilan de prévention — adapte tes séances tant qu\'elle n\'est pas résolue.')
+        : 'Douleur active signalée dans ton bilan de prévention — adapte tes séances tant qu\'elle n\'est pas résolue.', 'prevention')
     if (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
-      push('alert', 'shield', 'Douleur active et charge d\'entraînement élevée en même temps — combinaison à risque, priorise la récupération avant de reprendre l\'intensité.')
+      push('alert', 'shield', 'Douleur active et charge d\'entraînement élevée en même temps — combinaison à risque, priorise la récupération avant de reprendre l\'intensité.', 'prevention')
     }
   } else if (prev.status === 'absent') {
-    push('info', 'shield', 'Tu n\'as pas encore fait ton bilan de prévention — utile pour repérer tes facteurs de risque de blessure avant qu\'ils ne posent problème.')
+    push('info', 'shield', 'Tu n\'as pas encore fait ton bilan de prévention — utile pour repérer tes facteurs de risque de blessure avant qu\'ils ne posent problème.', 'prevention')
   } else if (prev.status === 'ok' && prev.extra.date) {
     const days = Math.floor((new Date(iso + 'T00:00:00') - new Date(prev.extra.date + 'T00:00:00')) / 86400000)
-    if (days > 60) push('info', 'shield', `Ton dernier bilan de prévention date de ${days} jours — refais-le pour un état des lieux à jour.`)
+    if (days > 60) push('info', 'shield', `Ton dernier bilan de prévention date de ${days} jours — refais-le pour un état des lieux à jour.`, 'prevention')
   }
 
   // --- Mobilité ---
@@ -464,12 +464,12 @@ export function recommendations(db) {
     const ankle = mob.extra.weak.some((l) => /cheville/i.test(l))
     push('info', 'target', ankle
       ? 'Ta mobilité de cheville limite potentiellement tes performances — ajoute des exercices ciblés.'
-      : `Zones de mobilité à travailler : ${mob.extra.weak.join(', ')}.`)
+      : `Zones de mobilité à travailler : ${mob.extra.weak.join(', ')}.`, 'mobility')
   }
   if (mob.status === 'ok' && mob.extra.date) {
     const days = Math.floor((new Date(iso + 'T00:00:00') - new Date(mob.extra.date + 'T00:00:00')) / 86400000)
     if (days > 30 && mob.extra.score < 60) {
-      push('info', 'target', `Ton dernier test de mobilité (score ${mob.extra.score}/100) date de ${days} jours — un nouveau test t'aiderait à voir si tu as progressé.`)
+      push('info', 'target', `Ton dernier test de mobilité (score ${mob.extra.score}/100) date de ${days} jours — un nouveau test t'aiderait à voir si tu as progressé.`, 'mobility')
     }
   }
 
@@ -485,7 +485,7 @@ export function recommendations(db) {
       for (const wl of mob.extra.weak) {
         const words = wl.toLowerCase().split(/[^a-zàâäéèêëïîôöùûüç]+/).filter((w) => w.length > 3)
         if (words.some((w) => focusLower.includes(w))) {
-          push('warn', 'target', `En ${sp.label}, ${wl.toLowerCase()} est une zone clé de la discipline (${sp.focus.toLowerCase()}) — c'est justement ta zone la plus raide au test de mobilité. Priorise les exercices ciblés avant que ça ne devienne limitant.`)
+          push('warn', 'target', `En ${sp.label}, ${wl.toLowerCase()} est une zone clé de la discipline (${sp.focus.toLowerCase()}) — c'est justement ta zone la plus raide au test de mobilité. Priorise les exercices ciblés avant que ça ne devienne limitant.`, 'mobility')
           break outer
         }
       }
@@ -496,13 +496,13 @@ export function recommendations(db) {
   const sleepLow = slp.status === 'ok' && slp.extra.hours && slp.extra.hours < 7
   const loadHigh = (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) || (load.status === 'ok' && load.extra.ratio > 1.3)
   if (sleepLow && loadHigh) {
-    push('alert', 'shield', "Sommeil insuffisant et charge d'entraînement élevée en même temps — combinaison qui augmente le risque de blessure et de baisse de performance.")
+    push('alert', 'shield', "Sommeil insuffisant et charge d'entraînement élevée en même temps — combinaison qui augmente le risque de blessure et de baisse de performance.", 'sommeil')
   }
 
   // --- Tests physiques : points faibles précis (pas juste "fais un test") ---
   const tests = db.physTests || []
   if (tests.length === 0) {
-    push('info', 'route', 'Tu n\'as encore fait aucun test physique — utile pour cibler tes séances de renfo et mobilité selon tes vrais points faibles.')
+    push('info', 'route', 'Tu n\'as encore fait aucun test physique — utile pour cibler tes séances de renfo et mobilité selon tes vrais points faibles.', 'tests')
   } else {
     const byId = {}
     tests.forEach((t) => { if (!byId[t.testId] || t.date > byId[t.testId].date) byId[t.testId] = t })
@@ -518,12 +518,12 @@ export function recommendations(db) {
       if (lv.score <= 2) weak.push(TEST_LABELS[tid] || tid)
     })
     if (weak.length) {
-      push('warn', 'chart', `Tests physiques : niveau faible en ${weak.join(', ')}. Tes séances de renfo et mobilité devraient cibler ces zones en priorité.`)
+      push('warn', 'chart', `Tests physiques : niveau faible en ${weak.join(', ')}. Tes séances de renfo et mobilité devraient cibler ces zones en priorité.`, 'tests')
     }
     const lastDate = tests.reduce((max, t) => (!max || t.date > max) ? t.date : max, null)
     if (lastDate) {
       const days = Math.floor((new Date(iso + 'T00:00:00') - new Date(lastDate + 'T00:00:00')) / 86400000)
-      if (days > 60) push('info', 'route', `Ton dernier test physique date de ${days} jours — refais-en un pour voir ta progression et ajuster tes séances.`)
+      if (days > 60) push('info', 'route', `Ton dernier test physique date de ${days} jours — refais-en un pour voir ta progression et ajuster tes séances.`, 'tests')
     }
   }
 
@@ -537,21 +537,21 @@ export function recommendations(db) {
     if (!h.record || !h.last || !h.last.charge || !h.last.date) continue
     const daysSinceLast = Math.floor((new Date(iso + 'T00:00:00') - new Date(h.last.date + 'T00:00:00')) / 86400000)
     if (daysSinceLast <= 14 && h.last.charge < h.record.charge * 0.8) {
-      push('info', 'dumbbell', `${name} : dernière charge ${h.last.charge} kg, nettement sous ton record de ${h.record.charge} kg — normal après une pause, mais surveille si ça persiste sur plusieurs séances.`)
+      push('info', 'dumbbell', `${name} : dernière charge ${h.last.charge} kg, nettement sous ton record de ${h.record.charge} kg — normal après une pause, mais surveille si ça persiste sur plusieurs séances.`, 'planner')
       break
     }
   }
 
   // --- Stress/charge élevée sans outil de régulation récent ---
   if (acwr.available && acwr.level === 'Vigilance renforcée') {
-    push('warn', 'wave', "Charge d'entraînement élevée — une courte séance de respiration ou de préparation mentale peut t'aider à mieux gérer cette période.")
+    push('warn', 'wave', "Charge d'entraînement élevée — une courte séance de respiration ou de préparation mentale peut t'aider à mieux gérer cette période.", 'esprit')
   }
 
   // --- Cycle menstruel : repère phase lutéale (preuve modérée, variabilité individuelle) ---
   if (db.cycle && db.cycle.enabled && db.cycle.startDate) {
     const cyc = cycleInfo(db.cycle)
     if (cyc.phase === 'luteale') {
-      push('info', 'wave', "Phase lutéale de ton cycle — la perception d'effort peut être légèrement plus élevée chez certaines personnes. Repère individuel, pas une règle universelle.")
+      push('info', 'wave', "Phase lutéale de ton cycle — la perception d'effort peut être légèrement plus élevée chez certaines personnes. Repère individuel, pas une règle universelle.", 'cycle')
     }
   }
 
@@ -579,7 +579,7 @@ export function recommendations(db) {
     if (lastWeekMin >= 60 && thisWeekMin > 0) {
       const change = (thisWeekMin - lastWeekMin) / lastWeekMin
       if (change > 0.5) {
-        push('info', 'chart', `Volume en hausse de ${Math.round(change * 100)}% par rapport à la semaine dernière (${thisWeekMin} vs ${lastWeekMin} min) — progression rapide, veille à bien récupérer entre les séances.`)
+        push('info', 'chart', `Volume en hausse de ${Math.round(change * 100)}% par rapport à la semaine dernière (${thisWeekMin} vs ${lastWeekMin} min) — progression rapide, veille à bien récupérer entre les séances.`, 'planner')
       }
     }
   }
@@ -595,7 +595,7 @@ export function recommendations(db) {
       const top = ts.sports[0]
       if (totalCount >= 5 && top.pct >= 80) {
         const others = ts.sports.slice(1).map((s) => s.label).join(', ')
-        push('info', 'chart', `${top.pct}% de tes séances enregistrées sont en ${top.label} — pense à garder un peu de place pour ${others} pour rester équilibré entre tes sports.`)
+        push('info', 'chart', `${top.pct}% de tes séances enregistrées sont en ${top.label} — pense à garder un peu de place pour ${others} pour rester équilibré entre tes sports.`, 'planner')
       }
     }
   }
@@ -603,7 +603,7 @@ export function recommendations(db) {
   // --- Hydratation avant une sortie course longue planifiée aujourd'hui ---
   const longRunToday = sessions.some((s) => s && s.date === iso && s.statut === 'planifie' && s.sport === 'course' && dureeToMins(s.duree) >= 60)
   if (longRunToday && hyd.status === 'ok' && hyd.extra.ml < hyd.extra.target * 0.3) {
-    push('warn', 'drop', "Sortie course longue prévue aujourd'hui et hydratation encore faible — anticipe avant de partir.")
+    push('warn', 'drop', "Sortie course longue prévue aujourd'hui et hydratation encore faible — anticipe avant de partir.", 'hydratation')
   }
 
   // --- Ressenti des 3 dernières séances réalisées (signal direct de l'utilisateur) ---
@@ -611,9 +611,9 @@ export function recommendations(db) {
   if (doneWithRessenti.length >= 3) {
     const lastThree = doneWithRessenti.slice(-3)
     if (lastThree.every((s) => s.ressenti <= 2)) {
-      push('warn', 'heart', 'Tes 3 dernières séances ont un ressenti faible — signe possible de fatigue accumulée. Une séance plus légère ou un jour de repos peut aider.')
+      push('warn', 'heart', 'Tes 3 dernières séances ont un ressenti faible — signe possible de fatigue accumulée. Une séance plus légère ou un jour de repos peut aider.', 'planner')
     } else if (lastThree.every((s) => s.ressenti >= 4)) {
-      push('info', 'flame', 'Tes 3 dernières séances ont un très bon ressenti — continue sur cette dynamique, c\'est un bon signal de récupération adaptée.')
+      push('info', 'flame', 'Tes 3 dernières séances ont un très bon ressenti — continue sur cette dynamique, c\'est un bon signal de récupération adaptée.', 'planner')
     }
   }
 
@@ -622,7 +622,7 @@ export function recommendations(db) {
   if (nDay.entries > 0) {
     const longEnduranceToday = sessions.some((s) => s && s.date === iso && s.statut === 'planifie' && (s.sport === 'course' || s.sport === 'velo') && dureeToMins(s.duree) >= 90)
     if (longEnduranceToday && nDay.g < 80) {
-      push('warn', 'apple', `Séance d'endurance longue prévue aujourd'hui et apport en glucides encore faible (${Math.round(nDay.g)} g) — pense à en ajouter avant de partir.`)
+      push('warn', 'apple', `Séance d'endurance longue prévue aujourd'hui et apport en glucides encore faible (${Math.round(nDay.g)} g) — pense à en ajouter avant de partir.`, 'nutrition')
     }
   }
 
@@ -636,14 +636,14 @@ export function recommendations(db) {
     if (!foodLog[isoK] || foodLog[isoK].length === 0) emptyDays++
   }
   if (emptyDays === 3) {
-    push('info', 'apple', 'Aucune saisie nutrition depuis 3 jours — reprends le suivi si tu veux des conseils plus précis.')
+    push('info', 'apple', 'Aucune saisie nutrition depuis 3 jours — reprends le suivi si tu veux des conseils plus précis.', 'nutrition')
   }
 
   // --- Répartition lipides anormalement élevée (> 40 % des calories du jour) ---
   if (nDay.entries > 0 && nDay.k > 0) {
     const lipRatio = nDay.l * 9 / nDay.k
     if (lipRatio > 0.40) {
-      push('info', 'apple', `Les lipides représentent une grosse part de tes calories aujourd'hui (${Math.round(lipRatio * 100)} %) — repère général à surveiller, pas une règle stricte.`)
+      push('info', 'apple', `Les lipides représentent une grosse part de tes calories aujourd'hui (${Math.round(lipRatio * 100)} %) — repère général à surveiller, pas une règle stricte.`, 'nutrition')
     }
   }
 
@@ -658,7 +658,7 @@ export function recommendations(db) {
       if (suppTaken[isoK] && suppTaken[isoK].length > 0) { anyTakenLast3 = true; break }
     }
     if (!anyTakenLast3) {
-      push('info', 'spark', 'Tu as un plan de compléments mais aucune prise enregistrée depuis 3 jours — coche-les au fur et à mesure pour garder un suivi utile.')
+      push('info', 'spark', 'Tu as un plan de compléments mais aucune prise enregistrée depuis 3 jours — coche-les au fur et à mesure pour garder un suivi utile.', 'complements')
     }
     if (suppPlan.includes('creatine')) {
       let creatineDaysTaken = 0
@@ -668,7 +668,7 @@ export function recommendations(db) {
         if (suppTaken[isoK] && suppTaken[isoK].includes('creatine')) creatineDaysTaken++
       }
       if (creatineDaysTaken > 0 && creatineDaysTaken < 4) {
-        push('info', 'spark', `Créatine prise seulement ${creatineDaysTaken} jour(s) sur les 7 derniers — son effet dépend d'une prise quotidienne régulière, pas du moment précis.`)
+        push('info', 'spark', `Créatine prise seulement ${creatineDaysTaken} jour(s) sur les 7 derniers — son effet dépend d'une prise quotidienne régulière, pas du moment précis.`, 'complements')
       }
     }
   }
@@ -685,14 +685,14 @@ export function recommendations(db) {
     if (upcoming) {
       const pk = upcoming.plan, pkGoal = upcoming.goal
       if (pk.phase === 'today') {
-        push('info', 'target', `C'est le jour J pour « ${pkGoal.label} » — fais confiance au travail effectué.`)
+        push('info', 'target', `C'est le jour J pour « ${pkGoal.label} » — fais confiance au travail effectué.`, 'peak')
       } else if (pk.phase === 'taper') {
-        push('warn', 'target', `Affûtage en cours pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — réduis le volume tout en gardant l'intensité.`)
+        push('warn', 'target', `Affûtage en cours pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — réduis le volume tout en gardant l'intensité.`, 'peak')
         if (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
-          push('alert', 'shield', `Ta charge d'entraînement reste élevée alors que tu es en affûtage pour « ${pkGoal.label} » — c'est le moment de vraiment lever le pied.`)
+          push('alert', 'shield', `Ta charge d'entraînement reste élevée alors que tu es en affûtage pour « ${pkGoal.label} » — c'est le moment de vraiment lever le pied.`, 'peak')
         }
       } else if (pk.phase === 'build' && pk.daysRemaining <= 21) {
-        push('info', 'route', `Phase de développement spécifique pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — rapproche tes séances de l'intensité cible.`)
+        push('info', 'route', `Phase de développement spécifique pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — rapproche tes séances de l'intensité cible.`, 'peak')
       }
     }
   }
@@ -703,7 +703,7 @@ export function recommendations(db) {
   const loadHighForRecov = acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')
   const painActiveForRecov = prev.status === 'ok' && prev.extra.pain && prev.extra.pain.active && !prev.extra.pain.urgent
   if ((loadHighForRecov || painActiveForRecov) && (daysSinceRecov == null || daysSinceRecov >= 5)) {
-    push('info', 'leaf', 'Charge élevée ou douleur active sans séance de récupération récente — une routine guidée (étirements, auto-massage) peut réduire la sensation de fatigue et de courbatures.')
+    push('info', 'leaf', 'Charge élevée ou douleur active sans séance de récupération récente — une routine guidée (étirements, auto-massage) peut réduire la sensation de fatigue et de courbatures.', 'recovery')
   }
 
   // --- Séance planifiée dans les 48h alors qu'un risque est actif ---
@@ -717,7 +717,7 @@ export function recommendations(db) {
       const when = soonest.date === iso ? "aujourd'hui" : (soonest.date === windowDates[1] ? 'demain' : 'dans 2 jours')
       const sportLabel = (SPORTS.find((sp) => sp.id === soonest.sport) || { label: soonest.sport || 'Séance' }).label
       const reason = painNow && loadRisky ? 'douleur active et charge élevée' : (painNow ? 'douleur active' : "charge d'entraînement élevée")
-      push(painNow ? 'alert' : 'warn', 'shield', `Séance planifiée ${when} (${sportLabel}) malgré ${reason} — envisage d'alléger l'intensité ou de la déplacer dans le Planning.`)
+      push(painNow ? 'alert' : 'warn', 'shield', `Séance planifiée ${when} (${sportLabel}) malgré ${reason} — envisage d'alléger l'intensité ou de la déplacer dans le Planning.`, 'planner')
     }
   }
 

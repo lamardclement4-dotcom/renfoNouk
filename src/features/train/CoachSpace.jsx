@@ -8,7 +8,16 @@ const GROUPS = [
   { level: 'info', label: 'Conseils', color: C.primary },
 ]
 
-export default function CoachSpace({ db, onClose }) {
+// Libellé du bouton d'action par destination — affiché sur chaque carte
+// de recommandation cliquable pour ouvrir directement le module concerné.
+const ACTION_LABELS = {
+  nutrition: 'Ouvrir Nutrition', hydratation: 'Ouvrir Hydratation', sommeil: 'Ouvrir Sommeil',
+  prevention: 'Ouvrir Prévention', mobility: 'Ouvrir Mobilité', tests: 'Ouvrir Tests physiques',
+  planner: 'Ouvrir le Calendrier', esprit: 'Ouvrir Esprit', cycle: 'Ouvrir Cycle',
+  complements: 'Ouvrir Compléments', peak: 'Ouvrir Pic de forme', recovery: 'Ouvrir Récupération',
+}
+
+export default function CoachSpace({ db, onClose, onAction }) {
   const recos = recommendations(db)
 
   return React.createElement(FlowSpace, { title: 'Coach', onClose },
@@ -16,7 +25,7 @@ export default function CoachSpace({ db, onClose }) {
       React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
         React.createElement(Icon, { name: 'target', size: 24, color: '#fff' })),
       React.createElement('div', { style: { fontFamily: C.font, fontSize: 19, fontWeight: 700, lineHeight: 1.15 } }, 'Tes recommandations'),
-      React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, 'Générées à partir de tes données réelles (charge, sommeil, nutrition, mobilité, tests). Pas une IA conversationnelle : des règles transparentes, basées sur des seuils documentés.')),
+      React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, 'Générées à partir de tes données réelles (charge, sommeil, nutrition, mobilité, tests). Pas une IA conversationnelle : des règles transparentes, basées sur des seuils documentés. Touche une carte pour ouvrir le module concerné.')),
 
     recos.length === 0
       ? React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 20px', gap: 12 } },
@@ -29,9 +38,23 @@ export default function CoachSpace({ db, onClose }) {
         if (!items.length) return null
         return React.createElement('div', { key: g.level, style: { marginBottom: 18 } },
           React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10 } }, g.label),
-          items.map((r, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: C.radiusSm, marginBottom: 8, background: `color-mix(in srgb, ${g.color} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${g.color} 25%, ${C.line})` } },
-            React.createElement(Icon, { name: r.icon || 'target', size: 16, color: g.color, style: { flex: '0 0 auto', marginTop: 1 } }),
-            React.createElement('span', { style: { fontSize: 13.5, color: C.ink, lineHeight: 1.45 } }, r.text))))
+          items.map((r, i) => {
+            const clickable = !!(r.action && onAction)
+            return React.createElement(clickable ? 'button' : 'div', {
+              key: i,
+              onClick: clickable ? () => onAction(r.action) : undefined,
+              style: {
+                display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: C.radiusSm, marginBottom: 8,
+                background: `color-mix(in srgb, ${g.color} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${g.color} 25%, ${C.line})`,
+                width: '100%', textAlign: 'left', cursor: clickable ? 'pointer' : 'default',
+              },
+            },
+              React.createElement(Icon, { name: r.icon || 'target', size: 16, color: g.color, style: { flex: '0 0 auto', marginTop: 1 } }),
+              React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                React.createElement('span', { style: { fontSize: 13.5, color: C.ink, lineHeight: 1.45 } }, r.text),
+                clickable && React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: g.color, marginTop: 6 } }, ACTION_LABELS[r.action] || 'Ouvrir')),
+              clickable && React.createElement(Icon, { name: 'arrow', size: 16, color: g.color, style: { flex: '0 0 auto', marginTop: 1 } }))
+          }))
       }),
 
     React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, marginTop: 8, background: 'color-mix(in srgb, #534ab7 9%, ' + C.surface + ')', border: '1px solid color-mix(in srgb, #534ab7 22%, ' + C.line + ')' } },
