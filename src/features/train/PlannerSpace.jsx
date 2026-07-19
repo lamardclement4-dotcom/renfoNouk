@@ -232,9 +232,12 @@ function GenericSportFields({ sportId, data, setData }) {
       })))
 }
 
-function ExerciseSetRow({ exIdx, setIdx, set, onUpdate }) {
+function ExerciseSetRow({ exIdx, setIdx, set, onUpdate, onRemove }) {
   const mode = set.mode || 'reps'
   return React.createElement('div', { style: { marginBottom: 10 } },
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 } },
+      React.createElement('span', { style: { fontSize: 11, fontWeight: 700, color: C.ink3 } }, `Série ${setIdx + 1}`),
+      onRemove && React.createElement('button', { onClick: onRemove, 'aria-label': 'Retirer cette série', style: { fontSize: 11, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' } }, '✕')),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 } },
       React.createElement('div', null,
         React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'Séries'),
@@ -253,10 +256,11 @@ function ExerciseSetRow({ exIdx, setIdx, set, onUpdate }) {
       React.createElement('button', { onClick: () => onUpdate(exIdx, setIdx, 'mode', 'duree'), style: { flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: mode === 'duree' ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface2, color: mode === 'duree' ? C.primary : C.ink3 } }, 'Tenue chronométrée')))
 }
 
-function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemove }) {
+function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemoveSet, onRemove }) {
   const h = history && history[ex.name]
   const last = h && h.last ? `Dernière : ${h.last.charge}kg × ${h.last.reps}` : ''
   const record = h && h.record ? `🏆 ${h.record.charge}kg` : ''
+  const sets = ex.sets || []
   return React.createElement('div', { style: { padding: 12, borderRadius: C.radiusSm, background: C.surface2, marginBottom: 10 } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 } },
       React.createElement('div', null,
@@ -266,7 +270,7 @@ function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemove }) {
         record && React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.primary } }, record),
         last && React.createElement('div', { style: { fontSize: 10, color: C.ink3 } }, last),
         React.createElement('button', { onClick: () => onRemove(idx), style: { fontSize: 11, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', marginTop: 3 } }, 'Retirer'))),
-    (ex.sets || []).map((set, si) => React.createElement(ExerciseSetRow, { key: si, exIdx: idx, setIdx: si, set, onUpdate: onUpdateSet })),
+    sets.map((set, si) => React.createElement(ExerciseSetRow, { key: si, exIdx: idx, setIdx: si, set, onUpdate: onUpdateSet, onRemove: sets.length > 1 ? () => onRemoveSet(idx, si) : null })),
     React.createElement('button', { onClick: () => onAddSet(idx), style: { width: '100%', padding: '8px 0', borderRadius: 8, background: 'transparent', border: `1px dashed ${C.line}`, color: C.ink3, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', marginTop: 4 } }, '+ Ajouter une série'))
 }
 
@@ -296,6 +300,11 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
     next[exIdx] = { ...next[exIdx], sets }
     setExercises(next)
   }
+  function removeSet(exIdx, setIdx) {
+    const next = [...exercises]
+    next[exIdx] = { ...next[exIdx], sets: next[exIdx].sets.filter((_, i) => i !== setIdx) }
+    setExercises(next)
+  }
 
   const sportLabels = { muscu: '💪 Musculation', crossfit: '🏋️ Crossfit', callisthenie: '🤸 Callisthénie', gym: '🤸 Gym', halterophilie: '🏋️ Haltérophilie' }
   return React.createElement('div', { style: { marginBottom: 16 } },
@@ -306,7 +315,7 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
         results.map((r, i) => React.createElement('button', { key: i, onClick: () => addEx(r.n, r.g), style: { width: '100%', display: 'flex', justifyContent: 'space-between', padding: '10px 13px', background: 'none', border: 'none', borderBottom: i < results.length - 1 ? `1px solid ${C.line}` : 'none', cursor: 'pointer', textAlign: 'left' } },
           React.createElement('span', { style: { fontSize: 13.5, fontWeight: 600 } }, r.n),
           React.createElement('span', { style: { fontSize: 11.5, color: C.ink3 } }, r.g))))),
-    exercises.map((ex, i) => React.createElement(ExerciseCard, { key: i, ex, idx: i, history: exerciseHistory, onUpdateSet: updateSet, onAddSet: addSet, onRemove: removeEx })),
+    exercises.map((ex, i) => React.createElement(ExerciseCard, { key: i, ex, idx: i, history: exerciseHistory, onUpdateSet: updateSet, onAddSet: addSet, onRemoveSet: removeSet, onRemove: removeEx })),
     exercises.length === 0 && React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, textAlign: 'center', padding: '10px 0' } }, 'Cherche et ajoute un exercice ci-dessus.'))
 }
 
@@ -321,6 +330,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, onSa
   const [notes, setNotes] = useState(initial?.notes || '')
   const [data, setData] = useState(initial?.data || {})
   const [exercises, setExercises] = useState(initial?.exercises || [])
+  const [dupDate, setDupDate] = useState('')
 
   const canSave = !!sport && !!date
   function handleSave() {
@@ -329,6 +339,18 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, onSa
       date, heure, sport,
       duree: duree === 'Personnalisée' ? (dureeCustom || 'Personnalisée') : duree,
       statut, ressenti, notes, data, exercises,
+    })
+  }
+  // Copie la séance (sport, durée, champs, exercices/séries, notes) sur un
+  // autre jour — repart en "Planifié" puisque cette occurrence-là n'a pas
+  // encore eu lieu.
+  function handleDuplicate() {
+    if (!dupDate) return
+    onSave({
+      id: 's_' + Date.now(),
+      date: dupDate, heure, sport,
+      duree: duree === 'Personnalisée' ? (dureeCustom || 'Personnalisée') : duree,
+      statut: 'planifie', ressenti: null, notes, data, exercises,
     })
   }
 
@@ -380,6 +402,13 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, onSa
       React.createElement('textarea', { value: notes, onChange: (e) => setNotes(e.target.value), placeholder: 'Objectifs, commentaires…', rows: 3, style: { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14, outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: C.font, marginBottom: 18 } }),
 
       React.createElement('button', { disabled: !canSave, onClick: handleSave, style: { width: '100%', padding: 15, borderRadius: 999, background: canSave ? C.primary : C.surface2, color: canSave ? '#fff' : C.ink3, border: 'none', fontSize: 15, fontWeight: 700, cursor: canSave ? 'pointer' : 'default' } }, '⚡ Enregistrer'),
+
+      initial && React.createElement('div', { style: { marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` } },
+        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Dupliquer vers un autre jour'),
+        React.createElement('div', { style: { display: 'flex', gap: 8 } },
+          React.createElement('input', { type: 'date', value: dupDate, onChange: (e) => setDupDate(e.target.value), style: { flex: 1, padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } }),
+          React.createElement('button', { disabled: !dupDate, onClick: handleDuplicate, style: { flex: '0 0 auto', padding: '11px 16px', borderRadius: C.radiusSm, background: dupDate ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface2, border: `1.5px solid ${dupDate ? C.primary : C.line}`, color: dupDate ? C.primary : C.ink3, fontSize: 13.5, fontWeight: 700, cursor: dupDate ? 'pointer' : 'default' } }, '📋 Copier'))),
+
       initial && React.createElement('button', { onClick: () => onDelete(initial.id), style: { width: '100%', marginTop: 10, padding: 13, borderRadius: 999, background: 'transparent', border: `1px solid ${C.line}`, color: '#b3402e', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, '🗑 Supprimer cette séance')))
 }
 

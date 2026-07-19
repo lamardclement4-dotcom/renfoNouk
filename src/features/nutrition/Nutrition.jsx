@@ -337,6 +337,10 @@ function TimingTab({ body }) {
 // Utilitaires date (journal alimentaire)
 // ============================================================
 const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+// Noms d'aliments pré-normalisés une seule fois au chargement du module :
+// évite de renormaliser (NFD + regex) les ~350 aliments à chaque frappe
+// dans la recherche, qui rendait la saisie perceptiblement saccadée.
+const FOODS_NORM = new Map(FOODS.map((f) => [f.id, norm(f.n)]))
 const todayISO = () => new Date().toISOString().slice(0, 10)
 // Reconstruit la date en UTC pur : new Date(iso+'T00:00:00') est interprété en
 // heure locale, et .toISOString() reconvertit en UTC — dans un fuseau en avance
@@ -460,7 +464,8 @@ function FoodTab({ db, store }) {
   })()
 
   if (mode === 'search') {
-    const res = (norm(q) ? FOODS.filter((f) => norm(f.n).includes(norm(q))) : FOODS).slice(0, 40)
+    const nq = norm(q)
+    const res = (nq ? FOODS.filter((f) => FOODS_NORM.get(f.id).includes(nq)) : FOODS).slice(0, 40)
     const Quick = ({ food, kk }) => React.createElement('button', { key: kk, onClick: () => chooseFood(food), style: { ...chipBtn(false), display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', maxWidth: '100%' } },
       React.createElement('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis' } }, isFav(food.n) ? '★ ' : '', food.n))
     return React.createElement('div', null,
@@ -468,13 +473,13 @@ function FoodTab({ db, store }) {
         React.createElement('button', { onClick: () => { setMode('main'); setQ('') }, style: xst.iconBtn, 'aria-label': 'Retour' }, React.createElement(Icon, { name: 'back', size: 19 })),
         React.createElement('input', { autoFocus: true, value: q, onChange: (e) => setQ(e.target.value), placeholder: 'Chercher un aliment…', style: { ...xst.input, marginTop: 0, flex: 1 } })),
       React.createElement('div', { style: { fontSize: 12.5, color: INK3, marginBottom: 14 } }, 'Pour le repas : ', React.createElement('strong', { style: { color: NUTRI } }, (MEALS.find((m) => m.id === meal) || {}).label)),
-      norm(q) === '' && favs.length > 0 && React.createElement(React.Fragment, null,
+      nq === '' && favs.length > 0 && React.createElement(React.Fragment, null,
         React.createElement(SecLab, null, 'Favoris'),
         React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } }, favs.map((f, i) => React.createElement(Quick, { key: 'fav' + i, kk: 'fav' + i, food: f })))),
-      norm(q) === '' && recents.length > 0 && React.createElement(React.Fragment, null,
+      nq === '' && recents.length > 0 && React.createElement(React.Fragment, null,
         React.createElement(SecLab, null, 'Récents'),
         React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } }, recents.map((f, i) => React.createElement(Quick, { key: 'rec' + i, kk: 'rec' + i, food: f })))),
-      norm(q) === '' && React.createElement(SecLab, null, 'Tous les aliments'),
+      nq === '' && React.createElement(SecLab, null, 'Tous les aliments'),
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
         res.map((f) => React.createElement('div', { key: f.id, style: { ...xst.optBtn, justifyContent: 'space-between', padding: '8px 8px 8px 14px' } },
           React.createElement('button', { onClick: () => chooseFood(f), style: { flex: 1, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 1, background: 'transparent', border: 'none', padding: '4px 0', cursor: 'pointer' } },

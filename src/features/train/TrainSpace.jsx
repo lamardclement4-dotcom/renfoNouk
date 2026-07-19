@@ -35,10 +35,13 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
 
   // Destinations Entraîner (tile interne) vs Santé (module cross-onglet,
   // ouvert en overlay plein écran via HealthHome embedded) — utilisé par
-  // les cartes cliquables du Coach pour ouvrir directement le bon module.
+  // les cartes du Coach et son chat pour ouvrir directement le bon module.
+  // 'session:<id>' ouvre l'écran Detail d'une séance précise (le check
+  // openId passe avant les tiles, donc ça marche depuis le Coach aussi).
   const ENTRAINER_ACTIONS = new Set(['mobility', 'program', 'planner', 'recovery', 'peak', 'tests'])
   function handleCoachAction(action) {
     if (!action) return
+    if (action.startsWith('session:')) { setOpenId(action.slice(8)); return }
     if (ENTRAINER_ACTIONS.has(action)) { setTile(action); return }
     setHealthTile(action)
   }

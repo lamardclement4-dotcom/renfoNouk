@@ -1,6 +1,9 @@
-import React from 'react'
-import { C, Icon, FlowSpace } from '../health/kit'
+import React, { useState, useRef, useEffect } from 'react'
+import { C, Icon, SegTabs } from '../health/kit'
 import { recommendations } from './renfoIntel'
+import { coachGreeting, coachReply } from './coachChat'
+
+const COACH = '#534ab7'
 
 const GROUPS = [
   { level: 'alert', label: 'À traiter en priorité', color: '#c46a3a' },
@@ -17,15 +20,15 @@ const ACTION_LABELS = {
   complements: 'Ouvrir Compléments', peak: 'Ouvrir Pic de forme', recovery: 'Ouvrir Récupération',
 }
 
-export default function CoachSpace({ db, onClose, onAction }) {
+// Onglet "Conseils" : les recommandations groupées par priorité (inchangé).
+function AdviceTab({ db, onAction }) {
   const recos = recommendations(db)
-
-  return React.createElement(FlowSpace, { title: 'Coach', onClose },
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: '#534ab7', color: '#fff', marginBottom: 18 } },
+  return React.createElement(React.Fragment, null,
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: COACH, color: '#fff', marginBottom: 18 } },
       React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
         React.createElement(Icon, { name: 'target', size: 24, color: '#fff' })),
       React.createElement('div', { style: { fontFamily: C.font, fontSize: 19, fontWeight: 700, lineHeight: 1.15 } }, 'Tes recommandations'),
-      React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, 'Générées à partir de tes données réelles (charge, sommeil, nutrition, mobilité, tests). Pas une IA conversationnelle : des règles transparentes, basées sur des seuils documentés. Touche une carte pour ouvrir le module concerné.')),
+      React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, 'Générées à partir de tes données réelles (charge, sommeil, nutrition, mobilité, tests). Touche une carte pour ouvrir le module concerné — ou passe sur « Discuter » pour me poser une question.')),
 
     recos.length === 0
       ? React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 20px', gap: 12 } },
@@ -57,7 +60,81 @@ export default function CoachSpace({ db, onClose, onAction }) {
           }))
       }),
 
-    React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, marginTop: 8, background: 'color-mix(in srgb, #534ab7 9%, ' + C.surface + ')', border: '1px solid color-mix(in srgb, #534ab7 22%, ' + C.line + ')' } },
-      React.createElement(Icon, { name: 'search', size: 16, color: '#534ab7', style: { flex: '0 0 auto', marginTop: 2 } }),
+    React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, marginTop: 8, background: `color-mix(in srgb, ${COACH} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${COACH} 22%, ${C.line})` } },
+      React.createElement(Icon, { name: 'search', size: 16, color: COACH, style: { flex: '0 0 auto', marginTop: 2 } }),
       React.createElement('p', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.45 } }, 'Système de règles déterministe (pas un modèle de langage) : transparent et basé sur des seuils documentés.')))
+}
+
+// Onglet "Discuter" : conversation avec le coach, entrée libre + suggestions.
+function ChatTab({ db, onAction }) {
+  const [messages, setMessages] = useState(() => [coachGreeting()])
+  const [input, setInput] = useState('')
+  const [typing, setTyping] = useState(false)
+  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [messages, typing])
+
+  function send(text) {
+    const t = (text || '').trim()
+    if (!t || typing) return
+    setMessages((m) => [...m, { from: 'user', text: t }])
+    setInput('')
+    setTyping(true)
+    setTimeout(() => {
+      setMessages((m) => [...m, coachReply(t, db)])
+      setTyping(false)
+    }, 450)
+  }
+
+  const last = messages[messages.length - 1]
+  const chips = !typing && last && last.from === 'coach' && last.chips ? last.chips : []
+
+  return React.createElement(React.Fragment, null,
+    React.createElement('div', { ref: scrollRef, style: { flex: 1, overflowY: 'auto', padding: '4px 18px 12px', display: 'flex', flexDirection: 'column', gap: 10 } },
+      messages.map((m, i) => {
+        const coach = m.from === 'coach'
+        return React.createElement('div', { key: i, style: { display: 'flex', flexDirection: 'column', alignItems: coach ? 'flex-start' : 'flex-end' } },
+          React.createElement('div', { style: {
+            maxWidth: '86%', padding: '10px 14px', fontSize: 14, lineHeight: 1.5,
+            borderRadius: coach ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
+            background: coach ? C.surface : COACH, color: coach ? C.ink : '#fff',
+            border: coach ? `1px solid ${C.line}` : 'none',
+          } }, m.text),
+          coach && m.action && onAction && React.createElement('button', {
+            onClick: () => onAction(m.action),
+            style: { marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 700, color: COACH, background: `color-mix(in srgb, ${COACH} 10%, ${C.surface})`, border: `1.5px solid color-mix(in srgb, ${COACH} 35%, ${C.line})`, cursor: 'pointer' },
+          }, m.actionLabel || 'Ouvrir', React.createElement(Icon, { name: 'arrow', size: 14, color: COACH })))
+      }),
+      typing && React.createElement('div', { style: { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: '4px 16px 16px 16px', background: C.surface, border: `1px solid ${C.line}`, color: C.ink3, fontSize: 14 } }, '…')),
+
+    chips.length > 0 && React.createElement('div', { style: { display: 'flex', gap: 7, overflowX: 'auto', padding: '4px 18px 8px', flexShrink: 0 } },
+      chips.map((c, i) => React.createElement('button', { key: i, onClick: () => send(c),
+        style: { flex: '0 0 auto', padding: '7px 13px', borderRadius: 999, fontSize: 12.5, fontWeight: 600, color: COACH, background: C.surface, border: `1.5px solid color-mix(in srgb, ${COACH} 30%, ${C.line})`, cursor: 'pointer', whiteSpace: 'nowrap' } }, c))),
+
+    React.createElement('form', { onSubmit: (e) => { e.preventDefault(); send(input) }, style: { display: 'flex', gap: 8, padding: '8px 18px calc(14px + env(safe-area-inset-bottom))', borderTop: `1px solid ${C.line}`, background: C.surface, flexShrink: 0 } },
+      React.createElement('input', {
+        value: input, onChange: (e) => setInput(e.target.value), placeholder: 'Écris ta question…',
+        style: { flex: 1, padding: '11px 14px', borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.bg, fontSize: 14.5, outline: 'none' },
+      }),
+      React.createElement('button', { type: 'submit', 'aria-label': 'Envoyer', disabled: !input.trim(),
+        style: { width: 42, height: 42, borderRadius: 999, border: 'none', background: input.trim() ? COACH : C.surface2, color: '#fff', fontSize: 17, cursor: input.trim() ? 'pointer' : 'default', flex: '0 0 auto' } }, '➤')))
+}
+
+export default function CoachSpace({ db, onClose, onAction }) {
+  const [tab, setTab] = useState('chat')
+
+  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font } },
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 8px', flexShrink: 0 } },
+      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
+        React.createElement(Icon, { name: 'back', size: 20 })),
+      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15 } }, 'Coach'),
+      React.createElement('div', { style: { width: 40 } })),
+    React.createElement('div', { style: { padding: '4px 18px 0', flexShrink: 0 } },
+      React.createElement(SegTabs, { tabs: [{ id: 'chat', lab: 'Discuter' }, { id: 'conseils', lab: 'Conseils' }], value: tab, onChange: setTab, tint: COACH })),
+    tab === 'chat'
+      ? React.createElement(ChatTab, { db, onAction })
+      : React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '4px 18px 32px' } },
+        React.createElement(AdviceTab, { db, onAction })))
 }
