@@ -118,6 +118,22 @@ export function useNutritionStore(userId) {
     })
   }, [userId])
 
+  // Ne charge que les DAYS_HISTORY derniers jours au montage (voir load() plus
+  // haut) pour rester léger — au-delà, une journée du journal est chargée à la
+  // demande quand l'utilisateur navigue vers une date plus ancienne (bouton
+  // "Jour précédent" côté Nutrition.jsx), pour ne pas afficher une journée
+  // vide alors que ses données existent bien en base.
+  const ensureDay = useCallback((date) => {
+    if (dayRowsRef.current[date] !== undefined || !userId) return
+    supabase.from('nutrition_logs').select('id,date,data').eq('user_id', userId).eq('date', date).maybeSingle().then(({ data, error }) => {
+      if (error) { console.error('[store] échec chargement journal du jour', error.message); return }
+      const day = { food: data?.data?.food || [], hydration: data?.data?.hydration || [] }
+      if (data) rowIds.current[date] = data.id
+      dayRowsRef.current = { ...dayRowsRef.current, [date]: day }
+      setDayRows(dayRowsRef.current)
+    })
+  }, [userId])
+
   const saveDay = useCallback((date, partial) => {
     const prevDay = dayRowsRef.current[date] || { food: [], hydration: [] }
     const nextDay = { ...prevDay, ...partial }
@@ -171,6 +187,7 @@ export function useNutritionStore(userId) {
 
   const store = {
     get: () => db,
+    ensureDay,
     set: (patchOrFn) => {
       const patch = typeof patchOrFn === 'function' ? patchOrFn(db) : patchOrFn
 

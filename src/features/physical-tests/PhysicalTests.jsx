@@ -236,10 +236,11 @@ function RecoSessions({ testId, level }) {
     React.createElement('div', { style: { fontSize: 13.5, color: INK2 } }, msg))
 }
 
-function TestDetail({ def, history, sexe, age, onSave, onBack }) {
+function TestDetail({ def, history, sexe, age, onSave, onDelete, onBack }) {
   const [val, setVal] = useState('')
   const [step, setStep] = useState('protocol')
   const [timerVal, setTimerVal] = useState(null)
+  const [showHistory, setShowHistory] = useState(false)
 
   const isTimer = def.unit === 's'
   const interp = val !== '' ? def.interpret(val, sexe, age) : null
@@ -304,6 +305,20 @@ function TestDetail({ def, history, sexe, age, onSave, onBack }) {
               'Précédent : ', React.createElement('strong', { style: { color: INK } }, prev.value + ' ' + def.unit), ' · ' + fmtDate(prev.date)))
         : React.createElement('div', { style: { padding: '14px 16px', borderRadius: RADIUS_SM, marginBottom: 14, fontSize: 13.5, color: INK2, background: `color-mix(in srgb, ${TESTS_COLOR} 9%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${TESTS_COLOR} 22%, ${LINE})` } }, 'Aucun résultat encore — passe ce test pour établir ta référence.'),
 
+      history && history.length > 0 && React.createElement('div', { style: { marginBottom: 14 } },
+        React.createElement('button', { onClick: () => setShowHistory(!showHistory), style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px', background: 'transparent', border: 'none', cursor: 'pointer' } },
+          React.createElement('span', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em' } }, `Historique (${history.length})`),
+          React.createElement(Icon, { name: 'arrow', size: 14, color: INK3, style: { display: 'inline-block', transform: showHistory ? 'rotate(-90deg)' : 'rotate(90deg)' } })),
+        showHistory && React.createElement('div', { style: { background: SURFACE, border: `1px solid ${LINE}`, borderRadius: RADIUS_SM, overflow: 'hidden' } },
+          history.slice().reverse().map((t, i) => {
+            const lv = def.interpret(t.value, sexe, age)
+            return React.createElement('div', { key: t.date + i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: i > 0 ? `1px solid ${LINE}` : 'none' } },
+              React.createElement('div', { style: { flex: 1 } },
+                React.createElement('span', { style: { fontWeight: 700, color: lv.color } }, t.value + ' ' + def.unit),
+                React.createElement('span', { style: { fontSize: 12.5, color: INK3, marginLeft: 8 } }, fmtDate(t.date))),
+              onDelete && React.createElement('button', { onClick: () => onDelete(t.date), 'aria-label': 'Supprimer ce résultat', style: { width: 30, height: 30, borderRadius: 999, border: 'none', background: 'transparent', color: INK3, fontSize: 15, cursor: 'pointer', flex: '0 0 auto' } }, '✕'))
+          }))),
+
       React.createElement('button', { onClick: () => setStep('do'), style: { width: '100%', padding: 16, borderRadius: 999, fontSize: 15.5, fontWeight: 700, border: 'none', cursor: 'pointer', background: TESTS_COLOR, color: '#fff', boxShadow: `0 12px 26px -14px ${TESTS_COLOR}` } }, 'Passer le test maintenant →')),
 
     step === 'do' && React.createElement('div', null,
@@ -353,6 +368,9 @@ export default function PhysicalTestsSpace({ userId, onClose }) {
     const existing = (db.physTests || []).filter((t) => !(t.testId === entry.testId && t.date === entry.date))
     store.set({ physTests: existing.concat([entry]) })
   }
+  function deleteTest(testId, date) {
+    store.set({ physTests: (db.physTests || []).filter((t) => !(t.testId === testId && t.date === date)) })
+  }
   function saveProfile(sx, ag) {
     store.set((st) => ({ profilePhys: { ...(st.profilePhys || {}), sexe: sx, age: ag } }))
     setProfOpen(false)
@@ -377,7 +395,7 @@ export default function PhysicalTestsSpace({ userId, onClose }) {
   if (sel) {
     const def = TESTS_DEF.find((d) => d.id === sel)
     return React.createElement('div', { style: FLOW_STYLE },
-      React.createElement(TestDetail, { def, history: historyFor(sel), sexe, age, onSave: saveTest, onBack: () => setSel(null) }))
+      React.createElement(TestDetail, { def, history: historyFor(sel), sexe, age, onSave: saveTest, onDelete: (date) => deleteTest(sel, date), onBack: () => setSel(null) }))
   }
 
   const score = globalScore()

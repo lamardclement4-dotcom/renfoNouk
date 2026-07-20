@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FOODS, COURSE_REF, DIAG_QUESTIONS, PILIERS } from './nutritionData'
 import { buildConseils } from './diagEngine'
 import { useNutritionStore } from './useNutritionStore'
@@ -406,6 +406,7 @@ function FoodTab({ db, store }) {
   const [meal, setMeal] = useState('midi')
   const [editId, setEditId] = useState(null)
   const [tgtSheet, setTgtSheet] = useState(false)
+  useEffect(() => { if (store.ensureDay) store.ensureDay(date) }, [date])
   const log = (db.foodLog && db.foodLog[date]) || []
   const targets = db.foodTargets || null
   const favs = db.foodFav || []

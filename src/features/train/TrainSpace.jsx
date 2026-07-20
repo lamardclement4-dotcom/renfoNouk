@@ -75,7 +75,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   if (tile === 'recovery') return React.createElement(RecoverySpace, { onClose: () => setTile(null), onOpenSession: setOpenId })
   if (tile === 'plyo') return React.createElement(PliometrieSpace, { onClose: () => setTile(null), onOpenSession: setOpenId })
   if (tile === 'coach') return React.createElement(CoachSpace, { db, onClose: () => setTile(null), onAction: handleCoachAction })
-  if (tile === 'peak') return React.createElement(PeakSpace, { db, store, onClose: () => setTile(null), onMobility: () => setTile('mobility'), onProgram: () => setTile('program'), onRecovery: () => setTile('recovery') })
+  if (tile === 'peak') return React.createElement(PeakSpace, { db, store, onClose: () => setTile(null), onMobility: () => setTile('mobility'), onProgram: () => setTile('program'), onRecovery: () => setTile('recovery'), onTests: () => setTile('tests'), onNutrition: () => setHealthTile('nutrition'), onCycle: () => setHealthTile('cycle') })
   if (tile === 'tests') return React.createElement(PhysicalTestsSpace, { userId, onClose: () => setTile(null) })
   if (tile === 'planner') return React.createElement(PlannerSpace, { db, store, onClose: () => setTile(null) })
 

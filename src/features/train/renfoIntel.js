@@ -433,12 +433,46 @@ export function recommendations(db) {
     push('info', 'calendar', `${load.extra.plannerPlanned} séance(s) planifiée(s) cette semaine — pense à les marquer comme réalisées.`, 'planner')
   }
 
+  // --- Aucun jour de repos cette semaine (nouveau) : ne peut se déclencher
+  // que quand les 7 jours (lun→dim) ont déjà une séance réalisée, donc
+  // naturellement en fin de semaine — pas de faux positif en milieu de semaine.
+  const weekPlanner = plannerWeekData(db)
+  if (weekPlanner.week.every((m) => m > 0)) {
+    push('warn', 'leaf', `Aucun jour de repos cette semaine (séance réalisée les 7 jours, ${weekPlanner.total} min au total) — la récupération fait partie de la progression, prévois une coupure.`, 'planner')
+  }
+
+  // --- Objectif hebdo de séances non atteint, repère seulement en fin de
+  // semaine (jeudi ou plus tard) pour éviter de rappeler l'objectif trop tôt.
+  const dowNow = (new Date().getDay() + 6) % 7
+  const g2 = db.goals || {}
+  if (dowNow >= 3 && g2.weeklySessions && weekPlanner.count < g2.weeklySessions) {
+    push('info', 'calendar', `${weekPlanner.count} / ${g2.weeklySessions} séances réalisées cette semaine — il reste ${7 - dowNow} jour(s) pour atteindre ton objectif.`, 'planner')
+  }
+
   // --- Sommeil ---
   const slp = pillarSleep(db)
   if (slp.status === 'ok' && slp.extra.hours) {
     const h = slp.extra.hours
     if (h < 6) push('alert', 'moon', `Seulement ${h.toFixed(1)} h de sommeil cette nuit — en-dessous de 6 h, récupération et performances chutent significativement (AASM).`, 'sommeil')
     else if (h < 7) push('warn', 'moon', `${h.toFixed(1)} h de sommeil cette nuit — vise 7–9 h pour une récupération optimale.`, 'sommeil')
+  }
+
+  // --- Dette de sommeil chronique (nouveau) : moyenne des 3 dernières nuits
+  // renseignées < 6h30 — un signal plus fiable qu'une seule nuit isolée,
+  // qui peut être une exception ponctuelle.
+  const sleepLog = db.sleepLog || {}
+  const last3Nights = []
+  for (let k = 0; k <= 2; k++) {
+    const dk = new Date(new Date(iso + 'T00:00:00')); dk.setDate(dk.getDate() - k)
+    const isoK = todayISOFrom(dk)
+    const s = sleepLog[isoK]
+    if (s && num(s.hours, 0) > 0) last3Nights.push(num(s.hours, 0))
+  }
+  if (last3Nights.length === 3) {
+    const avg3 = last3Nights.reduce((a, b) => a + b, 0) / 3
+    if (avg3 < 6.5) {
+      push('alert', 'moon', `Moyenne de ${avg3.toFixed(1)} h de sommeil sur les 3 dernières nuits — dette de sommeil qui s'installe, pas juste une mauvaise nuit isolée. Priorise le repos avant que ça n'affecte tes séances.`, 'sommeil')
+    }
   }
 
   // --- Prévention / douleur ---
@@ -492,6 +526,17 @@ export function recommendations(db) {
     }
   }
 
+  // --- Sport pratiqué sans jamais avoir fait le test de mobilité (nouveau) :
+  // invitation ciblée citant la zone-clé du premier sport du profil, plutôt
+  // qu'un rappel générique.
+  if (mob.status === 'absent') {
+    const userSportIds3 = (db.profilePhys && db.profilePhys.sports) || []
+    const firstSport = SPORTS.find((sp) => userSportIds3.includes(sp.id) && sp.focus)
+    if (firstSport) {
+      push('info', 'target', `Tu pratiques le ${firstSport.label.toLowerCase()} mais tu n'as pas encore fait le test de mobilité — utile pour repérer si tes zones-clés (${firstSport.focus.toLowerCase()}) sont limitantes.`, 'mobility')
+    }
+  }
+
   // --- Combo sommeil + charge : signal renforcé quand les deux se dégradent ---
   const sleepLow = slp.status === 'ok' && slp.extra.hours && slp.extra.hours < 7
   const loadHigh = (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) || (load.status === 'ok' && load.extra.ratio > 1.3)
@@ -511,15 +556,35 @@ export function recommendations(db) {
     const age = Number(pp.age) || 30
     const TEST_LABELS = { gai_max: 'gainage (stabilité du core)', souplesse: 'souplesse', squat30: 'force des jambes', push30: 'force du haut du corps', cooper: 'endurance aérobie' }
     const weak = []
+    const weakTestIds = []
     Object.keys(byId).forEach((tid) => {
       const def = TESTS_DEF.find((d) => d.id === tid)
       if (!def) return
       const lv = def.interpret(byId[tid].value, sexe, age)
-      if (lv.score <= 2) weak.push(TEST_LABELS[tid] || tid)
+      if (lv.score <= 2) { weak.push(TEST_LABELS[tid] || tid); weakTestIds.push(tid) }
     })
     if (weak.length) {
       push('warn', 'chart', `Tests physiques : niveau faible en ${weak.join(', ')}. Tes séances de renfo et mobilité devraient cibler ces zones en priorité.`, 'tests')
     }
+
+    // --- Croisement test physique × zone de mobilité (nouveau) : quand un
+    // test faible ET la zone de mobilité correspondante sont faibles tous
+    // les deux, le signal est corroboré par deux mesures indépendantes.
+    const TEST_ZONE_MAP = { gai_max: ['core'], souplesse: ['post', 'flechisseurs'], push30: ['epaules'], squat30: ['hanches', 'chevilles'] }
+    if (mob.status === 'ok' && weakTestIds.length) {
+      const weakZoneIds = (db.mobility.zones || []).filter((z) => z.val > 0 && z.val < 2).map((z) => z.id)
+      outerTz: for (const tid of weakTestIds) {
+        const zoneIds = TEST_ZONE_MAP[tid] || []
+        for (const zid of zoneIds) {
+          if (weakZoneIds.includes(zid)) {
+            const zoneLabel = (db.mobility.zones.find((z) => z.id === zid) || {}).label || zid
+            push('warn', 'chart', `${TEST_LABELS[tid]} faible ET ${zoneLabel.toLowerCase()} raide au test de mobilité — deux mesures indépendantes qui pointent vers la même zone, signal plus fiable qu'un seul test isolé.`, 'tests')
+            break outerTz
+          }
+        }
+      }
+    }
+
     const lastDate = tests.reduce((max, t) => (!max || t.date > max) ? t.date : max, null)
     if (lastDate) {
       const days = Math.floor((new Date(iso + 'T00:00:00') - new Date(lastDate + 'T00:00:00')) / 86400000)
@@ -637,6 +702,19 @@ export function recommendations(db) {
   }
   if (emptyDays === 3) {
     push('info', 'apple', 'Aucune saisie nutrition depuis 3 jours — reprends le suivi si tu veux des conseils plus précis.', 'nutrition')
+  }
+
+  // --- Régularité du suivi hydratation (nouveau, même logique que la
+  // nutrition) : 3 jours consécutifs sans aucune boisson enregistrée.
+  const hydroLog = db.hydroLog || {}
+  let emptyHydroDays = 0
+  for (let k = 1; k <= 3; k++) {
+    const dk = new Date(d0); dk.setDate(dk.getDate() - k)
+    const isoK = todayISOFrom(dk)
+    if (!hydroLog[isoK] || hydroLog[isoK].length === 0) emptyHydroDays++
+  }
+  if (emptyHydroDays === 3) {
+    push('info', 'drop', 'Aucune boisson enregistrée depuis 3 jours — reprends le suivi hydratation si tu veux garder un repère fiable.', 'hydratation')
   }
 
   // --- Répartition lipides anormalement élevée (> 40 % des calories du jour) ---
