@@ -1,7 +1,25 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
 
+/* Retour tactile léger sur tous les boutons : sensation plus réactive
+   au toucher sans devoir instrumenter chaque bouton individuellement. */
+button {
+  transition: transform .12s ease, opacity .12s ease;
+}
+button:active {
+  transform: scale(.96);
+  opacity: .85;
+}
+
 @keyframes ringPulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.015); }
+}
+
+/* Entrée douce des écrans "space" (Coach, tests, séances, sommeil…) —
+   fondu + léger glissement vers le haut, pour que l'ouverture d'un
+   module se sente fluide plutôt qu'un simple "pop" instantané. */
+@keyframes spaceIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

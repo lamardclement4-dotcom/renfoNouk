@@ -365,7 +365,7 @@ export function computePeakPlan(goal, todayStr) {
    ═══════════════════════════════════════════════════════════════════════ */
 
 var FLOW_STYLE = { position: 'fixed', inset: 0, background: C.bg, zIndex: 60, display: 'flex',
-  flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font };
+  flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' };
 var SCROLL_STYLE = { flex: 1, overflowY: 'auto', padding: '20px 22px calc(22px + env(safe-area-inset-bottom))' };
 
 function fmtDate(iso) {

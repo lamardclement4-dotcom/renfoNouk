@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
+import { Icon } from '../health/kit'
 
 // ============================================================
 // Tests physiques, portés depuis le bundle de l'ancienne app
@@ -20,14 +21,6 @@ const LINE = '#e6e3dd'
 const RADIUS = 16
 const RADIUS_SM = 12
 const FONT = '-apple-system, BlinkMacSystemFont, sans-serif'
-
-const ICONS = {
-  route: '🏁', layers: '📊', bolt: '⚡', target: '🎯', dumbbell: '🏋️', user: '👤',
-  close: '✕', chart: '📈', back: '←', play: '▶', arrow: '→', check: '✓',
-}
-function Icon({ name, size = 16, color, style }) {
-  return React.createElement('span', { style: { fontSize: size, lineHeight: 1, color, ...style } }, ICONS[name] || '•')
-}
 
 /* ─── Normes scientifiques par sexe et tranche d'âge ────────────────────────
    Sources : Cooper (1968), ACSM Guidelines for Exercise Testing (11e éd. 2021),
@@ -118,7 +111,7 @@ function fmtDuration(secs) {
   return m ? m + "'" + String(s).padStart(2, '0') + '"' : s + '"'
 }
 
-const FLOW_STYLE = { position: 'fixed', inset: 0, background: '#faf9f5', zIndex: 55, display: 'flex', flexDirection: 'column', padding: '20px 22px', fontFamily: FONT, overflowY: 'auto' }
+const FLOW_STYLE = { position: 'fixed', inset: 0, background: '#faf9f5', zIndex: 55, display: 'flex', flexDirection: 'column', padding: '20px 22px', fontFamily: FONT, overflowY: 'auto', animation: 'spaceIn .22s ease' }
 
 function ProfileBadge({ sexe, age, onEdit }) {
   const label = (sexe === 'f' ? 'Femme' : 'Homme') + ' · ' + ageGroup(age) + ' ans'

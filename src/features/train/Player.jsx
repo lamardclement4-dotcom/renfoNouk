@@ -58,7 +58,7 @@ export default function Player({ id, blocks: customBlocks, title: customTitle, p
   const cat = CATS[ex.cat] || { tint: C.primary }
   const prog = 1 - left / total
 
-  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.ink, zIndex: 80, display: 'flex', flexDirection: 'column', padding: '18px 20px calc(18px + env(safe-area-inset-bottom))', maxWidth: 460, margin: '0 auto', fontFamily: C.font } },
+  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.ink, zIndex: 80, display: 'flex', flexDirection: 'column', padding: '18px 20px calc(18px + env(safe-area-inset-bottom))', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 } },
       React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: 'rgba(255,255,255,.08)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
         React.createElement(Icon, { name: 'close', size: 20, color: '#fff' })),

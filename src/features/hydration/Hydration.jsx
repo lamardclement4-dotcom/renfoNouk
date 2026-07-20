@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
+import { Icon } from '../health/kit'
 
 // ============================================================
 // Hydratation unifiée (Eau + Boissons + Caféine + Sucres),
@@ -22,14 +23,6 @@ const FONT = '-apple-system, BlinkMacSystemFont, sans-serif'
 const COL_EAU = '#2e7d9e'
 const COL_CAF = '#8a6230'
 const COL_SUC = '#b5566a'
-
-const ICONS = {
-  drop: '💧', cup: '☕', leaf: '🌿', spark: '✨', glass: '🥤', bottle: '🧴',
-  bolt: '⚡', apple: '🍎', layers: '📊', back: '←', chart: '📈', moon: '🌙', check: '✓',
-}
-function Icon({ name, size = 16, color, style }) {
-  return React.createElement('span', { style: { fontSize: size, lineHeight: 1, color, ...style } }, ICONS[name] || '•')
-}
 
 function hlog(db) { return (db && db.hydroLog) || {} }
 function entryCaf(e) { return Number(e.caf != null ? e.caf : e.mg) || 0 }

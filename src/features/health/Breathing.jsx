@@ -181,7 +181,7 @@ export default function BreathingSpace({ onClose }) {
   const [inSession, setInSession] = useState(false)
 
   if (inSession) {
-    return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', padding: '20px 22px', fontFamily: C.font } },
+    return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', padding: '20px 22px', fontFamily: C.font, animation: 'spaceIn .22s ease' } },
       React.createElement(BreathingSession, { protocol: proto, minutes: mins, onFinish: () => setInSession(false), onExit: () => setInSession(false) }))
   }
 

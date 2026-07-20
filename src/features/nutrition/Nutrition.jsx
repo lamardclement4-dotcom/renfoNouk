@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { FOODS, COURSE_REF, DIAG_QUESTIONS, PILIERS } from './nutritionData'
 import { buildConseils } from './diagEngine'
 import { useNutritionStore } from './useNutritionStore'
+import { Icon } from '../health/kit'
 
 // ============================================================
 // Design tokens (équivalent des CSS custom properties de
@@ -29,16 +30,6 @@ const xst = {
   optBtn: { display: 'flex', alignItems: 'center', borderRadius: RADIUS_SM, border: `1px solid ${LINE}`, background: SURFACE },
   sheetWrap: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'flex-end', zIndex: 50 },
   sheet: { background: SURFACE, borderRadius: '20px 20px 0 0', padding: '20px 18px 28px', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box' },
-}
-
-const ICONS = {
-  apple: '🍎', flame: '🔥', layers: '📊', route: '🏁', clock: '🕐', search: '🔍', check: '✓',
-  moon: '🌙', heart: '❤', bolt: '⚡', leaf: '🌿', drop: '💧', droplet: '💧', alert: '⚠',
-  spark: '✨', target: '🎯', user: '👤', battery: '🔋', zap: '⚡', cup: '☕', glass: '🥤',
-  bottle: '🧴', back: '←', next: '→', prev: '←', arrow: '→', close: '✕',
-}
-function Icon({ name, size = 16, color }) {
-  return React.createElement('span', { style: { fontSize: size, lineHeight: 1, color, display: 'inline-block' } }, ICONS[name] || '•')
 }
 
 function FlowHeader({ title, onClose }) {
