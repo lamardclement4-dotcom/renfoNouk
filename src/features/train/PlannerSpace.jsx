@@ -237,7 +237,7 @@ function ExerciseSetRow({ exIdx, setIdx, set, onUpdate, onRemove }) {
   return React.createElement('div', { style: { marginBottom: 10 } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 } },
       React.createElement('span', { style: { fontSize: 11, fontWeight: 700, color: C.ink3 } }, `Série ${setIdx + 1}`),
-      onRemove && React.createElement('button', { onClick: onRemove, 'aria-label': 'Retirer cette série', style: { fontSize: 11, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' } }, '✕')),
+      onRemove && React.createElement('button', { onClick: onRemove, 'aria-label': 'Retirer cette série', style: { fontSize: 13, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: '10px 6px 10px 16px' } }, '✕')),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 } },
       React.createElement('div', null,
         React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'Séries'),
@@ -269,7 +269,7 @@ function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemoveSet, on
       React.createElement('div', { style: { textAlign: 'right' } },
         record && React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.primary } }, record),
         last && React.createElement('div', { style: { fontSize: 10, color: C.ink3 } }, last),
-        React.createElement('button', { onClick: () => onRemove(idx), style: { fontSize: 11, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', marginTop: 3 } }, 'Retirer'))),
+        React.createElement('button', { onClick: () => onRemove(idx), style: { fontSize: 12.5, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', marginTop: 3, padding: '9px 4px 9px 14px' } }, 'Retirer'))),
     sets.map((set, si) => React.createElement(ExerciseSetRow, { key: si, exIdx: idx, setIdx: si, set, onUpdate: onUpdateSet, onRemove: sets.length > 1 ? () => onRemoveSet(idx, si) : null })),
     React.createElement('button', { onClick: () => onAddSet(idx), style: { width: '100%', padding: '8px 0', borderRadius: 8, background: 'transparent', border: `1px dashed ${C.line}`, color: C.ink3, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', marginTop: 4 } }, '+ Ajouter une série'))
 }
