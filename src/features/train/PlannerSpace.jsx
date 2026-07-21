@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, FlowSpace, SegTabs } from '../health/kit'
+import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE } from './plannerData'
 
@@ -319,7 +319,7 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
     exercises.length === 0 && React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, textAlign: 'center', padding: '10px 0' } }, 'Cherche et ajoute un exercice ci-dessus.'))
 }
 
-function SessionForm({ activeSports, initial, initialDate, exerciseHistory, onSave, onDelete, onClose }) {
+function SessionForm({ activeSports, initial, initialDate, exerciseHistory, pastSessions, onSave, onDelete, onClose }) {
   const [sport, setSport] = useState(initial?.sport || null)
   const [date, setDate] = useState(initial?.date || initialDate || isoDate(new Date()))
   const [heure, setHeure] = useState(initial?.heure || '')
@@ -331,6 +331,24 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, onSa
   const [data, setData] = useState(initial?.data || {})
   const [exercises, setExercises] = useState(initial?.exercises || [])
   const [dupDate, setDupDate] = useState('')
+  const [reuseDismissed, setReuseDismissed] = useState(false)
+
+  // Nouvelle séance + sport choisi : propose de reprendre le contenu de la
+  // dernière séance de ce sport (durée, champs spécifiques, séries, notes)
+  // au lieu de tout re-remplir à chaque fois pour un sport qu'on refait
+  // régulièrement.
+  const lastOfSport = !initial && sport && !reuseDismissed
+    ? (pastSessions || []).filter((s) => s.sport === sport && s.id !== initial?.id)
+      .sort((a, b) => (b.statut === 'realise') - (a.statut === 'realise') || b.date.localeCompare(a.date))[0]
+    : null
+  function reuseLastSession() {
+    if (!lastOfSport) return
+    if (DUREES.includes(lastOfSport.duree)) { setDuree(lastOfSport.duree); setDureeCustom('') } else { setDuree('Personnalisée'); setDureeCustom(lastOfSport.duree || '') }
+    setData(lastOfSport.data || {})
+    setExercises(lastOfSport.exercises || [])
+    setNotes(lastOfSport.notes || '')
+    setReuseDismissed(true)
+  }
 
   const canSave = !!sport && !!date
   function handleSave() {
@@ -363,9 +381,15 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, onSa
       React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 16 } },
         activeSports.map((sp) => {
           const active = sport === sp.id
-          return React.createElement('button', { key: sp.id, onClick: () => setSport(sp.id), style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (active ? C.primary : C.line), background: active ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, color: active ? C.primary : C.ink } },
+          return React.createElement('button', { key: sp.id, onClick: () => { setSport(sp.id); setReuseDismissed(false) }, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (active ? C.primary : C.line), background: active ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, color: active ? C.primary : C.ink } },
             React.createElement('span', null, sportEmoji(sp.id)), sp.label)
         })),
+
+      lastOfSport && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.primary} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.primary} 25%, ${C.line})`, marginBottom: 16 } },
+        React.createElement('div', { style: { flex: 1, fontSize: 12.5, color: C.ink2, lineHeight: 1.4 } },
+          'Reprendre ta dernière séance de ce sport ', React.createElement('strong', { style: { color: C.ink } }, '(' + fmtDate(lastOfSport.date) + ')'), ' ?'),
+        React.createElement('button', { onClick: reuseLastSession, style: { flex: '0 0 auto', padding: '8px 13px', borderRadius: 999, background: C.primary, color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } }, 'Reprendre'),
+        React.createElement('button', { onClick: () => setReuseDismissed(true), 'aria-label': 'Ignorer', style: { flex: '0 0 auto', width: 28, height: 28, borderRadius: 999, background: 'transparent', border: 'none', color: C.ink3, fontSize: 15, cursor: 'pointer' } }, '✕')),
 
       React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Quand'),
       React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 16 } },
@@ -514,6 +538,7 @@ export default function PlannerSpace({ db, store, onClose }) {
       initial: form === 'new' ? null : form,
       initialDate: newDate,
       exerciseHistory,
+      pastSessions: sessions,
       onSave: saveSession,
       onDelete: deleteSession,
       onClose: () => setForm(null),
