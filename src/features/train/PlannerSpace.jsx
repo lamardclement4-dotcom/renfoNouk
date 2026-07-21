@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs } from '../health/kit'
 import { SPORTS } from './trainData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE } from './plannerData'
+import { dureeToMins } from './renfoIntel'
 
 const MUSCU_SPORTS = ['muscu', 'crossfit', 'callisthenie', 'gym', 'halterophilie']
 
@@ -443,7 +444,8 @@ export default function PlannerSpace({ db, store, onClose }) {
   function openAdd(ds) { setNewDate(ds); setForm('new') }
   function openEdit(s) { setForm(s) }
   function saveSession(sess) {
-    const next = sessions.some((s) => s.id === sess.id) ? sessions.map((s) => s.id === sess.id ? sess : s) : [...sessions, sess]
+    const prev = sessions.find((s) => s.id === sess.id)
+    const next = prev ? sessions.map((s) => s.id === sess.id ? sess : s) : [...sessions, sess]
     const patch = { planningSessions: next }
     if (MUSCU_SPORTS.includes(sess.sport) && sess.statut === 'realise' && sess.exercises && sess.exercises.length) {
       const hist = { ...exerciseHistory }
@@ -457,6 +459,26 @@ export default function PlannerSpace({ db, store, onClose }) {
         }
       })
       patch.exerciseHistory = hist
+    }
+    // Une séance marquée "Réalisé" pour la première fois (via le Calendrier,
+    // pas via le lecteur intégré) doit aussi compter dans le streak/stats
+    // globaux — sinon Accueil/Progrès ignorent tout ce qui est loggé ici.
+    const wasRealise = prev && prev.statut === 'realise'
+    if (sess.statut === 'realise' && !wasRealise) {
+      const mins = dureeToMins(sess.duree)
+      patch.sessionsTotal = (db.sessionsTotal || 0) + 1
+      patch.minutesTotal = (db.minutesTotal || 0) + mins
+      const todayIso = isoDate(new Date())
+      if (sess.date === todayIso) {
+        const week = [...db.week]
+        const dayIdx = (new Date().getDay() + 6) % 7
+        week[dayIdx] = (week[dayIdx] || 0) + mins
+        const newStreak = db.completedToday ? db.streak : db.streak + 1
+        patch.week = week
+        patch.streak = newStreak
+        patch.record = Math.max(db.record || 0, newStreak)
+        patch.lastSessionISO = todayIso
+      }
     }
     store.set(patch)
     setForm(null)
