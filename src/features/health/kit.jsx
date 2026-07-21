@@ -233,6 +233,11 @@ const ICONS = {
     el('path', { key: 1, d: 'M10 2h4v3.2l1.5 2V21a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V7.2l1.5-2V2z' }),
     el('path', { key: 2, d: 'M9.3 12h5.4' }),
   ],
+  wine: [
+    el('path', { key: 1, d: 'M7 3h10c0 5-1.5 8-5 8s-5-3-5-8z' }),
+    el('path', { key: 2, d: 'M12 11v7' }),
+    el('path', { key: 3, d: 'M8.5 21h7' }),
+  ],
   dot: [el('circle', { cx: 12, cy: 12, r: 3, fill: 'currentColor', stroke: 'none' })],
 }
 export function Icon({ name, size = 16, color, style }) {
