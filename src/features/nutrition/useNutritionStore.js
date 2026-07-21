@@ -170,6 +170,7 @@ export function useNutritionStore(userId) {
     foodLog: Object.fromEntries(Object.entries(dayRows).map(([d, v]) => [d, v.food || []])),
     hydroLog: Object.fromEntries(Object.entries(dayRows).map(([d, v]) => [d, v.hydration || []])),
     week: phys.week || [0, 0, 0, 0, 0, 0, 0],
+    sessionLog: phys.sessionLog || [],
     streak: phys.streak || 0,
     sessionsTotal: phys.sessionsTotal || 0,
     minutesTotal: phys.minutesTotal || 0,
@@ -223,13 +224,20 @@ export function useNutritionStore(userId) {
     // Actions dédiées au module Entraîner — équivalents des méthodes du store
     // local-only de l'ancienne app (Store.completeSession, Store.saveMobility…),
     // réécrites en termes de store.set pour rester compatibles Supabase.
-    completeSession: (mins) => {
+    completeSession: (mins, meta = {}) => {
       const day = (new Date().getDay() + 6) % 7 // 0=lundi … 6=dimanche
       const week = [...db.week]
       week[day] = (week[day] || 0) + mins
       const newStreak = db.completedToday ? db.streak : db.streak + 1
+      // Séance programme/catalogue jouée via le lecteur intégré : la seule
+      // trace qu'on en garde était le compteur "cette semaine" ci-dessus,
+      // qui ne se recale jamais sur une vraie date — impossible de la
+      // retrouver dans une rétrospective de semaines passées. On log
+      // aussi la date exacte ici pour que ce soit possible.
+      const log = [...db.sessionLog, { date: todayISO, mins, title: meta.title || null, cat: meta.cat || null }].slice(-300)
       store.set({
         week,
+        sessionLog: log,
         sessionsTotal: db.sessionsTotal + 1,
         minutesTotal: db.minutesTotal + mins,
         streak: newStreak,

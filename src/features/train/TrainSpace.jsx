@@ -51,7 +51,8 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
 
   function finishSession() {
     const s = getSession(playId, db.program)
-    store.completeSession(s ? s.mins : 8)
+    const isRecovery = playId && String(playId).startsWith('rec-')
+    store.completeSession(s ? s.mins : 8, { title: s ? s.title : null, cat: isRecovery ? 'recup' : (s ? s.cat : null) })
     if (playId && db.program && db.program.sessions && db.program.sessions.some((x) => x.id === playId)) {
       store.markProgramDone(playId)
     }

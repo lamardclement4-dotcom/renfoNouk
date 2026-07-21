@@ -145,6 +145,72 @@ export function trainingTotals(db) {
   }
 }
 
+// Couleurs/libellés des séances programme/catalogue (db.sessionLog), pour
+// les afficher à côté des sports du Calendrier dans la rétrospective —
+// valeurs alignées sur MODULE_TINTS (kit.jsx) sans importer le kit UI
+// dans ce module purement logique.
+const CAT_META = {
+  mobilite: { label: 'Mobilité', color: '#6f8fa6' },
+  renfo: { label: 'Renforcement', color: '#bf6a40' },
+  fullbody: { label: 'Full body', color: '#bd923f' },
+  plyo: { label: 'Pliométrie', color: '#a85a36' },
+  recup: { label: 'Récupération', color: '#5b8a72' },
+}
+
+// Rétrospective complète d'une semaine (celle de refDate par défaut) :
+// fusionne les séances du Calendrier (planningSessions, dates exactes)
+// et les séances programme/catalogue jouées via le lecteur (sessionLog)
+// en une liste chronologique + répartition par sport/type + total par
+// jour — la base de la vraie rétrospective (comparaisons, détail).
+export function weekRetro(db, refDate = new Date()) {
+  const monday = mondayOf(refDate)
+  const mondayMs = monday.getTime()
+  const week = [0, 0, 0, 0, 0, 0, 0]
+  const items = []
+  const bySportMap = {}
+
+  const addMins = (label, color, date, mins, source) => {
+    const dayIdx = Math.round((new Date(date + 'T00:00:00').getTime() - mondayMs) / 86400000)
+    if (dayIdx < 0 || dayIdx > 6 || mins <= 0) return
+    week[dayIdx] += mins
+    items.push({ date, mins, label, color, source })
+    if (!bySportMap[label]) bySportMap[label] = { mins: 0, color }
+    bySportMap[label].mins += mins
+  }
+
+  for (const s of db.planningSessions || []) {
+    if (!s || s.statut !== 'realise' || !s.date) continue
+    const meta = sportMeta(s.sport)
+    addMins(meta.label, meta.color, s.date, dureeToMins(s.duree), 'planner')
+  }
+  for (const e of db.sessionLog || []) {
+    if (!e || !e.date) continue
+    const meta = CAT_META[e.cat] || { label: e.title || 'Séance', color: '#999' }
+    addMins(e.title || meta.label, meta.color, e.date, num(e.mins, 0), 'player')
+  }
+
+  items.sort((a, b) => a.date.localeCompare(b.date))
+  const total = week.reduce((a, b) => a + b, 0)
+  const bySport = Object.keys(bySportMap)
+    .map((label) => ({ label, mins: bySportMap[label].mins, color: bySportMap[label].color, pct: total ? Math.round(bySportMap[label].mins / total * 100) : 0 }))
+    .sort((a, b) => b.mins - a.mins)
+
+  return { monday, week, total, count: items.length, items, bySport }
+}
+
+// Rétrospective sur plusieurs semaines (la plus ancienne en premier),
+// pour une comparaison / mini-graphe de tendance sur la durée.
+export function weeksTrend(db, count = 8) {
+  const thisMonday = mondayOf(new Date())
+  const out = []
+  for (let i = count - 1; i >= 0; i--) {
+    const monday = new Date(thisMonday.getTime() - i * 7 * 86400000)
+    const r = weekRetro(db, monday)
+    out.push({ offset: -i, monday, total: r.total, count: r.count })
+  }
+  return out
+}
+
 // --- PILIERS (score 0-100, ou null si donnée absente) ---
 
 export function pillarHydration(db, iso) {

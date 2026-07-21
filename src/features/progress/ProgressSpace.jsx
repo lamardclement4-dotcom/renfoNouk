@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, Ring, FlowSpace, isoToday } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { trainingStats, trainingTotals, plannerWeekData, mondayOf, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
+import { trainingStats, trainingTotals, weekRetro, weeksTrend, mondayOf, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import TrainSpace from '../train/TrainSpace'
 import PhysicalTestsSpace, { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import SleepSpace from '../health/Sleep'
@@ -93,17 +93,23 @@ export default function ProgressSpace({ userId, onClose }) {
   const today = isoToday()
   const totals = trainingTotals(db)
   const streak = totals.streak
-  // La semaine en cours profite de la fusion avec db.week (séances jouées
-  // via le lecteur intégré, qui n'ont pas d'historique par semaine passée) ;
-  // les semaines précédentes sont recalculées à la volée depuis le
-  // planning uniquement — c'est la seule source qui garde une date exacte.
+  // Rétrospective : week/items/bySport viennent tous de la même source
+  // (weekRetro, planning + sessionLog datés) pour que le graphe, la
+  // répartition par sport et la liste des séances restent cohérents
+  // entre eux, quelle que soit la semaine affichée.
   const thisMonday = mondayOf(new Date())
-  const selectedWeek = weekOffset === 0 ? totals.week : plannerWeekData(db, new Date(thisMonday.getTime() + weekOffset * 7 * 86400000)).week
-  const totalMins = selectedWeek.reduce((a, b) => a + b, 0)
+  const selectedMonday = new Date(thisMonday.getTime() + weekOffset * 7 * 86400000)
+  const retro = weekRetro(db, selectedMonday)
+  const prevRetro = weekRetro(db, new Date(selectedMonday.getTime() - 7 * 86400000))
+  const trend = weeksTrend(db, 8)
+  const selectedWeek = retro.week
+  const totalMins = retro.total
   const maxM = Math.max(...selectedWeek, 1)
   const doneCount = selectedWeek.filter((m) => m > 0).length
   const weeklyGoal = db.goals.weeklySessions
   const goalPct = Math.min(100, Math.round((doneCount / weeklyGoal) * 100))
+  const vsPrevDelta = retro.total - prevRetro.total
+  const vsPrevPct = prevRetro.total ? Math.round(vsPrevDelta / prevRetro.total * 100) : null
   const hrs = Math.floor(totals.minutesTotal / 60)
   const mins = totals.minutesTotal % 60
   const hoursLabel = mins ? `${hrs}h${String(mins).padStart(2, '0')}` : `${hrs}h`
@@ -325,14 +331,61 @@ export default function ProgressSpace({ userId, onClose }) {
       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 } },
         h(WeekPicker, { offset: weekOffset, setOffset: setWeekOffset }),
         h('div', { style: { fontSize: 13.5, color: C.ink3, fontWeight: 600 } }, doneCount, '/', weeklyGoal, ' séances · ', totalMins, ' min')),
-      h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-end', height: 96 } },
+      h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-end', height: 96, marginBottom: 14 } },
         selectedWeek.map((m, k) => {
           const done = m > 0
           return h('div', { key: k, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 } },
             h('div', { style: { width: '100%', height: 70, display: 'flex', alignItems: 'flex-end' } },
               h('div', { style: { width: '100%', height: `${Math.max(m / maxM * 100, 6)}%`, borderRadius: 7, background: done ? C.primary : C.surface2 } })),
             h('span', { style: { fontSize: 12, fontWeight: 600, color: done ? C.ink : C.ink3 } }, WEEK_DAYS[k]))
-        }))),
+        })),
+
+      // Comparaison vs la semaine précédente.
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', borderRadius: C.radiusXs, background: C.surface2, marginBottom: 14 } },
+        h(Icon, { name: 'chart', size: 14, color: vsPrevPct == null ? C.ink3 : vsPrevDelta >= 0 ? '#4a8a6a' : '#c46a3a', style: vsPrevPct != null && vsPrevDelta < 0 ? { transform: 'scaleY(-1)' } : undefined }),
+        h('span', { style: { fontSize: 12.5, color: C.ink2 } },
+          vsPrevPct == null
+            ? (prevRetro.total === 0 ? 'Pas de séance la semaine précédente pour comparer.' : `${prevRetro.total} min la semaine précédente.`)
+            : h(React.Fragment, null,
+              h('strong', { style: { color: vsPrevDelta >= 0 ? '#4a8a6a' : '#c46a3a' } }, vsPrevDelta >= 0 ? `+${vsPrevPct}%` : `${vsPrevPct}%`),
+              ` vs semaine précédente (${prevRetro.total} min).`))),
+
+      // Répartition par sport / type de séance.
+      retro.bySport.length > 0 && h('div', { style: { marginBottom: 14 } },
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Répartition'),
+        h('div', { style: { display: 'flex', borderRadius: 999, overflow: 'hidden', height: 8, marginBottom: 8 } },
+          retro.bySport.map((s, i) => h('div', { key: i, style: { width: `${s.pct}%`, background: s.color } }))),
+        retro.bySport.map((s, i) => h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' } },
+          h('div', { style: { width: 8, height: 8, borderRadius: 999, background: s.color, flex: '0 0 auto' } }),
+          h('span', { style: { flex: 1, fontSize: 13, color: C.ink } }, s.label),
+          h('span', { style: { fontSize: 12.5, color: C.ink3, fontWeight: 600 } }, s.mins, ' min · ', s.pct, '%')))),
+
+      // Détail des séances de la semaine sélectionnée.
+      retro.items.length > 0 && h('div', null,
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Séances'),
+        retro.items.map((it, i) => h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
+          h('div', { style: { width: 8, height: 8, borderRadius: 999, background: it.color, flex: '0 0 auto' } }),
+          h('span', { style: { fontSize: 12.5, color: C.ink3, width: 68, flex: '0 0 auto' } }, new Date(it.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })),
+          h('span', { style: { flex: 1, fontSize: 13.5, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.label),
+          h('span', { style: { fontSize: 12.5, color: C.ink3, fontWeight: 600 } }, it.mins, ' min'))))),
+
+    // Tendance sur 8 semaines — pour voir la progression d'un coup d'œil.
+    h('div', { style: { background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, padding: 20, marginBottom: 14 } },
+      h('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 15, marginBottom: 14 } }, '8 dernières semaines'),
+      h('div', { style: { display: 'flex', gap: 6, alignItems: 'flex-end', height: 60 } },
+        (() => {
+          const maxT = Math.max(...trend.map((w) => w.total), 1)
+          return trend.map((w, i) => h('button', {
+            key: i,
+            onClick: () => setWeekOffset(w.offset),
+            title: `${w.total} min`,
+            style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0 },
+          },
+            h('div', { style: { width: '100%', height: 44, display: 'flex', alignItems: 'flex-end' } },
+              h('div', { style: { width: '100%', height: `${Math.max(w.total / maxT * 100, w.total > 0 ? 8 : 3)}%`, borderRadius: 4, background: w.offset === weekOffset ? C.primary : (w.total > 0 ? `color-mix(in srgb, ${C.primary} 35%, ${C.surface2})` : C.surface2) } })),
+            h('span', { style: { fontSize: 10, fontWeight: w.offset === weekOffset ? 700 : 500, color: w.offset === weekOffset ? C.primary : C.ink3 } }, w.offset === 0 ? "auj." : `${w.offset}s`))
+          )
+        })())),
 
     h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 } },
       [
