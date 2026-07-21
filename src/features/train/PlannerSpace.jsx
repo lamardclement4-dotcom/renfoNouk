@@ -5,6 +5,26 @@ import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE } from './plannerData'
 
 const MUSCU_SPORTS = ['muscu', 'crossfit', 'callisthenie', 'gym', 'halterophilie']
 
+// Regroupe les groupes musculaires d'EXERCISES_DB (Quadriceps, Dos…) en
+// grandes familles de séance (Jambes/Haut du corps/Core), pour proposer
+// "reprendre ma séance Jambes" plutôt qu'un simple "reprendre la dernière
+// séance de muscu" qui pourrait être une séance haut du corps.
+const GROUP_FAMILY = {
+  Quadriceps: 'Jambes', 'Ischio-jamb.': 'Jambes', Fessiers: 'Jambes', Mollets: 'Jambes',
+  Pectoraux: 'Haut du corps', Dos: 'Haut du corps', Épaules: 'Haut du corps', Biceps: 'Haut du corps', Triceps: 'Haut du corps',
+  Abdominaux: 'Core', Lombaires: 'Core',
+}
+const FAMILY_ICON = { 'Jambes': '🦵', 'Haut du corps': '💪', Core: '🧱', Mixte: '🔀' }
+function muscuFamily(exercises) {
+  const counts = {}
+  for (const ex of exercises || []) {
+    const fam = GROUP_FAMILY[ex.group] || 'Mixte'
+    counts[fam] = (counts[fam] || 0) + 1
+  }
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1])
+  return entries.length ? entries[0][0] : 'Mixte'
+}
+
 const SPORT_EMOJI = {
   course: '🏃', demi: '🏃', fond: '🏃', trail: '⛰️', marche: '🥾',
   perche: '🤸', sprint: '⚡', saut: '🦘', lancers: '🥏',
@@ -334,11 +354,14 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
   const [reuseDismissed, setReuseDismissed] = useState(false)
   const [repeatNextWeek, setRepeatNextWeek] = useState(false)
 
+  const isMuscu = !!(sport && MUSCU_SPORTS.includes(sport))
+
   // Nouvelle séance + sport choisi : propose de reprendre le contenu de la
-  // dernière séance de ce sport (durée, champs spécifiques, séries, notes)
-  // au lieu de tout re-remplir à chaque fois pour un sport qu'on refait
-  // régulièrement.
-  const lastOfSport = !initial && sport && !reuseDismissed
+  // dernière séance de ce sport (durée, champs spécifiques, notes) au lieu
+  // de tout re-remplir à chaque fois pour un sport qu'on refait
+  // régulièrement. Pour la muscu, voir muscuSuggestions ci-dessous à la
+  // place — un seul "dernière séance" mélangerait jambes et haut du corps.
+  const lastOfSport = !initial && sport && !isMuscu && !reuseDismissed
     ? (pastSessions || []).filter((s) => s.sport === sport && s.id !== initial?.id)
       .sort((a, b) => (b.statut === 'realise') - (a.statut === 'realise') || b.date.localeCompare(a.date))[0]
     : null
@@ -348,6 +371,40 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
     setData(lastOfSport.data || {})
     setExercises(lastOfSport.exercises || [])
     setNotes(lastOfSport.notes || '')
+    setReuseDismissed(true)
+  }
+
+  // Muscu : une suggestion par famille de séance récente (Jambes, Haut du
+  // corps, Core…) plutôt qu'une seule — "séance déjà faite = jambes" doit
+  // proposer une séance jambes, pas la dernière muscu peu importe le type.
+  // La charge de chaque exercice est reprise depuis exerciseHistory (la
+  // plus à jour), pas depuis la vieille séance recopiée qui peut dater.
+  const muscuSuggestions = !initial && isMuscu && !reuseDismissed
+    ? (() => {
+      const candidates = (pastSessions || []).filter((s) => s.sport === sport && s.id !== initial?.id && s.exercises && s.exercises.length)
+        .sort((a, b) => (b.statut === 'realise') - (a.statut === 'realise') || b.date.localeCompare(a.date))
+      const seenFamily = {}
+      const out = []
+      for (const s of candidates) {
+        const fam = muscuFamily(s.exercises)
+        if (seenFamily[fam]) continue
+        seenFamily[fam] = true
+        out.push({ family: fam, session: s })
+        if (out.length >= 3) break
+      }
+      return out
+    })()
+    : []
+  function applyMuscuSuggestion(session) {
+    if (DUREES.includes(session.duree)) { setDuree(session.duree); setDureeCustom('') } else { setDuree('Personnalisée'); setDureeCustom(session.duree || '') }
+    const refreshed = (session.exercises || []).map((ex) => {
+      const h = exerciseHistory && exerciseHistory[ex.name]
+      const lastCharge = h && h.last && h.last.charge != null ? h.last.charge : null
+      const sets = (ex.sets || []).map((st) => lastCharge != null ? { ...st, charge: lastCharge } : st)
+      return { ...ex, sets }
+    })
+    setExercises(refreshed)
+    setNotes(session.notes || '')
     setReuseDismissed(true)
   }
 
@@ -406,6 +463,14 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
           'Reprendre ta dernière séance de ce sport ', React.createElement('strong', { style: { color: C.ink } }, '(' + fmtDate(lastOfSport.date) + ')'), ' ?'),
         React.createElement('button', { onClick: reuseLastSession, style: { flex: '0 0 auto', padding: '8px 13px', borderRadius: 999, background: C.primary, color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } }, 'Reprendre'),
         React.createElement('button', { onClick: () => setReuseDismissed(true), 'aria-label': 'Ignorer', style: { flex: '0 0 auto', width: 28, height: 28, borderRadius: 999, background: 'transparent', border: 'none', color: C.ink3, fontSize: 15, cursor: 'pointer' } }, '✕')),
+
+      muscuSuggestions.length > 0 && React.createElement('div', { style: { padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.primary} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.primary} 25%, ${C.line})`, marginBottom: 16 } },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 } },
+          React.createElement('span', { style: { fontSize: 12.5, color: C.ink2 } }, 'Reprendre une séance récente (exercices + dernière charge) :'),
+          React.createElement('button', { onClick: () => setReuseDismissed(true), 'aria-label': 'Ignorer', style: { flex: '0 0 auto', width: 24, height: 24, borderRadius: 999, background: 'transparent', border: 'none', color: C.ink3, fontSize: 14, cursor: 'pointer' } }, '✕')),
+        React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7 } },
+          muscuSuggestions.map(({ family, session }, i) => React.createElement('button', { key: i, onClick: () => applyMuscuSuggestion(session), style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 999, background: C.surface, border: `1.5px solid ${C.primary}`, color: C.primary, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } },
+            FAMILY_ICON[family] || '💪', family, React.createElement('span', { style: { color: C.ink3, fontWeight: 500 } }, '(' + fmtDate(session.date) + ')'))))),
 
       React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Quand'),
       React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 16 } },
