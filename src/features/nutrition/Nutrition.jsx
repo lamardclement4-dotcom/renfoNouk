@@ -22,7 +22,7 @@ const RADIUS_SM = 12
 const FONT = '-apple-system, BlinkMacSystemFont, sans-serif'
 
 const xst = {
-  flow: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#faf9f5', fontFamily: FONT },
+  flow: { position: 'fixed', inset: 0, zIndex: 55, display: 'flex', flexDirection: 'column', background: '#faf9f5', maxWidth: 460, margin: '0 auto', fontFamily: FONT, animation: 'spaceIn .22s ease' },
   primaryBtn: { padding: '13px 20px', borderRadius: RADIUS_SM, border: 'none', color: '#fff', fontWeight: 700, fontSize: 14.5, cursor: 'pointer', width: '100%' },
   input: { padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', fontSize: 15, marginTop: 8, width: '100%', boxSizing: 'border-box' },
   iconBtn: { width: 38, height: 38, borderRadius: 10, border: 'none', background: SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: '0 0 auto' },
@@ -457,7 +457,7 @@ function FoodTab({ db, store }) {
 
   if (mode === 'search') {
     const nq = norm(q)
-    const res = (nq ? FOODS.filter((f) => FOODS_NORM.get(f.id).includes(nq)) : FOODS).slice(0, 40)
+    const res = nq ? FOODS.filter((f) => FOODS_NORM.get(f.id).includes(nq)) : FOODS
     const Quick = ({ food, kk }) => React.createElement('button', { key: kk, onClick: () => chooseFood(food), style: { ...chipBtn(false), display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', maxWidth: '100%' } },
       React.createElement('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis' } }, isFav(food.n) ? '★ ' : '', food.n))
     return React.createElement('div', null,
