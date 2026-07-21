@@ -211,6 +211,99 @@ export function weeksTrend(db, count = 8) {
   return out
 }
 
+function fmtWeekRangeFr(monday) {
+  const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6)
+  const d = (dt) => dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  return `${d(monday)} au ${d(sunday)}`
+}
+
+// Rétrospective hebdomadaire complète — entraînement, nutrition,
+// hydratation, compléments — pour le message affiché sur Accueil chaque
+// lundi. Porte sur la semaine qui vient de se terminer (lundi-dimanche
+// précédent), pas celle en cours qui ne fait que commencer.
+export function mondayRetro(db) {
+  const thisMonday = mondayOf(new Date())
+  const lastMonday = new Date(thisMonday.getTime() - 7 * 86400000)
+  const prevMonday = new Date(thisMonday.getTime() - 14 * 86400000)
+
+  const training = weekRetro(db, lastMonday)
+  const trainingPrev = weekRetro(db, prevMonday)
+
+  const days = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(lastMonday.getTime() + i * 86400000)
+    const p = (n) => n < 10 ? '0' + n : '' + n
+    days.push(d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()))
+  }
+
+  let kcalSum = 0, protSum = 0, nutriDays = 0
+  let mlSum = 0, cafSum = 0, hydroDays = 0
+  const plan = db.suppPlan || []
+  let suppPossible = 0, suppTakenCount = 0
+  for (const iso of days) {
+    const n = nutritionDay(db, iso)
+    if (n.entries > 0) { kcalSum += n.k; protSum += n.p; nutriDays++ }
+    const h = hydroDay(db, iso)
+    if (h.entries > 0) { mlSum += h.ml; cafSum += h.caf; hydroDays++ }
+    if (plan.length) {
+      suppPossible += plan.length
+      suppTakenCount += ((db.suppTaken || {})[iso] || []).filter((id) => plan.includes(id)).length
+    }
+  }
+
+  const t = db.foodTargets || {}
+  const kcalTarget = num(t.kcal, 0) || num(t.k, 0)
+  const protTarget = num(t.prot, 0) || num(t.p, 0)
+  const hydroTarget = hydricTargetMl(db)
+
+  const nutrition = nutriDays ? { avgKcal: round(kcalSum / nutriDays), avgProt: round(protSum / nutriDays), kcalTarget, protTarget, days: nutriDays } : null
+  const hydration = hydroDays ? { avgMl: round(mlSum / hydroDays), avgCaf: round(cafSum / hydroDays), target: hydroTarget, days: hydroDays } : null
+  const supplements = plan.length ? { pct: suppPossible ? round(suppTakenCount / suppPossible * 100) : 0, planLen: plan.length } : null
+
+  const weekLabel = fmtWeekRangeFr(lastMonday)
+  const lines = []
+
+  if (training.count > 0) {
+    const deltaPct = trainingPrev.total ? Math.round((training.total - trainingPrev.total) / trainingPrev.total * 100) : null
+    const top = training.bySport[0]
+    let s = `Semaine du ${weekLabel} : ${training.count} séance${training.count > 1 ? 's' : ''}, ${training.total} min`
+    if (deltaPct != null) s += ` (${deltaPct >= 0 ? '+' : ''}${deltaPct}% vs la semaine d'avant)`
+    if (top) s += `, principalement en ${top.label.toLowerCase()} (${top.pct}%)`
+    lines.push(s + '.')
+  } else {
+    lines.push(`Semaine du ${weekLabel} : aucune séance enregistrée — repos complet, ou séances non loguées ?`)
+  }
+
+  if (nutrition) {
+    let s = `Nutrition : ${nutrition.avgKcal} kcal/jour en moyenne`
+    if (nutrition.kcalTarget) s += ` (objectif ${nutrition.kcalTarget})`
+    s += ` sur ${nutrition.days}/7 jours logués.`
+    if (nutrition.protTarget && nutrition.avgProt < nutrition.protTarget * 0.8) {
+      s += ` Apport protéique en retard (${nutrition.avgProt} / ${nutrition.protTarget} g) — à surveiller la semaine prochaine.`
+    } else if (nutrition.protTarget) {
+      s += ` Protéines dans la cible (${nutrition.avgProt} / ${nutrition.protTarget} g).`
+    }
+    lines.push(s)
+  } else {
+    lines.push('Nutrition : rien de logué cette semaine.')
+  }
+
+  if (hydration) {
+    let s = `Hydratation : ${hydration.avgMl} ml/jour en moyenne (objectif ${hydration.target} ml)`
+    s += hydration.avgMl >= hydration.target ? ', objectif tenu.' : `, ${Math.round((1 - hydration.avgMl / hydration.target) * 100)}% en dessous de la cible.`
+    if (hydration.avgCaf >= 300) s += ` Caféine moyenne élevée (${hydration.avgCaf} mg/j).`
+    lines.push(s)
+  } else {
+    lines.push('Hydratation : rien de logué cette semaine.')
+  }
+
+  if (supplements) {
+    lines.push(`Compléments : ${supplements.pct}% d'observance sur ton plan de ${supplements.planLen} complément${supplements.planLen > 1 ? 's' : ''}.`)
+  }
+
+  return { weekLabel, training, trainingPrev, nutrition, hydration, supplements, lines }
+}
+
 // --- PILIERS (score 0-100, ou null si donnée absente) ---
 
 export function pillarHydration(db, iso) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, Pill, MODULE_TINTS, isoToday } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals } from '../train/renfoIntel'
+import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro } from '../train/renfoIntel'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
 import TrainSpace from '../train/TrainSpace'
 import HealthHome from '../health/HealthHome'
@@ -112,6 +112,27 @@ function renderBothEqual(heroInfo, onOpen, onPlanner) {
 
 // Alerte visible seulement en cas de charge ACWR "Vigilance renforcée" —
 // mêmes seuils que le pilier Charge et le Profil (inferUserLevel).
+// Rétrospective affichée chaque lundi : analyse précise (pas juste des
+// chiffres) de la semaine qui vient de se terminer — entraînement,
+// nutrition, hydratation, compléments. Fermeture locale seulement (pas
+// persistée) : elle revient à la prochaine ouverture, et de toute façon
+// naturellement chaque lundi suivant.
+function MondayRetroCard({ db }) {
+  const [dismissed, setDismissed] = useState(false)
+  if (dismissed || new Date().getDay() !== 1) return null
+  const r = mondayRetro(db)
+  if (!r.training.count && !r.nutrition && !r.hydration) return null
+  return h('div', { style: { padding: 20, borderRadius: C.radius, background: '#3f3a5c', color: '#fff', marginBottom: 16, boxShadow: '0 10px 24px -12px #3f3a5c' } },
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 } },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+        h('div', { style: { width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          h(Icon, { name: 'chart', size: 18, color: '#fff' })),
+        h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15.5 } }, 'Rétrospective de la semaine')),
+      h('button', { onClick: () => setDismissed(true), 'aria-label': 'Fermer', style: { background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', cursor: 'pointer', padding: 4 } },
+        h(Icon, { name: 'close', size: 16, color: 'rgba(255,255,255,.7)' }))),
+    r.lines.map((line, i) => h('p', { key: i, style: { fontSize: 13, lineHeight: 1.55, opacity: 0.95, marginTop: i ? 8 : 0 } }, line)))
+}
+
 function OverloadAlert({ db, onPrevention }) {
   const r = acwrRisk(db)
   if (!r.available || r.level !== 'Vigilance renforcée') return null
@@ -231,6 +252,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     header,
     hero,
     statRow,
+    h(MondayRetroCard, { db }),
     h(OverloadAlert, { db, onPrevention: () => setHealthTile('prevention') }),
     h(HealthScoreCard, { db, onSleep: () => setHealthTile('sommeil') }),
     h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition') }),
