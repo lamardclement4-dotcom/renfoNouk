@@ -332,6 +332,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
   const [exercises, setExercises] = useState(initial?.exercises || [])
   const [dupDate, setDupDate] = useState('')
   const [reuseDismissed, setReuseDismissed] = useState(false)
+  const [repeatNextWeek, setRepeatNextWeek] = useState(false)
 
   // Nouvelle séance + sport choisi : propose de reprendre le contenu de la
   // dernière séance de ce sport (durée, champs spécifiques, séries, notes)
@@ -350,6 +351,13 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
     setReuseDismissed(true)
   }
 
+  // Nouvelle séance : propose d'ajouter tout de suite la même le même jour
+  // la semaine prochaine, pour les sports qu'on répète chaque semaine —
+  // sans rien créer si ce jour-là a déjà une séance de ce sport.
+  const nextWeekDate = date ? isoDate(new Date(new Date(date + 'T00:00:00').getTime() + 7 * 86400000)) : null
+  const nextWeekTaken = !!(nextWeekDate && (pastSessions || []).some((s) => s.sport === sport && s.date === nextWeekDate))
+  const showRepeatOption = !initial && sport && nextWeekDate && !nextWeekTaken
+
   const canSave = !!sport && !!date
   function handleSave() {
     onSave({
@@ -358,6 +366,14 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
       duree: duree === 'Personnalisée' ? (dureeCustom || 'Personnalisée') : duree,
       statut, ressenti, notes, data, exercises,
     })
+    if (showRepeatOption && repeatNextWeek) {
+      onSave({
+        id: 's_' + (Date.now() + 1),
+        date: nextWeekDate, heure, sport,
+        duree: duree === 'Personnalisée' ? (dureeCustom || 'Personnalisée') : duree,
+        statut: 'planifie', ressenti: null, notes, data, exercises,
+      })
+    }
   }
   // Copie la séance (sport, durée, champs, exercices/séries, notes) sur un
   // autre jour — repart en "Planifié" puisque cette occurrence-là n'a pas
@@ -424,6 +440,11 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
 
       React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Notes'),
       React.createElement('textarea', { value: notes, onChange: (e) => setNotes(e.target.value), placeholder: 'Objectifs, commentaires…', rows: 3, style: { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14, outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: C.font, marginBottom: 18 } }),
+
+      showRepeatOption && React.createElement('button', { type: 'button', onClick: () => setRepeatNextWeek(!repeatNextWeek), style: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '11px 13px', borderRadius: C.radiusSm, background: repeatNextWeek ? `color-mix(in srgb, ${C.primary} 8%, ${C.surface})` : C.surface2, border: `1px solid ${repeatNextWeek ? 'color-mix(in srgb, ' + C.primary + ' 25%, ' + C.line + ')' : C.line}`, cursor: 'pointer', marginBottom: 12 } },
+        React.createElement('div', { style: { width: 20, height: 20, borderRadius: 6, flex: '0 0 auto', border: `1.5px solid ${repeatNextWeek ? C.primary : C.line}`, background: repeatNextWeek ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          repeatNextWeek && React.createElement(Icon, { name: 'check', size: 13, color: '#fff' })),
+        React.createElement('span', { style: { flex: 1, fontSize: 12.5, color: C.ink2, lineHeight: 1.4 } }, 'Ajouter aussi la même séance le ', React.createElement('strong', { style: { color: C.ink } }, fmtDate(nextWeekDate)), ' (semaine prochaine)')),
 
       React.createElement('button', { disabled: !canSave, onClick: handleSave, style: { width: '100%', padding: 15, borderRadius: 999, background: canSave ? C.primary : C.surface2, color: canSave ? '#fff' : C.ink3, border: 'none', fontSize: 15, fontWeight: 700, cursor: canSave ? 'pointer' : 'default' } }, '⚡ Enregistrer'),
 
