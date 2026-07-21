@@ -124,8 +124,8 @@ function ProfileBadge({ sexe, age, onEdit }) {
 function QuickProfileSheet({ sexe, age, onSave, onClose }) {
   const [sx, setSx] = useState(sexe || 'h')
   const [ag, setAg] = useState(age || 30)
-  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 65, display: 'flex', alignItems: 'flex-end' } },
-    React.createElement('div', { style: { width: '100%', background: SURFACE, borderRadius: '24px 24px 0 0', padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto' } },
+  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 65, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
+    React.createElement('div', { style: { width: '100%', background: SURFACE, borderRadius: '24px 24px 0 0', padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto', animation: 'sheetUp .3s ease' } },
       React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 19, marginBottom: 6 } }, 'Ton profil'),
       React.createElement('div', { style: { fontSize: 13.5, color: INK3, marginBottom: 18, lineHeight: 1.4 } }, 'Pour calculer des normes adaptées et comparables à ta tranche de population.'),
       React.createElement('div', { style: { marginBottom: 16 } },
@@ -396,7 +396,7 @@ export default function PhysicalTestsSpace({ userId, onClose }) {
   return React.createElement('div', { style: FLOW_STYLE },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 } },
       React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 22, letterSpacing: '-.01em' } }, 'Tests physiques'),
-      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, cursor: 'pointer', background: SURFACE, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, cursor: 'pointer', background: SURFACE, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(43,43,43,.06), 0 1px 2px rgba(43,43,43,.04)' } },
         React.createElement(Icon, { name: 'close', size: 18 }))),
 
     React.createElement(ProfileBadge, { sexe, age, onEdit: () => setProfOpen(true) }),

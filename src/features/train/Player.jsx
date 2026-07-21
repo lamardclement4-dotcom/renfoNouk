@@ -13,8 +13,8 @@ function ExerciseDetailSheet({ ex, onClose }) {
         React.createElement(Icon, { name: icon, size: 13, color: tint })),
       React.createElement('span', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em' } }, title)),
     React.createElement('p', { style: { fontSize: 14.5, color: C.ink2, lineHeight: 1.55, marginLeft: 34 } }, text))
-  return React.createElement('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 75, display: 'flex', alignItems: 'flex-end' } },
-    React.createElement('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: '24px 24px 0 0', padding: '22px 22px 32px', maxHeight: '80vh', overflowY: 'auto' } },
+  return React.createElement('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 75, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
+    React.createElement('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: '24px 24px 0 0', padding: '22px 22px 32px', maxHeight: '80vh', overflowY: 'auto', animation: 'sheetUp .3s ease' } },
       React.createElement('div', { style: { width: 38, height: 4, borderRadius: 999, background: C.line, margin: '0 auto 18px' } }),
       React.createElement('div', { style: { fontFamily: C.font, fontSize: 19, fontWeight: 700, marginBottom: 4, textAlign: 'center' } }, ex.label),
       ex.muscles && React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, textAlign: 'center', marginBottom: 18, fontWeight: 600 } }, ex.muscles),

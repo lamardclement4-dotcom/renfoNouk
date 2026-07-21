@@ -48,8 +48,8 @@ function CycleSetup({ cycle, onSave, onClose }) {
   const field = (label, node) => React.createElement('div', { style: { marginBottom: 16 } },
     React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, label), node)
   const numInput = (value, setter, min, max) => React.createElement('input', { type: 'number', value, min, max, onChange: (e) => setter(Number(e.target.value)), style: { width: '100%', padding: '13px 15px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 16, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } })
-  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 65, display: 'flex', alignItems: 'flex-end' } },
-    React.createElement('div', { style: { width: '100%', background: C.surface, borderRadius: '24px 24px 0 0', padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto' } },
+  return React.createElement('div', { style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 65, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
+    React.createElement('div', { style: { width: '100%', background: C.surface, borderRadius: '24px 24px 0 0', padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto', animation: 'sheetUp .3s ease' } },
       React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, marginBottom: 6 } }, 'Ton cycle'),
       React.createElement('div', { style: { fontSize: 13.5, color: C.ink3, marginBottom: 18, lineHeight: 1.4 } }, 'Pour situer ta phase et adapter les séances. Modifiable à tout moment.'),
       field('Premier jour des dernières règles', React.createElement('input', { type: 'date', value: startDate, onChange: (e) => setStartDate(e.target.value), style: { width: '100%', padding: '13px 15px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 16, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } })),

@@ -28,8 +28,8 @@ const xst = {
   iconBtn: { width: 38, height: 38, borderRadius: 10, border: 'none', background: SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: '0 0 auto' },
   ghostBtn: { padding: '12px 16px', borderRadius: RADIUS_SM, border: '1.5px solid #ddd', background: 'transparent', color: INK, fontWeight: 600, cursor: 'pointer' },
   optBtn: { display: 'flex', alignItems: 'center', borderRadius: RADIUS_SM, border: `1px solid ${LINE}`, background: SURFACE },
-  sheetWrap: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'flex-end', zIndex: 50 },
-  sheet: { background: SURFACE, borderRadius: '20px 20px 0 0', padding: '20px 18px 28px', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box' },
+  sheetWrap: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'flex-end', zIndex: 50, animation: 'fadeIn .2s ease' },
+  sheet: { background: SURFACE, borderRadius: '20px 20px 0 0', padding: '20px 18px 28px', width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'sheetUp .3s ease' },
 }
 
 function FlowHeader({ title, onClose }) {

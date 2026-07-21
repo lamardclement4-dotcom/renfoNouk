@@ -23,3 +23,16 @@ button:active {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Feuilles du bas (choix de sport, formulaire de séance, sélecteur de
+   test…) : le fond s'estompe pendant que la feuille glisse depuis le
+   bas — PeakSpace référençait déjà ces deux noms d'animation mais ils
+   n'étaient définis nulle part, donc cette transition ne jouait jamais. */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sheetUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}

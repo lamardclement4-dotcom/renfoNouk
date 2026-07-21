@@ -6,8 +6,8 @@ import { RENFO_GOALS, RENFO_GOAL_ORDER } from './generateProgram'
 const optRowStyle = { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radiusSm, background: C.surface, border: `1.5px solid ${C.line}`, marginBottom: 18, cursor: 'pointer' }
 
 function Sheet({ title, sub, onClose, children }) {
-  return React.createElement('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 70, display: 'flex', alignItems: 'flex-end' } },
-    React.createElement('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: '24px 24px 0 0', padding: '18px 22px calc(24px + env(safe-area-inset-bottom))', maxHeight: '82vh', display: 'flex', flexDirection: 'column' } },
+  return React.createElement('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 70, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
+    React.createElement('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: '24px 24px 0 0', padding: '18px 22px calc(24px + env(safe-area-inset-bottom))', maxHeight: '82vh', display: 'flex', flexDirection: 'column', animation: 'sheetUp .3s ease' } },
       React.createElement('div', { style: { width: 38, height: 4, borderRadius: 999, background: C.line, margin: '0 auto 16px' } }),
       React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, textAlign: 'center', marginBottom: 4 } }, title),
       sub && React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, textAlign: 'center', marginBottom: 14 } }, sub),

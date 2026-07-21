@@ -872,7 +872,7 @@ function PeakSpace({ db, store, onClose, onNutrition, onRecovery, onMobility, on
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 } },
           React.createElement('div', { style: { fontFamily: `${C.font}`, fontWeight: 700, fontSize: 22, letterSpacing: '-.01em' } }, 'Pic de forme'),
           React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, cursor: 'pointer',
-            background: `${C.surface}`, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+            background: `${C.surface}`, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: C.shadowSm } },
             React.createElement(Icon, { name: 'close', size: 18 })
           )
         ),

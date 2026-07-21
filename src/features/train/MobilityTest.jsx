@@ -50,7 +50,7 @@ export default function MobilityTest({ store, onClose, onProgram }) {
 
   return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 60, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, padding: '20px 22px calc(20px + env(safe-area-inset-bottom))', animation: 'spaceIn .22s ease' } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 } },
-      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
+      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm } },
         React.createElement(Icon, { name: 'close', size: 20 })),
       React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 14 } }, 'Test de mobilité'),
       React.createElement('div', { style: { width: 40 } })),

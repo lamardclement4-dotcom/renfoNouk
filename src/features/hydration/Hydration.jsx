@@ -346,7 +346,7 @@ export default function HydrationSpace({ userId, onClose }) {
 
   return React.createElement('div', { style: { minHeight: '100vh', background: '#faf9f5', display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: FONT } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px 0', flexShrink: 0 } },
-      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 11, background: SURFACE, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' } },
+      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 11, background: SURFACE, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', boxShadow: '0 1px 3px rgba(43,43,43,.06), 0 1px 2px rgba(43,43,43,.04)' } },
         React.createElement(Icon, { name: 'back', size: 20 })),
       React.createElement('div', { style: { flex: 1, fontFamily: FONT, fontSize: 18, fontWeight: 700 } }, 'Hydratation')),
     React.createElement('div', { style: { display: 'flex', padding: '12px 16px 0' } },
