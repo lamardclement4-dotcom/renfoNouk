@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, Ring, FlowSpace, isoToday } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { trainingStats, trainingTotals, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
+import { trainingStats, trainingTotals, plannerWeekData, mondayOf, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import TrainSpace from '../train/TrainSpace'
 import PhysicalTestsSpace, { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import SleepSpace from '../health/Sleep'
@@ -9,6 +9,37 @@ import { HealthScoreCard, PeakHomeCard } from './cards'
 
 const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const h = React.createElement
+
+// Semaines listées dans la rétrospective : la semaine en cours (offset 0)
+// et les 11 précédentes — assez pour couvrir un trimestre de recul.
+const WEEK_OPTIONS = 12
+function fmtWeekLabel(monday) {
+  const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6)
+  const d = (dt) => dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  return `${d(monday)} – ${d(sunday)}`
+}
+
+// Menu déroulant pour naviguer entre la semaine en cours et les
+// précédentes — évite d'avoir à cliquer ‹ › une à une pour retrouver
+// une vieille semaine.
+function WeekPicker({ offset, setOffset }) {
+  const [open, setOpen] = useState(false)
+  const thisMonday = mondayOf(new Date())
+  const weeks = Array.from({ length: WEEK_OPTIONS }, (_, i) => -i)
+  const label = offset === 0 ? 'Cette semaine' : fmtWeekLabel(new Date(thisMonday.getTime() + offset * 7 * 86400000))
+  return h('div', { style: { position: 'relative' } },
+    h('button', { onClick: () => setOpen(!open), style: { display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 } },
+      h('span', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 17 } }, label),
+      h(Icon, { name: 'next', size: 15, color: C.ink3, style: { transform: open ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform .15s ease' } })),
+    open && h(React.Fragment, null,
+      h('div', { onClick: () => setOpen(false), style: { position: 'fixed', inset: 0, zIndex: 9 } }),
+      h('div', { style: { position: 'absolute', top: '100%', left: 0, marginTop: 6, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, boxShadow: C.shadowLg, zIndex: 10, maxHeight: 260, overflowY: 'auto', minWidth: 190 } },
+        weeks.map((wk) => h('button', {
+          key: wk,
+          onClick: () => { setOffset(wk); setOpen(false) },
+          style: { display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: wk === offset ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: wk === offset ? 700 : 500, color: wk === offset ? C.primary : C.ink },
+        }, wk === 0 ? 'Cette semaine' : fmtWeekLabel(new Date(thisMonday.getTime() + wk * 7 * 86400000)))))))
+}
 
 function sectionTitle(txt, action) {
   return h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '26px 2px 12px' } },
@@ -43,6 +74,7 @@ function tile(opts) {
 export default function ProgressSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [flow, setFlow] = useState(null)
+  const [weekOffset, setWeekOffset] = useState(0)
 
   if (loading) {
     return h('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font } }, 'Chargement...')
@@ -61,9 +93,15 @@ export default function ProgressSpace({ userId, onClose }) {
   const today = isoToday()
   const totals = trainingTotals(db)
   const streak = totals.streak
-  const totalMins = totals.week.reduce((a, b) => a + b, 0)
-  const maxM = Math.max(...totals.week, 1)
-  const doneCount = totals.week.filter((m) => m > 0).length
+  // La semaine en cours profite de la fusion avec db.week (séances jouées
+  // via le lecteur intégré, qui n'ont pas d'historique par semaine passée) ;
+  // les semaines précédentes sont recalculées à la volée depuis le
+  // planning uniquement — c'est la seule source qui garde une date exacte.
+  const thisMonday = mondayOf(new Date())
+  const selectedWeek = weekOffset === 0 ? totals.week : plannerWeekData(db, new Date(thisMonday.getTime() + weekOffset * 7 * 86400000)).week
+  const totalMins = selectedWeek.reduce((a, b) => a + b, 0)
+  const maxM = Math.max(...selectedWeek, 1)
+  const doneCount = selectedWeek.filter((m) => m > 0).length
   const weeklyGoal = db.goals.weeklySessions
   const goalPct = Math.min(100, Math.round((doneCount / weeklyGoal) * 100))
   const hrs = Math.floor(totals.minutesTotal / 60)
@@ -285,10 +323,10 @@ export default function ProgressSpace({ userId, onClose }) {
 
     h('div', { style: { background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, padding: 20, marginBottom: 14 } },
       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 } },
-        h('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 17 } }, 'Cette semaine'),
+        h(WeekPicker, { offset: weekOffset, setOffset: setWeekOffset }),
         h('div', { style: { fontSize: 13.5, color: C.ink3, fontWeight: 600 } }, doneCount, '/', weeklyGoal, ' séances · ', totalMins, ' min')),
       h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-end', height: 96 } },
-        totals.week.map((m, k) => {
+        selectedWeek.map((m, k) => {
           const done = m > 0
           return h('div', { key: k, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 } },
             h('div', { style: { width: '100%', height: 70, display: 'flex', alignItems: 'flex-end' } },

@@ -86,7 +86,7 @@ export function dureeToMins(duree) {
   return Number.isFinite(n) && n > 0 ? n : 0
 }
 
-function mondayOf(d) {
+export function mondayOf(d) {
   const r = new Date(d)
   const day = r.getDay()
   r.setDate(r.getDate() - day + (day === 0 ? -6 : 1))
@@ -94,10 +94,12 @@ function mondayOf(d) {
   return r
 }
 
-// Minutes réalisées cette semaine (planning) par jour L→D + séances planifiées restantes.
-function plannerWeekData(db) {
+// Minutes réalisées par jour L→D pour la semaine de `refDate` (par défaut :
+// celle en cours) + séances planifiées restantes. `refDate` permet de
+// rejouer n'importe quelle semaine passée pour une rétrospective.
+export function plannerWeekData(db, refDate = new Date()) {
   const sessions = db.planningSessions || []
-  const monday = mondayOf(new Date())
+  const monday = mondayOf(refDate)
   const week = [0, 0, 0, 0, 0, 0, 0]
   let count = 0, planned = 0
   for (const s of sessions) {
