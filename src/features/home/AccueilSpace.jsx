@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, Pill, MODULE_TINTS, isoToday } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { pillars as intelPillars, acwrRisk, dureeToMins } from '../train/renfoIntel'
+import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals } from '../train/renfoIntel'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
 import TrainSpace from '../train/TrainSpace'
 import HealthHome from '../health/HealthHome'
@@ -180,9 +180,10 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   if (healthTile) return h(HealthHome, { userId, initialSpace: healthTile, embedded: true, onClose: () => setHealthTile(null) })
 
   const heroInfo = pickHeroContent(db)
-  const streak = db.streak
-  const totalMins = db.week.reduce((a, b) => a + b, 0)
-  const doneCount = db.week.filter((m) => m > 0).length
+  const totals = trainingTotals(db)
+  const streak = totals.streak
+  const totalMins = totals.week.reduce((a, b) => a + b, 0)
+  const doneCount = totals.week.filter((m) => m > 0).length
   const firstName = profile?.first_name || ''
   const initial = (firstName || '?').trim().charAt(0).toUpperCase()
 

@@ -16,7 +16,7 @@
 // l'utilisateur via RenfoIntel, peut proposer une action (ouvrir un
 // module, lancer une séance) et des suggestions de relance.
 // ============================================================
-import { pillarSleep, pillarLoad, acwrRisk, trainingStats, hydroDay, hydricTargetMl, nutritionDay, globalScore, dureeToMins } from './renfoIntel'
+import { pillarSleep, pillarLoad, acwrRisk, trainingStats, trainingTotals, hydroDay, hydricTargetMl, nutritionDay, globalScore, dureeToMins } from './renfoIntel'
 import { SESSIONS, SPORTS } from './trainData'
 import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
@@ -353,8 +353,9 @@ function recordsReply(db, ctx) {
 
 function statsReply(db) {
   const g = globalScore(db)
-  const weekMins = (db.week || []).reduce((a, b) => a + b, 0)
-  const parts = [`Série en cours : ${db.streak || 0} jour(s) (record ${db.record || 0}).`, `${db.sessionsTotal || 0} séances au total, ${fmtMins(db.minutesTotal || 0)} cumulées.`, `Cette semaine : ${weekMins} min.`]
+  const totals = trainingTotals(db)
+  const weekMins = totals.week.reduce((a, b) => a + b, 0)
+  const parts = [`Série en cours : ${totals.streak} jour(s) (record ${totals.record}).`, `${totals.sessionsTotal} séances au total, ${fmtMins(totals.minutesTotal)} cumulées.`, `Cette semaine : ${weekMins} min.`]
   if (g.score != null) parts.push(`Score santé sportive : ${g.score}/100 (${g.active} pilier(s) actif(s)).`)
   return { text: parts.join(' '), chips: ['Ma charge', 'Mes records', 'Mon sommeil'] }
 }
@@ -389,7 +390,7 @@ function peakReply(db) {
 
 function motivationReply(db) {
   const short = SESSIONS.slice().sort((a, b) => a.mins - b.mins)[0]
-  const streak = db.streak || 0
+  const streak = trainingTotals(db).streak
   return { text: `${streak > 0 ? `Tu as une série de ${streak} jour(s) en cours — ce serait dommage de la casser !` : 'Le plus dur, c\'est de commencer.'} Deal : juste « ${short.title} » (${short.mins} min). Si après ça tu veux t'arrêter, c'est ok — mais en général, une fois lancé, on continue.`, action: 'session:' + short.id, actionLabel: `Lancer (${short.mins} min)`, chips: ['Mon programme', 'Je me sens fatigué'] }
 }
 

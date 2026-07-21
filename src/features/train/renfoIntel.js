@@ -115,6 +115,34 @@ function plannerWeekData(db) {
   return { week, total: week.reduce((a, b) => a + b, 0), count, planned }
 }
 
+// Stats d'entraînement affichées sur Accueil/Progrès (streak, "cette
+// semaine", total séances/minutes), fusionnant les deux seules sources
+// de séance "réalisée" qui existent dans l'app : le compteur incrémental
+// (db.week/sessionsTotal/minutesTotal, mis à jour uniquement quand une
+// séance programme/catalogue est terminée via le lecteur intégré — ces
+// séances n'existent nulle part ailleurs) et les séances du Calendrier
+// marquées "Réalisé" (jamais stockées dans le compteur, recalculées ici
+// en direct depuis planningSessions). Sans cette fusion, tout ce qui est
+// coché "Réalisé" dans le Calendrier restait invisible sur ces écrans.
+export function trainingTotals(db) {
+  const planner = plannerWeekData(db)
+  const week = (db.week || [0, 0, 0, 0, 0, 0, 0]).map((m, i) => m + (planner.week[i] || 0))
+  const sessions = db.planningSessions || []
+  let allCount = 0, allMins = 0
+  for (const s of sessions) {
+    if (!s || s.statut !== 'realise' || !s.date) continue
+    allCount++
+    allMins += dureeToMins(s.duree)
+  }
+  return {
+    week,
+    sessionsTotal: (db.sessionsTotal || 0) + allCount,
+    minutesTotal: (db.minutesTotal || 0) + allMins,
+    streak: db.streak || 0,
+    record: db.record || 0,
+  }
+}
+
 // --- PILIERS (score 0-100, ou null si donnée absente) ---
 
 export function pillarHydration(db, iso) {
@@ -241,7 +269,7 @@ export function inferUserLevel(db) {
   }
   const g = db.goals || {}
   const mob = db.mobility || null
-  const total = db.sessionsTotal || 0
+  const total = trainingTotals(db).sessionsTotal
   const perWeek = g.weeklySessions || 3
   const mobScore = mob && mob.score != null ? mob.score : null
   if (total < 20 || perWeek < 3) return { ...LEVEL_PRESETS.debutant, manual: false }

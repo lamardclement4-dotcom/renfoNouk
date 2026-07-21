@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, Ring, FlowSpace, isoToday } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { trainingStats, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
+import { trainingStats, trainingTotals, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import TrainSpace from '../train/TrainSpace'
 import PhysicalTestsSpace, { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import SleepSpace from '../health/Sleep'
@@ -59,14 +59,15 @@ export default function ProgressSpace({ userId, onClose }) {
   }
 
   const today = isoToday()
-  const streak = db.streak
-  const totalMins = db.week.reduce((a, b) => a + b, 0)
-  const maxM = Math.max(...db.week, 1)
-  const doneCount = db.week.filter((m) => m > 0).length
+  const totals = trainingTotals(db)
+  const streak = totals.streak
+  const totalMins = totals.week.reduce((a, b) => a + b, 0)
+  const maxM = Math.max(...totals.week, 1)
+  const doneCount = totals.week.filter((m) => m > 0).length
   const weeklyGoal = db.goals.weeklySessions
   const goalPct = Math.min(100, Math.round((doneCount / weeklyGoal) * 100))
-  const hrs = Math.floor(db.minutesTotal / 60)
-  const mins = db.minutesTotal % 60
+  const hrs = Math.floor(totals.minutesTotal / 60)
+  const mins = totals.minutesTotal % 60
   const hoursLabel = mins ? `${hrs}h${String(mins).padStart(2, '0')}` : `${hrs}h`
 
   // ── Aujourd'hui : hydratation + nutrition ──
@@ -287,7 +288,7 @@ export default function ProgressSpace({ userId, onClose }) {
         h('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 17 } }, 'Cette semaine'),
         h('div', { style: { fontSize: 13.5, color: C.ink3, fontWeight: 600 } }, doneCount, '/', weeklyGoal, ' séances · ', totalMins, ' min')),
       h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-end', height: 96 } },
-        db.week.map((m, k) => {
+        totals.week.map((m, k) => {
           const done = m > 0
           return h('div', { key: k, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 } },
             h('div', { style: { width: '100%', height: 70, display: 'flex', alignItems: 'flex-end' } },
@@ -297,7 +298,7 @@ export default function ProgressSpace({ userId, onClose }) {
 
     h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 } },
       [
-        { big: db.sessionsTotal, lab: 'séances au total' },
+        { big: totals.sessionsTotal, lab: 'séances au total' },
         { big: hoursLabel, lab: 'temps cumulé' },
         { big: goalPct + '%', lab: 'objectif hebdo' },
       ].map((s, i) => h('div', { key: i, style: { background: C.surface, borderRadius: C.radiusSm, padding: '16px 12px', border: `1px solid ${C.line}`, textAlign: 'center' } },

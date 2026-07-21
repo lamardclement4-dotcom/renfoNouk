@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs } from '../health/kit'
 import { SPORTS } from './trainData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE } from './plannerData'
-import { dureeToMins } from './renfoIntel'
 
 const MUSCU_SPORTS = ['muscu', 'crossfit', 'callisthenie', 'gym', 'halterophilie']
 
@@ -460,21 +459,18 @@ export default function PlannerSpace({ db, store, onClose }) {
       })
       patch.exerciseHistory = hist
     }
-    // Une séance marquée "Réalisé" pour la première fois (via le Calendrier,
-    // pas via le lecteur intégré) doit aussi compter dans le streak/stats
-    // globaux — sinon Accueil/Progrès ignorent tout ce qui est loggé ici.
+    // Une séance marquée "Réalisé" pour la première fois aujourd'hui met à
+    // jour le streak (pas de source "live" pour ça). Le nombre de séances,
+    // les minutes et le graphe "cette semaine" ne sont PAS incrémentés ici
+    // — Accueil/Progrès les recalculent en direct depuis planningSessions
+    // via trainingTotals(), pour ne jamais rater une séance ni la compter
+    // deux fois (l'ancienne version incrémentait ici ET aurait ensuite été
+    // recomptée en direct, doublant tout ce qui passe par le Calendrier).
     const wasRealise = prev && prev.statut === 'realise'
     if (sess.statut === 'realise' && !wasRealise) {
-      const mins = dureeToMins(sess.duree)
-      patch.sessionsTotal = (db.sessionsTotal || 0) + 1
-      patch.minutesTotal = (db.minutesTotal || 0) + mins
       const todayIso = isoDate(new Date())
       if (sess.date === todayIso) {
-        const week = [...db.week]
-        const dayIdx = (new Date().getDay() + 6) % 7
-        week[dayIdx] = (week[dayIdx] || 0) + mins
         const newStreak = db.completedToday ? db.streak : db.streak + 1
-        patch.week = week
         patch.streak = newStreak
         patch.record = Math.max(db.record || 0, newStreak)
         patch.lastSessionISO = todayIso

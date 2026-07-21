@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { supabase } from '../../lib'
 import { C, Icon, FlowSpace } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { inferUserLevel } from '../train/renfoIntel'
+import { inferUserLevel, trainingTotals } from '../train/renfoIntel'
 import { SPORTS } from '../train/trainData'
 import TrainSpace from '../train/TrainSpace'
 
@@ -109,6 +109,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
   }
 
   const g = db.goals
+  const totals = trainingTotals(db)
   const firstName = profile?.first_name || ''
   const lastName = profile?.last_name || ''
   const initial = (firstName || '?').trim().charAt(0).toUpperCase()
@@ -154,7 +155,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
           levelLabel, h(Icon, { name: isManualLevel ? 'pin' : 'edit', size: 11, color: levelTint })))),
 
     h('div', { style: { display: 'flex', alignItems: 'center', padding: '14px 0', background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}` } },
-      Stat(db.streak, 'Jours de série'), Divider(), Stat(db.sessionsTotal, 'Séances'), Divider(), Stat(g.weeklySessions + '/sem', 'Objectif')),
+      Stat(totals.streak, 'Jours de série'), Divider(), Stat(totals.sessionsTotal, 'Séances'), Divider(), Stat(g.weeklySessions + '/sem', 'Objectif')),
 
     SecTitle('Mes sports'),
     h('div', { style: { position: 'relative' } },
