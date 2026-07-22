@@ -501,6 +501,50 @@ export function acwrRisk(db) {
   return { available: true, ratio: ratioR, acuteMin: Math.round(acuteMin), chronicAvgWeek: Math.round(chronicAvgWeek), level, color, advice, userLevel: ul }
 }
 
+function acwrLevelFor(ratio, ul) {
+  if (ratio < 0.8) return { level: 'Sous-charge', color: '#6f8a3a' }
+  if (ratio <= ul.acwrWarn) return { level: 'Zone optimale', color: '#4a8a6a' }
+  if (ratio <= ul.acwrAlert) return { level: 'Vigilance', color: '#c4a03a' }
+  return { level: 'Vigilance renforcée', color: '#c4503a' }
+}
+
+// "Si je fais aussi cette séance-là (extraMins), ma charge deviendrait…" —
+// reprend l'acuteMin/chronicAvgWeek déjà calculés par acwrRisk et les
+// seuils du même profil utilisateur, pour prévenir AVANT de valider une
+// séance plutôt que de constater le surmenage après coup.
+export function projectedAcwr(db, extraMins) {
+  const current = acwrRisk(db)
+  if (!current.available || !extraMins) return null
+  const ratio = Math.round((current.acuteMin + extraMins) / current.chronicAvgWeek * 100) / 100
+  const { level, color } = acwrLevelFor(ratio, current.userLevel)
+  return { ratio, level, color, currentRatio: current.ratio, currentLevel: current.level, worsened: level !== current.level && (level === 'Vigilance' || level === 'Vigilance renforcée') }
+}
+
+// Combien de jours consécutifs (jusqu'à et y compris `dateISO`) ont déjà
+// une séance "réalisée" — pour repérer un enchaînement sans repos au
+// moment même où on planifie une séance de plus sur la pile.
+export function consecutiveDaysBefore(db, dateISO) {
+  const sessions = db.planningSessions || []
+  const doneDates = new Set(sessions.filter((s) => s && s.statut === 'realise' && s.date).map((s) => s.date))
+  let n = 0
+  let d = new Date(dateISO + 'T00:00:00')
+  while (n < 21) {
+    const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    if (iso === dateISO || doneDates.has(iso)) { n++; d.setDate(d.getDate() - 1) } else break
+  }
+  return n
+}
+
+// Volume cible pour une nouvelle séance si un objectif Pic de forme est en
+// affûtage — applique targetVolumePct (déjà calculé par computePeakPlan) à
+// la durée "habituelle" fournie par l'appelant (ex : dernière séance du
+// même sport), pour suggérer directement une durée réduite plutôt que de
+// laisser l'utilisateur deviner le pourcentage à appliquer.
+export function taperSuggestedMins(plan, usualMins) {
+  if (!plan || plan.phase !== 'taper' || plan.targetVolumePct == null || !usualMins) return null
+  return Math.max(5, Math.round(usualMins * plan.targetVolumePct / 100 / 5) * 5)
+}
+
 // Prêt pour le jour J ? Croise le plan Pic de forme (calendaire, calculé
 // par computePeakPlan) avec les VRAIES données d'entraînement/récup pour
 // donner un score de préparation et des alertes concrètes — jusqu'ici le

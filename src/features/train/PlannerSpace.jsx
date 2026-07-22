@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE } from './plannerData'
+import { dureeToMins, projectedAcwr, consecutiveDaysBefore, taperSuggestedMins } from './renfoIntel'
+import { computePeakPlan } from './PeakSpace'
 
 const MUSCU_SPORTS = ['muscu', 'crossfit', 'callisthenie', 'gym', 'halterophilie']
 
@@ -156,6 +158,17 @@ function MonthView({ date, sessions, onGoDay }) {
           React.createElement('div', { style: { fontWeight: 800, fontSize: 20 } }, real),
           React.createElement('div', { style: { fontSize: 11, color: C.ink3, fontWeight: 600 } }, 'Réalisées')))
     })())
+}
+
+// dureeToMins (renfoIntel) ne comprend que les libellés standards ou un
+// nombre pur — une durée personnalisée du type "1h45" doit être comprise
+// pour que l'analyse de charge (ACWR projeté) ait une vraie valeur.
+function parseCustomMins(s) {
+  if (!s) return 0
+  const m = String(s).match(/(\d+)\s*h\s*(\d*)/i)
+  if (m) return (parseInt(m[1], 10) || 0) * 60 + (parseInt(m[2], 10) || 0)
+  const n = parseInt(s, 10)
+  return Number.isFinite(n) ? n : 0
 }
 
 function fieldLabel() { return { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }
@@ -379,7 +392,7 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
     exercises.length === 0 && React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, textAlign: 'center', padding: '10px 0' } }, 'Cherche et ajoute un exercice ci-dessus.'))
 }
 
-function SessionForm({ activeSports, initial, initialDate, exerciseHistory, pastSessions, onSave, onDelete, onClose }) {
+function SessionForm({ activeSports, initial, initialDate, exerciseHistory, pastSessions, db, onSave, onDelete, onClose }) {
   const [sport, setSport] = useState(initial?.sport || null)
   const [date, setDate] = useState(initial?.date || initialDate || isoDate(new Date()))
   const [heure, setHeure] = useState(initial?.heure || '')
@@ -454,6 +467,30 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
   const nextWeekDate = date ? isoDate(new Date(new Date(date + 'T00:00:00').getTime() + 7 * 86400000)) : null
   const nextWeekTaken = !!(nextWeekDate && (pastSessions || []).some((s) => s.sport === sport && s.date === nextWeekDate))
   const showRepeatOption = !initial && sport && nextWeekDate && !nextWeekTaken
+
+  // Analyse de charge : croise la durée de LA séance en cours de création
+  // avec la charge réelle (ACWR), l'enchaînement de jours consécutifs sans
+  // repos, et un objectif Pic de forme actif en affûtage — pour avertir ou
+  // suggérer AVANT de valider, pas seulement constater après coup.
+  const sessionMins = duree === 'Personnalisée' ? parseCustomMins(dureeCustom) : dureeToMins(duree)
+  const overload = db && sessionMins ? projectedAcwr(db, sessionMins) : null
+  const consecDays = db && date ? consecutiveDaysBefore(db, date) : 0
+  const activePeakPlan = (() => {
+    const goals = (db && db.peakGoals) || []
+    let best = null
+    for (const g of goals) {
+      const pl = computePeakPlan(g)
+      if (pl.phase === 'past' || pl.phase === 'today') continue
+      if (!best || g.eventDate < best.goal.eventDate) best = { goal: g, plan: pl }
+    }
+    return best
+  })()
+  const taperTarget = activePeakPlan && sessionMins ? taperSuggestedMins(activePeakPlan.plan, sessionMins) : null
+  const showTaperSuggestion = taperTarget && taperTarget < sessionMins * 0.9
+  function applyTaperTarget() {
+    setDuree('Personnalisée')
+    setDureeCustom(taperTarget + ' min')
+  }
 
   const canSave = !!sport && !!date
   function handleSave() {
@@ -545,6 +582,17 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
 
       React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Notes'),
       React.createElement('textarea', { value: notes, onChange: (e) => setNotes(e.target.value), placeholder: 'Objectifs, commentaires…', rows: 3, style: { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14, outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: C.font, marginBottom: 18 } }),
+
+      (overload?.worsened || consecDays >= 5 || showTaperSuggestion) && React.createElement('div', { style: { marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 } },
+        overload?.worsened && React.createElement('div', { style: { display: 'flex', gap: 9, alignItems: 'flex-start', padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${overload.color} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${overload.color} 28%, ${C.line})` } },
+          React.createElement(Icon, { name: 'shield', size: 15, color: overload.color, style: { flex: '0 0 auto', marginTop: 1 } }),
+          React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, 'Avec cette séance, ta charge passerait en zone "', React.createElement('strong', { style: { color: overload.color } }, overload.level.toLowerCase()), `" (ratio ${overload.currentRatio} → ${overload.ratio}).`)),
+        consecDays >= 5 && React.createElement('div', { style: { display: 'flex', gap: 9, alignItems: 'flex-start', padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, #c4a03a 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, #c4a03a 28%, ${C.line})` } },
+          React.createElement(Icon, { name: 'alert', size: 15, color: '#c4a03a', style: { flex: '0 0 auto', marginTop: 1 } }),
+          React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, `Ce serait ton ${consecDays}e jour d'entraînement consécutif — pense à un jour de repos.`)),
+        showTaperSuggestion && React.createElement('div', { style: { display: 'flex', gap: 9, alignItems: 'center', padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.primary} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.primary} 25%, ${C.line})` } },
+          React.createElement('span', { style: { flex: 1, fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, `En affûtage pour « ${activePeakPlan.goal.label} » (vise ~${activePeakPlan.plan.targetVolumePct}% du volume habituel) — réduire cette séance à ${taperTarget} min ?`),
+          React.createElement('button', { type: 'button', onClick: applyTaperTarget, style: { flex: '0 0 auto', padding: '7px 11px', borderRadius: 999, background: C.primary, color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' } }, 'Réduire'))),
 
       showRepeatOption && React.createElement('button', { type: 'button', onClick: () => setRepeatNextWeek(!repeatNextWeek), style: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '11px 13px', borderRadius: C.radiusSm, background: repeatNextWeek ? `color-mix(in srgb, ${C.primary} 8%, ${C.surface})` : C.surface2, border: `1px solid ${repeatNextWeek ? 'color-mix(in srgb, ' + C.primary + ' 25%, ' + C.line + ')' : C.line}`, cursor: 'pointer', marginBottom: 12 } },
         React.createElement('div', { style: { width: 20, height: 20, borderRadius: 6, flex: '0 0 auto', border: `1.5px solid ${repeatNextWeek ? C.primary : C.line}`, background: repeatNextWeek ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
@@ -665,6 +713,7 @@ export default function PlannerSpace({ db, store, onClose }) {
       initialDate: newDate,
       exerciseHistory,
       pastSessions: sessions,
+      db,
       onSave: saveSession,
       onDelete: deleteSession,
       onClose: () => setForm(null),
