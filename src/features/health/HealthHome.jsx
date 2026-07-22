@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { C, MODULE_TINTS, Icon } from './kit'
+import { C, MODULE_TINTS, Icon, isoToday } from './kit'
 import NutritionSpace from '../nutrition/Nutrition'
 import HydrationSpace from '../hydration/Hydration'
 import SleepSpace from './Sleep'
@@ -31,7 +31,7 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
     return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font } }, 'Chargement...')
   }
 
-  const todayKey = new Date().toISOString().slice(0, 10)
+  const todayKey = isoToday()
   const sleepToday = (db.sleepLog || {})[todayKey]
   const cyclePhaseLabel = db.cycle && db.cycle.enabled && db.cycle.startDate
     ? (() => {

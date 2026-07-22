@@ -335,7 +335,7 @@ function whatIfReply(db, ctx) {
   if (!mins) return { text: "Précise une durée (ex. « je peux faire 1h30 aujourd'hui ? ») pour que je calcule l'impact réel sur ta charge.", chips: STARTER_CHIPS }
   const proj = projectedAcwr(db, mins)
   if (!proj) return { text: `Pas encore assez d'historique de séances réalisées pour chiffrer précisément l'impact d'une séance de ${fmtMins(mins)} — vas-y si tu te sens bien, mais reste à l'écoute de tes sensations.`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: STARTER_CHIPS }
-  const consec = consecutiveDaysBefore(db, todayISO()) + 1
+  const consec = consecutiveDaysBefore(db, todayISO())
   let verdict
   if (proj.worsened) verdict = `⚠️ Je serais prudent : ça ferait passer ta charge de « ${proj.currentLevel.toLowerCase()} » à « ${proj.level.toLowerCase()} » (ratio ${proj.currentRatio} → ${proj.ratio}).`
   else if (proj.level === 'Vigilance renforcée') verdict = `⚠️ Ta charge est déjà en zone « vigilance renforcée » (ratio ${proj.currentRatio}) — cette séance la maintiendrait à ${proj.ratio}, pas idéal.`

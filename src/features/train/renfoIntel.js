@@ -392,10 +392,8 @@ export function pillarPrevention(db) {
 // exactes) et db.week (lecteur de séance in-app, supplément pour aujourd'hui).
 export function pillarLoad(db) {
   const plannerData = plannerWeekData(db)
-  const inAppTotal = (db.week || []).reduce((a, b) => a + num(b, 0), 0)
-  const todayDow = (new Date().getDay() + 6) % 7
-  const mergedWeek = plannerData.week.slice()
-  if (mergedWeek[todayDow] === 0 && inAppTotal > 0) mergedWeek[todayDow] = inAppTotal
+  const dbWeek = db.week || [0, 0, 0, 0, 0, 0, 0]
+  const mergedWeek = plannerData.week.map((m, i) => m + num(dbWeek[i], 0))
   const sum = mergedWeek.reduce((a, b) => a + b, 0)
 
   if (sum === 0) {

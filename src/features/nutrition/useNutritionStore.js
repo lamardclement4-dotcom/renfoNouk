@@ -6,7 +6,7 @@ const DAYS_HISTORY = 10
 function isoDaysAgo(n) {
   const d = new Date()
   d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
 }
 
 // Clés que l'ancienne app rangeait sous profiles.phys.nutrition (regroupées
@@ -155,7 +155,7 @@ export function useNutritionStore(userId) {
   // Reconstitue le "db" plat attendu par les composants portés de l'ancienne app.
   // `...phys` expose toutes les clés racine (physTests, sleepLog, suppPlan…) ;
   // les entrées ci-dessous surchargent avec les valeurs dérivées/imbriquées.
-  const todayISO = new Date().toISOString().slice(0, 10)
+  const todayISO = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') })()
 
   const db = {
     ...phys,

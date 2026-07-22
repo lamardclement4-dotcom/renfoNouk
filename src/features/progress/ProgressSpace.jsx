@@ -13,7 +13,7 @@ import { HealthScoreCard, PeakHomeCard } from './cards'
 // dispatcher traduit le premier cas et route tout le reste tel quel, vers
 // les flows internes existants (mobility/program/planner/peak/tests/sleep)
 // ou vers HealthHome pour les autres (hydratation/nutrition/prevention…).
-const OWN_FLOWS = new Set(['mobility', 'program', 'planner', 'peak', 'tests'])
+const OWN_FLOWS = new Set(['mobility', 'program', 'planner', 'peak', 'tests', 'recovery'])
 const ACTION_DEST = { hydration: 'hydratation', load: 'planner', sleep: 'sleep', sommeil: 'sleep' }
 
 const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
@@ -100,7 +100,7 @@ export default function ProgressSpace({ userId, onClose }) {
 
   if (healthTile) return h(HealthHome, { userId, initialSpace: healthTile, embedded: true, onClose: () => setHealthTile(null) })
 
-  if (flow === 'mobility' || flow === 'program' || flow === 'planner' || flow === 'peak') {
+  if (flow === 'mobility' || flow === 'program' || flow === 'planner' || flow === 'peak' || flow === 'recovery') {
     return h(TrainSpace, { userId, initialTile: flow, embedded: true, onClose: () => setFlow(null) })
   }
   if (flow === 'tests') {

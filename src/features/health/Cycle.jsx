@@ -26,7 +26,7 @@ export function cycleInfo(cycle, today = new Date()) {
   const nextDate = new Date(t); nextDate.setDate(t.getDate() + daysToNext)
   const ovDay = Math.round(len * 0.46) + 1
   const daysToOv = ovDay - day
-  const ovDate = new Date(t); ovDate.setDate(t.getDate() + (daysToOv > 0 ? daysToOv : daysToOv + len))
+  const ovDate = new Date(t); ovDate.setDate(t.getDate() + (daysToOv >= 0 ? daysToOv : daysToOv + len))
   return { day, len, phase, pl, daysToNext, nextDate, ovDate }
 }
 

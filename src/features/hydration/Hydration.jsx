@@ -29,7 +29,7 @@ function entryCaf(e) { return Number(e.caf != null ? e.caf : e.mg) || 0 }
 function entryWaterMl(e) { return (Number(e.ml) || 0) * (e.factor != null ? Number(e.factor) : 1) }
 function entryName(e) { return e.n || e.name || 'Boisson' }
 
-function isoToday() { return new Date().toISOString().slice(0, 10) }
+function isoToday() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
 // Reconstruit la date en UTC pur : new Date(iso+'T00:00:00') est interprété en
 // heure locale, et .toISOString() reconvertit en UTC — dans un fuseau en avance
 // sur UTC, ça décalait le résultat d'un jour en arrière.

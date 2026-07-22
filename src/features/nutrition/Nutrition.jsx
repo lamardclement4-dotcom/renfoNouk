@@ -332,7 +332,7 @@ const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,
 // évite de renormaliser (NFD + regex) les ~350 aliments à chaque frappe
 // dans la recherche, qui rendait la saisie perceptiblement saccadée.
 const FOODS_NORM = new Map(FOODS.map((f) => [f.id, norm(f.n)]))
-const todayISO = () => new Date().toISOString().slice(0, 10)
+const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
 // Reconstruit la date en UTC pur : new Date(iso+'T00:00:00') est interprété en
 // heure locale, et .toISOString() reconvertit en UTC — dans un fuseau en avance
 // sur UTC, ça décalait le résultat d'un jour en arrière.
@@ -608,7 +608,7 @@ function DiagTab({ db, store, onGoToJournal }) {
     const out = []
     for (let i = 0; i < 7; i++) {
       const d = new Date(); d.setDate(d.getDate() - i)
-      const iso = d.toISOString().slice(0, 10)
+      const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
       const entries = logs[iso] || []
       if (entries.length > 0) out.push(entries.reduce((a, e) => ({ k: a.k + e.k, p: a.p + e.p, fib: a.fib + (e.fib || 0) }), { k: 0, p: 0, fib: 0 }))
     }
@@ -647,7 +647,7 @@ function DiagTab({ db, store, onGoToJournal }) {
     return total > 0 ? Math.round(pts / total * 100) : 0
   }
   function saveScore(sc) {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayISO()
     const hist = (db.diagHistory || []).slice(-4)
     hist.push({ date: today, score: sc, piliers: calcPiliers() })
     store.set({ diagHistory: hist })
