@@ -175,14 +175,54 @@ function computeAllure(distance, temps) {
 function CourseFields({ sport, data, setData }) {
   const allure = computeAllure(data.distance, data.temps)
   const upd = (k, v) => setData({ ...data, [k]: v, allure: k === 'distance' || k === 'temps' ? computeAllure(k === 'distance' ? v : data.distance, k === 'temps' ? v : data.temps) : data.allure })
+  const typeSeance = data.typeSeance || 'continu'
+  const setType = (t) => setData({ ...data, typeSeance: t })
+  // Allure de la répétition : réutilise computeAllure (attend un km) en
+  // convertissant la distance de la répétition, en mètres, en km.
+  const repAllure = computeAllure(data.repDistance ? Number(data.repDistance) / 1000 : '', data.repTemps)
+  const recupType = data.recupType || 'trot'
+  // Le reste de l'app (tendance course de Progrès, trainingStats) ne lit
+  // que data.distance en km — on la recalcule à chaque changement pour
+  // qu'une séance fractionnée compte, elle aussi, dans ces stats.
+  const updFrac = (k, v) => {
+    const next = { ...data, [k]: v }
+    const series = Number(next.series) || 1
+    const reps = Number(next.reps) || 0
+    const repDist = Number(next.repDistance) || 0
+    next.distance = reps && repDist ? Math.round(series * reps * repDist) / 1000 : data.distance
+    setData(next)
+  }
+
   return React.createElement('div', { style: { marginBottom: 16 } },
     React.createElement('div', { style: fieldLabel() }, sport === 'sprint' ? '⚡ Sprint' : sport === 'trail' ? '⛰️ Trail' : '🏃 Course'),
-    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
-      React.createElement('input', { type: 'number', step: '0.1', placeholder: 'Distance (km)', value: data.distance || '', onChange: (e) => upd('distance', e.target.value), style: fieldInputStyle }),
-      React.createElement('input', { type: 'text', placeholder: 'Temps (mm:ss)', value: data.temps || '', onChange: (e) => upd('temps', e.target.value), style: fieldInputStyle }),
-      React.createElement('input', { type: 'text', placeholder: 'Allure (auto)', value: allure, readOnly: true, style: { ...fieldInputStyle, color: C.ink3 } }),
-      React.createElement('input', { type: 'number', placeholder: 'FC moy. (bpm)', value: data.fc || '', onChange: (e) => upd('fc', e.target.value), style: fieldInputStyle }),
-      React.createElement('input', { type: 'number', placeholder: 'Dénivelé+ (m)', value: data.denivele || '', onChange: (e) => upd('denivele', e.target.value), style: { ...fieldInputStyle, gridColumn: '1 / -1' } })))
+    React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 12 } },
+      React.createElement('button', { type: 'button', onClick: () => setType('continu'), style: { ...pillStyle(typeSeance === 'continu'), flex: 1, textAlign: 'center' } }, 'Continu'),
+      React.createElement('button', { type: 'button', onClick: () => setType('fractionne'), style: { ...pillStyle(typeSeance === 'fractionne'), flex: 1, textAlign: 'center' } }, 'Fractionné')),
+
+    typeSeance === 'fractionne'
+      ? React.createElement(React.Fragment, null,
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 } },
+          React.createElement('input', { type: 'number', placeholder: 'Séries (ex : 2)', value: data.series || '', onChange: (e) => updFrac('series', e.target.value), style: fieldInputStyle }),
+          React.createElement('input', { type: 'number', placeholder: 'Répétitions / série', value: data.reps || '', onChange: (e) => updFrac('reps', e.target.value), style: fieldInputStyle }),
+          React.createElement('input', { type: 'number', placeholder: 'Distance / répét. (m)', value: data.repDistance || '', onChange: (e) => updFrac('repDistance', e.target.value), style: fieldInputStyle }),
+          React.createElement('input', { type: 'text', placeholder: 'Temps / répét. (mm:ss)', value: data.repTemps || '', onChange: (e) => setData({ ...data, repTemps: e.target.value }), style: fieldInputStyle }),
+          React.createElement('input', { type: 'text', placeholder: 'Allure répét. (auto)', value: repAllure, readOnly: true, style: { ...fieldInputStyle, color: C.ink3 } }),
+          React.createElement('input', { type: 'text', placeholder: 'Récup (mm:ss)', value: data.recup || '', onChange: (e) => setData({ ...data, recup: e.target.value }), style: fieldInputStyle })),
+        React.createElement('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, marginBottom: 8 } }, 'Récupération'),
+        React.createElement('div', { style: { display: 'flex', gap: 7, marginBottom: 12 } },
+          [{ id: 'trot', lab: 'Trot' }, { id: 'marche', lab: 'Marche' }, { id: 'arret', lab: 'Arrêt' }].map((o) =>
+            React.createElement('button', { key: o.id, type: 'button', onClick: () => setData({ ...data, recupType: o.id }), style: pillStyle(recupType === o.id) }, o.lab))),
+        data.series && data.reps && data.repDistance && React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 12 } },
+          'Total : ' + (Number(data.series) * Number(data.reps)) + ' × ' + data.repDistance + ' m = ' + Math.round(Number(data.series) * Number(data.reps) * Number(data.repDistance)) / 1000 + ' km'),
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+          React.createElement('input', { type: 'number', placeholder: 'FC moy. (bpm)', value: data.fc || '', onChange: (e) => upd('fc', e.target.value), style: fieldInputStyle }),
+          React.createElement('input', { type: 'number', placeholder: 'Dénivelé+ (m)', value: data.denivele || '', onChange: (e) => upd('denivele', e.target.value), style: fieldInputStyle })))
+      : React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+        React.createElement('input', { type: 'number', step: '0.1', placeholder: 'Distance (km)', value: data.distance || '', onChange: (e) => upd('distance', e.target.value), style: fieldInputStyle }),
+        React.createElement('input', { type: 'text', placeholder: 'Temps (mm:ss)', value: data.temps || '', onChange: (e) => upd('temps', e.target.value), style: fieldInputStyle }),
+        React.createElement('input', { type: 'text', placeholder: 'Allure (auto)', value: allure, readOnly: true, style: { ...fieldInputStyle, color: C.ink3 } }),
+        React.createElement('input', { type: 'number', placeholder: 'FC moy. (bpm)', value: data.fc || '', onChange: (e) => upd('fc', e.target.value), style: fieldInputStyle }),
+        React.createElement('input', { type: 'number', placeholder: 'Dénivelé+ (m)', value: data.denivele || '', onChange: (e) => upd('denivele', e.target.value), style: { ...fieldInputStyle, gridColumn: '1 / -1' } })))
 }
 
 function PercheFields({ data, setData }) {
