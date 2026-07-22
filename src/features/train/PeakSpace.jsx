@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon } from '../health/kit'
 import { SPORTS } from './trainData'
+import { peakReadiness } from './renfoIntel'
 
 var PEAK_COLOR = '#a3526b';
 var PHASE_COLORS = { base: '#5b6fa5', build: '#bf6a40', taper: '#4a8a6a', today: '#a3526b', past: '#9c9489' };
@@ -591,6 +592,30 @@ function SignalsBlock(db, plan) {
   );
 }
 
+var FLAG_COLOR = { alert: '#c4503a', warn: '#c4a03a', info: PEAK_COLOR };
+
+// Analyse concrète, pas juste un compte à rebours : croise le plan
+// d'affûtage avec la charge réelle (ACWR), le respect effectif de la
+// réduction de volume, la mobilité et le sommeil pour un vrai score de
+// préparation à l'objectif.
+function ReadinessCard(db, plan) {
+  if (!db || plan.phase === 'past' || plan.phase === 'today') return null;
+  var r = peakReadiness(db, plan);
+  var scoreColor = r.score >= 75 ? '#4a8a6a' : r.score >= 50 ? '#c4a03a' : '#c4503a';
+  return React.createElement('div', { style: { padding: 18, borderRadius: `${C.radiusSm}`, background: `${C.surface}`, border: `1px solid ${C.line}`, marginBottom: 18 } },
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: r.flags.length ? 12 : 0 } },
+      React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: `${C.ink}` } }, 'Prêt pour le jour J ?'),
+      React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 3 } },
+        React.createElement('span', { className: 'num-display', style: { fontSize: 21, fontWeight: 800, color: scoreColor } }, r.score),
+        React.createElement('span', { style: { fontSize: 12, color: `${C.ink3}` } }, '/100'))),
+    r.flags.length === 0 && React.createElement('p', { style: { fontSize: 12.5, color: `${C.ink2}`, lineHeight: 1.45 } }, 'Rien à signaler pour l’instant sur charge, affûtage, mobilité ou sommeil — continue comme ça.'),
+    r.flags.map(function(f, i) {
+      return React.createElement('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: i ? 8 : 0 } },
+        React.createElement('div', { style: { width: 6, height: 6, borderRadius: 999, background: FLAG_COLOR[f.level] || PEAK_COLOR, flex: '0 0 auto', marginTop: 5 } }),
+        React.createElement('p', { style: { fontSize: 12.5, color: `${C.ink2}`, lineHeight: 1.45, margin: 0 } }, f.text));
+    }));
+}
+
 /* Cible indicative de séances/semaine par catégorie × phase, utilisée
    uniquement pour proposer une synchronisation en un tap avec l\u2019objectif
    hebdomadaire global de l\u2019app (db.goals.weeklySessions). */
@@ -656,6 +681,8 @@ function GoalDetail({ goal, db, store, onEdit, onDelete, onBack, onNutrition, on
       ),
 
       QuickLinksRow(plan, { onNutrition: onNutrition, onRecovery: onRecovery, onMobility: onMobility, onTests: onTests, onProgram: onProgram, onCycle: onCycle, cycleEnabled: !!(db && db.cycle && db.cycle.enabled) }),
+
+      ReadinessCard(db, plan),
 
       SignalsBlock(db, plan),
 

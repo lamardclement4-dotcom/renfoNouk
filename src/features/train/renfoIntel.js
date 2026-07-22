@@ -501,6 +501,70 @@ export function acwrRisk(db) {
   return { available: true, ratio: ratioR, acuteMin: Math.round(acuteMin), chronicAvgWeek: Math.round(chronicAvgWeek), level, color, advice, userLevel: ul }
 }
 
+// Prêt pour le jour J ? Croise le plan Pic de forme (calendaire, calculé
+// par computePeakPlan) avec les VRAIES données d'entraînement/récup pour
+// donner un score de préparation et des alertes concrètes — jusqu'ici le
+// plan ne regardait que la date, jamais si l'affûtage était vraiment
+// respecté ou si la charge réelle mettait l'objectif en danger.
+export function peakReadiness(db, plan) {
+  const flags = []
+  let score = 100
+
+  const acwr = acwrRisk(db)
+  if (acwr.available) {
+    if ((plan.phase === 'base' || plan.phase === 'build') && acwr.level === 'Vigilance renforcée') {
+      flags.push({ level: 'alert', text: `Charge en zone "vigilance renforcée" (ratio ${acwr.ratio}) pendant ta phase de ${plan.phase === 'base' ? 'développement général' : 'développement spécifique'} — risque d'arriver à l'affûtage déjà fatigué.` })
+      score -= 30
+    } else if ((plan.phase === 'base' || plan.phase === 'build') && acwr.level === 'Vigilance') {
+      flags.push({ level: 'warn', text: `Charge en zone "vigilance" (ratio ${acwr.ratio}) — surveille fatigue et sommeil pour ne pas arriver épuisé à l'affûtage.` })
+      score -= 15
+    } else if (plan.phase === 'taper' && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
+      flags.push({ level: 'alert', text: `Tu entres en affûtage avec une charge encore élevée (ratio ${acwr.ratio}) — laisse vraiment le corps récupérer d'ici le jour J.` })
+      score -= 25
+    }
+  }
+
+  let taperCompliance = null
+  if (plan.phase === 'taper' && plan.targetVolumePct != null && plan.taperStartISO) {
+    const thisWeek = weekRetro(db).total
+    const taperMonday = mondayOf(new Date(plan.taperStartISO + 'T00:00:00'))
+    let refSum = 0, refCount = 0
+    for (let i = 1; i <= 4; i++) {
+      const wk = weekRetro(db, new Date(taperMonday.getTime() - i * 7 * 86400000))
+      if (wk.total > 0) { refSum += wk.total; refCount++ }
+    }
+    if (refCount > 0) {
+      const refAvg = refSum / refCount
+      const actualPct = refAvg > 0 ? Math.round(thisWeek / refAvg * 100) : 0
+      taperCompliance = { actualPct, targetPct: plan.targetVolumePct, refAvg: round(refAvg), thisWeek }
+      const gap = actualPct - plan.targetVolumePct
+      if (gap > 20) {
+        flags.push({ level: 'warn', text: `Volume cette semaine à ${actualPct}% de ta charge habituelle (${thisWeek} / ~${round(refAvg)} min), alors que l'affûtage recommande de viser ${plan.targetVolumePct}% — réduis encore pour arriver frais.` })
+        score -= 25
+      } else if (gap < -40) {
+        flags.push({ level: 'info', text: `Volume déjà très réduit (${actualPct}% vs ${plan.targetVolumePct}% recommandé) — pas la peine de couper davantage, garde un minimum d'activité pour rester affûté.` })
+        score -= 5
+      }
+    }
+  }
+
+  if (db.mobility && db.mobility.score != null && db.mobility.score < 60) {
+    flags.push({ level: 'info', text: `Mobilité à ${db.mobility.score}/100 — des zones raides peuvent limiter ton geste le jour J.` })
+    score -= 12
+  }
+
+  const sleepDates = Object.keys(db.sleepLog || {}).sort().slice(-7)
+  let sleepSum = 0, sleepN = 0
+  for (const d of sleepDates) { const e = (db.sleepLog || {})[d]; if (e && typeof e.hours === 'number') { sleepSum += e.hours; sleepN++ } }
+  const sleepAvg = sleepN ? round(sleepSum / sleepN * 10) / 10 : null
+  if (sleepAvg != null && sleepAvg < 7) {
+    flags.push({ level: 'info', text: `Sommeil moyen ${sleepAvg} h sur les 7 derniers jours enregistrés — sous la fourchette optimale (7–9 h) pour bien récupérer.` })
+    score -= 10
+  }
+
+  return { score: clamp(score, 0, 100), flags, acwr, taperCompliance, sleepAvg }
+}
+
 export function pillars(db, iso) {
   iso = iso || todayISO()
   return [pillarHydration(db, iso), pillarNutrition(db, iso), pillarSleep(db), pillarLoad(db), pillarMobility(db), pillarPrevention(db)]
@@ -953,13 +1017,17 @@ export function recommendations(db) {
       const pk = upcoming.plan, pkGoal = upcoming.goal
       if (pk.phase === 'today') {
         push('info', 'target', `C'est le jour J pour « ${pkGoal.label} » — fais confiance au travail effectué.`, 'peak')
-      } else if (pk.phase === 'taper') {
-        push('warn', 'target', `Affûtage en cours pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — réduis le volume tout en gardant l'intensité.`, 'peak')
-        if (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
-          push('alert', 'shield', `Ta charge d'entraînement reste élevée alors que tu es en affûtage pour « ${pkGoal.label} » — c'est le moment de vraiment lever le pied.`, 'peak')
+      } else {
+        if (pk.phase === 'taper') {
+          push('warn', 'target', `Affûtage en cours pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — réduis le volume tout en gardant l'intensité.`, 'peak')
+        } else if (pk.phase === 'build' && pk.daysRemaining <= 21) {
+          push('info', 'route', `Phase de développement spécifique pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — rapproche tes séances de l'intensité cible.`, 'peak')
         }
-      } else if (pk.phase === 'build' && pk.daysRemaining <= 21) {
-        push('info', 'route', `Phase de développement spécifique pour « ${pkGoal.label} » (J-${pk.daysRemaining}) — rapproche tes séances de l'intensité cible.`, 'peak')
+        // Croise le plan avec les vraies données (charge réelle, respect de
+        // l'affûtage, mobilité, sommeil) — pas seulement la date — pour ne
+        // pousser que les alertes qui reflètent un vrai risque pour l'objectif.
+        const readiness = peakReadiness(db, pk)
+        readiness.flags.forEach((f) => push(f.level, f.level === 'alert' ? 'shield' : 'target', `« ${pkGoal.label} » : ${f.text}`, 'peak'))
       }
     }
   }

@@ -16,7 +16,7 @@
 // l'utilisateur via RenfoIntel, peut proposer une action (ouvrir un
 // module, lancer une séance) et des suggestions de relance.
 // ============================================================
-import { pillarSleep, pillarLoad, acwrRisk, trainingStats, trainingTotals, hydroDay, hydricTargetMl, nutritionDay, globalScore, dureeToMins } from './renfoIntel'
+import { pillarSleep, pillarLoad, acwrRisk, trainingStats, trainingTotals, peakReadiness, hydroDay, hydricTargetMl, nutritionDay, globalScore, dureeToMins } from './renfoIntel'
 import { SESSIONS, SPORTS } from './trainData'
 import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
@@ -385,7 +385,14 @@ function peakReply(db) {
   }
   const { g, plan } = upcoming[0]
   const phases = { base: 'développement général', build: 'développement spécifique', taper: 'affûtage', today: 'jour J' }
-  return { text: `Prochaine échéance : « ${g.label} » ${plan.daysRemaining === 0 ? "— c'est aujourd'hui !" : `dans ${plan.daysRemaining} jour(s)`}, phase actuelle : ${phases[plan.phase] || plan.phase}.${plan.phase === 'taper' ? ' Réduis le volume, garde l\'intensité.' : ''}`, action: 'peak', actionLabel: 'Ouvrir Pic de forme', chips: ['Ma charge', 'Mon sommeil'] }
+  let text = `Prochaine échéance : « ${g.label} » ${plan.daysRemaining === 0 ? "— c'est aujourd'hui !" : `dans ${plan.daysRemaining} jour(s)`}, phase actuelle : ${phases[plan.phase] || plan.phase}.`
+  if (plan.phase !== 'today') {
+    const readiness = peakReadiness(db, plan)
+    text += ` Préparation : ${readiness.score}/100.`
+    if (readiness.flags.length) text += ' ' + readiness.flags[0].text
+    else if (plan.phase === 'taper') text += ' Réduis le volume, garde l\'intensité.'
+  }
+  return { text, action: 'peak', actionLabel: 'Ouvrir Pic de forme', chips: ['Ma charge', 'Mon sommeil'] }
 }
 
 function motivationReply(db) {
