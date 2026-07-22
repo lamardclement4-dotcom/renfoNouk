@@ -16,7 +16,7 @@
 // l'utilisateur via RenfoIntel, peut proposer une action (ouvrir un
 // module, lancer une séance) et des suggestions de relance.
 // ============================================================
-import { pillarSleep, pillarLoad, acwrRisk, trainingStats, trainingTotals, peakReadiness, hydroDay, hydricTargetMl, nutritionDay, globalScore, dureeToMins } from './renfoIntel'
+import { pillarSleep, pillarLoad, acwrRisk, trainingStats, trainingTotals, peakReadiness, projectedAcwr, consecutiveDaysBefore, mondayRetro, hydroDay, hydricTargetMl, nutritionDay, globalScore, dureeToMins } from './renfoIntel'
 import { SESSIONS, SPORTS } from './trainData'
 import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
@@ -127,12 +127,28 @@ function extractDayOffset(t) {
   return 0
 }
 
+// Durée mentionnée dans le message ("1h30", "2 h", "90 min", "45 minutes")
+// — pour répondre à une hypothèse concrète ("je peux faire 1h30
+// aujourd'hui ?") avec un vrai calcul plutôt qu'une réponse générique.
+function extractMins(t) {
+  // "(il y) a 14h30" ("à 14h30") est une heure d'horloge ou un "il y a X"
+  // passé, pas une durée — on retire la sous-chaîne entière avant de
+  // chercher une durée, pour ne pas confondre "à 14h30" avec "1h30".
+  const stripped = t.replace(/\ba\s*\d{1,2}\s*h\s*\d{0,2}\b/g, '')
+  let m = stripped.match(/(\d+)\s*h(?:eures?)?\s*(\d{1,2})?/)
+  if (m) return (parseInt(m[1], 10) || 0) * 60 + (parseInt(m[2], 10) || 0)
+  m = stripped.match(/(\d+)\s*min(?:utes?)?/)
+  if (m) return parseInt(m[1], 10) || 0
+  return null
+}
+
 function buildContext(t, db) {
   return {
     zoneIds: extractZoneIds(t),
     exerciseName: extractExerciseName(t, db),
     sportId: extractSportId(t),
     dayOffset: extractDayOffset(t),
+    mins: extractMins(t),
   }
 }
 
@@ -299,13 +315,41 @@ function nutriReply(db, ctx) {
 
 function loadReply(db) {
   const acwr = acwrRisk(db)
+  const consec = consecutiveDaysBefore(db, todayISO())
+  const streakNote = consec >= 5 ? ` Tu en es à ${consec} jours d'entraînement consécutifs sans repos — surveille ça.` : ''
   if (acwr.available) {
-    return { text: `Charge : « ${acwr.level} » (ratio ${acwr.ratio} — ${acwr.acuteMin} min sur 7 jours vs ${acwr.chronicAvgWeek} min/sem en moyenne sur 4 semaines, seuils adaptés à ton profil ${acwr.userLevel.label.toLowerCase()}). ${acwr.advice}`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Je me sens fatigué', "Quelle séance aujourd'hui ?"] }
+    return { text: `Charge : « ${acwr.level} » (ratio ${acwr.ratio} — ${acwr.acuteMin} min sur 7 jours vs ${acwr.chronicAvgWeek} min/sem en moyenne sur 4 semaines, seuils adaptés à ton profil ${acwr.userLevel.label.toLowerCase()}). ${acwr.advice}${streakNote}`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Je me sens fatigué', "Quelle séance aujourd'hui ?"] }
   }
   const load = pillarLoad(db)
   const base = load.status === 'ok' ? `Cette semaine : ${load.extra.weekMin} / ${load.extra.targetMin} min par rapport à ton objectif.` : 'Aucune séance enregistrée cette semaine.'
   const why = acwr.reason === 'not_enough_history' ? ` Il me faut au moins 14 jours d'historique de séances réalisées pour calculer ton ratio de charge complet (tu en as ${acwr.daysOfHistory || 0}).` : " Enregistre tes séances réalisées dans le Calendrier pour que je calcule ton ratio de charge complet."
-  return { text: base + why, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ["Quelle séance aujourd'hui ?", 'Résumé de mes stats'] }
+  return { text: base + why + streakNote, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ["Quelle séance aujourd'hui ?", 'Résumé de mes stats'] }
+}
+
+// Question hypothétique ("je peux faire 1h30 aujourd'hui ?") : calcule le
+// VRAI impact sur la charge (projectedAcwr) plutôt qu'une réponse
+// générique — c'est le genre de question qu'un coach humain regarderait
+// dans tes vraies données avant de répondre.
+function whatIfReply(db, ctx) {
+  const mins = ctx && ctx.mins
+  if (!mins) return { text: "Précise une durée (ex. « je peux faire 1h30 aujourd'hui ? ») pour que je calcule l'impact réel sur ta charge.", chips: STARTER_CHIPS }
+  const proj = projectedAcwr(db, mins)
+  if (!proj) return { text: `Pas encore assez d'historique de séances réalisées pour chiffrer précisément l'impact d'une séance de ${fmtMins(mins)} — vas-y si tu te sens bien, mais reste à l'écoute de tes sensations.`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: STARTER_CHIPS }
+  const consec = consecutiveDaysBefore(db, todayISO()) + 1
+  let verdict
+  if (proj.worsened) verdict = `⚠️ Je serais prudent : ça ferait passer ta charge de « ${proj.currentLevel.toLowerCase()} » à « ${proj.level.toLowerCase()} » (ratio ${proj.currentRatio} → ${proj.ratio}).`
+  else if (proj.level === 'Vigilance renforcée') verdict = `⚠️ Ta charge est déjà en zone « vigilance renforcée » (ratio ${proj.currentRatio}) — cette séance la maintiendrait à ${proj.ratio}, pas idéal.`
+  else verdict = `✅ Feu vert : ta charge resterait en zone « ${proj.level.toLowerCase()} » (ratio ${proj.currentRatio} → ${proj.ratio}).`
+  const streakNote = consec >= 5 ? ` Attention, ce serait ton ${consec}e jour consécutif sans repos.` : ''
+  return { text: `Une séance de ${fmtMins(mins)} aujourd'hui : ${verdict}${streakNote}`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Ma charge', 'Résumé de mes stats'] }
+}
+
+// Bilan de semaine à la demande — reprend le même moteur que la
+// rétrospective du lundi sur Accueil (mondayRetro), mais accessible
+// n'importe quel jour de la semaine, pas juste le lundi.
+function weekBilanReply(db) {
+  const r = mondayRetro(db)
+  return { text: r.lines.join(' '), chips: ['Ma charge', 'Mes records', "Quelle séance aujourd'hui ?"] }
 }
 
 function mobilityReply(db) {
@@ -412,7 +456,7 @@ function recoveryReply() {
 }
 
 function helpReply() {
-  return { text: 'Je peux te parler de : ta séance du jour, ta charge d\'entraînement, ton sommeil, ta fatigue, une douleur, ton hydratation, ta nutrition, ta mobilité, tes tests physiques, tes records, ton cycle, tes compléments, tes échéances (pic de forme), ou te faire un résumé de tes stats.', chips: STARTER_CHIPS }
+  return { text: 'Je peux te parler de : ta séance du jour, ta charge d\'entraînement, ton sommeil, ta fatigue, une douleur, ton hydratation, ta nutrition, ta mobilité, tes tests physiques, tes records, ton cycle, tes compléments, tes échéances (pic de forme), ou te faire un résumé de tes stats ou de ta semaine. Tu peux aussi me poser une hypothèse concrète — « je peux faire 1h30 aujourd\'hui ? » — je calcule le vrai impact sur ta charge avant de répondre.', chips: STARTER_CHIPS }
 }
 
 // ============================================================
@@ -434,6 +478,8 @@ const TOPIC_INTENTS = [
   { id: 'motivation', test: (t) => /(motivation|pas envie|flemme|demotive|lache)/.test(t), reply: motivationReply },
   { id: 'session', test: (t, ctx) => /(quelle|quoi|prochaine|je fais quoi).*(seance|entrain)|seance.*(jour|aujourd)|entrainement (du jour|aujourd)/.test(t) || (!!(ctx && ctx.sportId) && /(quoi|qu.est-ce|prevu|programme|au programme)/.test(t)), reply: sessionTodayReply },
   { id: 'load', test: (t) => /(charge|volume|surentrainement|acwr|trop d.entrainement|en fais trop)/.test(t), reply: loadReply },
+  { id: 'whatif', test: (t, ctx) => /(je (peux|dois|vais|pourrais) faire|je fais quoi si|si je fais|ca passe si)/.test(t) && !!(ctx && ctx.mins), reply: whatIfReply },
+  { id: 'weekbilan', test: (t) => /semaine/.test(t) && /(bilan|resume|comment.*(passe|ete)|analyse)/.test(t), reply: weekBilanReply },
   { id: 'hydra', test: (t) => /(hydrat|\beau\b|boire|\bbu\b|soif|cafeine|cafe)/.test(t), reply: hydraReply },
   { id: 'nutri', test: (t) => /(nutrition|calorie|proteine|glucide|lipide|manger|repas|faim)/.test(t), reply: nutriReply },
   { id: 'mobility', test: (t) => /(mobilite|souplesse|raide)/.test(t), reply: mobilityReply },
