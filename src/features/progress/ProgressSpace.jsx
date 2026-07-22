@@ -5,7 +5,16 @@ import { trainingStats, trainingTotals, weekRetro, weeksTrend, mondayOf, hydroDa
 import TrainSpace from '../train/TrainSpace'
 import PhysicalTestsSpace, { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import SleepSpace from '../health/Sleep'
+import HealthHome from '../health/HealthHome'
 import { HealthScoreCard, PeakHomeCard } from './cards'
+
+// Pilliers/recos renvoient soit un id pilier générique (hydration, load…)
+// soit déjà l'id d'espace Santé en français (hydratation, sommeil…) — le
+// dispatcher traduit le premier cas et route tout le reste tel quel, vers
+// les flows internes existants (mobility/program/planner/peak/tests/sleep)
+// ou vers HealthHome pour les autres (hydratation/nutrition/prevention…).
+const OWN_FLOWS = new Set(['mobility', 'program', 'planner', 'peak', 'tests'])
+const ACTION_DEST = { hydration: 'hydratation', load: 'planner', sleep: 'sleep', sommeil: 'sleep' }
 
 const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 const h = React.createElement
@@ -74,11 +83,22 @@ function tile(opts) {
 export default function ProgressSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [flow, setFlow] = useState(null)
+  const [healthTile, setHealthTile] = useState(null)
   const [weekOffset, setWeekOffset] = useState(0)
+
+  function handleAction(action) {
+    if (!action) return
+    const dest = ACTION_DEST[action] || action
+    if (OWN_FLOWS.has(dest)) { setFlow(dest); return }
+    if (dest === 'sleep') { setFlow('sleep'); return }
+    setHealthTile(dest)
+  }
 
   if (loading) {
     return h('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font } }, 'Chargement...')
   }
+
+  if (healthTile) return h(HealthHome, { userId, initialSpace: healthTile, embedded: true, onClose: () => setHealthTile(null) })
 
   if (flow === 'mobility' || flow === 'program' || flow === 'planner' || flow === 'peak') {
     return h(TrainSpace, { userId, initialTile: flow, embedded: true, onClose: () => setFlow(null) })
@@ -325,7 +345,7 @@ export default function ProgressSpace({ userId, onClose }) {
           h('div', { style: { color: 'rgba(255,255,255,.7)', fontSize: 13, marginTop: 2 } }, 'Record : ', db.record, ' jours')))),
 
     h(PeakHomeCard, { db, onPeak: () => setFlow('peak') }),
-    h(HealthScoreCard, { db, onSleep: () => setFlow('sleep') }),
+    h(HealthScoreCard, { db, onAction: handleAction }),
 
     h('div', { style: { background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, padding: 20, marginBottom: 14 } },
       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 } },

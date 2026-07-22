@@ -14,7 +14,12 @@ const h = React.createElement
 const PILLAR_IC = { hydration: 'drop', nutrition: 'apple', sleep: 'moon', load: 'chart', mobility: 'target', prevention: 'shield' }
 const RECO_COLOR = { alert: '#c46a3a', warn: '#c4a03a', info: C.primary }
 
-export function HealthScoreCard({ db, onSleep }) {
+// Chaque tuile pilier redirige vers son module — l'id du pilier (renvoyé
+// tel quel par globalScore/pillars) est passé à onAction, à charge de
+// l'appelant (Accueil, Progrès) de le router vers sa propre navigation.
+const PILLAR_ACTION = { hydration: 'hydration', nutrition: 'nutrition', sleep: 'sleep', load: 'load', mobility: 'mobility', prevention: 'prevention' }
+
+export function HealthScoreCard({ db, onAction }) {
   const result = globalScore(db)
   const recos = recommendations(db)
   if (result.active === 0) return null
@@ -40,10 +45,10 @@ export function HealthScoreCard({ db, onSleep }) {
         const col = active ? scoreColor : C.ink3
         const pct = active ? p.score : 0
         const isSleep = p.id === 'sleep'
-        return h('div', {
+        return h('button', {
           key: p.id,
-          onClick: isSleep ? onSleep : undefined,
-          style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: isSleep ? 'pointer' : 'default' },
+          onClick: onAction ? () => onAction(PILLAR_ACTION[p.id] || p.id) : undefined,
+          style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: onAction ? 'pointer' : 'default' },
         },
           h('div', { style: { width: '100%', height: 36, borderRadius: 6, background: isSleep && !active ? `color-mix(in srgb, #4a6fa5 12%, ${C.surface2})` : C.surface2, position: 'relative', overflow: 'hidden', border: isSleep ? `1px solid color-mix(in srgb, #4a6fa5 30%, ${C.line})` : 'none' } },
             h('div', { style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: pct + '%', background: active ? `color-mix(in srgb, ${col} 80%, transparent)` : C.surface2, borderRadius: 6, transition: 'height .4s ease' } }),
@@ -55,9 +60,15 @@ export function HealthScoreCard({ db, onSleep }) {
     topRecos.length > 0 && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
       topRecos.map((r, i) => {
         const col = RECO_COLOR[r.level] || C.ink3
-        return h('div', { key: i, style: { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', borderRadius: C.radiusXs, background: `color-mix(in srgb, ${col} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${col} 25%, ${C.line})` } },
+        const clickable = !!(r.action && onAction)
+        return h(clickable ? 'button' : 'div', {
+          key: i,
+          onClick: clickable ? () => onAction(r.action) : undefined,
+          style: { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', borderRadius: C.radiusXs, background: `color-mix(in srgb, ${col} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${col} 25%, ${C.line})`, width: '100%', textAlign: 'left', cursor: clickable ? 'pointer' : 'default' },
+        },
           h(Icon, { name: r.icon || 'target', size: 14, color: col, style: { flexShrink: 0, marginTop: 1 } }),
-          h('span', { style: { fontSize: 12.5, color: C.ink, lineHeight: 1.4 } }, r.text))
+          h('span', { style: { fontSize: 12.5, color: C.ink, lineHeight: 1.4, flex: 1 } }, r.text),
+          clickable && h(Icon, { name: 'arrow', size: 13, color: col, style: { flexShrink: 0, marginTop: 1 } }))
       })))
 }
 

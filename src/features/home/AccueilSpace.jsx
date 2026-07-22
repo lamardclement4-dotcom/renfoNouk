@@ -117,18 +117,18 @@ function renderBothEqual(heroInfo, onOpen, onPlanner) {
 // nutrition, hydratation, compléments. Fermeture locale seulement (pas
 // persistée) : elle revient à la prochaine ouverture, et de toute façon
 // naturellement chaque lundi suivant.
-function MondayRetroCard({ db }) {
+function MondayRetroCard({ db, onOpen }) {
   const [dismissed, setDismissed] = useState(false)
   if (dismissed || new Date().getDay() !== 1) return null
   const r = mondayRetro(db)
   if (!r.training.count && !r.nutrition && !r.hydration) return null
-  return h('div', { style: { padding: 20, borderRadius: C.radius, background: '#3f3a5c', color: '#fff', marginBottom: 16, boxShadow: '0 10px 24px -12px #3f3a5c' } },
+  return h('div', { onClick: onOpen, style: { padding: 20, borderRadius: C.radius, background: '#3f3a5c', color: '#fff', marginBottom: 16, boxShadow: '0 10px 24px -12px #3f3a5c', cursor: onOpen ? 'pointer' : 'default' } },
     h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 } },
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
         h('div', { style: { width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
           h(Icon, { name: 'chart', size: 18, color: '#fff' })),
         h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15.5 } }, 'Rétrospective de la semaine')),
-      h('button', { onClick: () => setDismissed(true), 'aria-label': 'Fermer', style: { background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', cursor: 'pointer', padding: 4 } },
+      h('button', { onClick: (e) => { e.stopPropagation(); setDismissed(true) }, 'aria-label': 'Fermer', style: { background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', cursor: 'pointer', padding: 4 } },
         h(Icon, { name: 'close', size: 16, color: 'rgba(255,255,255,.7)' }))),
     r.lines.map((line, i) => h('p', { key: i, style: { fontSize: 13, lineHeight: 1.55, opacity: 0.95, marginTop: i ? 8 : 0 } }, line)))
 }
@@ -177,7 +177,7 @@ function TodayInsights({ db, onPlanner, onNutrition }) {
     h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 10px' } }, "Aujourd'hui"),
     !(next && next.date === iso) && Row('calendar', C.primary, nextTitle, nextDetail, onPlanner),
     (nutPillar || hydPillar) && Row('apple', '#6f8a3a', 'Nutrition & hydratation', [nutPillar && nutPillar.status === 'ok' ? nutPillar.detail : null, hydPillar && hydPillar.status === 'ok' ? hydPillar.detail : null].filter(Boolean).join(' · ') || "Rien enregistré aujourd'hui", onNutrition),
-    acwr.available && acwr.level !== 'Vigilance renforcée' && Row('chart', acwr.color, 'Charge : ' + acwr.level, `Ratio ${acwr.ratio} · ${acwr.acuteMin} min (7j) vs ${acwr.chronicAvgWeek} min/sem moy.`))
+    acwr.available && acwr.level !== 'Vigilance renforcée' && Row('chart', acwr.color, 'Charge : ' + acwr.level, `Ratio ${acwr.ratio} · ${acwr.acuteMin} min (7j) vs ${acwr.chronicAvgWeek} min/sem moy.`, onPlanner))
 }
 
 // ============================================================
@@ -200,6 +200,21 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   if (openId) return h(TrainSpace, { userId, initialOpenId: openId, embedded: true, onClose: () => setOpenId(null) })
   if (healthTile) return h(HealthHome, { userId, initialSpace: healthTile, embedded: true, onClose: () => setHealthTile(null) })
 
+  // Dispatch générique pour tout ce qui est cliquable sur Accueil (tuiles
+  // du score santé, recommandations, "Charge" du jour…) — même logique que
+  // TrainSpace/CoachSpace : préfixe session:<id>, sinon un tile Entraîner,
+  // sinon un module Santé. Traduit aussi les ids de pilier bruts
+  // (hydration/sleep/load) vers leur vraie destination.
+  const ENTRAINER_ACTIONS = new Set(['mobility', 'program', 'planner', 'recovery', 'peak', 'tests', 'load'])
+  const PILLAR_DEST = { hydration: 'hydratation', sleep: 'sommeil', load: 'planner' }
+  function handleAction(action) {
+    if (!action) return
+    const dest = PILLAR_DEST[action] || action
+    if (dest.startsWith('session:')) { setOpenId(dest.slice(8)); return }
+    if (ENTRAINER_ACTIONS.has(dest)) { setTile(dest); return }
+    setHealthTile(dest)
+  }
+
   const heroInfo = pickHeroContent(db)
   const totals = trainingTotals(db)
   const streak = totals.streak
@@ -219,7 +234,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     { ic: 'flame', big: streak, lab: 'jours de suite' },
     { ic: 'clock', big: totalMins, lab: 'min cette semaine' },
     { ic: 'check', big: doneCount, lab: 'séances faites' },
-  ].map((s, i) => h('div', { key: i, style: { textAlign: 'center', borderLeft: i > 0 ? `1px solid ${C.line}` : 'none' } },
+  ].map((s, i) => h('button', { key: i, onClick: () => setTile('planner'), style: { textAlign: 'center', width: '100%', background: 'none', border: 'none', borderLeft: i > 0 ? `1px solid ${C.line}` : 'none', cursor: 'pointer', padding: '0 4px' } },
     h(Icon, { name: s.ic, size: 18, color: C.primary }),
     h('div', { style: { fontSize: 24, fontWeight: 700, lineHeight: 1, marginTop: 8 } }, s.big),
     h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4, fontWeight: 600 } }, s.lab)))
@@ -252,9 +267,9 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     header,
     hero,
     statRow,
-    h(MondayRetroCard, { db }),
+    h(MondayRetroCard, { db, onOpen: () => setTile('planner') }),
     h(OverloadAlert, { db, onPrevention: () => setHealthTile('prevention') }),
-    h(HealthScoreCard, { db, onSleep: () => setHealthTile('sommeil') }),
+    h(HealthScoreCard, { db, onAction: handleAction }),
     h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition') }),
     h(PeakHomeCard, { db, onPeak: () => setTile('peak') }),
     mobilityCta)
