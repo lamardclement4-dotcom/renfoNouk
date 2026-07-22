@@ -747,7 +747,7 @@ function DiagTab({ db, store, onGoToJournal }) {
 
   const score = calcScore()
   const piliers = calcPiliers()
-  const conseils = buildConseils(ans, { bmr, cibLo, cibMid, protLo, protHi, poids, avg, validProfile })
+  const conseils = buildConseils(ans, { bmr, cibLo, cibMid, protLo, protHi, poids, avg, validProfile, fibMin, fibMax })
   const urgent = conseils.filter((c) => c.priority === 0)
   const attn = conseils.filter((c) => c.priority === 1 || c.priority === 2)
   const positifs = conseils.filter((c) => c.priority === 3)

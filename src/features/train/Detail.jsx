@@ -1,6 +1,6 @@
 import React from 'react'
 import { C, Icon, Pill } from '../health/kit'
-import { CATS, getSession, sessionExercises } from './trainData'
+import { CATS, getSession, sessionExercises, sessionDuration } from './trainData'
 
 const ZONE_LABELS = { genoux: 'Genoux', dos: 'Dos / lombaires', epaules: 'Épaules', chevilles: 'Chevilles', hanches: 'Hanches', poignets: 'Poignets / coudes', cou: 'Cou / cervicales' }
 
@@ -15,7 +15,7 @@ export function SessionCard({ s, onOpen }) {
         React.createElement('span', { style: { fontSize: 11.5, fontWeight: 700, color: cat.tint, textTransform: 'uppercase', letterSpacing: '.03em' } }, cat.label)),
       React.createElement('div', { style: { fontFamily: C.font, fontSize: 16.5, fontWeight: 600, letterSpacing: '-.01em' } }, s.title),
       React.createElement('div', { style: { fontSize: 13, color: C.ink3, marginTop: 4, display: 'flex', gap: 12 } },
-        React.createElement('span', null, s.mins, ' min'), React.createElement('span', null, '·'),
+        React.createElement('span', null, s.mins || sessionDuration(s), ' min'), React.createElement('span', null, '·'),
         React.createElement('span', null, n, ' mvts'), React.createElement('span', null, '·'),
         React.createElement('span', null, s.level))),
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', paddingRight: 14 } }, React.createElement(Icon, { name: 'arrow', size: 18, color: C.ink3 })))
@@ -58,7 +58,7 @@ export default function Detail({ id, program, sensitiveZones, onBack, onStart })
         "Réduis l'amplitude ou saute un mouvement si tu sens une gêne, et stoppe en cas de douleur.")),
 
     React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 20 } },
-      [{ ic: 'clock', v: s.mins + ' min', l: 'Durée' }, { ic: 'layers', v: blocks.length, l: 'Mouvements' }, { ic: 'target', v: s.level, l: 'Niveau' }].map((m, i) =>
+      [{ ic: 'clock', v: (s.mins || sessionDuration(s)) + ' min', l: 'Durée' }, { ic: 'layers', v: blocks.length, l: 'Mouvements' }, { ic: 'target', v: s.level, l: 'Niveau' }].map((m, i) =>
         React.createElement('div', { key: i, style: { flex: 1, padding: '12px 8px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, textAlign: 'center' } },
           React.createElement(Icon, { name: m.ic, size: 17, color: C.primary }),
           React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15, marginTop: 6 } }, m.v),

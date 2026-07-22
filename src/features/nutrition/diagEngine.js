@@ -2,7 +2,7 @@
 // l'ancienne app (bundle renfo v6). Chaque règle cite sa source scientifique.
 // Ne pas modifier les seuils/textes sans re-vérifier le bundle d'origine.
 export function buildConseils(ans, ctx) {
-  const { bmr, cibLo, cibMid, protLo, protHi, poids, avg, validProfile } = ctx
+  const { bmr, cibLo, cibMid, protLo, protHi, poids, avg, validProfile, fibMin, fibMax } = ctx
     var c=[];
     var a=ans;
 

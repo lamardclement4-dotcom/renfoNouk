@@ -127,9 +127,9 @@ function BilanTab({ db, store }) {
     const tags = new Set()
     QUIZ.forEach((qq, i) => {
       if (!visible(i)) return
-      maxv += Math.max(...qq.opts.map((o) => o[1]))
       const ai = ans[i]
       if (ai == null) return
+      maxv += Math.max(...qq.opts.map((o) => o[1]))
       const val = qq.opts[ai][1]
       score += val
       if (qq.flag && val >= 3) flag = true
