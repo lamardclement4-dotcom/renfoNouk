@@ -20,6 +20,11 @@ const ZONES = [
   { id: 'cou', label: 'Cou / cervicales' },
 ]
 
+// Avatar : simple galerie d'emoji stockée telle quelle sous phys.avatar
+// (comme mobility/prevention/etc., pas de colonne dédiée nécessaire).
+// Pas de upload de photo : aucun stockage de fichiers côté app statique.
+const AVATARS = ['🏃', '🚴', '🏋️', '🧘', '🥊', '🏊', '⛷️', '🤸', '🏸', '⚽', '🎾', '🧗', '🏀', '🤾', '🚵', '🏄', '😊', '😎', '🔥', '💪']
+
 const LEVEL_OPTS = [
   { id: 'debutant', label: 'Débutant', desc: 'Tu commences ou reprends une activité régulière', tint: '#5b6fa5' },
   { id: 'intermediaire', label: 'Intermédiaire', desc: "Tu t'entraînes régulièrement depuis plusieurs mois", tint: '#c4a03a' },
@@ -147,8 +152,10 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
 
   return h(FlowSpace, { title: 'Profil', onClose, fixed: false },
     h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 8, marginBottom: 20 } },
-      h('div', { style: { position: 'relative', marginBottom: 14 } },
-        h('div', { style: { width: 80, height: 80, borderRadius: 999, background: C.ink, color: C.surface, fontFamily: C.font, fontWeight: 700, fontSize: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, initial)),
+      h('button', { onClick: () => setSheet('avatar'), 'aria-label': "Changer d'avatar", style: { position: 'relative', marginBottom: 14, background: 'none', border: 'none', padding: 0, cursor: 'pointer' } },
+        h('div', { style: { width: 80, height: 80, borderRadius: 999, background: db.avatar ? `color-mix(in srgb, ${C.primary} 14%, ${C.surface})` : C.ink, color: C.surface, fontFamily: C.font, fontWeight: 700, fontSize: db.avatar ? 38 : 32, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, db.avatar || initial),
+        h('div', { style: { position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, borderRadius: 999, background: C.primary, border: `2px solid ${C.surface}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          h(Icon, { name: 'edit', size: 12, color: '#fff' }))),
       h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 } },
         h('h1', { onClick: () => setSheet('name'), style: { fontFamily: C.font, fontSize: 24, fontWeight: 700, letterSpacing: '-.01em', cursor: 'pointer', margin: 0, color: firstName ? C.ink : C.ink3 } }, firstName ? firstName + (lastName ? ' ' + lastName : '') : 'Ajouter ton nom'),
         h('button', { onClick: () => setSheet('level'), style: { fontSize: 12, padding: '2px 8px 2px 10px', borderRadius: 999, fontWeight: 700, background: `color-mix(in srgb, ${levelTint} 12%, ${C.surface})`, color: levelTint, display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', cursor: 'pointer' } },
@@ -215,6 +222,16 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
     h('button', { onClick: signOut, style: { width: '100%', marginTop: 24, padding: 14, borderRadius: 999, background: 'transparent', border: `1.5px solid ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14.5, cursor: 'pointer' } }, 'Se déconnecter'),
 
     sheet === 'name' && h(TextFieldSheet, { title: 'Mon nom', fields: [{ key: 'firstName', label: 'Prénom', value: firstName, required: true, autoFocus: true, maxLength: 24 }, { key: 'lastName', label: 'Nom', value: lastName, maxLength: 24 }], onSave: saveName, onClose: () => setSheet(null) }),
+    sheet === 'avatar' && sheetWrap(() => setSheet(null),
+      h('div', null,
+        h('div', { style: { fontFamily: C.font, fontSize: 18, fontWeight: 700, marginBottom: 16, textAlign: 'center' } }, 'Choisis ton avatar'),
+        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 16 } },
+          AVATARS.map((em) => h('button', {
+            key: em,
+            onClick: () => { store.set({ avatar: em }); setSheet(null) },
+            style: { width: '100%', aspectRatio: '1', borderRadius: C.radiusSm, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: db.avatar === em ? `color-mix(in srgb, ${C.primary} 16%, ${C.surface})` : C.surface2, border: db.avatar === em ? `1.5px solid ${C.primary}` : `1.5px solid transparent`, cursor: 'pointer' },
+          }, em))),
+        db.avatar && h('button', { onClick: () => { store.set({ avatar: null }); setSheet(null) }, style: { width: '100%', padding: 13, borderRadius: 999, background: 'none', border: `1.5px solid ${C.line}`, color: C.ink3, fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Retirer l’avatar'))),
     sheet === 'dailyMin' && h(NumberFieldSheet, { title: 'Temps par jour', unit: 'min / jour', value: g.dailyMin, min: 5, max: 90, step: 5, onSave: (v) => store.setGoal('dailyMin', v), onClose: () => setSheet(null) }),
     sheet === 'weeklySessions' && h(NumberFieldSheet, { title: 'Séances / semaine', unit: 'séances', value: g.weeklySessions, min: 1, max: 14, step: 1, onSave: (v) => store.setGoal('weeklySessions', v), onClose: () => setSheet(null) }),
     sheet === 'goal' && h(TextFieldSheet, {
