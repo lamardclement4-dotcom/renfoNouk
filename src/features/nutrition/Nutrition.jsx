@@ -327,11 +327,15 @@ function TimingTab({ body }) {
 // ============================================================
 // Utilitaires date (journal alimentaire)
 // ============================================================
-const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+// NFD décompose les accents (é → e) mais pas les ligatures : œ et æ sont des
+// lettres à part entière, pas des compositions. Sans ce remplacement, chercher
+// "boeuf" au clavier ne remontait aucun des morceaux de "bœuf".
+const norm = (s) => (s || '').toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD').replace(/[̀-ͯ]/g, '')
 // Noms d'aliments pré-normalisés une seule fois au chargement du module :
 // évite de renormaliser (NFD + regex) les ~350 aliments à chaque frappe
 // dans la recherche, qui rendait la saisie perceptiblement saccadée.
 const FOODS_NORM = new Map(FOODS.map((f) => [f.id, norm(f.n)]))
+const PAGE_SIZE = 80
 const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
 // Reconstruit la date en UTC pur : new Date(iso+'T00:00:00') est interprété en
 // heure locale, et .toISOString() reconvertit en UTC — dans un fuseau en avance
@@ -392,6 +396,10 @@ function FoodTab({ db, store }) {
   const [date, setDate] = useState(todayISO())
   const [mode, setMode] = useState('main')
   const [q, setQ] = useState('')
+  // La base compte plus d'un millier d'aliments : tout rendre d'un coup fige
+  // la liste sur mobile. On en affiche une tranche, agrandie à la demande —
+  // rien n'est masqué, contrairement à un plafond fixe.
+  const [listLimit, setListLimit] = useState(PAGE_SIZE)
   const [pick, setPick] = useState(null)
   const [grams, setGrams] = useState(100)
   const [meal, setMeal] = useState('midi')
@@ -463,7 +471,7 @@ function FoodTab({ db, store }) {
     return React.createElement('div', null,
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 } },
         React.createElement('button', { onClick: () => { setMode('main'); setQ('') }, style: xst.iconBtn, 'aria-label': 'Retour' }, React.createElement(Icon, { name: 'back', size: 19 })),
-        React.createElement('input', { autoFocus: true, value: q, onChange: (e) => setQ(e.target.value), placeholder: 'Chercher un aliment…', style: { ...xst.input, marginTop: 0, flex: 1 } })),
+        React.createElement('input', { autoFocus: true, value: q, onChange: (e) => { setQ(e.target.value); setListLimit(PAGE_SIZE) }, placeholder: 'Chercher un aliment…', style: { ...xst.input, marginTop: 0, flex: 1 } })),
       React.createElement('div', { style: { fontSize: 12.5, color: INK3, marginBottom: 14 } }, 'Pour le repas : ', React.createElement('strong', { style: { color: NUTRI } }, (MEALS.find((m) => m.id === meal) || {}).label)),
       nq === '' && favs.length > 0 && React.createElement(React.Fragment, null,
         React.createElement(SecLab, null, 'Favoris'),
@@ -471,13 +479,17 @@ function FoodTab({ db, store }) {
       nq === '' && recents.length > 0 && React.createElement(React.Fragment, null,
         React.createElement(SecLab, null, 'Récents'),
         React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } }, recents.map((f, i) => React.createElement(Quick, { key: 'rec' + i, kk: 'rec' + i, food: f })))),
-      nq === '' && React.createElement(SecLab, null, 'Tous les aliments'),
+      nq === '' && React.createElement(SecLab, null, `Tous les aliments (${res.length})`),
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
-        res.map((f) => React.createElement('div', { key: f.id, style: { ...xst.optBtn, justifyContent: 'space-between', padding: '8px 8px 8px 14px' } },
+        res.slice(0, listLimit).map((f) => React.createElement('div', { key: f.id, style: { ...xst.optBtn, justifyContent: 'space-between', padding: '8px 8px 8px 14px' } },
           React.createElement('button', { onClick: () => chooseFood(f), style: { flex: 1, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 1, background: 'transparent', border: 'none', padding: '4px 0', cursor: 'pointer' } },
             React.createElement('span', { style: { fontWeight: 600, fontSize: 14.5 } }, f.n),
             React.createElement('span', { style: { fontSize: 11.5, color: INK3 } }, f.k, ' kcal /100g')),
           React.createElement('button', { onClick: () => toggleFav(f), 'aria-label': 'Favori', style: { flex: '0 0 auto', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: isFav(f.n) ? '#d9a441' : INK3, background: 'transparent', border: 'none', cursor: 'pointer' } }, isFav(f.n) ? '★' : '☆')))),
+      res.length > listLimit && React.createElement('button', {
+        onClick: () => setListLimit((l) => l + PAGE_SIZE * 3),
+        style: { ...xst.ghostBtn, width: '100%', marginTop: 12, padding: 12, fontSize: 14 },
+      }, `Afficher plus (${res.length - listLimit} restants)`),
       res.length === 0 && React.createElement('div', { style: { textAlign: 'center', color: INK3, fontSize: 13.5, padding: '20px 0' } },
         'Aucun résultat. Tu peux ajouter cet aliment à la main :',
         React.createElement('button', { onClick: () => { setPick({ n: q || 'Aliment', k: 0, p: 0, g: 0, l: 0, custom: true }); setGrams(100); setEditId(null); setMode('qty') }, style: { ...xst.ghostBtn, width: '100%', marginTop: 12, padding: 12, fontSize: 14 } }, '+ Aliment personnalisé')))
