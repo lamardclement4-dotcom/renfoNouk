@@ -508,7 +508,15 @@ function FoodTab({ db, store }) {
         res.slice(0, listLimit).map((f) => React.createElement('div', { key: f.id, style: { ...xst.optBtn, justifyContent: 'space-between', padding: '8px 8px 8px 14px' } },
           React.createElement('button', { onClick: () => chooseFood(f), style: { flex: 1, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 1, background: 'transparent', border: 'none', padding: '4px 0', cursor: 'pointer' } },
             React.createElement('span', { style: { fontWeight: 600, fontSize: 14.5 } }, f.n),
-            React.createElement('span', { style: { fontSize: 11.5, color: INK3 } }, f.k, ' kcal /100g')),
+            React.createElement('span', { style: { fontSize: 11.5, color: INK3, display: 'flex', alignItems: 'center', gap: 6 } },
+              f.k + ' kcal /100g',
+              // Valeur issue de la table officielle de l'ANSES plutôt que
+              // d'une saisie manuelle : on le signale, c'est un gage de
+              // fiabilité sur lequel l'utilisateur peut s'appuyer.
+              f.src === 'ciqual' && React.createElement('span', {
+                title: 'Valeur officielle — table CIQUAL de l’ANSES',
+                style: { fontSize: 9.5, fontWeight: 700, letterSpacing: '.03em', color: NUTRI, border: '1px solid ' + NUTRI, borderRadius: 4, padding: '0 4px', lineHeight: '14px' },
+              }, 'ANSES'))),
           React.createElement('button', { onClick: () => toggleFav(f), 'aria-label': 'Favori', style: { flex: '0 0 auto', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: isFav(f.n) ? '#d9a441' : INK3, background: 'transparent', border: 'none', cursor: 'pointer' } }, isFav(f.n) ? '★' : '☆')))),
       res.length > listLimit && React.createElement('button', {
         onClick: () => setListLimit((l) => l + PAGE_SIZE * 3),

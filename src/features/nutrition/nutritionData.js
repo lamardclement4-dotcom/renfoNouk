@@ -1,5 +1,6 @@
 // Données réelles extraites du bundle de l'ancienne app (renfo v6, index.html).
 // Ne pas inventer de valeurs ici : toute correction doit venir d'une re-extraction du bundle.
+import { CIQUAL_FOODS } from './ciqualFoods'
 
 export const DIAG_QUESTIONS = [
   // ── PILIER ÉNERGIE ────────────────────────────────────────────
@@ -576,7 +577,6 @@ export const FOODS = [
   ["Riz souffl\xE9 nature", 395, 7, 85, 1, 25, "1 bol", 1.5],
   ["Foie de veau", 141, 22, 4, 4, 100, "", 0],
   ["Foie de volaille", 165, 24, 1, 7, 100, "", 0],
-  ["Chorizo", 380, 24, 2, 31, 30, "", 0],
   ["Bacon", 410, 24, 0, 35, 20, "1 tranche", 0],
   ["Lapin (cuisse)", 130, 21, 0, 5, 150, "", 0],
   ["Caille", 134, 21, 0, 5, 120, "1 caille", 0],
@@ -683,15 +683,10 @@ export const FOODS = [
   ["Boudin noir", 310, 15, 2, 27, 100, "", 0],
   ["Boudin blanc", 260, 12, 8, 20, 100, "", 0],
   ["Rôti de porc", 165, 27, 0, 6, 120, "", 0],
-  ["Jambon cru", 195, 25, 0, 10, 30, "1 tranche", 0],
-  ["Jambon de Bayonne", 200, 24, 0, 11, 30, "1 tranche", 0],
   ["Pâté de campagne", 320, 13, 2, 29, 40, "", 0],
   ["Rillettes", 380, 15, 0, 35, 40, "", 0],
   ["Foie gras", 460, 9, 4, 45, 30, "", 0],
   ["Pastrami", 150, 22, 1, 6, 30, "", 0],
-  ["Bresaola", 150, 32, 0, 2.5, 30, "", 0],
-  ["Coppa", 380, 24, 0, 32, 20, "", 0],
-  ["Saucisson sec", 400, 24, 1, 34, 25, "", 0],
   ["Terrine de campagne", 300, 14, 1, 27, 40, "", 0],
   ["Osso bucco", 150, 20, 2, 7, 250, "1 assiette", 0.5],
   ["Travers de porc", 280, 20, 0, 22, 150, "", 0],
@@ -703,7 +698,6 @@ export const FOODS = [
   ["Onglet", 190, 27, 0, 9, 150, "", 0],
   ["Cuisse de poulet", 195, 26, 0, 10, 130, "1 cuisse", 0],
   ["Poulet rôti (avec peau)", 215, 27, 0, 12, 130, "", 0],
-  ["Confit de canard", 320, 22, 0, 26, 130, "1 cuisse", 0],
   ["Pintade", 158, 23, 0, 7, 130, "", 0],
   ["Poule (bouillie)", 200, 20, 0, 13, 130, "", 0],
 
@@ -916,33 +910,24 @@ export const FOODS = [
   ["Cœur de bœuf", 110, 18, 0, 4, 120, "", 0],
   ["Tripes", 95, 15, 0, 4, 200, "1 portion", 0],
   ["Gras-double", 100, 15, 0, 4.5, 200, "", 0],
-  ["Andouille de Vire", 250, 17, 1, 20, 50, "", 0],
-  ["Saucisson à l'ail", 300, 17, 2, 25, 30, "", 0],
   ["Rosette", 400, 23, 1, 34, 25, "", 0],
-  ["Mortadelle", 310, 15, 2, 27, 30, "", 0],
-  ["Salami", 390, 22, 1.5, 33, 25, "", 0],
   ["Jambon de Parme", 220, 26, 0, 13, 30, "1 tranche", 0],
   ["Speck", 280, 26, 0, 20, 30, "", 0],
   ["Lonzo", 250, 30, 0, 14, 30, "", 0],
   ["Figatelle", 350, 20, 1, 30, 60, "", 0],
   ["Jambonneau", 200, 22, 1, 12, 100, "", 0],
   ["Museau de porc", 190, 18, 1, 13, 60, "", 0],
-  ["Fromage de tête", 210, 16, 1, 16, 60, "", 0],
   ["Saucisse de Toulouse", 310, 16, 1, 27, 100, "1 saucisse", 0],
-  ["Saucisse de Morteau", 320, 17, 1, 28, 100, "", 0],
-  ["Saucisse de Francfort", 275, 12, 2, 24, 50, "1 saucisse", 0],
   ["Saucisse de Strasbourg (knack)", 280, 12, 2, 25, 50, "1 knack", 0],
   ["Chipolata", 300, 15, 1.5, 26, 50, "1 chipolata", 0],
   ["Saucisse végétale", 210, 17, 6, 13, 80, "1 saucisse", 2],
   ["Chorizo doux", 375, 24, 2, 30, 30, "", 0],
   ["Poitrine fumée", 340, 17, 0.5, 30, 30, "", 0],
   ["Pancetta", 400, 18, 0, 36, 25, "", 0],
-  ["Filet de bacon", 145, 22, 0.5, 6, 40, "", 0],
   ["Blanc de poulet (charcuterie)", 105, 20, 1, 2, 40, "1 tranche", 0],
   ["Blanc de dinde (charcuterie)", 100, 20, 1, 1.8, 40, "1 tranche", 0],
 
   // ─── Poissons ─────────────────────────────────────────────────
-  ["Saumon fumé", 180, 23, 0, 10, 50, "2 tranches", 0],
   ["Saumon (cru / sashimi)", 180, 20, 0, 11, 100, "", 0],
   ["Truite fumée", 165, 22, 0, 8.5, 50, "", 0],
   ["Truite arc-en-ciel", 140, 20, 0, 6.5, 130, "", 0],
@@ -1290,8 +1275,6 @@ export const FOODS = [
   ["Œufs à la coque", 145, 13, 1, 10, 50, "1 œuf", 0],
   ["Œuf de caille", 158, 13, 0.4, 11, 10, "1 œuf", 0],
   ["Œuf de cane", 185, 13, 1.5, 14, 70, "1 œuf", 0],
-  ["Omelette au fromage", 200, 14, 1.5, 16, 180, "1 omelette", 0],
-  ["Omelette aux champignons", 145, 11, 2, 10.5, 200, "1 omelette", 0.6],
   ["Œufs cocotte", 175, 10, 2, 14, 120, "1 ramequin", 0],
   ["Œufs mimosa", 220, 11, 1.5, 19, 100, "2 demis", 0],
   ["Quiche aux légumes", 220, 7, 20, 12, 150, "1 part", 1.8],
@@ -1970,7 +1953,6 @@ export const FOODS = [
   ["Poulet aux noix de cajou", 190, 16, 10, 10, 250, "1 assiette", 1.5],
   ["Riz sauté aux légumes", 145, 4, 24, 3.5, 300, "1 assiette", 2],
   ["Nouilles sautées aux crevettes", 160, 9, 21, 4.5, 300, "1 assiette", 1.5],
-  ["Beignet de crevette", 250, 10, 22, 14, 100, "", 1],
   ["Salade de papaye verte (som tam)", 75, 2, 14, 1.5, 200, "1 part", 3],
   ["Larb / salade thaï viande", 145, 16, 5, 7, 200, "1 part", 1.2],
   ["Curry jaune thaï", 155, 9, 11, 8.5, 350, "1 assiette", 2],
@@ -2020,7 +2002,6 @@ export const FOODS = [
   ["Cotriade", 110, 12, 6, 4.5, 300, "1 assiette", 1],
   ["Kig ha farz", 130, 10, 12, 4.5, 350, "1 assiette", 1.5],
   ["Palourdes farcies", 175, 12, 6, 11, 150, "", 0.8],
-  ["Andouille de Guémené", 235, 18, 1, 18, 50, "", 0],
   ["Ficelle picarde", 195, 10, 14, 11, 150, "1 pièce", 1],
   ["Carbonnade du Nord", 145, 14, 8, 6.5, 300, "1 assiette", 1],
   ["Potjevleesch", 155, 20, 2, 8, 150, "", 0.3],
@@ -2114,15 +2095,12 @@ export const FOODS = [
   ["Nduja", 400, 14, 2, 38, 20, "", 0],
   ["Soppressata", 400, 23, 1, 34, 25, "", 0],
   ["Pastrami de bœuf", 145, 22, 1, 6, 40, "", 0],
-  ["Viande des Grisons", 175, 36, 1, 3, 30, "", 0],
   ["Bacon fumé", 400, 24, 0.5, 34, 20, "", 0],
   ["Lard fumé", 500, 12, 0, 50, 20, "", 0],
   ["Saindoux", 890, 0, 0, 99, 10, "", 0],
   ["Rillons", 350, 22, 0, 29, 50, "", 0],
   ["Grattons / gratterons", 500, 25, 0, 44, 30, "", 0],
   ["Pâté de foie", 320, 12, 3, 29, 40, "", 0],
-  ["Pâté en croûte", 300, 12, 20, 19, 100, "1 part", 1],
-  ["Mousse de canard", 340, 11, 3, 32, 40, "", 0],
   ["Galantine", 250, 16, 3, 19, 60, "", 0],
   ["Ballotine de volaille", 210, 18, 3, 14, 80, "", 0],
   ["Aspic de volaille", 130, 15, 3, 6, 100, "", 0],
@@ -2397,7 +2375,13 @@ export const FOODS = [
   ["Steak d'algue", 120, 10, 8, 5, 100, "", 4],
   ["Mycoprotéine (quorn)", 105, 15, 5, 3, 100, "", 6],
   ["Œuf végétal (poudre)", 350, 20, 40, 12, 15, "", 5]
-].map((a, i) => ({ id: "f" + i, n: a[0], k: a[1], p: a[2], g: a[3], l: a[4], port: a[5], portLab: a[6], fib: a[7] || 0 }));
+].map((a, i) => ({ id: "f" + i, n: a[0], k: a[1], p: a[2], g: a[3], l: a[4], port: a[5], portLab: a[6], fib: a[7] || 0 }))
+  // Table officielle CIQUAL de l'ANSES ajoutée à la suite : morceaux de
+  // viande, poissons et fruits de mer au détail, avec des valeurs sourcées
+  // et non saisies à la main. Préfixe d'id distinct pour ne pas entrer en
+  // collision avec la numérotation ci-dessus, et marqueur `src` pour que
+  // l'écran de saisie puisse signaler l'origine officielle de la valeur.
+  .concat(CIQUAL_FOODS.map((a, i) => ({ id: "c" + i, n: a[0], k: a[1], p: a[2], g: a[3], l: a[4], port: a[5], portLab: a[6], fib: a[7] || 0, src: "ciqual" })));
 const norm = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 export const BOISSONS = [
