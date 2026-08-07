@@ -118,17 +118,15 @@ export function plannerWeekData(db, refDate = new Date()) {
 }
 
 // Stats d'entraînement affichées sur Accueil/Progrès (streak, "cette
-// semaine", total séances/minutes), fusionnant les deux seules sources
-// de séance "réalisée" qui existent dans l'app : le compteur incrémental
-// (db.week/sessionsTotal/minutesTotal, mis à jour uniquement quand une
-// séance programme/catalogue est terminée via le lecteur intégré — ces
-// séances n'existent nulle part ailleurs) et les séances du Calendrier
-// marquées "Réalisé" (jamais stockées dans le compteur, recalculées ici
-// en direct depuis planningSessions). Sans cette fusion, tout ce qui est
-// coché "Réalisé" dans le Calendrier restait invisible sur ces écrans.
+// semaine", total séances/minutes). La semaine vient de weekRetro, qui
+// fusionne les deux sources de séance réalisée en se basant sur leurs
+// dates réelles (Calendrier + lecteur intégré). db.week n'est PAS utilisé
+// ici : ce compteur n'est indexé que par jour de la semaine et n'est
+// jamais remis à zéro au changement de semaine, donc il cumulait
+// indéfiniment les minutes de toutes les semaines passées sur les 7
+// mêmes cases.
 export function trainingTotals(db) {
-  const planner = plannerWeekData(db)
-  const week = (db.week || [0, 0, 0, 0, 0, 0, 0]).map((m, i) => m + (planner.week[i] || 0))
+  const week = weekRetro(db).week
   const sessions = db.planningSessions || []
   let allCount = 0, allMins = 0
   for (const s of sessions) {
@@ -169,24 +167,29 @@ export function weekRetro(db, refDate = new Date()) {
   const items = []
   const bySportMap = {}
 
-  const addMins = (label, color, date, mins, source) => {
+  // `group` sert de clé de regroupement dans la répartition (catégorie ou
+  // sport), `label` est ce qu'on affiche dans la liste chronologique — pour
+  // une séance du lecteur c'est son titre, sinon les deux sont identiques.
+  // Sans cette distinction, deux séances de renfo aux titres différents
+  // apparaissaient comme deux catégories distinctes dans la répartition.
+  const addMins = (group, label, color, date, mins, source) => {
     const dayIdx = Math.round((new Date(date + 'T00:00:00').getTime() - mondayMs) / 86400000)
     if (dayIdx < 0 || dayIdx > 6 || mins <= 0) return
     week[dayIdx] += mins
     items.push({ date, mins, label, color, source })
-    if (!bySportMap[label]) bySportMap[label] = { mins: 0, color }
-    bySportMap[label].mins += mins
+    if (!bySportMap[group]) bySportMap[group] = { mins: 0, color }
+    bySportMap[group].mins += mins
   }
 
   for (const s of db.planningSessions || []) {
     if (!s || s.statut !== 'realise' || !s.date) continue
     const meta = sportMeta(s.sport)
-    addMins(meta.label, meta.color, s.date, dureeToMins(s.duree), 'planner')
+    addMins(meta.label, meta.label, meta.color, s.date, dureeToMins(s.duree), 'planner')
   }
   for (const e of db.sessionLog || []) {
     if (!e || !e.date) continue
-    const meta = CAT_META[e.cat] || { label: e.title || 'Séance', color: '#999' }
-    addMins(e.title || meta.label, meta.color, e.date, num(e.mins, 0), 'player')
+    const meta = CAT_META[e.cat] || { label: 'Séance', color: '#999' }
+    addMins(meta.label, e.title || meta.label, meta.color, e.date, num(e.mins, 0), 'player')
   }
 
   items.sort((a, b) => a.date.localeCompare(b.date))
@@ -388,12 +391,13 @@ export function pillarPrevention(db) {
   return { id: 'prevention', label: 'Prévention', score, status: 'ok', detail, extra: { level: p.level, pain: p.pain || null, date: p.date } }
 }
 
-// Charge d'entraînement : fusionne le planning (source primaire, dates
-// exactes) et db.week (lecteur de séance in-app, supplément pour aujourd'hui).
+// Charge d'entraînement de la semaine en cours. weekRetro fusionne déjà
+// Calendrier + lecteur intégré sur les dates réelles — utiliser db.week
+// ici gonflait la charge avec les minutes de toutes les semaines passées
+// (compteur indexé par jour de semaine, jamais remis à zéro).
 export function pillarLoad(db) {
   const plannerData = plannerWeekData(db)
-  const dbWeek = db.week || [0, 0, 0, 0, 0, 0, 0]
-  const mergedWeek = plannerData.week.map((m, i) => m + num(dbWeek[i], 0))
+  const mergedWeek = weekRetro(db).week
   const sum = mergedWeek.reduce((a, b) => a + b, 0)
 
   if (sum === 0) {

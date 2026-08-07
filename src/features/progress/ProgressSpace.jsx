@@ -125,9 +125,12 @@ export default function ProgressSpace({ userId, onClose }) {
   const selectedWeek = retro.week
   const totalMins = retro.total
   const maxM = Math.max(...selectedWeek, 1)
-  const doneCount = selectedWeek.filter((m) => m > 0).length
+  // Nombre de séances réellement réalisées, pas de jours actifs : deux
+  // séances le même jour comptent pour deux (l'objectif hebdo du profil
+  // est bien exprimé en séances).
+  const doneCount = retro.count
   const weeklyGoal = db.goals.weeklySessions
-  const goalPct = Math.min(100, Math.round((doneCount / weeklyGoal) * 100))
+  const goalPct = weeklyGoal ? Math.min(100, Math.round((doneCount / weeklyGoal) * 100)) : 0
   const vsPrevDelta = retro.total - prevRetro.total
   const vsPrevPct = prevRetro.total ? Math.round(vsPrevDelta / prevRetro.total * 100) : null
   const hrs = Math.floor(totals.minutesTotal / 60)
@@ -274,7 +277,7 @@ export default function ProgressSpace({ userId, onClose }) {
       h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 12 } },
         statMini(ts.weekSessions, 'séances (sem.)'), statMini(ts.weekKm, 'km (sem.)'), statMini(ts.monthSessions, 'séances (mois)'), statMini(ts.monthKm, 'km (mois)')),
       ts.sports.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, marginBottom: 12 } },
-        h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Répartition des sports'),
+        h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Répartition des sports · depuis le début'),
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
           ts.sports.map((sp) => h('div', { key: sp.id, style: { display: 'flex', alignItems: 'center', gap: 10 } },
             h('div', { style: { width: 82, fontSize: 13, fontWeight: 600, flex: '0 0 auto' } }, sp.label),
@@ -367,7 +370,12 @@ export default function ProgressSpace({ userId, onClose }) {
           vsPrevPct == null
             ? (prevRetro.total === 0 ? 'Pas de séance la semaine précédente pour comparer.' : `${prevRetro.total} min la semaine précédente.`)
             : h(React.Fragment, null,
-              h('strong', { style: { color: vsPrevDelta >= 0 ? '#4a8a6a' : '#c46a3a' } }, vsPrevDelta >= 0 ? `+${vsPrevPct}%` : `${vsPrevPct}%`),
+              // Un delta non nul qui s'arrondit à 0 % afficherait "0 %" à côté
+              // d'une flèche de baisse : on bascule sur les minutes dans ce cas.
+              h('strong', { style: { color: vsPrevDelta >= 0 ? '#4a8a6a' : '#c46a3a' } },
+                vsPrevPct === 0 && vsPrevDelta !== 0
+                  ? `${vsPrevDelta > 0 ? '+' : '−'}${Math.abs(vsPrevDelta)} min`
+                  : `${vsPrevDelta >= 0 ? '+' : '−'}${Math.abs(vsPrevPct)}%`),
               ` vs semaine précédente (${prevRetro.total} min).`))),
 
       // Répartition par sport / type de séance.
