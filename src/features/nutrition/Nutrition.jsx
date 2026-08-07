@@ -332,10 +332,34 @@ function TimingTab({ body }) {
 // "boeuf" au clavier ne remontait aucun des morceaux de "bœuf".
 const norm = (s) => (s || '').toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD').replace(/[̀-ͯ]/g, '')
 // Noms d'aliments pré-normalisés une seule fois au chargement du module :
-// évite de renormaliser (NFD + regex) les ~350 aliments à chaque frappe
+// évite de renormaliser (NFD + regex) les ~2000 aliments à chaque frappe
 // dans la recherche, qui rendait la saisie perceptiblement saccadée.
 const FOODS_NORM = new Map(FOODS.map((f) => [f.id, norm(f.n)]))
 const PAGE_SIZE = 80
+
+// Pertinence d'un résultat : sur une base de cette taille, un simple test de
+// sous-chaîne remonte n'importe quoi en tête (chercher "lait" affichait
+// "Chocolat au lait" avant "Lait entier", par ordre d'insertion). On classe
+// donc : nom exact, puis nom qui commence par la requête, puis requête en
+// début de mot, puis sous-chaîne quelconque — à égalité, le nom le plus
+// court d'abord, qui est presque toujours l'aliment de base.
+function searchRank(name, q) {
+  const i = name.indexOf(q)
+  if (i < 0) return -1
+  if (name === q) return 0
+  if (i === 0) return 1
+  return name[i - 1] === ' ' || name[i - 1] === "'" || name[i - 1] === '-' ? 2 : 3
+}
+function searchFoods(q) {
+  if (!q) return FOODS
+  const scored = []
+  for (const f of FOODS) {
+    const rank = searchRank(FOODS_NORM.get(f.id), q)
+    if (rank >= 0) scored.push({ f, rank })
+  }
+  scored.sort((a, b) => a.rank - b.rank || a.f.n.length - b.f.n.length)
+  return scored.map((s) => s.f)
+}
 const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
 // Reconstruit la date en UTC pur : new Date(iso+'T00:00:00') est interprété en
 // heure locale, et .toISOString() reconvertit en UTC — dans un fuseau en avance
@@ -465,7 +489,7 @@ function FoodTab({ db, store }) {
 
   if (mode === 'search') {
     const nq = norm(q)
-    const res = nq ? FOODS.filter((f) => FOODS_NORM.get(f.id).includes(nq)) : FOODS
+    const res = searchFoods(nq)
     const Quick = ({ food, kk }) => React.createElement('button', { key: kk, onClick: () => chooseFood(food), style: { ...chipBtn(false), display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', maxWidth: '100%' } },
       React.createElement('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis' } }, isFav(food.n) ? '★ ' : '', food.n))
     return React.createElement('div', null,
