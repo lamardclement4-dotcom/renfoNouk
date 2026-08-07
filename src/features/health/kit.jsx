@@ -4,24 +4,48 @@ import React from 'react'
 // Kit UI partagé des modules Santé, porté depuis l'ancienne app.
 // L'ancienne app utilisait des CSS custom properties (var(--surface)…) ;
 // on les fige ici en constantes littérales cohérentes avec le reste
-// (fond #faf9f5, surfaces blanches, accent terracotta).
+// (fond clair, surfaces blanches, accent bleu).
 // ============================================================
 export const C = {
-  bg: '#faf9f5',
+  bg: '#f6f7f9',
   surface: '#fff',
-  surface2: '#f5f4ef',
-  ink: '#2b2b2b',
-  ink2: '#666',
-  ink3: '#999',
-  line: '#e6e3dd',
-  primary: '#c25a3f',
-  radius: 16,
-  radiusSm: 12,
-  radiusXs: 10,
-  font: '-apple-system, BlinkMacSystemFont, sans-serif',
-  shadowSm: '0 1px 3px rgba(43,43,43,.06), 0 1px 2px rgba(43,43,43,.04)',
-  shadow: '0 4px 14px rgba(43,43,43,.07), 0 1px 3px rgba(43,43,43,.05)',
-  shadowLg: '0 12px 28px rgba(43,43,43,.1), 0 3px 8px rgba(43,43,43,.06)',
+  surface2: '#f1f3f6',
+  ink: '#111827',
+  ink2: '#5b6472',
+  ink3: '#98a1ae',
+  line: '#e8ebef',
+  primary: '#2d7ff9',
+  // Accents sémantiques : chaque métrique garde la même couleur partout
+  // (calories/série en orange, glucides et réussite en vert, lipides en
+  // jaune), ce qui rend les anneaux lisibles sans légende.
+  accent: '#2d7ff9',
+  success: '#2fb865',
+  warn: '#f0b429',
+  danger: '#e5533d',
+  calorie: '#ff8a3d',
+  protein: '#2d7ff9',
+  carb: '#2fb865',
+  fat: '#f2b93b',
+  radius: 22,
+  radiusSm: 16,
+  radiusXs: 12,
+  font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif',
+  // Ombres très basses et diffuses : les cartes doivent flotter sur le
+  // fond dégradé sans halo marqué.
+  shadowSm: '0 1px 2px rgba(17,24,39,.04), 0 1px 3px rgba(17,24,39,.03)',
+  shadow: '0 2px 8px rgba(17,24,39,.05), 0 8px 24px -12px rgba(17,24,39,.10)',
+  shadowLg: '0 8px 30px -8px rgba(17,24,39,.14), 0 2px 8px rgba(17,24,39,.05)',
+}
+
+// Dégradés de fond par onglet : ce sont eux qui donnent son identité à
+// chaque écran (vert tendre sur Progrès, bleu sur l'accueil), le reste de
+// l'interface restant blanc et neutre.
+export const GRADIENTS = {
+  accueil: 'linear-gradient(180deg, #dbeafe 0%, #eef4fd 22%, #f6f7f9 46%)',
+  progres: 'linear-gradient(180deg, #d6f5e3 0%, #eaf8f0 22%, #f6f7f9 46%)',
+  entrainer: 'linear-gradient(180deg, #ffe8d6 0%, #fdf1e7 22%, #f6f7f9 46%)',
+  sante: 'linear-gradient(180deg, #e5e0fb 0%, #f0edfc 22%, #f6f7f9 46%)',
+  profil: 'linear-gradient(180deg, #e6eaf0 0%, #f0f2f6 22%, #f6f7f9 46%)',
 }
 
 // Teintes par module (valeurs exactes de MODULE_TINTS de l'ancienne app).
@@ -254,10 +278,13 @@ export function Icon({ name, size = 16, color, style }) {
 // barre de navigation basse — utilisé par les sous-écrans. Les onglets
 // racine (Progrès, Profil) passent fixed=false pour rester un enfant flex
 // normal du cadre de App.jsx et laisser la barre de nav visible.
-export function FlowSpace({ title, onClose, action, tint, children, fixed = true }) {
+// `tint` colore le titre (compat. appelants existants) ; `bg` choisit le
+// dégradé d'ambiance de l'onglet parmi GRADIENTS.
+export function FlowSpace({ title, onClose, action, tint, bg, children, fixed = true }) {
+  const surface = bg && GRADIENTS[bg] ? { backgroundImage: GRADIENTS[bg], backgroundColor: C.bg } : { background: C.bg }
   return React.createElement('div', { style: fixed
-    ? { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' }
-    : { flex: 1, minHeight: 0, background: C.bg, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font } },
+    ? { position: 'fixed', inset: 0, ...surface, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' }
+    : { flex: 1, minHeight: 0, ...surface, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 8px', flexShrink: 0 } },
       React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm } },
         React.createElement(Icon, { name: 'back', size: 20 })),
@@ -308,6 +335,53 @@ export function Ring({ size = 250, stroke = 12, progress = 0, track = C.surface2
       React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: track, strokeWidth: stroke }),
       React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: color, strokeWidth: stroke, strokeLinecap: 'round', strokeDasharray: circ, strokeDashoffset: circ * (1 - Math.max(0, Math.min(1, progress))), style: { transition: 'stroke-dashoffset .4s linear' } })),
     React.createElement('div', { style: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }, children))
+}
+
+// ------------------------------------------------------------
+// Primitives de la refonte visuelle : fond dégradé par onglet, carte
+// blanche surélevée, gros chiffre-repère, pilules de filtre et bouton
+// flottant. Elles encapsulent le style pour que les écrans décrivent leur
+// contenu plutôt que de répéter des objets de style.
+// ------------------------------------------------------------
+
+// Carte blanche standard.
+export function Card({ children, style, onClick, pad = 16 }) {
+  const base = { background: C.surface, borderRadius: C.radius, padding: pad, boxShadow: C.shadow, border: `1px solid ${C.line}`, width: '100%', boxSizing: 'border-box' }
+  if (!onClick) return React.createElement('div', { style: { ...base, ...style } }, children)
+  return React.createElement('button', { onClick, style: { ...base, textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit', ...style } }, children)
+}
+
+// Gros chiffre-repère : libellé discret, valeur dominante, unité en
+// exposant optique. C'est le motif central de la maquette.
+export function BigStat({ label, value, unit, color = C.ink, sub, size = 38, style }) {
+  return React.createElement('div', { style },
+    label && React.createElement('div', { style: { fontSize: 13, color: C.ink2, fontWeight: 600, marginBottom: 4 } }, label),
+    React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 4 } },
+      React.createElement('span', { style: { fontFamily: C.font, fontSize: size, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1, color } }, value),
+      unit && React.createElement('span', { style: { fontSize: Math.round(size * 0.42), fontWeight: 700, color: C.ink3 } }, unit)),
+    sub && React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 6 } }, sub))
+}
+
+// Barre de progression fine.
+export function Bar({ pct, color = C.primary, height = 6, style }) {
+  return React.createElement('div', { style: { width: '100%', height, borderRadius: 999, background: C.surface2, overflow: 'hidden', ...style } },
+    React.createElement('div', { style: { width: Math.max(0, Math.min(100, pct)) + '%', height: '100%', borderRadius: 999, background: color, transition: 'width .45s ease' } }))
+}
+
+// Pilules de filtre (1 sem. / 1 mois / …) : active pleine, inactives
+// blanches cerclées.
+export function SegPills({ options, value, onChange, tint = C.primary, style }) {
+  return React.createElement('div', { style: { display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2, ...style } },
+    options.map((o) => {
+      const id = o.id !== undefined ? o.id : o
+      const lab = o.label !== undefined ? o.label : o
+      const on = id === value
+      return React.createElement('button', {
+        key: id,
+        onClick: () => onChange(id),
+        style: { flex: '0 0 auto', padding: '9px 16px', borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', color: on ? '#fff' : C.ink2, background: on ? tint : C.surface, border: `1px solid ${on ? tint : C.line}`, boxShadow: on ? `0 8px 18px -10px ${tint}` : C.shadowSm },
+      }, lab)
+    }))
 }
 
 // Bouton d'action pleine largeur.

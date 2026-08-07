@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, Pill, MODULE_TINTS, isoToday } from '../health/kit'
+import { C, Icon, Pill, MODULE_TINTS, isoToday, GRADIENTS, Ring } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro } from '../train/renfoIntel'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
@@ -231,13 +231,14 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   const greeting = hr < 12 ? 'Bonjour' : hr < 18 ? 'Bon après-midi' : 'Bonsoir'
 
   const statCards = [
-    { ic: 'flame', big: streak, lab: 'jours de suite' },
-    { ic: 'clock', big: totalMins, lab: 'min cette semaine' },
-    { ic: 'check', big: doneCount, lab: 'séances faites' },
-  ].map((s, i) => h('button', { key: i, onClick: () => setTile('planner'), style: { textAlign: 'center', width: '100%', background: 'none', border: 'none', borderLeft: i > 0 ? `1px solid ${C.line}` : 'none', cursor: 'pointer', padding: '0 4px' } },
-    h(Icon, { name: s.ic, size: 18, color: C.primary }),
-    h('div', { style: { fontSize: 24, fontWeight: 700, lineHeight: 1, marginTop: 8 } }, s.big),
-    h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4, fontWeight: 600 } }, s.lab)))
+    { ic: 'flame', big: streak, lab: 'jours de suite', col: C.calorie },
+    { ic: 'clock', big: totalMins, lab: 'min cette semaine', col: C.protein },
+    { ic: 'check', big: doneCount, lab: 'séances faites', col: C.success },
+  ].map((s, i) => h('button', { key: i, onClick: () => setTile('planner'), style: { textAlign: 'center', width: '100%', background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, boxShadow: C.shadowSm, cursor: 'pointer', padding: '14px 6px' } },
+    h('div', { style: { fontFamily: C.font, fontSize: 26, fontWeight: 800, lineHeight: 1, letterSpacing: '-.02em', color: s.col } }, s.big),
+    h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 5, fontWeight: 600 } }, s.lab),
+    h('div', { style: { width: 26, height: 26, borderRadius: 999, margin: '9px auto 0', background: `color-mix(in srgb, ${s.col} 14%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      h(Icon, { name: s.ic, size: 14, color: s.col }))))
 
   const mobilityCta = !db.mobility && h('button', {
     onClick: () => setTile('mobility'),
@@ -250,20 +251,40 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
       h('div', { style: { fontSize: 13, color: C.ink3, marginTop: 2 } }, '9 questions · identifie tes zones raides et génère ton programme')),
     h(Icon, { name: 'arrow', size: 20, color: C.ink3, style: { flex: '0 0 auto' } }))
 
-  const header = h('div', { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 } },
-    h('div', null,
-      h('div', { style: { color: C.ink3, fontSize: 14, fontWeight: 600 } }, dateLabel),
-      h('h1', { style: { fontFamily: C.font, fontSize: 27, fontWeight: 700, letterSpacing: '-.02em', marginTop: 2 } }, greeting, ', ', firstName)),
-    h('button', { onClick: onProfil, 'aria-label': 'Profil', style: { width: 44, height: 44, borderRadius: 999, background: C.ink, color: C.surface, fontFamily: C.font, fontWeight: 700, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', flex: '0 0 auto' } }, initial))
+  // En-tête façon maquette : badge de série en haut à droite, gros titre,
+  // puis la semaine sous forme d'anneaux quotidiens (jour du jour surligné).
+  const WD = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+  const todayDow = (now.getDay() + 6) % 7
+  const dayGoal = Math.max(1, Number(db.goals && db.goals.dailyMin) || 20)
+  const weekRings = h('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: 18 } },
+    totals.week.map((m, i) => {
+      const on = i === todayDow
+      const col = m > 0 ? C.success : C.line
+      const d = new Date(now); d.setDate(now.getDate() - (todayDow - i))
+      return h('div', { key: i, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
+        h(Ring, { size: 34, stroke: 3, progress: Math.min(1, m / dayGoal), color: col, track: C.surface2 },
+          h('span', { style: { fontSize: 11.5, fontWeight: 700, color: m > 0 ? C.ink : C.ink3 } }, WD[i])),
+        h('span', { style: { fontSize: 10.5, fontWeight: on ? 800 : 600, color: on ? C.ink : C.ink3, background: on ? C.surface2 : 'transparent', borderRadius: 999, padding: on ? '1px 6px' : '1px 0' } }, d.getDate()))
+    }))
+
+  const header = h('div', null,
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 } },
+      h('div', { style: { color: C.ink3, fontSize: 13.5, fontWeight: 600 } }, dateLabel),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+        h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, boxShadow: C.shadowSm } },
+          h(Icon, { name: 'flame', size: 14, color: C.calorie }),
+          h('span', { style: { fontSize: 12.5, fontWeight: 800, color: C.calorie } }, streak)),
+        h('button', { onClick: onProfil, 'aria-label': 'Profil', style: { width: 38, height: 38, borderRadius: 999, background: C.ink, color: C.surface, fontFamily: C.font, fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', flex: '0 0 auto' } }, db.avatar || initial))),
+    h('h1', { style: { fontFamily: C.font, fontSize: 32, fontWeight: 800, letterSpacing: '-.03em', margin: '0 0 16px' } }, greeting, firstName ? ', ' + firstName : ''),
+    weekRings)
 
   const hero = heroInfo.kind === 'both'
     ? renderBothEqual(heroInfo, setOpenId, () => setTile('planner'))
     : renderHeroCard(heroInfo, setOpenId, () => setTile('planner'))
 
-  const statRow = h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', marginBottom: 22, background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, padding: '16px 0' } }, statCards)
+  const statRow = h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 } }, statCards)
 
-  const content = h('div', { style: { maxWidth: 460, margin: '0 auto', padding: '20px 18px 32px' } },
-    h('div', { style: { fontSize: 15, color: C.primary, fontWeight: 700, marginBottom: 14 } }, 'Renfo'),
+  const content = h('div', { style: { maxWidth: 460, margin: '0 auto', padding: '18px 18px 32px' } },
     header,
     hero,
     statRow,
@@ -274,5 +295,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     h(PeakHomeCard, { db, onPeak: () => setTile('peak') }),
     mobilityCta)
 
-  return h('div', { style: { flex: 1, overflowY: 'auto', background: C.bg, fontFamily: C.font } }, content)
+  // Dégradé attaché au contenu (`local`) pour qu'il reste en haut de page
+  // au défilement au lieu de suivre le viewport.
+  return h('div', { style: { flex: 1, overflowY: 'auto', backgroundColor: C.bg, backgroundImage: GRADIENTS.accueil, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat', fontFamily: C.font } }, content)
 }

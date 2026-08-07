@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, Ring, FlowSpace, isoToday } from '../health/kit'
+import { C, Icon, Ring, FlowSpace, isoToday, Card, BigStat, Bar, SegPills } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { trainingStats, trainingTotals, weekRetro, weeksTrend, mondayOf, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import TrainSpace from '../train/TrainSpace'
@@ -85,6 +85,8 @@ export default function ProgressSpace({ userId, onClose }) {
   const [flow, setFlow] = useState(null)
   const [healthTile, setHealthTile] = useState(null)
   const [weekOffset, setWeekOffset] = useState(0)
+  // Profondeur de la courbe de tendance, en semaines.
+  const [trendRange, setTrendRange] = useState(8)
 
   function handleAction(action) {
     if (!action) return
@@ -121,7 +123,7 @@ export default function ProgressSpace({ userId, onClose }) {
   const selectedMonday = new Date(thisMonday.getTime() + weekOffset * 7 * 86400000)
   const retro = weekRetro(db, selectedMonday)
   const prevRetro = weekRetro(db, new Date(selectedMonday.getTime() - 7 * 86400000))
-  const trend = weeksTrend(db, 8)
+  const trend = weeksTrend(db, trendRange)
   const selectedWeek = retro.week
   const totalMins = retro.total
   const maxM = Math.max(...selectedWeek, 1)
@@ -337,15 +339,26 @@ export default function ProgressSpace({ userId, onClose }) {
       tile({ onClick: () => setFlow('tests'), left: iconBadge('chart', TC), title: 'Passer un test physique', sub: 'Cooper · Gainage · Souplesse · Pompes · Squats' }))
   }
 
-  return h(FlowSpace, { title: 'Tes progrès', onClose, fixed: false },
-    h('div', { style: { position: 'relative', minHeight: 150, padding: 22, borderRadius: C.radius, background: C.primary, marginBottom: 18, boxShadow: `0 18px 40px -22px ${C.primary}` } },
-      h('div', { style: { display: 'flex', alignItems: 'center', gap: 18 } },
-        h(Ring, { size: 92, stroke: 9, progress: Math.min(1, streak / 14), color: '#fff', track: 'rgba(255,255,255,.25)' },
-          h(Icon, { name: 'flame', size: 30, color: '#fff' })),
-        h('div', null,
-          h('div', { style: { fontFamily: C.font, fontSize: 40, fontWeight: 700, color: '#fff', lineHeight: 1 } }, streak),
-          h('div', { style: { color: 'rgba(255,255,255,.88)', fontSize: 15, fontWeight: 600 } }, 'jours de suite 🔥'),
-          h('div', { style: { color: 'rgba(255,255,255,.7)', fontSize: 13, marginTop: 2 } }, 'Record : ', db.record, ' jours')))),
+  return h(FlowSpace, { title: 'Tes progrès', onClose, fixed: false, bg: 'progres' },
+    // En-tête façon maquette : titre en gros, puis deux cartes côte à côte
+    // (volume de la semaine et série en cours avec ses pastilles de jours).
+    h('h1', { style: { fontFamily: C.font, fontSize: 32, fontWeight: 800, letterSpacing: '-.03em', margin: '2px 0 16px' } }, 'Progrès'),
+    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 } },
+      h(Card, { pad: 16 },
+        h(BigStat, { label: 'Cette semaine', value: totalMins, unit: 'min', color: C.ink, size: 34 }),
+        h(Bar, { pct: goalPct, color: C.success, style: { marginTop: 12 } }),
+        h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 6, fontWeight: 600 } }, doneCount, '/', weeklyGoal, ' séances')),
+      h(Card, { pad: 16, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' } },
+        h('div', { style: { position: 'relative', width: 54, height: 54, marginBottom: 6 } },
+          h(Ring, { size: 54, stroke: 5, progress: Math.min(1, streak / 14), color: C.calorie, track: C.surface2 },
+            h('span', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: C.calorie } }, streak))),
+        h('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.calorie } }, 'Jours de suite'),
+        h('div', { style: { display: 'flex', gap: 4, marginTop: 10 } },
+          selectedWeek.map((m, k) => h('div', { key: k, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 } },
+            h('div', { style: { width: 17, height: 17, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: m > 0 ? C.calorie : C.surface2 } },
+              m > 0 && h(Icon, { name: 'check', size: 10, color: '#fff' })),
+            h('span', { style: { fontSize: 8.5, color: C.ink3, fontWeight: 600 } }, WEEK_DAYS[k])))),
+        h('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 8 } }, 'Record ', db.record, ' j'))),
 
     h(PeakHomeCard, { db, onPeak: () => setFlow('peak') }),
     h(HealthScoreCard, { db, onAction: handleAction }),
@@ -359,7 +372,7 @@ export default function ProgressSpace({ userId, onClose }) {
           const done = m > 0
           return h('div', { key: k, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 } },
             h('div', { style: { width: '100%', height: 70, display: 'flex', alignItems: 'flex-end' } },
-              h('div', { style: { width: '100%', height: `${Math.max(m / maxM * 100, 6)}%`, borderRadius: 7, background: done ? C.primary : C.surface2 } })),
+              h('div', { style: { width: '100%', height: `${Math.max(m / maxM * 100, 6)}%`, borderRadius: 8, background: done ? `linear-gradient(180deg, ${C.success} 0%, color-mix(in srgb, ${C.success} 72%, #fff) 100%)` : C.surface2, transition: 'height .4s ease' } })),
             h('span', { style: { fontSize: 12, fontWeight: 600, color: done ? C.ink : C.ink3 } }, WEEK_DAYS[k]))
         })),
 
@@ -399,19 +412,33 @@ export default function ProgressSpace({ userId, onClose }) {
 
     // Tendance sur 8 semaines — pour voir la progression d'un coup d'œil.
     h('div', { style: { background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, padding: 20, marginBottom: 14 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 15, marginBottom: 14 } }, '8 dernières semaines'),
-      h('div', { style: { display: 'flex', gap: 6, alignItems: 'flex-end', height: 60 } },
+      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 12 } }, 'Tendance'),
+      h(SegPills, {
+        options: [{ id: 4, label: '1 mois' }, { id: 8, label: '2 mois' }, { id: 12, label: '3 mois' }, { id: 26, label: '6 mois' }],
+        value: trendRange,
+        // Ne touche pas à weekOffset : changer la profondeur du graphe ne
+        // doit pas changer la semaine détaillée affichée au-dessus.
+        onChange: setTrendRange,
+        tint: C.success,
+        style: { marginBottom: 14 },
+      }),
+      // Au-delà de 12 semaines les barres deviennent trop fines pour porter
+      // une étiquette lisible : on resserre l'écart et on n'étiquette plus
+      // qu'une barre sur quatre.
+      h('div', { style: { display: 'flex', gap: trend.length > 12 ? 2 : 6, alignItems: 'flex-end', height: 60 } },
         (() => {
           const maxT = Math.max(...trend.map((w) => w.total), 1)
+          const dense = trend.length > 12
           return trend.map((w, i) => h('button', {
             key: i,
             onClick: () => setWeekOffset(w.offset),
             title: `${w.total} min`,
-            style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0 },
+            style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0 },
           },
             h('div', { style: { width: '100%', height: 44, display: 'flex', alignItems: 'flex-end' } },
-              h('div', { style: { width: '100%', height: `${Math.max(w.total / maxT * 100, w.total > 0 ? 8 : 3)}%`, borderRadius: 4, background: w.offset === weekOffset ? C.primary : (w.total > 0 ? `color-mix(in srgb, ${C.primary} 35%, ${C.surface2})` : C.surface2) } })),
-            h('span', { style: { fontSize: 10, fontWeight: w.offset === weekOffset ? 700 : 500, color: w.offset === weekOffset ? C.primary : C.ink3 } }, w.offset === 0 ? "auj." : `${w.offset}s`))
+              h('div', { style: { width: '100%', height: `${Math.max(w.total / maxT * 100, w.total > 0 ? 8 : 3)}%`, borderRadius: 4, background: w.offset === weekOffset ? C.success : (w.total > 0 ? `color-mix(in srgb, ${C.success} 35%, ${C.surface2})` : C.surface2), transition: 'height .4s ease' } })),
+            h('span', { style: { fontSize: 10, fontWeight: w.offset === weekOffset ? 700 : 500, color: w.offset === weekOffset ? C.success : C.ink3, whiteSpace: 'nowrap' } },
+              w.offset === weekOffset || !dense || i % 4 === 0 ? (w.offset === 0 ? 'auj.' : `${w.offset}s`) : ' '))
           )
         })())),
 

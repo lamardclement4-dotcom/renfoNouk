@@ -5,7 +5,7 @@ import TrainSpace from './features/train/TrainSpace'
 import ProgressSpace from './features/progress/ProgressSpace'
 import ProfilSpace from './features/profil/ProfilSpace'
 import AccueilSpace from './features/home/AccueilSpace'
-import { Icon } from './features/health/kit'
+import { Icon, C } from './features/health/kit'
 
 // ============================================================
 // Hook d'authentification
@@ -368,7 +368,7 @@ function Onboarding({ userId, onDone }) {
         {stepId !== 'welcome' && stepId !== 'final' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 18 }}>
             {order.slice(1, -1).map((_, i) => (
-              <div key={i} style={{ flex: 1, height: 4, borderRadius: 999, background: i < idx ? '#c25a3f' : '#eee' }} />
+              <div key={i} style={{ flex: 1, height: 4, borderRadius: 999, background: i < idx ? '#2d7ff9' : '#eee' }} />
             ))}
             {idx > 0 && (
               <button type="button" onClick={back} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#999', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
@@ -561,28 +561,28 @@ function Onboarding({ userId, onDone }) {
 }
 
 const styles = {
-  wrapper: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#faf9f5', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', padding: 16 },
+  wrapper: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f6f7f9', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', padding: 16 },
   card: { width: '100%', maxWidth: 400, background: '#fff', borderRadius: 16, padding: 28, boxShadow: '0 4px 20px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
-  title: { fontSize: 28, fontWeight: 700, color: '#c25a3f', marginBottom: 4 },
+  title: { fontSize: 28, fontWeight: 700, color: '#2d7ff9', marginBottom: 4 },
   subtitle: { fontSize: 14, color: '#666', marginBottom: 20 },
   stepIndicator: { fontSize: 12, color: '#999', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   stepTitle: { fontSize: 20, fontWeight: 700, color: '#333', marginBottom: 18 },
   label: { fontSize: 13, fontWeight: 600, marginTop: 12, marginBottom: 6, color: '#333' },
   input: { padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', fontSize: 15, marginBottom: 8, width: '100%' },
-  button: { padding: '12px 20px', borderRadius: 10, border: 'none', background: '#c25a3f', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', flex: 1 },
+  button: { padding: '12px 20px', borderRadius: 10, border: 'none', background: '#2d7ff9', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', flex: 1 },
   buttonSecondary: { padding: '12px 20px', borderRadius: 10, border: '1px solid #ddd', background: '#fff', color: '#333', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
-  switchLink: { marginTop: 14, background: 'none', border: 'none', color: '#c25a3f', fontSize: 13, cursor: 'pointer' },
+  switchLink: { marginTop: 14, background: 'none', border: 'none', color: '#2d7ff9', fontSize: 13, cursor: 'pointer' },
   error: { color: '#c0392b', fontSize: 13, marginTop: 10 },
   info: { color: '#2d7a4f', fontSize: 13, marginTop: 10 },
   chipGrid: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   chip: { padding: '8px 14px', borderRadius: 20, border: '1px solid #ddd', background: '#fff', color: '#333', fontSize: 14, cursor: 'pointer' },
-  chipActive: { padding: '8px 14px', borderRadius: 20, border: '1px solid #c25a3f', background: '#c25a3f', color: '#fff', fontSize: 14, cursor: 'pointer' },
+  chipActive: { padding: '8px 14px', borderRadius: 20, border: '1px solid #2d7ff9', background: '#2d7ff9', color: '#fff', fontSize: 14, cursor: 'pointer' },
   optBtn: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: 12, border: '1.5px solid #ddd', background: '#fff', cursor: 'pointer', textAlign: 'left' },
-  optBtnActive: { border: '1.5px solid #c25a3f', background: '#fdf1ee' },
-  optCheck: { width: 22, height: 22, borderRadius: 999, border: '2px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#c25a3f', flex: '0 0 auto' },
-  optCheckActive: { border: '2px solid #c25a3f' },
-  statCard: { flex: 1, padding: '16px 12px', borderRadius: 12, background: '#faf9f5', border: '1px solid #eee', textAlign: 'center' },
-  statValue: { fontWeight: 800, fontSize: 24, color: '#c25a3f' },
+  optBtnActive: { border: '1.5px solid #2d7ff9', background: '#fdf1ee' },
+  optCheck: { width: 22, height: 22, borderRadius: 999, border: '2px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#2d7ff9', flex: '0 0 auto' },
+  optCheckActive: { border: '2px solid #2d7ff9' },
+  statCard: { flex: 1, padding: '16px 12px', borderRadius: 12, background: '#f6f7f9', border: '1px solid #eee', textAlign: 'center' },
+  statValue: { fontWeight: 800, fontSize: 24, color: '#2d7ff9' },
   statLabel: { fontSize: 11.5, color: '#999', fontWeight: 600, marginTop: 3 },
 }
 
@@ -645,22 +645,33 @@ function Home({ profile, signOut, refreshProfile }) {
   const userId = profile.id
 
   return (
-    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: '#faf9f5' }}>
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       {space === 'accueil' && <AccueilSpace userId={userId} profile={profile} onProfil={() => setSpace('profil')} />}
       {space === 'entrainer' && <TrainSpace userId={userId} onClose={() => setSpace('accueil')} />}
       {space === 'sante' && <HealthHome userId={userId} onClose={() => setSpace('accueil')} />}
       {space === 'progres' && <ProgressSpace userId={userId} onClose={() => setSpace('accueil')} />}
       {space === 'profil' && <ProfilSpace userId={userId} profile={profile} refreshProfile={refreshProfile} signOut={signOut} onClose={() => setSpace('accueil')} />}
-      <nav style={{ display: 'flex', flexShrink: 0, width: '100%', maxWidth: 460, margin: '0 auto', borderTop: '1px solid #e6e3dd', background: '#fff', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {/* Barre de navigation : l'onglet actif est marqué par une pastille
+          teintée derrière l'icône plutôt que par la seule couleur du texte,
+          plus lisible d'un coup d'œil sur fond clair. */}
+      <nav style={{ display: 'flex', flexShrink: 0, width: '100%', maxWidth: 460, margin: '0 auto', borderTop: `1px solid ${C.line}`, background: 'rgba(255,255,255,.92)', backdropFilter: 'saturate(180%) blur(12px)', WebkitBackdropFilter: 'saturate(180%) blur(12px)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {NAV.map((n) => {
           const active = space === n.id
           return (
             <button key={n.id} onClick={() => setSpace(n.id)} style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              padding: '9px 0 8px', background: 'none', border: 'none', cursor: 'pointer',
-              color: active ? '#c25a3f' : '#999', fontWeight: active ? 700 : 600, fontSize: 11,
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              padding: '8px 0 7px', background: 'none', border: 'none', cursor: 'pointer',
+              color: active ? C.primary : C.ink3, fontWeight: active ? 700 : 600, fontSize: 10.5,
+              fontFamily: C.font,
             }}>
-              <Icon name={n.ic} size={19} />
+              <span style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 42, height: 26, borderRadius: 999,
+                background: active ? `color-mix(in srgb, ${C.primary} 13%, #fff)` : 'transparent',
+                transition: 'background .2s ease',
+              }}>
+                <Icon name={n.ic} size={19} />
+              </span>
               <span>{n.label}</span>
             </button>
           )
