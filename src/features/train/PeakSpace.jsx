@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon } from '../health/kit'
+import { C, Icon, GRADIENTS } from '../health/kit'
 import { SPORTS } from './trainData'
 import { peakReadiness } from './renfoIntel'
 
@@ -365,7 +365,7 @@ export function computePeakPlan(goal, todayStr) {
    UI
    ═══════════════════════════════════════════════════════════════════════ */
 
-var FLOW_STYLE = { position: 'fixed', inset: 0, background: C.bg, zIndex: 60, display: 'flex',
+var FLOW_STYLE = { position: 'fixed', inset: 0, backgroundColor: C.bg, backgroundImage: GRADIENTS.entrainer, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat', zIndex: 60, display: 'flex',
   flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' };
 var SCROLL_STYLE = { flex: 1, overflowY: 'auto', padding: '20px 22px calc(22px + env(safe-area-inset-bottom))' };
 

@@ -133,7 +133,7 @@ function ComplementsTab({ db, store }) {
 export default function ComplementsSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
   if (loading) {
-    return React.createElement(FlowSpace, { title: 'Compléments', onClose, tint: SUPP }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
+    return React.createElement(FlowSpace, { bg: 'sante', title: 'Compléments', onClose, tint: SUPP }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
   }
-  return React.createElement(FlowSpace, { title: 'Compléments', onClose, tint: SUPP }, React.createElement(ComplementsTab, { db, store }))
+  return React.createElement(FlowSpace, { bg: 'sante', title: 'Compléments', onClose, tint: SUPP }, React.createElement(ComplementsTab, { db, store }))
 }

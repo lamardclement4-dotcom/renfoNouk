@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { Icon } from '../health/kit'
+import { Icon, GRADIENTS, C } from '../health/kit'
 
 // ============================================================
 // Tests physiques, portés depuis le bundle de l'ancienne app
@@ -111,7 +111,7 @@ function fmtDuration(secs) {
   return m ? m + "'" + String(s).padStart(2, '0') + '"' : s + '"'
 }
 
-const FLOW_STYLE = { position: 'fixed', inset: 0, background: '#f6f7f9', zIndex: 55, display: 'flex', flexDirection: 'column', padding: '20px 22px', fontFamily: FONT, overflowY: 'auto', animation: 'spaceIn .22s ease' }
+const FLOW_STYLE = { position: 'fixed', inset: 0, backgroundColor: C.bg, backgroundImage: GRADIENTS.entrainer, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat', zIndex: 55, display: 'flex', flexDirection: 'column', padding: '20px 22px', fontFamily: FONT, overflowY: 'auto', animation: 'spaceIn .22s ease' }
 
 function ProfileBadge({ sexe, age, onEdit }) {
   const label = (sexe === 'f' ? 'Femme' : 'Homme') + ' · ' + ageGroup(age) + ' ans'

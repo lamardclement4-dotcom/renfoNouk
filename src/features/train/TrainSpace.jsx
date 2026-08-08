@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, MODULE_TINTS } from '../health/kit'
+import { C, Icon, MODULE_TINTS, GRADIENTS } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { getSession, sessionDuration } from './trainData'
 import Detail from './Detail'
@@ -101,28 +101,36 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
     { ic: 'target', tint: '#a3526b', lab: 'Pic de forme', sub: db.peakGoals && db.peakGoals.length ? `${db.peakGoals.length} objectif${db.peakGoals.length > 1 ? 's' : ''} programmé${db.peakGoals.length > 1 ? 's' : ''}` : 'Programme tes échéances', on: 'peak' },
   ]
 
-  return React.createElement('div', { style: embedded
-    ? { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' }
-    : { flex: 1, minHeight: 0, background: C.bg, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font } },
-    React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px 8px', flexShrink: 0 } },
-      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm } },
-        React.createElement(Icon, { name: 'back', size: 20 })),
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 20 } }, "S'entraîner")),
-    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '10px 18px 32px' } },
-      React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 } },
-        tiles.map((t, i) => React.createElement('button', { key: i, onClick: () => setTile(t.on),
-          style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: 16, borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, cursor: 'pointer' } },
-          React.createElement('div', { style: { width: 40, height: 40, borderRadius: 12, background: `color-mix(in srgb, ${t.tint} 15%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9 } },
-            React.createElement(Icon, { name: t.ic, size: 20, color: t.tint })),
-          React.createElement('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 14.5 } }, t.lab),
-          React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 1 } }, t.sub)))),
-      React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
-        rows.map((r, i) => React.createElement('button', { key: i, onClick: () => setTile(r.on),
-          style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, cursor: 'pointer' } },
-          React.createElement('div', { style: { width: 40, height: 40, borderRadius: 12, background: `color-mix(in srgb, ${r.tint} 15%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' } },
-            React.createElement(Icon, { name: r.ic, size: 19, color: r.tint })),
-          React.createElement('div', { style: { flex: 1 } },
-            React.createElement('div', { style: { fontWeight: 600, fontSize: 15 } }, r.lab),
-            r.sub && React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 1 } }, r.sub)),
-          React.createElement(Icon, { name: 'arrow', size: 18, color: C.ink3 }))))))
+  const el = React.createElement
+  // Hub "S'entraîner" : grand titre et cartes surélevées, comme les autres
+  // onglets. Les six modules principaux sont en grille, les parcours plus
+  // longs (calendrier, coach, pic de forme) en lignes pleine largeur.
+  return el('div', { style: {
+    ...(embedded
+      ? { position: 'fixed', inset: 0, zIndex: 55, animation: 'spaceIn .22s ease' }
+      : { flex: 1, minHeight: 0, width: '100%' }),
+    backgroundColor: C.bg, backgroundImage: GRADIENTS.entrainer, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat',
+    display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font,
+  } },
+    el('div', { style: { flex: 1, overflowY: 'auto', padding: '14px 18px 32px' } },
+      el('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm, marginBottom: 12 } },
+        el(Icon, { name: 'back', size: 19 })),
+      el('h1', { style: { fontFamily: C.font, fontSize: 30, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1.1, margin: 0 } }, "S'entraîner"),
+      el('p', { style: { fontSize: 13.5, color: C.ink2, margin: '6px 0 18px' } }, 'Séances, planning et suivi de charge'),
+      el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 } },
+        tiles.map((t, i) => el('button', { key: i, onClick: () => setTile(t.on),
+          style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: C.shadowSm, cursor: 'pointer' } },
+          el('div', { style: { width: 42, height: 42, borderRadius: 13, background: `color-mix(in srgb, ${t.tint} 15%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 } },
+            el(Icon, { name: t.ic, size: 21, color: t.tint })),
+          el('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 14.5 } }, t.lab),
+          el('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2 } }, t.sub)))),
+      el('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+        rows.map((r, i) => el('button', { key: i, onClick: () => setTile(r.on),
+          style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: C.shadowSm, cursor: 'pointer' } },
+          el('div', { style: { width: 42, height: 42, borderRadius: 13, background: `color-mix(in srgb, ${r.tint} 15%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' } },
+            el(Icon, { name: r.ic, size: 20, color: r.tint })),
+          el('div', { style: { flex: 1, minWidth: 0 } },
+            el('div', { style: { fontWeight: 700, fontSize: 15 } }, r.lab),
+            r.sub && el('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 2 } }, r.sub)),
+          el(Icon, { name: 'arrow', size: 18, color: C.ink3, style: { flex: '0 0 auto' } }))))))
 }

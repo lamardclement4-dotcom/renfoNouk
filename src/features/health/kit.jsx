@@ -378,27 +378,39 @@ export function Icon({ name, size = 16, color, style }) {
 // barre de navigation basse — utilisé par les sous-écrans. Les onglets
 // racine (Progrès, Profil) passent fixed=false pour rester un enfant flex
 // normal du cadre de App.jsx et laisser la barre de nav visible.
+// Coquille commune à tous les sous-écrans. Le titre est traité en grand,
+// aligné à gauche, sous une barre d'actions compacte : c'est ce qui donne
+// aux sous-écrans la même allure que les onglets principaux.
 // `tint` colore le titre (compat. appelants existants) ; `bg` choisit le
-// dégradé d'ambiance de l'onglet parmi GRADIENTS.
-export function FlowSpace({ title, onClose, action, tint, bg, children, fixed = true }) {
-  const surface = bg && GRADIENTS[bg] ? { backgroundImage: GRADIENTS[bg], backgroundColor: C.bg } : { background: C.bg }
+// dégradé d'ambiance parmi GRADIENTS ; `subtitle` ajoute une ligne de
+// contexte sous le titre.
+export function FlowSpace({ title, subtitle, onClose, action, tint, bg, children, fixed = true }) {
+  const surface = bg && GRADIENTS[bg]
+    ? { backgroundImage: GRADIENTS[bg], backgroundColor: C.bg, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat' }
+    : { background: C.bg }
   return React.createElement('div', { style: fixed
     ? { position: 'fixed', inset: 0, ...surface, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' }
     : { flex: 1, minHeight: 0, ...surface, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font } },
-    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 8px', flexShrink: 0 } },
-      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm } },
-        React.createElement(Icon, { name: 'back', size: 20 })),
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15, color: tint || C.ink } }, title),
-      React.createElement('div', { style: { width: 40, display: 'flex', justifyContent: 'flex-end' } }, action || null)),
-    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '4px 18px 32px' } }, children))
+    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '14px 18px 32px' } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 } },
+        React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm, flex: '0 0 auto' } },
+          React.createElement(Icon, { name: 'back', size: 19 })),
+        React.createElement('div', { style: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', minHeight: 38 } }, action || null)),
+      React.createElement('h1', { style: { fontFamily: C.font, fontSize: 30, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1.1, margin: 0, color: tint || C.ink } }, title),
+      subtitle && React.createElement('p', { style: { fontSize: 13.5, color: C.ink2, margin: '6px 0 0', lineHeight: 1.45 } }, subtitle),
+      React.createElement('div', { style: { marginTop: 18 } }, children)))
 }
 
+// Bandeau d'introduction d'un sous-écran. Carte claire teintée plutôt que
+// bloc de couleur pleine : le grand titre de FlowSpace porte déjà l'accent,
+// deux aplats saturés l'un sous l'autre alourdissaient l'écran.
 export function SpaceBanner({ ic, tint, title, text }) {
-  return React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: tint, color: '#fff', marginBottom: 18, boxShadow: `0 10px 24px -12px ${tint}` } },
-    React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
-      React.createElement(Icon, { name: ic, size: 24, color: '#fff' })),
-    React.createElement('div', { style: { fontFamily: C.font, fontSize: 22, fontWeight: 700, lineHeight: 1.1 } }, title),
-    React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 8, lineHeight: 1.5 } }, text))
+  return React.createElement('div', { style: { display: 'flex', gap: 14, padding: 16, borderRadius: C.radius, background: `color-mix(in srgb, ${tint} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${tint} 24%, ${C.line})`, marginBottom: 18 } },
+    React.createElement('div', { style: { width: 44, height: 44, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${tint} 16%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      React.createElement(Icon, { name: ic, size: 22, color: tint })),
+    React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+      React.createElement('div', { style: { fontFamily: C.font, fontSize: 16.5, fontWeight: 700, lineHeight: 1.2, color: C.ink } }, title),
+      React.createElement('p', { style: { fontSize: 13.5, color: C.ink2, margin: '5px 0 0', lineHeight: 1.45 } }, text)))
 }
 
 export function SecLab({ children, style }) {
@@ -411,12 +423,15 @@ export function NoteBox({ tint = C.primary, children }) {
     React.createElement('span', null, children))
 }
 
+// Bascule segmentée : l'onglet actif est une pastille blanche surélevée
+// dans une gouttière teintée, plutôt qu'un aplat de couleur — c'est le
+// même vocabulaire que SegPills, en version compacte et pleine largeur.
 export function SegTabs({ tabs, value, onChange, tint = C.primary }) {
-  return React.createElement('div', { style: { display: 'flex', gap: 6, background: C.surface2, padding: 4, borderRadius: 999, marginBottom: 18 } },
+  return React.createElement('div', { style: { display: 'flex', gap: 4, background: C.surface2, padding: 4, borderRadius: 999, marginBottom: 18, border: `1px solid ${C.line}` } },
     tabs.map((t) => {
       const active = value === t.id
       return React.createElement('button', { key: t.id, onClick: () => onChange(t.id),
-        style: { flex: 1, padding: '9px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', border: 'none', cursor: 'pointer', color: active ? '#fff' : C.ink2, background: active ? tint : 'transparent', transition: 'all .15s ease' } }, t.lab)
+        style: { flex: 1, padding: '9px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', border: 'none', cursor: 'pointer', color: active ? tint : C.ink2, background: active ? C.surface : 'transparent', boxShadow: active ? C.shadowSm : 'none', transition: 'all .15s ease' } }, t.lab)
     }))
 }
 

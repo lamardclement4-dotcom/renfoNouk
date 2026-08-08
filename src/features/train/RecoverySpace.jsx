@@ -17,7 +17,7 @@ const RECOV_TIPS = [
 const CTX_ICON = { course: 'route', express: 'clock', rouleau: 'spark', jambes: 'leaf', sommeil: 'moon' }
 
 export default function RecoverySpace({ onClose, onOpenSession }) {
-  return React.createElement(FlowSpace, { title: 'Récupération', onClose },
+  return React.createElement(FlowSpace, { bg: 'entrainer', title: 'Récupération', onClose },
     React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.success, color: '#fff', marginBottom: 18 } },
       React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
         React.createElement(Icon, { name: 'leaf', size: 24, color: '#fff' })),

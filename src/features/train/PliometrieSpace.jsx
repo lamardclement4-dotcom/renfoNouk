@@ -6,7 +6,7 @@ const PLYO_T = '#a85a36'
 
 export default function PliometrieSpace({ onClose, onOpenSession }) {
   const list = SESSIONS.filter((s) => s.cat === 'plyo')
-  return React.createElement(FlowSpace, { title: 'Pliométrie', onClose },
+  return React.createElement(FlowSpace, { bg: 'entrainer', title: 'Pliométrie', onClose },
     React.createElement(SpaceBanner, { ic: 'bolt', tint: PLYO_T, title: 'Sauts & explosivité', text: 'Le travail de rebond rend la foulée plus économique et plus puissante. À placer en début de séance, sur jambes fraîches.' }),
     React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, marginBottom: 18 } },
       React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Avant de commencer'),

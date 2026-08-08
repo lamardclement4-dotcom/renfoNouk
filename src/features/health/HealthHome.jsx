@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { C, MODULE_TINTS, Icon, isoToday } from './kit'
+import { C, MODULE_TINTS, Icon, isoToday, GRADIENTS } from './kit'
 import NutritionSpace from '../nutrition/Nutrition'
 import HydrationSpace from '../hydration/Hydration'
 import SleepSpace from './Sleep'
@@ -57,19 +57,26 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
     { ic: 'spark', tint: MODULE_TINTS.complements, lab: 'Compléments', sub: 'Plan · rappels', on: 'complements' },
   ]
 
-  return React.createElement('div', { style: embedded
-    ? { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' }
-    : { flex: 1, minHeight: 0, background: C.bg, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font } },
-    React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px 8px', flexShrink: 0 } },
-      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm } },
-        React.createElement(Icon, { name: 'back', size: 20 })),
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 20 } }, 'Santé & bien-être')),
-    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '10px 18px 32px' } },
-      React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
-        tiles.map((t, i) => React.createElement('button', { key: i, onClick: () => setSpace(t.on),
-          style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: 16, borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, cursor: 'pointer' } },
-          React.createElement('div', { style: { width: 40, height: 40, borderRadius: 12, background: `color-mix(in srgb, ${t.tint} 15%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 9 } },
-            React.createElement(Icon, { name: t.ic, size: 20, color: t.tint })),
-          React.createElement('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 14.5 } }, t.lab),
-          React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' } }, t.sub))))))
+  const el = React.createElement
+  // Hub "Santé" : même traitement que les autres onglets (grand titre,
+  // cartes surélevées sur fond dégradé).
+  return el('div', { style: {
+    ...(embedded
+      ? { position: 'fixed', inset: 0, zIndex: 55, animation: 'spaceIn .22s ease' }
+      : { flex: 1, minHeight: 0, width: '100%' }),
+    backgroundColor: C.bg, backgroundImage: GRADIENTS.sante, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat',
+    display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font,
+  } },
+    el('div', { style: { flex: 1, overflowY: 'auto', padding: '14px 18px 32px' } },
+      el('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm, marginBottom: 12 } },
+        el(Icon, { name: 'back', size: 19 })),
+      el('h1', { style: { fontFamily: C.font, fontSize: 30, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1.1, margin: 0 } }, 'Santé'),
+      el('p', { style: { fontSize: 13.5, color: C.ink2, margin: '6px 0 18px' } }, 'Nutrition, sommeil, prévention et bien-être'),
+      el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+        tiles.map((t, i) => el('button', { key: i, onClick: () => setSpace(t.on),
+          style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: C.shadowSm, cursor: 'pointer' } },
+          el('div', { style: { width: 42, height: 42, borderRadius: 13, background: `color-mix(in srgb, ${t.tint} 15%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 } },
+            el(Icon, { name: t.ic, size: 21, color: t.tint })),
+          el('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 14.5 } }, t.lab),
+          el('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' } }, t.sub))))))
 }

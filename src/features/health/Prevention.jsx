@@ -276,9 +276,9 @@ export default function PreventionSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [tab, setTab] = useState('bilan')
   if (loading) {
-    return React.createElement(FlowSpace, { title: 'Prévention', onClose, tint: PREV }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
+    return React.createElement(FlowSpace, { bg: 'sante', title: 'Prévention', onClose, tint: PREV }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
   }
-  return React.createElement(FlowSpace, { title: 'Prévention', onClose, tint: PREV },
+  return React.createElement(FlowSpace, { bg: 'sante', title: 'Prévention', onClose, tint: PREV },
     React.createElement(SegTabs, { tint: PREV, value: tab, onChange: setTab, tabs: [{ id: 'bilan', lab: 'Bilan' }, { id: 'blessures', lab: 'Blessures' }] }),
     tab === 'bilan' && React.createElement(BilanTab, { db, store }),
     tab === 'blessures' && React.createElement(BlessuresTab, null))

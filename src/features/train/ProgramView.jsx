@@ -35,7 +35,7 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
   const prog = db.program
 
   if (!prog) {
-    return React.createElement(FlowSpace, { title: 'Mon programme', onClose },
+    return React.createElement(FlowSpace, { bg: 'entrainer', title: 'Mon programme', onClose },
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', minHeight: '55vh' } },
         React.createElement('div', { style: { width: 88, height: 88, borderRadius: 999, background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' } },
           React.createElement(Icon, { name: 'route', size: 40, color: C.primary })),
@@ -63,7 +63,7 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
     return { profilePhys: { ...(st.profilePhys || {}), sports: next } }
   })
 
-  return React.createElement(FlowSpace, {
+  return React.createElement(FlowSpace, { bg: 'entrainer',
     title: 'Mon programme', onClose,
     action: React.createElement('button', { onClick: onMobility, 'aria-label': 'Refaire le test', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
       React.createElement(Icon, { name: 'target', size: 18 })),

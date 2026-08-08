@@ -689,7 +689,7 @@ export default function PlannerSpace({ db, store, onClose }) {
   else if (view === 'week') { const m = mondayOf(date), s = new Date(m); s.setDate(m.getDate() + 6); label = `${m.getDate()} – ${s.getDate()} ${MOIS_C[s.getMonth()]} ${s.getFullYear()}` }
   else label = `${MOIS_L[date.getMonth()]} ${date.getFullYear()}`
 
-  return React.createElement(FlowSpace, {
+  return React.createElement(FlowSpace, { bg: 'entrainer',
     title: 'Calendrier', onClose,
     action: React.createElement('button', { onClick: () => openAdd(view === 'day' ? isoDate(date) : null), 'aria-label': 'Ajouter une séance', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
       React.createElement(Icon, { name: 'plus', size: 20, color: C.primary })),

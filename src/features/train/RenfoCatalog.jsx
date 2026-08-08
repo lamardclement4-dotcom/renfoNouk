@@ -29,7 +29,7 @@ export default function RenfoCatalog({ onClose, onOpenSession }) {
     return React.createElement('button', { key: id, onClick: () => setFilter(id), style: { flex: 1, padding: '9px 4px', borderRadius: C.radiusXs, border: 'none', background: active ? C.surface : 'transparent', color: active ? C.ink : C.ink3, fontWeight: active ? 700 : 600, fontSize: 13.5, cursor: 'pointer', boxShadow: active ? '0 1px 4px rgba(0,0,0,.08)' : 'none' } }, `${label} (${count})`)
   }
 
-  return React.createElement(FlowSpace, { title: 'Renforcement', onClose },
+  return React.createElement(FlowSpace, { bg: 'entrainer', title: 'Renforcement', onClose },
     React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: 'linear-gradient(135deg, #bf6a40, #a85a36)', color: '#fff', marginBottom: 16 } },
       React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
         React.createElement(Icon, { name: 'dumbbell', size: 24, color: '#fff' })),

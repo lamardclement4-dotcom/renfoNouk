@@ -2,27 +2,27 @@ import React, { useState, useEffect } from 'react'
 import { FOODS, COURSE_REF, DIAG_QUESTIONS, PILIERS } from './nutritionData'
 import { buildConseils } from './diagEngine'
 import { useNutritionStore } from './useNutritionStore'
-import { Icon } from '../health/kit'
+import { Icon, C, GRADIENTS } from '../health/kit'
 
 // ============================================================
-// Design tokens (équivalent des CSS custom properties de
-// l'ancienne app, ramenés aux valeurs littérales déjà utilisées
-// dans App.jsx pour rester cohérent visuellement).
+// Jetons de style : ils pointent vers ceux du kit partagé plutôt que
+// de figer des couleurs, sinon cet écran resterait sur l'ancienne
+// palette et ignorerait le thème choisi.
 // ============================================================
-const NUTRI = '#2d7ff9'
-const DANGER = '#c0392b'
-const SURFACE = '#fff'
-const SURFACE2 = '#f5f4ef'
-const INK = '#2b2b2b'
-const INK2 = '#666'
-const INK3 = '#999'
-const LINE = '#e8ebef'
-const RADIUS = 16
-const RADIUS_SM = 12
-const FONT = '-apple-system, BlinkMacSystemFont, sans-serif'
+const NUTRI = C.carb
+const DANGER = C.danger
+const SURFACE = C.surface
+const SURFACE2 = C.surface2
+const INK = C.ink
+const INK2 = C.ink2
+const INK3 = C.ink3
+const LINE = C.line
+const RADIUS = C.radius
+const RADIUS_SM = C.radiusSm
+const FONT = C.font
 
 const xst = {
-  flow: { position: 'fixed', inset: 0, zIndex: 55, display: 'flex', flexDirection: 'column', background: '#f6f7f9', maxWidth: 460, margin: '0 auto', fontFamily: FONT, animation: 'spaceIn .22s ease' },
+  flow: { position: 'fixed', inset: 0, zIndex: 55, display: 'flex', flexDirection: 'column', backgroundColor: C.bg, backgroundImage: GRADIENTS.sante, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat', maxWidth: 460, margin: '0 auto', fontFamily: FONT, animation: 'spaceIn .22s ease' },
   primaryBtn: { padding: '13px 20px', borderRadius: RADIUS_SM, border: 'none', color: '#fff', fontWeight: 700, fontSize: 14.5, cursor: 'pointer', width: '100%' },
   input: { padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', fontSize: 15, marginTop: 8, width: '100%', boxSizing: 'border-box' },
   iconBtn: { width: 38, height: 38, borderRadius: 10, border: 'none', background: SURFACE2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: '0 0 auto' },

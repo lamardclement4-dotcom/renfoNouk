@@ -339,10 +339,9 @@ export default function ProgressSpace({ userId, onClose }) {
       tile({ onClick: () => setFlow('tests'), left: iconBadge('chart', TC), title: 'Passer un test physique', sub: 'Cooper · Gainage · Souplesse · Pompes · Squats' }))
   }
 
-  return h(FlowSpace, { title: 'Tes progrès', onClose, fixed: false, bg: 'progres' },
-    // En-tête façon maquette : titre en gros, puis deux cartes côte à côte
-    // (volume de la semaine et série en cours avec ses pastilles de jours).
-    h('h1', { style: { fontFamily: C.font, fontSize: 32, fontWeight: 800, letterSpacing: '-.03em', margin: '2px 0 16px' } }, 'Progrès'),
+  // Le grand titre est rendu par FlowSpace : on enchaîne directement sur
+  // les deux cartes de tête (volume de la semaine, série en cours).
+  return h(FlowSpace, { title: 'Progrès', onClose, fixed: false, bg: 'progres' },
     h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 } },
       h(Card, { pad: 16 },
         h(BigStat, { label: 'Cette semaine', value: totalMins, unit: 'min', color: C.ink, size: 34 }),

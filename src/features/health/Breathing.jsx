@@ -186,7 +186,7 @@ export default function BreathingSpace({ onClose }) {
   }
 
   const TABS = [{ id: 'breathing', lab: 'Respiration', ic: 'wave' }, { id: 'mental', lab: 'Préparation mentale', ic: 'target' }]
-  return React.createElement(FlowSpace, { title: 'Esprit & performance', onClose, tint: BR },
+  return React.createElement(FlowSpace, { bg: 'sante', title: 'Esprit & performance', onClose, tint: BR },
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, margin: '10px 0 18px' } },
       TABS.map((it) => {
         const active = tab === it.id

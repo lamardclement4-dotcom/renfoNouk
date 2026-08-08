@@ -35,8 +35,8 @@ function Ring({ size = 80, stroke = 8, progress, color, track, children }) {
   const circ = 2 * Math.PI * r
   return React.createElement('div', { style: { position: 'relative', width: size, height: size, flex: '0 0 auto' } },
     React.createElement('svg', { width: size, height: size, viewBox: `0 0 ${size} ${size}` },
-      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: track, strokeWidth: stroke }),
-      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: color, strokeWidth: stroke, strokeDasharray: circ, strokeDashoffset: circ * (1 - Math.max(0, Math.min(1, progress))), strokeLinecap: 'round', transform: `rotate(-90 ${size / 2} ${size / 2})` })),
+      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', strokeWidth: stroke, style: { stroke: track } }),
+      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', strokeWidth: stroke, strokeDasharray: circ, strokeDashoffset: circ * (1 - Math.max(0, Math.min(1, progress))), strokeLinecap: 'round', transform: `rotate(-90 ${size / 2} ${size / 2})`, style: { stroke: color } })),
     React.createElement('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, children))
 }
 
@@ -188,7 +188,7 @@ export default function CycleSpace({ userId, onClose }) {
   const [setupOpen, setSetupOpen] = useState(false)
 
   if (loading) {
-    return React.createElement(FlowSpace, { title: 'Cycle', onClose, tint: CYC }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
+    return React.createElement(FlowSpace, { bg: 'sante', title: 'Cycle', onClose, tint: CYC }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
   }
 
   const cycle = db.cycle || {}
@@ -196,7 +196,7 @@ export default function CycleSpace({ userId, onClose }) {
   const saveCycle = (c) => { store.set({ cycle: { ...cycle, ...c } }); setSetupOpen(false) }
 
   if (!enabled) {
-    return React.createElement(FlowSpace, { title: 'Espace Cycle', onClose, tint: CYC },
+    return React.createElement(FlowSpace, { bg: 'sante', title: 'Espace Cycle', onClose, tint: CYC },
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', minHeight: '70vh' } },
         React.createElement('div', { style: { width: 96, height: 96, borderRadius: 999, background: `color-mix(in srgb, ${CYC} 16%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' } }, React.createElement(Icon, { name: 'moon', size: 42, color: CYC })),
         React.createElement('h1', { style: { fontFamily: C.font, fontSize: 27, fontWeight: 700, letterSpacing: '-.02em' } }, 'Bouge avec ton cycle'),
@@ -205,7 +205,7 @@ export default function CycleSpace({ userId, onClose }) {
       setupOpen && React.createElement(CycleSetup, { cycle, onSave: saveCycle, onClose: () => setSetupOpen(false) }))
   }
 
-  return React.createElement(FlowSpace, { title: 'Cycle', onClose, tint: CYC, action: React.createElement('button', { onClick: () => setSetupOpen(true), style: { fontSize: 12.5, fontWeight: 700, color: CYC, background: 'none', border: 'none', cursor: 'pointer' } }, 'Dates') },
+  return React.createElement(FlowSpace, { bg: 'sante', title: 'Cycle', onClose, tint: CYC, action: React.createElement('button', { onClick: () => setSetupOpen(true), style: { fontSize: 12.5, fontWeight: 700, color: CYC, background: 'none', border: 'none', cursor: 'pointer' } }, 'Dates') },
     React.createElement(SegTabs, { tint: CYC, value: tab, onChange: setTab, tabs: [{ id: 'today', lab: 'Aujourd’hui' }, { id: 'phases', lab: 'Phases' }] }),
     tab === 'today' && React.createElement(TodayTab, { cycle, store }),
     tab === 'phases' && React.createElement(PhasesTab, null),

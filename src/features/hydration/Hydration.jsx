@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { Icon } from '../health/kit'
+import { Icon, C, GRADIENTS } from '../health/kit'
 
 // ============================================================
 // Hydratation unifiée (Eau + Boissons + Caféine + Sucres),
@@ -10,19 +10,20 @@ import { Icon } from '../health/kit'
 // pour des comptes créés directement sur Supabase.
 // ============================================================
 
-const SURFACE = '#fff'
-const SURFACE2 = '#f5f4ef'
-const INK = '#2b2b2b'
-const INK2 = '#666'
-const INK3 = '#999'
-const LINE = '#e8ebef'
-const RADIUS_SM = 12
-const RADIUS_XS = 10
-const FONT = '-apple-system, BlinkMacSystemFont, sans-serif'
+// Jetons repris du kit partagé pour suivre le thème (cf. Nutrition).
+const SURFACE = C.surface
+const SURFACE2 = C.surface2
+const INK = C.ink
+const INK2 = C.ink2
+const INK3 = C.ink3
+const LINE = C.line
+const RADIUS_SM = C.radiusSm
+const RADIUS_XS = C.radiusXs
+const FONT = C.font
 
-const COL_EAU = '#2e7d9e'
-const COL_CAF = '#8a6230'
-const COL_SUC = '#b5566a'
+const COL_EAU = 'var(--m-hydra)'
+const COL_CAF = C.warn
+const COL_SUC = 'var(--m-cycle)'
 
 function hlog(db) { return (db && db.hydroLog) || {} }
 function entryCaf(e) { return Number(e.caf != null ? e.caf : e.mg) || 0 }
@@ -154,7 +155,7 @@ const ST = {
 }
 
 function Alert({ type, children }) {
-  const colors = { danger: '#b5566a', warn: '#c2863c', info: COL_EAU, check: 'var(--c-carb)' }
+  const colors = { danger: C.danger, warn: C.warn, info: COL_EAU, check: C.carb }
   const col = colors[type] || colors.info
   return React.createElement('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', padding: '11px 13px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${col} 10%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${col} 30%, ${LINE})`, color: col, fontWeight: 600, fontSize: 13, marginBottom: 10 } },
     React.createElement(Icon, { name: type === 'check' ? 'check' : 'spark', size: 16, color: col }),
@@ -392,7 +393,7 @@ export default function HydrationSpace({ userId, onClose }) {
     { id: 'trends', lab: 'Tendances', ic: 'chart' },
   ]
 
-  return React.createElement('div', { style: { position: 'fixed', inset: 0, zIndex: 55, background: '#f6f7f9', display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: FONT, animation: 'spaceIn .22s ease' } },
+  return React.createElement('div', { style: { position: 'fixed', inset: 0, zIndex: 55, backgroundColor: C.bg, backgroundImage: GRADIENTS.sante, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat', display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: FONT, animation: 'spaceIn .22s ease' } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px 0', flexShrink: 0 } },
       React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 11, background: SURFACE, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', boxShadow: '0 1px 3px rgba(43,43,43,.06), 0 1px 2px rgba(43,43,43,.04)' } },
         React.createElement(Icon, { name: 'back', size: 20 })),

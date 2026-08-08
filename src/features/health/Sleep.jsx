@@ -204,9 +204,9 @@ export default function SleepSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [tab, setTab] = useState('night')
   if (loading) {
-    return React.createElement(FlowSpace, { title: 'Sommeil', onClose, tint: SLEEP_COL }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
+    return React.createElement(FlowSpace, { bg: 'sante', title: 'Sommeil', onClose, tint: SLEEP_COL }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
   }
-  return React.createElement(FlowSpace, { title: 'Sommeil', onClose, tint: SLEEP_COL },
+  return React.createElement(FlowSpace, { bg: 'sante', title: 'Sommeil', onClose, tint: SLEEP_COL },
     React.createElement(SegTabs, { tint: SLEEP_COL, value: tab, onChange: setTab, tabs: [{ id: 'night', lab: 'Cette nuit' }, { id: 'routine', lab: 'Routine' }, { id: 'history', lab: 'Historique' }] }),
     tab === 'night' && React.createElement(NightTab, { db, store, onDone: () => setTab('history') }),
     tab === 'routine' && React.createElement(RoutineTab, { db, store }),

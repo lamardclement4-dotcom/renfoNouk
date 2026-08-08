@@ -173,7 +173,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
 
   const filteredSports = SPORTS.filter((sp) => !sportQuery || sp.label.toLowerCase().includes(sportQuery.toLowerCase()))
 
-  return h(FlowSpace, { title: 'Profil', onClose, fixed: false },
+  return h(FlowSpace, { bg: 'profil', title: 'Profil', onClose, fixed: false },
     h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 8, marginBottom: 20 } },
       h('button', { onClick: () => setSheet('avatar'), 'aria-label': "Changer d'avatar", style: { position: 'relative', marginBottom: 14, background: 'none', border: 'none', padding: 0, cursor: 'pointer' } },
         h('div', { style: { width: 80, height: 80, borderRadius: 999, background: db.avatar ? `color-mix(in srgb, ${C.primary} 14%, ${C.surface})` : C.ink, color: C.surface, fontFamily: C.font, fontWeight: 700, fontSize: db.avatar ? 38 : 32, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, db.avatar || initial),
