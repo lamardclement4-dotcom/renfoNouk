@@ -151,7 +151,7 @@ function HistoryTab({ db, store }) {
   const debtTotal = recent.reduce((a, d) => a + Math.max(0, SLEEP_REF - (log[d].hours || 0)), 0)
   const debtLabel = Math.floor(debtTotal) + ' h' + (Math.round((debtTotal % 1) * 60) ? ' ' + Math.round((debtTotal % 1) * 60) : '')
   const debtLevel = debtTotal < 3 ? 'faible' : debtTotal < 8 ? 'modérée' : 'élevée'
-  const debtColor = debtTotal < 3 ? '#4a8a6a' : debtTotal < 8 ? '#c4a03a' : '#c4503a'
+  const debtColor = debtTotal < 3 ? C.success : debtTotal < 8 ? C.warn : '#c4503a'
   const effList = recent.map((d) => Math.max(60, 100 - (log[d].awakenings || 0) * 12))
   const avgEff = Math.round(effList.reduce((a, b) => a + b, 0) / effList.length)
 
@@ -168,7 +168,7 @@ function HistoryTab({ db, store }) {
           const hh = log[d].hours || 0
           const bh = Math.max(3, Math.round((hh / chartMax) * chartH))
           const inRange = hh >= 7 && hh <= 9
-          return React.createElement('rect', { key: d, x: i * (barW + barGap), y: chartH - bh, width: barW, height: bh, rx: 3, fill: inRange ? SLEEP_COL : `color-mix(in srgb, ${SLEEP_COL} 40%, ${C.surface2})` })
+          return React.createElement('rect', { key: d, x: i * (barW + barGap), y: chartH - bh, width: barW, height: bh, rx: 3, style: { fill: inRange ? SLEEP_COL : `color-mix(in srgb, ${SLEEP_COL} 40%, ${C.surface2})` } })
         })),
       React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6 } }, 'Zone foncée = dans la fenêtre recommandée (7–9 h)')),
     React.createElement('div', { style: { display: 'flex', gap: 12, marginBottom: 14 } },

@@ -249,7 +249,7 @@ function ChoiceList({ items, selected, onPick, multi }) {
             <span style={{ ...styles.optCheck, ...(on ? styles.optCheckActive : {}) }}>{on ? '✓' : ''}</span>
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <span style={{ fontWeight: 700, fontSize: 15 }}>{o.label}</span>
-              {o.sub && <span style={{ fontSize: 12.5, color: '#999', marginTop: 2 }}>{o.sub}</span>}
+              {o.sub && <span style={{ fontSize: 12.5, color: C.ink3, marginTop: 2 }}>{o.sub}</span>}
             </span>
           </button>
         )
@@ -371,7 +371,7 @@ function Onboarding({ userId, onDone }) {
               <div key={i} style={{ flex: 1, height: 4, borderRadius: 999, background: i < idx ? '#2d7ff9' : '#eee' }} />
             ))}
             {idx > 0 && (
-              <button type="button" onClick={back} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#999', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+              <button type="button" onClick={back} style={{ marginLeft: 10, background: 'none', border: 'none', color: C.ink3, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
                 Retour
               </button>
             )}
@@ -381,7 +381,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'welcome' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <h1 style={styles.title}>Bienvenue{firstName ? `, ${firstName}` : ''} !</h1>
-            <p style={{ color: '#666', fontSize: 15, marginTop: 12 }}>
+            <p style={{ color: C.ink2, fontSize: 15, marginTop: 12 }}>
               Quelques minutes pour tout régler : profil, objectifs, nutrition, cycle, compléments. Tout est modifiable ensuite.
             </p>
             <button type="button" onClick={next} style={{ ...styles.button, marginTop: 24 }}>Commencer</button>
@@ -403,7 +403,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'body' && (
           <div>
             <h2 style={styles.stepTitle}>Quelques infos sur toi</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>Elles servent au calcul de tes besoins (calories, protéines).</p>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>Elles servent au calcul de tes besoins (calories, protéines).</p>
             <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
               {[{ id: 'h', label: 'Homme' }, { id: 'f', label: 'Femme' }].map((o) => (
                 <button key={o.id} type="button" onClick={() => setSexe(o.id)}
@@ -425,7 +425,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'cycle' && (
           <div>
             <h2 style={styles.stepTitle}>Suivre ton cycle ?</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>
               L'app adapte alors séances et conseils à tes phases. Tes dernières règles ont commencé...
             </p>
             <ChoiceList items={[
@@ -447,7 +447,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'sports' && (
           <div>
             <h2 style={styles.stepTitle}>Quel(s) sport(s) tu pratiques ?</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>On te proposera des séances de renfo, récup et plyo adaptées.</p>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>On te proposera des séances de renfo, récup et plyo adaptées.</p>
             <SportPicker selected={sports} onToggle={toggleSport} />
             <button type="button" onClick={next} style={{ ...styles.button, marginTop: 16, width: '100%' }}>
               {sports.length ? 'Continuer' : 'Passer'}
@@ -458,7 +458,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'level' && (
           <div>
             <h2 style={styles.stepTitle}>Ton niveau actuel ?</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>Il cale les seuils du suivi de charge d'entraînement.</p>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>Il cale les seuils du suivi de charge d'entraînement.</p>
             <ChoiceList items={NIVEAUX} selected={niveau} onPick={setNiveau} multi={false} />
             <button type="button" onClick={next} style={{ ...styles.button, marginTop: 16, width: '100%' }}>Continuer</button>
           </div>
@@ -467,7 +467,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'renfogoal' && (
           <div>
             <h2 style={styles.stepTitle}>Ton objectif renfo ?</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>Il oriente les séances mises en avant.</p>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>Il oriente les séances mises en avant.</p>
             <ChoiceList items={RENFO_GOALS} selected={renfoGoal} onPick={setRenfoGoal} multi={false} />
             <button type="button" onClick={next} style={{ ...styles.button, marginTop: 16, width: '100%' }}>Continuer</button>
           </div>
@@ -476,7 +476,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'nutriobj' && (
           <div>
             <h2 style={styles.stepTitle}>Ton objectif nutrition ?</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>Il fixe tes cibles caloriques et protéiques (repères ISSN).</p>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>Il fixe tes cibles caloriques et protéiques (repères ISSN).</p>
             <ChoiceList items={NUTRI_OBJS} selected={nutriObj} onPick={setNutriObj} multi={false} />
             <button type="button" onClick={next} style={{ ...styles.button, marginTop: 16, width: '100%' }}>Continuer</button>
           </div>
@@ -485,7 +485,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'activity' && (
           <div>
             <h2 style={styles.stepTitle}>Ton activité au quotidien ?</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>Hors séances — elle pondère ta dépense énergétique totale.</p>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>Hors séances — elle pondère ta dépense énergétique totale.</p>
             <ChoiceList items={ACTIVITES} selected={act} onPick={setAct} multi={false} />
             <button type="button" onClick={next} style={{ ...styles.button, marginTop: 16, width: '100%' }}>Continuer</button>
           </div>
@@ -494,7 +494,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'supps' && (
           <div>
             <h2 style={styles.stepTitle}>Des compléments ?</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>Optionnel, modifiable ensuite.</p>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>Optionnel, modifiable ensuite.</p>
             <ChoiceList items={SUPPLEMENTS} selected={supps} onPick={toggleSupp} multi={true} />
             <button type="button" onClick={next} style={{ ...styles.button, marginTop: 16, width: '100%' }}>
               {supps.length ? 'Continuer' : 'Aucun, continuer'}
@@ -505,7 +505,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'zones' && (
           <div>
             <h2 style={styles.stepTitle}>Des zones sensibles en ce moment ?</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>Un rappel de prudence s'affichera sur chaque séance.</p>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>Un rappel de prudence s'affichera sur chaque séance.</p>
             <div style={styles.chipGrid}>
               {ZONES.map((z) => (
                 <button key={z.id} type="button" onClick={() => toggleZone(z.id)}
@@ -523,7 +523,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'rhythm' && (
           <div>
             <h2 style={styles.stepTitle}>Quel rythme tu vises ?</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 14 }}>Tu pourras changer ça à tout moment dans ton profil.</p>
+            <p style={{ fontSize: 13, color: C.ink2, marginBottom: 14 }}>Tu pourras changer ça à tout moment dans ton profil.</p>
             <ChoiceList
               items={RYTHMES.map((g, i) => ({ id: i, label: g.label, sub: g.sub }))}
               selected={goalIdx} onPick={setGoalIdx} multi={false}
@@ -535,7 +535,7 @@ function Onboarding({ userId, onDone }) {
         {stepId === 'final' && (
           <div style={{ textAlign: 'center' }}>
             <h2 style={styles.stepTitle}>{firstName ? `C'est prêt, ${firstName} !` : "C'est prêt !"}</h2>
-            <p style={{ color: '#666', fontSize: 14, marginTop: 8 }}>Tes besoins estimés :</p>
+            <p style={{ color: C.ink2, fontSize: 14, marginTop: 8 }}>Tes besoins estimés :</p>
             <div style={{ display: 'flex', gap: 10, margin: '18px 0' }}>
               <div style={styles.statCard}>
                 <div style={styles.statValue}>{e.kcal}</div>
@@ -546,7 +546,7 @@ function Onboarding({ userId, onDone }) {
                 <div style={styles.statLabel}>protéines / jour</div>
               </div>
             </div>
-            <p style={{ fontSize: 11.5, color: '#999', lineHeight: 1.4 }}>
+            <p style={{ fontSize: 11.5, color: C.ink3, lineHeight: 1.4 }}>
               Estimation Mifflin-St Jeor · repères ISSN/EFSA/OMS. Indicatif, pas un avis médical.
             </p>
             {error && <p style={styles.error}>{error}</p>}
@@ -561,29 +561,32 @@ function Onboarding({ userId, onDone }) {
 }
 
 const styles = {
-  wrapper: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f6f7f9', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', padding: 16 },
-  card: { width: '100%', maxWidth: 400, background: '#fff', borderRadius: 16, padding: 28, boxShadow: '0 4px 20px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' },
-  title: { fontSize: 28, fontWeight: 700, color: '#2d7ff9', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#666', marginBottom: 20 },
-  stepIndicator: { fontSize: 12, color: '#999', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  stepTitle: { fontSize: 20, fontWeight: 700, color: '#333', marginBottom: 18 },
-  label: { fontSize: 13, fontWeight: 600, marginTop: 12, marginBottom: 6, color: '#333' },
-  input: { padding: '10px 12px', borderRadius: 10, border: '1px solid #ddd', fontSize: 15, marginBottom: 8, width: '100%' },
-  button: { padding: '12px 20px', borderRadius: 10, border: 'none', background: '#2d7ff9', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', flex: 1 },
-  buttonSecondary: { padding: '12px 20px', borderRadius: 10, border: '1px solid #ddd', background: '#fff', color: '#333', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
-  switchLink: { marginTop: 14, background: 'none', border: 'none', color: '#2d7ff9', fontSize: 13, cursor: 'pointer' },
-  error: { color: '#c0392b', fontSize: 13, marginTop: 10 },
-  info: { color: '#2d7a4f', fontSize: 13, marginTop: 10 },
+  // Écrans de connexion et d'onboarding : ils suivent le thème comme le
+  // reste (sinon une carte blanche figée resterait aveuglante sur le
+  // thème Nuit).
+  wrapper: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, fontFamily: C.font, padding: 16 },
+  card: { width: '100%', maxWidth: 400, background: C.surface, borderRadius: C.radius, padding: 28, boxShadow: C.shadow, display: 'flex', flexDirection: 'column' },
+  title: { fontSize: 28, fontWeight: 800, letterSpacing: '-.02em', color: C.primary, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: C.ink2, marginBottom: 20 },
+  stepIndicator: { fontSize: 12, color: C.ink3, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  stepTitle: { fontSize: 20, fontWeight: 700, color: C.ink, marginBottom: 18 },
+  label: { fontSize: 13, fontWeight: 600, marginTop: 12, marginBottom: 6, color: C.ink },
+  input: { padding: '11px 12px', borderRadius: C.radiusXs, border: `1px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 15, marginBottom: 8, width: '100%', boxSizing: 'border-box' },
+  button: { padding: '13px 20px', borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', flex: 1 },
+  buttonSecondary: { padding: '13px 20px', borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.ink2, fontSize: 15, fontWeight: 600, cursor: 'pointer' },
+  switchLink: { marginTop: 14, background: 'none', border: 'none', color: C.primary, fontSize: 13, cursor: 'pointer' },
+  error: { color: C.danger, fontSize: 13, marginTop: 10 },
+  info: { color: C.success, fontSize: 13, marginTop: 10 },
   chipGrid: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  chip: { padding: '8px 14px', borderRadius: 20, border: '1px solid #ddd', background: '#fff', color: '#333', fontSize: 14, cursor: 'pointer' },
-  chipActive: { padding: '8px 14px', borderRadius: 20, border: '1px solid #2d7ff9', background: '#2d7ff9', color: '#fff', fontSize: 14, cursor: 'pointer' },
-  optBtn: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: 12, border: '1.5px solid #ddd', background: '#fff', cursor: 'pointer', textAlign: 'left' },
-  optBtnActive: { border: '1.5px solid #2d7ff9', background: '#fdf1ee' },
-  optCheck: { width: 22, height: 22, borderRadius: 999, border: '2px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#2d7ff9', flex: '0 0 auto' },
-  optCheckActive: { border: '2px solid #2d7ff9' },
-  statCard: { flex: 1, padding: '16px 12px', borderRadius: 12, background: '#f6f7f9', border: '1px solid #eee', textAlign: 'center' },
-  statValue: { fontWeight: 800, fontSize: 24, color: '#2d7ff9' },
-  statLabel: { fontSize: 11.5, color: '#999', fontWeight: 600, marginTop: 3 },
+  chip: { padding: '8px 14px', borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.ink2, fontSize: 14, cursor: 'pointer' },
+  chipActive: { padding: '8px 14px', borderRadius: 999, border: `1px solid ${C.primary}`, background: C.primary, color: '#fff', fontSize: 14, cursor: 'pointer' },
+  optBtn: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: C.radiusXs, border: `1.5px solid ${C.line}`, background: C.surface, color: C.ink, cursor: 'pointer', textAlign: 'left' },
+  optBtnActive: { border: `1.5px solid ${C.primary}`, background: `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` },
+  optCheck: { width: 22, height: 22, borderRadius: 999, border: `2px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: C.primary, flex: '0 0 auto' },
+  optCheckActive: { border: `2px solid ${C.primary}` },
+  statCard: { flex: 1, padding: '16px 12px', borderRadius: C.radiusXs, background: C.surface2, border: `1px solid ${C.line}`, textAlign: 'center' },
+  statValue: { fontWeight: 800, fontSize: 24, color: C.primary },
+  statLabel: { fontSize: 11.5, color: C.ink3, fontWeight: 600, marginTop: 3 },
 }
 
 // ============================================================
@@ -592,14 +595,14 @@ const styles = {
 function App() {
   const { loading, isAuthenticated, isApproved, isPending, isRejected, signIn, signUp, signOut, profile, refreshProfile } = useAuth()
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#666' }}>Chargement...</div>
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.ink2 }}>Chargement...</div>
   if (!isAuthenticated) return <Login signIn={signIn} signUp={signUp} />
 
   if (isPending) {
     return (
       <div style={{ padding: 40, textAlign: 'center', maxWidth: 420, margin: '0 auto' }}>
         <h2>Compte en attente</h2>
-        <p style={{ color: '#666', marginTop: 12 }}>Ton inscription a bien été reçue. L'accès sera activé après validation manuelle.</p>
+        <p style={{ color: C.ink2, marginTop: 12 }}>Ton inscription a bien été reçue. L'accès sera activé après validation manuelle.</p>
         <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
       </div>
     )
@@ -609,7 +612,7 @@ function App() {
     return (
       <div style={{ padding: 40, textAlign: 'center', maxWidth: 420, margin: '0 auto' }}>
         <h2>Accès refusé</h2>
-        <p style={{ color: '#666', marginTop: 12 }}>Contacte l'administrateur pour plus d'informations.</p>
+        <p style={{ color: C.ink2, marginTop: 12 }}>Contacte l'administrateur pour plus d'informations.</p>
         <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
       </div>
     )

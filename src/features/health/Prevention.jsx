@@ -137,8 +137,8 @@ function BilanTab({ db, store }) {
       if (qq.tag && !qq.painOnly && val >= 2) tags.add(qq.tag)
     })
     const ratio = maxv > 0 ? score / maxv : 0
-    const level = ratio < 0.18 ? { l: 'Faible', t: '#5b8a72', d: 'Entretien : mobilité + renfo préventif 2×/sem.' }
-      : ratio < 0.4 ? { l: 'Modéré', t: '#6f8a3a', d: 'Cible tes points faibles ci-dessous et revois ta progression de charge.' }
+    const level = ratio < 0.18 ? { l: 'Faible', t: C.success, d: 'Entretien : mobilité + renfo préventif 2×/sem.' }
+      : ratio < 0.4 ? { l: 'Modéré', t: C.carb, d: 'Cible tes points faibles ci-dessous et revois ta progression de charge.' }
       : { l: 'Élevé', t: '#b5566a', d: 'Prudence : réduis la charge, priorise les corrections, envisage un bilan pro.' }
     const optOf = (tag) => { const i = QUIZ.findIndex((q) => q.tag === tag); return i < 0 || ans[i] == null ? null : QUIZ[i].opts[ans[i]] }
     const PAIN_TAGS = ['pain_region', 'pain_struct', 'pain_point', 'pain_trigger', 'pain_when', 'pain_swell', 'pain_intensity', 'pain_load', 'pain_dur', 'pain_evo']
@@ -239,8 +239,8 @@ const INJURIES = [
 function BlessuresTab() {
   const [open, setOpen] = useState(null)
   const feux = [
-    ['#5b8a72', 'Vert', 'Pas de douleur, ou gêne qui disparaît à l’échauffement → on continue.'],
-    ['#6f8a3a', 'Jaune', 'Gêne légère et stable → on réduit le volume, on surveille, on traite la cause.'],
+    [C.success, 'Vert', 'Pas de douleur, ou gêne qui disparaît à l’échauffement → on continue.'],
+    [C.carb, 'Jaune', 'Gêne légère et stable → on réduit le volume, on surveille, on traite la cause.'],
     ['#b5566a', 'Rouge', 'Douleur vive, qui s’aggrave ou persiste au repos → stop et avis médical.'],
   ]
   return React.createElement('div', null,

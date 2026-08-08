@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { supabase } from '../../lib'
-import { C, Icon, FlowSpace } from '../health/kit'
+import { C, Icon, FlowSpace, THEMES, THEME_KEY, DEFAULT_THEME, applyTheme } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { inferUserLevel, trainingTotals } from '../train/renfoIntel'
 import { SPORTS } from '../train/trainData'
 import TrainSpace from '../train/TrainSpace'
+import WeightSpace from './WeightSpace'
 
 const h = React.createElement
 
@@ -27,8 +28,8 @@ const AVATARS = ['🏃', '🚴', '🏋️', '🧘', '🥊', '🏊', '⛷️', '�
 
 const LEVEL_OPTS = [
   { id: 'debutant', label: 'Débutant', desc: 'Tu commences ou reprends une activité régulière', tint: '#5b6fa5' },
-  { id: 'intermediaire', label: 'Intermédiaire', desc: "Tu t'entraînes régulièrement depuis plusieurs mois", tint: '#c4a03a' },
-  { id: 'confirme', label: 'Confirmé', desc: 'Entraînement structuré depuis longtemps, bonne tolérance à la charge', tint: '#4a8a6a' },
+  { id: 'intermediaire', label: 'Intermédiaire', desc: "Tu t'entraînes régulièrement depuis plusieurs mois", tint: C.warn },
+  { id: 'confirme', label: 'Confirmé', desc: 'Entraînement structuré depuis longtemps, bonne tolérance à la charge', tint: C.success },
 ]
 
 function sheetWrap(onClose, children) {
@@ -92,10 +93,11 @@ function LinkRow(ic, label, value, onClick, key) {
 // perso), raccourcis. Le nom (prénom/nom) vit sur profiles.first_name/
 // last_name (colonnes top-level, pas dans profiles.phys) donc s'édite
 // via un update Supabase direct + refreshProfile, pas via store.set.
-// La galerie d'avatars et le sélecteur de thème de l'ancienne app ne
-// sont pas repris (aucun asset/atelier de theming CSS existant côté
-// port — cf. kit.jsx qui fige des couleurs littérales, pas de
-// variables CSS à switcher).
+// La galerie d'avatars et le sélecteur de thème sont désormais repris :
+// la palette de kit.jsx passe par des variables CSS, donc changer de
+// thème se résume à les réécrire sur <html> (cf. applyTheme). Le choix
+// est gardé en local (appliqué avant le premier rendu) et dans le profil
+// (pour suivre d'un appareil à l'autre).
 // ============================================================
 export default function ProfilSpace({ userId, profile, refreshProfile, signOut, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
@@ -104,11 +106,32 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
   const [sportOpen, setSportOpen] = useState(false)
   const [sportQuery, setSportQuery] = useState('')
   const [flow, setFlow] = useState(null)
+  // Le thème vit dans le stockage local (appliqué avant le premier rendu)
+  // et dans le profil (pour suivre l'utilisateur d'un appareil à l'autre).
+  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || DEFAULT_THEME)
+  // Le profil peut porter un thème choisi sur un autre appareil : on
+  // s'aligne dessus une fois les données chargées.
+  React.useEffect(() => {
+    if (db.theme && db.theme !== theme) {
+      applyTheme(db.theme)
+      localStorage.setItem(THEME_KEY, db.theme)
+      setTheme(db.theme)
+    }
+  }, [db.theme])
+  function changeTheme(id) {
+    const applied = applyTheme(id)
+    localStorage.setItem(THEME_KEY, applied)
+    setTheme(applied)
+    store.set({ theme: applied })
+  }
 
   if (loading) {
     return h('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font } }, 'Chargement...')
   }
 
+  if (flow === 'weight') {
+    return h(WeightSpace, { db, store, onClose: () => setFlow(null) })
+  }
   if (flow === 'mobility' || flow === 'program' || flow === 'recovery') {
     return h(TrainSpace, { userId, initialTile: flow, embedded: true, onClose: () => setFlow(null) })
   }
@@ -123,7 +146,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
 
   const ul = inferUserLevel(db)
   const levelLabel = ul.label
-  const levelTint = ul.id === 'confirme' ? '#4a8a6a' : ul.id === 'intermediaire' ? '#c4a03a' : '#5b6fa5'
+  const levelTint = ul.id === 'confirme' ? C.success : ul.id === 'intermediaire' ? C.warn : '#5b6fa5'
   const isManualLevel = !!ul.manual
 
   function setLevelOverride(id) {
@@ -192,7 +215,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
       ZONES.map((z) => {
         const cur = db.sensitiveZones || []
         const on = cur.includes(z.id)
-        return h('button', { key: z.id, onClick: () => toggleZone(z.id), style: { padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 600, border: `1.5px solid ${on ? '#c4a03a' : C.line}`, background: on ? 'color-mix(in srgb, #c4a03a 12%, ' + C.surface + ')' : C.surface, color: on ? '#8a6d1e' : C.ink2, cursor: 'pointer' } }, z.label)
+        return h('button', { key: z.id, onClick: () => toggleZone(z.id), style: { padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 600, border: `1.5px solid ${on ? C.warn : C.line}`, background: on ? 'color-mix(in srgb, #c4a03a 12%, ' + C.surface + ')' : C.surface, color: on ? '#8a6d1e' : C.ink2, cursor: 'pointer' } }, z.label)
       })),
     h('p', { style: { fontSize: 12, color: C.ink3, lineHeight: 1.4, marginBottom: 4 } }, "Un rappel de prudence s'affiche sur chaque séance tant qu'une zone est active."),
 
@@ -214,10 +237,29 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
 
     SecTitle('Accès rapide'),
     h('div', { style: { background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, overflow: 'hidden' } },
+      LinkRow('chart', 'Suivi du poids', db.weightLog && db.weightLog.length ? db.weightLog[db.weightLog.length - 1].kg + ' kg' : 'Démarrer', () => setFlow('weight'), 'weight'),
       db.program
         ? LinkRow('route', 'Mon programme', 'Ouvrir', () => setFlow('program'), 'program')
         : LinkRow('route', 'Générer mon programme', 'Faire', () => setFlow('mobility'), 'program'),
       LinkRow('leaf', 'Espace Récupération', '', () => setFlow('recovery'), 'recovery')),
+
+    SecTitle('Thème'),
+    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+      THEMES.map((t) => {
+        const on = t.id === theme
+        return h('button', {
+          key: t.id,
+          onClick: () => changeTheme(t.id),
+          style: { textAlign: 'left', padding: 13, borderRadius: C.radiusSm, cursor: 'pointer', background: C.surface, border: `1.5px solid ${on ? C.primary : C.line}`, boxShadow: on ? `0 8px 20px -12px ${C.primary}` : C.shadowSm },
+        },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 } },
+            // Pastilles en couleurs littérales du thème : elles doivent
+            // montrer la palette proposée, pas celle en cours.
+            t.swatch.map((sw, i) => h('span', { key: i, style: { width: 15, height: 15, borderRadius: 999, background: sw, border: `1px solid rgba(0,0,0,.06)` } })),
+            on && h(Icon, { name: 'check', size: 14, color: C.primary, style: { marginLeft: 'auto' } })),
+          h('div', { style: { fontWeight: 700, fontSize: 14 } }, t.label),
+          h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2 } }, t.hint))
+      })),
 
     h('button', { onClick: signOut, style: { width: '100%', marginTop: 24, padding: 14, borderRadius: 999, background: 'transparent', border: `1.5px solid ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14.5, cursor: 'pointer' } }, 'Se déconnecter'),
 

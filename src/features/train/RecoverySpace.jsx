@@ -18,7 +18,7 @@ const CTX_ICON = { course: 'route', express: 'clock', rouleau: 'spark', jambes: 
 
 export default function RecoverySpace({ onClose, onOpenSession }) {
   return React.createElement(FlowSpace, { title: 'Récupération', onClose },
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: '#5b8a72', color: '#fff', marginBottom: 18 } },
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.success, color: '#fff', marginBottom: 18 } },
       React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
         React.createElement(Icon, { name: 'leaf', size: 24, color: '#fff' })),
       React.createElement('div', { style: { fontFamily: C.font, fontSize: 20, fontWeight: 700, lineHeight: 1.1 } }, 'Récupère plus vite'),
@@ -30,7 +30,7 @@ export default function RecoverySpace({ onClose, onOpenSession }) {
         const mins = sessionDuration(s)
         return React.createElement('button', { key: s.id, onClick: () => onOpenSession(s.id), style: { display: 'flex', alignItems: 'flex-start', gap: 12, width: '100%', textAlign: 'left', padding: 12, borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, cursor: 'pointer' } },
           React.createElement('div', { style: { width: 52, height: 52, borderRadius: 14, flex: '0 0 auto', background: 'color-mix(in srgb, #5b8a72 16%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-            React.createElement(Icon, { name: CTX_ICON[s.ctx] || 'heart', size: 22, color: '#5b8a72' })),
+            React.createElement(Icon, { name: CTX_ICON[s.ctx] || 'heart', size: 22, color: C.success })),
           React.createElement('div', { style: { flex: 1, textAlign: 'left', minWidth: 0 } },
             React.createElement('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 16 } }, s.title),
             React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 3, lineHeight: 1.4 } }, s.note),
@@ -41,7 +41,7 @@ export default function RecoverySpace({ onClose, onOpenSession }) {
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 8 } },
       RECOV_TIPS.map((tp, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'flex-start', gap: 13, padding: '13px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}` } },
         React.createElement('div', { style: { width: 36, height: 36, borderRadius: 10, flex: '0 0 auto', background: 'color-mix(in srgb, #5b8a72 14%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-          React.createElement(Icon, { name: tp.ic, size: 18, color: '#5b8a72' })),
+          React.createElement(Icon, { name: tp.ic, size: 18, color: C.success })),
         React.createElement('div', { style: { flex: 1 } },
           React.createElement('div', { style: { fontWeight: 600, fontSize: 15 } }, tp.t),
           React.createElement('div', { style: { fontSize: 13, color: C.ink3, marginTop: 1, lineHeight: 1.45 } }, tp.d))))))

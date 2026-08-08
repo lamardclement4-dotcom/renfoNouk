@@ -165,7 +165,7 @@ export default function ProgressSpace({ userId, onClose }) {
       h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 10 } },
         hasHyd ? miniBar('Hydratation', hyd.ml, hydTarget, 'ml', '#4a8aa5', hyd.caf ? `Caféine : ${hyd.caf} mg${hyd.caf >= 400 ? ' — limite atteinte' : ''}` : null) : null,
         hasNut && kcalTarget ? miniBar('Calories', Math.round(nut.k), Math.round(kcalTarget), 'kcal', C.primary) : null,
-        hasNut && protTarget ? miniBar('Protéines', Math.round(nut.p), Math.round(protTarget), 'g', '#6f8a3a') : null,
+        hasNut && protTarget ? miniBar('Protéines', Math.round(nut.p), Math.round(protTarget), 'g', C.carb) : null,
         hasNut && !kcalTarget ? h('div', { style: { fontSize: 12.5, color: C.ink3 } }, 'Définis tes objectifs caloriques pour suivre la nutrition.') : null))
   }
 
@@ -218,15 +218,15 @@ export default function ProgressSpace({ userId, onClose }) {
         h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 } },
           h('div', { style: { fontFamily: C.font, fontSize: 26, fontWeight: 800, color: C.primary } }, mhLast.score),
           h('span', { style: { fontSize: 13, color: C.ink3 } }, '/100'),
-          h('span', { style: { fontSize: 12.5, fontWeight: 700, marginLeft: 4, color: mhDelta >= 0 ? '#4a8a6a' : '#c4503a' } }, (mhDelta >= 0 ? '▲+' : '▼') + mhDelta + ' vs précédent')),
+          h('span', { style: { fontSize: 12.5, fontWeight: 700, marginLeft: 4, color: mhDelta >= 0 ? C.success : '#c4503a' } }, (mhDelta >= 0 ? '▲+' : '▼') + mhDelta + ' vs précédent')),
         h('svg', { width: '100%', height: mhH + 22, viewBox: `0 0 ${mhW} ${mhH + 22}`, preserveAspectRatio: 'xMidYMax meet' },
           mhRecent.map((e, i) => {
             const bh = Math.max(4, Math.round(e.score / mhMax * mhH))
             const bx = i * (mhBarW + mhGap)
             const isLast = i === mhRecent.length - 1
             return h('g', { key: e.date },
-              h('rect', { x: bx, y: mhH - bh, width: mhBarW, height: bh, rx: 4, fill: isLast ? C.primary : `color-mix(in srgb, ${C.primary} 35%, ${C.surface2})` }),
-              h('text', { x: bx + mhBarW / 2, y: mhH + 16, textAnchor: 'middle', fontSize: 9.5, fill: C.ink3, fontWeight: 600 }, mhFmtDate(e.date)))
+              h('rect', { x: bx, y: mhH - bh, width: mhBarW, height: bh, rx: 4, style: { fill: isLast ? C.primary : `color-mix(in srgb, ${C.primary} 35%, ${C.surface2})` } }),
+              h('text', { x: bx + mhBarW / 2, y: mhH + 16, textAnchor: 'middle', fontSize: 9.5, fontWeight: 600, style: { fill: C.ink3 } }, mhFmtDate(e.date)))
           })),
         h('p', { style: { fontSize: 12, color: C.ink3, marginTop: 10, lineHeight: 1.4 } }, mobHist.length + " test·s enregistré" + (mobHist.length > 1 ? 's' : '') + ' · score auto-évalué, indicatif')))
   }
@@ -242,11 +242,11 @@ export default function ProgressSpace({ userId, onClose }) {
       sectionTitle('Programme correctif'),
       tile({
         onClick: () => setFlow('program'),
-        left: iconBadge('route', '#6f8a3a'),
+        left: iconBadge('route', C.carb),
         title: `${done}/${sess.length} séances réalisées`,
         sub: db.program.weak && db.program.weak.length ? `Cible : ${db.program.weak.join(', ')}` : 'Programme personnalisé',
-        right: h(Ring, { size: 44, stroke: 6, progress: pct / 100, color: '#6f8a3a', track: C.surface2 },
-          h('div', { style: { fontFamily: C.font, fontSize: 11, fontWeight: 700, color: '#6f8a3a' } }, pct + '%')),
+        right: h(Ring, { size: 44, stroke: 6, progress: pct / 100, color: C.carb, track: C.surface2 },
+          h('div', { style: { fontFamily: C.font, fontSize: 11, fontWeight: 700, color: C.carb } }, pct + '%')),
       }))
   }
 
@@ -259,8 +259,8 @@ export default function ProgressSpace({ userId, onClose }) {
     suppBlock = h('div', null,
       sectionTitle('Compléments', h('span', { style: { fontSize: 12, color: C.ink3, fontWeight: 600 } }, 'hors score santé')),
       tile({
-        left: h(Ring, { size: 46, stroke: 6, progress: pct / 100, color: '#6f8a3a', track: C.surface2 },
-          h('div', { style: { fontFamily: C.font, fontSize: 13, fontWeight: 700, color: '#6f8a3a' } }, taken.length + '/' + plan.length)),
+        left: h(Ring, { size: 46, stroke: 6, progress: pct / 100, color: C.carb, track: C.surface2 },
+          h('div', { style: { fontFamily: C.font, fontSize: 13, fontWeight: 700, color: C.carb } }, taken.length + '/' + plan.length)),
         title: "Pris aujourd'hui",
         sub: pct === 100 ? 'Plan du jour complété' : "Suivi d'observance",
       }))
@@ -327,7 +327,7 @@ export default function ProgressSpace({ userId, onClose }) {
         tids.map((tid, i) => {
           const e = byId[tid]
           const def = TESTS_DEF.find((d) => d.id === tid)
-          const interp = def ? def.interpret(e.value, sexe, age) : { level: 'Acceptable', color: '#c4a03a' }
+          const interp = def ? def.interpret(e.value, sexe, age) : { level: 'Acceptable', color: C.warn }
           return h('div', { key: tid, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderTop: i ? `1px solid ${C.line}` : 'none' } },
             h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: `color-mix(in srgb,${TC} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'chart', size: 16, color: TC })),
             h('div', { style: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, LABEL[tid] || tid),
@@ -378,14 +378,14 @@ export default function ProgressSpace({ userId, onClose }) {
 
       // Comparaison vs la semaine précédente.
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', borderRadius: C.radiusXs, background: C.surface2, marginBottom: 14 } },
-        h(Icon, { name: 'chart', size: 14, color: vsPrevPct == null ? C.ink3 : vsPrevDelta >= 0 ? '#4a8a6a' : '#c46a3a', style: vsPrevPct != null && vsPrevDelta < 0 ? { transform: 'scaleY(-1)' } : undefined }),
+        h(Icon, { name: 'chart', size: 14, color: vsPrevPct == null ? C.ink3 : vsPrevDelta >= 0 ? C.success : C.danger, style: vsPrevPct != null && vsPrevDelta < 0 ? { transform: 'scaleY(-1)' } : undefined }),
         h('span', { style: { fontSize: 12.5, color: C.ink2 } },
           vsPrevPct == null
             ? (prevRetro.total === 0 ? 'Pas de séance la semaine précédente pour comparer.' : `${prevRetro.total} min la semaine précédente.`)
             : h(React.Fragment, null,
               // Un delta non nul qui s'arrondit à 0 % afficherait "0 %" à côté
               // d'une flèche de baisse : on bascule sur les minutes dans ce cas.
-              h('strong', { style: { color: vsPrevDelta >= 0 ? '#4a8a6a' : '#c46a3a' } },
+              h('strong', { style: { color: vsPrevDelta >= 0 ? C.success : C.danger } },
                 vsPrevPct === 0 && vsPrevDelta !== 0
                   ? `${vsPrevDelta > 0 ? '+' : '−'}${Math.abs(vsPrevDelta)} min`
                   : `${vsPrevDelta >= 0 ? '+' : '−'}${Math.abs(vsPrevPct)}%`),

@@ -12,7 +12,7 @@ const h = React.createElement
 // quelles sur l'écran d'accueil.
 // ============================================================
 const PILLAR_IC = { hydration: 'drop', nutrition: 'apple', sleep: 'moon', load: 'chart', mobility: 'target', prevention: 'shield' }
-const RECO_COLOR = { alert: '#c46a3a', warn: '#c4a03a', info: C.primary }
+const RECO_COLOR = { alert: C.danger, warn: C.warn, info: C.primary }
 
 // Chaque tuile pilier redirige vers son module — l'id du pilier (renvoyé
 // tel quel par globalScore/pillars) est passé à onAction, à charge de
@@ -25,7 +25,7 @@ export function HealthScoreCard({ db, onAction }) {
   if (result.active === 0) return null
 
   const score = result.score
-  const scoreColor = score >= 75 ? '#4a8a6a' : score >= 50 ? C.primary : '#c46a3a'
+  const scoreColor = score >= 75 ? C.success : score >= 50 ? C.primary : C.danger
   const ORDER = { alert: 0, warn: 1, info: 2 }
   const topRecos = recos.slice().sort((a, b) => (ORDER[a.level] || 2) - (ORDER[b.level] || 2)).slice(0, 2)
 
@@ -35,9 +35,9 @@ export function HealthScoreCard({ db, onAction }) {
         h('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 3 } }, 'Score santé sportive'),
         h('div', { style: { fontSize: 32, fontWeight: 900, fontFamily: C.font, color: scoreColor, lineHeight: 1 } }, score, h('span', { style: { fontSize: 16, fontWeight: 600, marginLeft: 2 } }, '/100'))),
       h('svg', { width: 52, height: 52, viewBox: '0 0 52 52' },
-        h('circle', { cx: 26, cy: 26, r: 22, fill: 'none', stroke: C.surface2, strokeWidth: 5 }),
-        h('circle', { cx: 26, cy: 26, r: 22, fill: 'none', stroke: scoreColor, strokeWidth: 5, strokeDasharray: `${Math.round(2 * Math.PI * 22 * score / 100)} ${Math.round(2 * Math.PI * 22)}`, strokeLinecap: 'round', transform: 'rotate(-90 26 26)', style: { transition: 'stroke-dasharray .5s ease' } }),
-        h('text', { x: 26, y: 30, textAnchor: 'middle', fontSize: 13, fontWeight: 800, fill: scoreColor }, score))),
+        h('circle', { cx: 26, cy: 26, r: 22, fill: 'none', strokeWidth: 5, style: { stroke: C.surface2 } }),
+        h('circle', { cx: 26, cy: 26, r: 22, fill: 'none', strokeWidth: 5, strokeDasharray: `${Math.round(2 * Math.PI * 22 * score / 100)} ${Math.round(2 * Math.PI * 22)}`, strokeLinecap: 'round', transform: 'rotate(-90 26 26)', style: { stroke: scoreColor, transition: 'stroke-dasharray .5s ease' } }),
+        h('text', { x: 26, y: 30, textAnchor: 'middle', fontSize: 13, fontWeight: 800, style: { fill: scoreColor } }, score))),
 
     h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6, marginBottom: topRecos.length ? 14 : 0 } },
       result.pillars.map((p) => {
@@ -78,7 +78,7 @@ export function PeakHomeCard({ db, onPeak }) {
   const upcoming = goals.map((g) => ({ g, plan: computePeakPlan(g) })).filter((x) => x.plan.phase !== 'past').sort((a, b) => a.g.eventDate.localeCompare(b.g.eventDate))
   if (!upcoming.length) return null
   const top = upcoming[0]
-  const colors = { base: '#5b6fa5', build: '#bf6a40', taper: '#4a8a6a', today: '#a3526b' }
+  const colors = { base: '#5b6fa5', build: '#bf6a40', taper: C.success, today: '#a3526b' }
   const labels = { base: 'Développement général', build: 'Développement spécifique', taper: 'Affûtage', today: 'Jour J' }
   const tint = colors[top.plan.phase] || '#a3526b'
   const countdown = top.plan.daysRemaining === 0 ? 'Jour J' : top.plan.daysRemaining === 1 ? 'J-1' : 'J-' + top.plan.daysRemaining

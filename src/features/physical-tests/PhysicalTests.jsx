@@ -60,7 +60,7 @@ const NORMS = {
   },
 }
 
-const LEVEL_COLORS = { Excellent: '#4a8a6a', Bien: '#7a9a4a', Acceptable: '#c4a03a', Faible: '#c47a3a', 'Très faible': '#c4503a' }
+const LEVEL_COLORS = { Excellent: 'var(--c-success)', Bien: '#7a9a4a', Acceptable: 'var(--c-warn)', Faible: '#c47a3a', 'Très faible': '#c4503a' }
 const LEVEL_SCORES = { Excellent: 5, Bien: 4, Acceptable: 3, Faible: 2, 'Très faible': 1 }
 
 function makeInterpret(testId) {
@@ -89,7 +89,7 @@ export const TESTS_DEF = [
   { id: 'squat30', label: 'Squats 30 secondes', unit: 'rép.', icon: 'bolt', color: '#7a5fa5', input: { type: 'number', min: 0, max: 80, step: 1, placeholder: 'Nombre de répétitions' },
     protocol: 'Pieds écartés, descendre cuisses parallèles au sol, remonter complet. Maximum en 30s. Source : YMCA, Rikli & Jones (2013).',
     interpret: makeInterpret('squat30') },
-  { id: 'souplesse', label: 'Sit & Reach', unit: 'cm', icon: 'target', color: '#5b8a72', input: { type: 'number', min: -30, max: 40, step: 1, placeholder: 'cm (+ = au-delà des pieds)' },
+  { id: 'souplesse', label: 'Sit & Reach', unit: 'cm', icon: 'target', color: 'var(--c-success)', input: { type: 'number', min: -30, max: 40, step: 1, placeholder: 'cm (+ = au-delà des pieds)' },
     protocol: 'Assis, jambes tendues, se pencher le plus loin possible. + = au-delà des pieds, - = en-deçà. Source : ACSM (2021), Wells & Dillon (1952).',
     interpret: makeInterpret('souplesse') },
   { id: 'push30', label: 'Pompes 30 secondes', unit: 'rép.', icon: 'dumbbell', color: '#a55b5b', input: { type: 'number', min: 0, max: 80, step: 1, placeholder: 'Nombre de répétitions' },
@@ -223,7 +223,7 @@ function RecoSessions({ testId, level }) {
   if (!msg) return null
   const isGood = level === 'Excellent' || level === 'Bien'
   const isWarn = level === 'Acceptable'
-  const tint = isGood ? '#4a8a6a' : isWarn ? '#c4a03a' : '#c4503a'
+  const tint = isGood ? 'var(--c-success)' : isWarn ? 'var(--c-warn)' : '#c4503a'
   return React.createElement('div', { style: { marginTop: 18, padding: '14px 16px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${tint} 9%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${tint} 24%, ${LINE})`, lineHeight: 1.5, textAlign: 'left' } },
     React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: tint, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 } }, isGood ? 'Très bien' : isWarn ? 'Axe de progression' : 'Priorité'),
     React.createElement('div', { style: { fontSize: 13.5, color: INK2 } }, msg))
@@ -437,7 +437,7 @@ export default function PhysicalTestsSpace({ userId, onClose }) {
               ? React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
                   React.createElement('span', { style: { fontSize: 15, fontWeight: 700, color: interp.color } }, last.value + ' ' + def.unit),
                   React.createElement('span', { style: { fontSize: 12, padding: '2px 9px', borderRadius: 999, fontWeight: 700, background: `color-mix(in srgb, ${interp.color} 12%, ${SURFACE})`, color: interp.color } }, interp.level),
-                  delta !== null && React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: delta >= 0 ? '#4a8a6a' : '#c4503a' } }, (delta >= 0 ? '▲+' : '▼') + delta + ' vs précédent'))
+                  delta !== null && React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: delta >= 0 ? 'var(--c-success)' : '#c4503a' } }, (delta >= 0 ? '▲+' : '▼') + delta + ' vs précédent'))
               : React.createElement('div', { style: { fontSize: 13, color: INK3 } }, 'Pas encore réalisé · ' + def.unit)),
           React.createElement(Icon, { name: 'arrow', size: 19, color: INK3 }))
       })),

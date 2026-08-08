@@ -154,7 +154,7 @@ const ST = {
 }
 
 function Alert({ type, children }) {
-  const colors = { danger: '#b5566a', warn: '#c2863c', info: COL_EAU, check: '#6f8a3a' }
+  const colors = { danger: '#b5566a', warn: '#c2863c', info: COL_EAU, check: 'var(--c-carb)' }
   const col = colors[type] || colors.info
   return React.createElement('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', padding: '11px 13px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${col} 10%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${col} 30%, ${LINE})`, color: col, fontWeight: 600, fontSize: 13, marginBottom: 10 } },
     React.createElement(Icon, { name: type === 'check' ? 'check' : 'spark', size: 16, color: col }),

@@ -176,7 +176,7 @@ function TodayInsights({ db, onPlanner, onNutrition }) {
   return h('div', { style: { marginTop: 22 } },
     h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 10px' } }, "Aujourd'hui"),
     !(next && next.date === iso) && Row('calendar', C.primary, nextTitle, nextDetail, onPlanner),
-    (nutPillar || hydPillar) && Row('apple', '#6f8a3a', 'Nutrition & hydratation', [nutPillar && nutPillar.status === 'ok' ? nutPillar.detail : null, hydPillar && hydPillar.status === 'ok' ? hydPillar.detail : null].filter(Boolean).join(' · ') || "Rien enregistré aujourd'hui", onNutrition),
+    (nutPillar || hydPillar) && Row('apple', C.carb, 'Nutrition & hydratation', [nutPillar && nutPillar.status === 'ok' ? nutPillar.detail : null, hydPillar && hydPillar.status === 'ok' ? hydPillar.detail : null].filter(Boolean).join(' · ') || "Rien enregistré aujourd'hui", onNutrition),
     acwr.available && acwr.level !== 'Vigilance renforcée' && Row('chart', acwr.color, 'Charge : ' + acwr.level, `Ratio ${acwr.ratio} · ${acwr.acuteMin} min (7j) vs ${acwr.chronicAvgWeek} min/sem moy.`, onPlanner))
 }
 

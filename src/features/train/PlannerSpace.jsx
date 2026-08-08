@@ -60,7 +60,7 @@ function mondayOf(d) {
 function estimateLoad(s) { return LOAD_BY_DUREE[s.duree] || 45 }
 function sportLabel(id) { const sp = SPORTS.find((s) => s.id === id); return sp ? sp.label : id }
 function sportEmoji(id) { return SPORT_EMOJI[id] || '🏋️' }
-function loadColor(load) { return load > 80 ? '#c46a5a' : load > 50 ? '#6f8fa6' : '#5b8a72' }
+function loadColor(load) { return load > 80 ? '#c46a5a' : load > 50 ? '#6f8fa6' : C.success }
 
 function SessionCard({ s, onOpen }) {
   const meta = [s.heure, s.duree].filter(Boolean).join(' · ')
@@ -70,7 +70,7 @@ function SessionCard({ s, onOpen }) {
       React.createElement('div', { style: { fontWeight: 600, fontSize: 15 } }, sportLabel(s.sport)),
       React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 2 } }, meta),
       React.createElement('div', { style: { display: 'flex', gap: 6, marginTop: 6 } },
-        React.createElement('span', { style: { fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: s.statut === 'realise' ? 'color-mix(in srgb, #5b8a72 15%, ' + C.surface + ')' : 'color-mix(in srgb, #6f8fa6 15%, ' + C.surface + ')', color: s.statut === 'realise' ? '#5b8a72' : '#6f8fa6' } }, s.statut === 'realise' ? '✅ Réalisé' : '📅 Planifié'),
+        React.createElement('span', { style: { fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: s.statut === 'realise' ? 'color-mix(in srgb, #5b8a72 15%, ' + C.surface + ')' : 'color-mix(in srgb, #6f8fa6 15%, ' + C.surface + ')', color: s.statut === 'realise' ? C.success : '#6f8fa6' } }, s.statut === 'realise' ? '✅ Réalisé' : '📅 Planifié'),
         s.exercises && s.exercises.length > 0 && React.createElement('span', { style: { fontSize: 11, color: C.ink3 } }, '💪 ' + s.exercises.length + ' ex.'),
         s.notes && React.createElement('span', { style: { fontSize: 11, color: C.ink3 } }, '📝'))),
     s.ressenti && React.createElement('div', { style: { fontSize: 20, flex: '0 0 auto' } }, RESSENTI[s.ressenti - 1].e))
@@ -146,7 +146,7 @@ function MonthView({ date, sessions, onGoDay }) {
         return React.createElement('button', { key: ds, onClick: () => onGoDay(ds), style: { aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 10, background: isToday ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : 'transparent', border: 'none', cursor: 'pointer' } },
           React.createElement('div', { style: { fontSize: 12.5, fontWeight: isToday ? 700 : 500, color: isToday ? C.primary : C.ink } }, day),
           React.createElement('div', { style: { display: 'flex', gap: 2 } },
-            daySs.slice(0, 4).map((s, k) => React.createElement('div', { key: k, style: { width: 4, height: 4, borderRadius: 999, background: s.statut === 'realise' ? '#5b8a72' : '#6f8fa6' } }))))
+            daySs.slice(0, 4).map((s, k) => React.createElement('div', { key: k, style: { width: 4, height: 4, borderRadius: 999, background: s.statut === 'realise' ? C.success : '#6f8fa6' } }))))
       })),
     (() => {
       const real = ss.filter((s) => s.statut === 'realise').length
@@ -588,7 +588,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
           React.createElement(Icon, { name: 'shield', size: 15, color: overload.color, style: { flex: '0 0 auto', marginTop: 1 } }),
           React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, 'Avec cette séance, ta charge passerait en zone "', React.createElement('strong', { style: { color: overload.color } }, overload.level.toLowerCase()), `" (ratio ${overload.currentRatio} → ${overload.ratio}).`)),
         consecDays >= 5 && React.createElement('div', { style: { display: 'flex', gap: 9, alignItems: 'flex-start', padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, #c4a03a 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, #c4a03a 28%, ${C.line})` } },
-          React.createElement(Icon, { name: 'alert', size: 15, color: '#c4a03a', style: { flex: '0 0 auto', marginTop: 1 } }),
+          React.createElement(Icon, { name: 'alert', size: 15, color: C.warn, style: { flex: '0 0 auto', marginTop: 1 } }),
           React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, `Ce serait ton ${consecDays}e jour d'entraînement consécutif — pense à un jour de repos.`)),
         showTaperSuggestion && React.createElement('div', { style: { display: 'flex', gap: 9, alignItems: 'center', padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.primary} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.primary} 25%, ${C.line})` } },
           React.createElement('span', { style: { flex: 1, fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, `En affûtage pour « ${activePeakPlan.goal.label} » (vise ~${activePeakPlan.plan.targetVolumePct}% du volume habituel) — réduire cette séance à ${taperTarget} min ?`),

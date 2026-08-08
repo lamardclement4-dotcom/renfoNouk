@@ -171,6 +171,11 @@ export function useNutritionStore(userId) {
     hydroLog: Object.fromEntries(Object.entries(dayRows).map(([d, v]) => [d, v.hydration || []])),
     week: phys.week || [0, 0, 0, 0, 0, 0, 0],
     sessionLog: phys.sessionLog || [],
+    // Suivi du poids : historique des pesées ({date, kg}) et poids visé.
+    weightLog: phys.weightLog || [],
+    weightGoal: phys.weightGoal || null,
+    // Thème choisi, pour le retrouver d'un appareil à l'autre.
+    theme: phys.theme || null,
     streak: phys.streak || 0,
     sessionsTotal: phys.sessionsTotal || 0,
     minutesTotal: phys.minutesTotal || 0,

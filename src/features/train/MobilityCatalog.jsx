@@ -10,7 +10,7 @@ const ZONES = [
   { key: 'epaules', label: 'Épaules & bras', ic: 'dumbbell', tint: '#8a6a4a', match: ['épaule', 'bras', 'main', 'poignet'] },
   { key: 'cou', label: 'Cou & nuque', ic: 'user', tint: '#5b6fa5', match: ['cou', 'nuque'] },
   { key: 'jambes', label: 'Jambes complètes', ic: 'bolt', tint: '#bf6a40', match: ['jambe', 'ischio', 'course'] },
-  { key: 'global', label: 'Routines globales', ic: 'heart', tint: '#5b8a72', match: ['complet', 'flow', 'réveil', 'avant de courir', 'récup', 'soir', 'détente', 'global'] },
+  { key: 'global', label: 'Routines globales', ic: 'heart', tint: C.success, match: ['complet', 'flow', 'réveil', 'avant de courir', 'récup', 'soir', 'détente', 'global'] },
 ]
 
 function zoneOf(s) {
@@ -61,7 +61,7 @@ export default function MobilityCatalog({ onClose, onOpenSession }) {
               React.createElement('div', { style: { flex: 1, textAlign: 'left', minWidth: 0 } },
                 React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
                   React.createElement('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 15 } }, s.title),
-                  isEtir && React.createElement('span', { style: { fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'color-mix(in srgb, #5b8a72 14%, ' + C.surface + ')', color: '#5b8a72', textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Étir.')),
+                  isEtir && React.createElement('span', { style: { fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: 'color-mix(in srgb, #5b8a72 14%, ' + C.surface + ')', color: C.success, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Étir.')),
                 React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 4 } }, mins, ' min · ', nbMvts, ' mvts · ', s.level)),
               React.createElement(Icon, { name: 'arrow', size: 16, color: C.ink3, style: { flexShrink: 0, marginTop: 4 } }))
           })))

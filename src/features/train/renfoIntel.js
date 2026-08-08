@@ -152,7 +152,7 @@ const CAT_META = {
   renfo: { label: 'Renforcement', color: '#bf6a40' },
   fullbody: { label: 'Full body', color: '#bd923f' },
   plyo: { label: 'Pliométrie', color: '#a85a36' },
-  recup: { label: 'Récupération', color: '#5b8a72' },
+  recup: { label: 'Récupération', color: 'var(--c-success)' },
 }
 
 // Rétrospective complète d'une semaine (celle de refDate par défaut) :
@@ -477,15 +477,15 @@ export function acwrRisk(db) {
   const ul = inferUserLevel(db)
   let level, color, advice
   if (ratio < 0.8) {
-    level = 'Sous-charge'; color = '#6f8a3a'
+    level = 'Sous-charge'; color = 'var(--c-carb)'
     advice = ul.id === 'debutant'
       ? 'Charge basse — normal au démarrage. Augmente progressivement (+10 % max / semaine).'
       : "Charge récente plus basse que d'habitude — marge pour reprendre progressivement."
   } else if (ratio <= ul.acwrWarn) {
-    level = 'Zone optimale'; color = '#4a8a6a'
+    level = 'Zone optimale'; color = 'var(--c-success)'
     advice = `Charge cohérente avec ton profil ${ul.label.toLowerCase()} — progression bien maîtrisée.`
   } else if (ratio <= ul.acwrAlert) {
-    level = 'Vigilance'; color = '#c4a03a'
+    level = 'Vigilance'; color = 'var(--c-warn)'
     advice = ul.id === 'debutant'
       ? "Hausse rapide pour un profil débutant — ton corps a besoin de plus de temps pour s'adapter. Insère un jour de repos."
       : ul.id === 'confirme'
@@ -504,9 +504,9 @@ export function acwrRisk(db) {
 }
 
 function acwrLevelFor(ratio, ul) {
-  if (ratio < 0.8) return { level: 'Sous-charge', color: '#6f8a3a' }
-  if (ratio <= ul.acwrWarn) return { level: 'Zone optimale', color: '#4a8a6a' }
-  if (ratio <= ul.acwrAlert) return { level: 'Vigilance', color: '#c4a03a' }
+  if (ratio < 0.8) return { level: 'Sous-charge', color: 'var(--c-carb)' }
+  if (ratio <= ul.acwrWarn) return { level: 'Zone optimale', color: 'var(--c-success)' }
+  if (ratio <= ul.acwrAlert) return { level: 'Vigilance', color: 'var(--c-warn)' }
   return { level: 'Vigilance renforcée', color: '#c4503a' }
 }
 
@@ -627,7 +627,7 @@ export function globalScore(db, iso) {
 }
 
 // --- Stats d'entraînement (planning + historique d'exercices Supabase) ---
-const PALETTE = ['#e07b54', '#6f8a3a', '#4a8a6a', '#c4a03a', '#7a6fa5', '#4a8aa5', '#a5704a', '#9a7ab5', '#c4503a', '#5b8a72']
+const PALETTE = ['#e07b54', 'var(--c-carb)', 'var(--c-success)', 'var(--c-warn)', '#7a6fa5', '#4a8aa5', '#a5704a', '#9a7ab5', '#c4503a', 'var(--c-success)']
 function sportMeta(id) {
   const sp = SPORTS.find((s) => s.id === id)
   const idx = SPORTS.findIndex((s) => s.id === id)

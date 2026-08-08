@@ -138,12 +138,12 @@ function DiagRadar({ scores }) {
     const sc = scores[p.id] || 0
     const col = sc >= 70 ? p.col : sc >= 45 ? '#e07b39' : '#b5566a'
     return React.createElement('g', { key: 'lab' + i },
-      React.createElement('text', { x: lp[0].toFixed(1), y: (lp[1] - 5).toFixed(1), textAnchor: 'middle', dominantBaseline: 'middle', fontSize: '9', fontWeight: '700', fill: col }, p.label),
-      React.createElement('text', { x: lp[0].toFixed(1), y: (lp[1] + 7).toFixed(1), textAnchor: 'middle', dominantBaseline: 'middle', fontSize: '9', fontWeight: '800', fill: col }, sc + '/100'))
+      React.createElement('text', { x: lp[0].toFixed(1), y: (lp[1] - 5).toFixed(1), textAnchor: 'middle', dominantBaseline: 'middle', fontSize: '9', fontWeight: '700', style: { fill: col } }, p.label),
+      React.createElement('text', { x: lp[0].toFixed(1), y: (lp[1] + 7).toFixed(1), textAnchor: 'middle', dominantBaseline: 'middle', fontSize: '9', fontWeight: '800', style: { fill: col } }, sc + '/100'))
   })
   const tickLabels = [20, 40, 60, 80].map((v) => {
     const p = pt(2, v)
-    return React.createElement('text', { key: 'tick' + v, x: (p[0] + 4).toFixed(1), y: p[1].toFixed(1), fontSize: '7.5', fill: INK3, dominantBaseline: 'middle' }, v)
+    return React.createElement('text', { key: 'tick' + v, x: (p[0] + 4).toFixed(1), y: p[1].toFixed(1), fontSize: '7.5', dominantBaseline: 'middle', style: { fill: INK3 } }, v)
   })
   return React.createElement('svg', { viewBox: '0 0 240 240', width: '100%', style: { maxWidth: 260, display: 'block', margin: '0 auto' } },
     React.createElement('g', null, grids), React.createElement('g', null, tickLabels), React.createElement('g', null, axes),
@@ -795,7 +795,7 @@ function DiagTab({ db, store, onGoToJournal }) {
   const urgent = conseils.filter((c) => c.priority === 0)
   const attn = conseils.filter((c) => c.priority === 1 || c.priority === 2)
   const positifs = conseils.filter((c) => c.priority === 3)
-  const sCol = score >= 70 ? '#6f8a3a' : score >= 45 ? '#e07b39' : '#b5566a'
+  const sCol = score >= 70 ? 'var(--c-carb)' : score >= 45 ? '#e07b39' : '#b5566a'
   const sLab = score >= 70 ? 'Bon équilibre global' : score >= 45 ? "Des axes d'amélioration" : 'Points critiques'
   // Le score qu'on vient de sauvegarder est déjà dans diagHistory à ce stade
   // (saveScore a tourné avant ce rendu) : on compare donc à l'entrée d'avant,
@@ -813,7 +813,7 @@ function DiagTab({ db, store, onGoToJournal }) {
         React.createElement('div', null,
           React.createElement('div', { style: { fontFamily: FONT, fontSize: 17, fontWeight: 700, color: sCol, lineHeight: 1.25 } }, sLab),
           React.createElement('div', { style: { fontSize: 11.5, color: INK3, marginTop: 4 } }, urgent.length + ' urgent(s) · ' + attn.length + ' à améliorer · ' + positifs.length + ' acquis'),
-          prevDiff !== null && React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, marginTop: 5, color: prevDiff > 0 ? '#6f8a3a' : prevDiff < 0 ? '#b5566a' : INK3 } }, prevDiff > 0 ? '▲ +' + prevDiff + ' pts vs précédent' : prevDiff < 0 ? '▼ ' + prevDiff + ' pts vs précédent' : '= identique au précédent'))),
+          prevDiff !== null && React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, marginTop: 5, color: prevDiff > 0 ? 'var(--c-carb)' : prevDiff < 0 ? '#b5566a' : INK3 } }, prevDiff > 0 ? '▲ +' + prevDiff + ' pts vs précédent' : prevDiff < 0 ? '▼ ' + prevDiff + ' pts vs précédent' : '= identique au précédent'))),
       React.createElement(DiagRadar, { scores: piliers })),
     React.createElement(SecLab, null, 'Scores par pilier'),
     React.createElement('div', { style: { padding: '12px 14px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 12 } },
@@ -832,7 +832,7 @@ function DiagTab({ db, store, onGoToJournal }) {
       React.createElement(SecLab, null, 'Tes points forts (' + positifs.length + ')'),
       React.createElement('div', { style: { borderRadius: RADIUS_SM, border: `1px solid color-mix(in srgb, #6f8a3a 25%, ${LINE})`, overflow: 'hidden', marginBottom: 10 } },
         positifs.map((c, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: i === 0 ? 'none' : `1px solid ${LINE}`, background: `color-mix(in srgb, #6f8a3a 5%, ${SURFACE})` } },
-          React.createElement(Icon, { name: 'check', size: 14, color: '#6f8a3a' }),
+          React.createElement(Icon, { name: 'check', size: 14, color: 'var(--c-carb)' }),
           React.createElement('span', { style: { fontSize: 13.5, fontWeight: 600, color: INK } }, ' ' + c.title))))),
     React.createElement(SecLab, null, 'Tes ' + TOTAL + ' réponses'),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 12 } },
@@ -841,7 +841,7 @@ function DiagTab({ db, store, onGoToJournal }) {
         const opt = a ? q.options.find((o) => o.id === a) : null
         const pilier = PILIERS.find((p) => p.id === q.pilier)
         const sc = opt ? opt.score : null
-        const scCol = sc >= 7 ? '#6f8a3a' : sc >= 4 ? '#e07b39' : '#b5566a'
+        const scCol = sc >= 7 ? 'var(--c-carb)' : sc >= 4 ? '#e07b39' : '#b5566a'
         return React.createElement('div', { key: q.key, style: { padding: '8px 10px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}` } },
           React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
             React.createElement('div', { style: { fontSize: 9, fontWeight: 700, color: pilier ? pilier.col : INK3, textTransform: 'uppercase', letterSpacing: '.03em' } }, q.title),

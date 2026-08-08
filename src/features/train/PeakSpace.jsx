@@ -4,7 +4,7 @@ import { SPORTS } from './trainData'
 import { peakReadiness } from './renfoIntel'
 
 var PEAK_COLOR = '#a3526b';
-var PHASE_COLORS = { base: '#5b6fa5', build: '#bf6a40', taper: '#4a8a6a', today: '#a3526b', past: '#9c9489' };
+var PHASE_COLORS = { base: '#5b6fa5', build: '#bf6a40', taper: C.success, today: '#a3526b', past: '#9c9489' };
 var PHASE_LABELS = { base: 'Développement général', build: 'Développement spécifique', taper: 'Affûtage', today: 'Jour J', past: 'Terminé' };
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -592,7 +592,7 @@ function SignalsBlock(db, plan) {
   );
 }
 
-var FLAG_COLOR = { alert: '#c4503a', warn: '#c4a03a', info: PEAK_COLOR };
+var FLAG_COLOR = { alert: '#c4503a', warn: C.warn, info: PEAK_COLOR };
 
 // Analyse concrète, pas juste un compte à rebours : croise le plan
 // d'affûtage avec la charge réelle (ACWR), le respect effectif de la
@@ -601,7 +601,7 @@ var FLAG_COLOR = { alert: '#c4503a', warn: '#c4a03a', info: PEAK_COLOR };
 function ReadinessCard(db, plan) {
   if (!db || plan.phase === 'past' || plan.phase === 'today') return null;
   var r = peakReadiness(db, plan);
-  var scoreColor = r.score >= 75 ? '#4a8a6a' : r.score >= 50 ? '#c4a03a' : '#c4503a';
+  var scoreColor = r.score >= 75 ? C.success : r.score >= 50 ? C.warn : '#c4503a';
   return React.createElement('div', { style: { padding: 18, borderRadius: `${C.radiusSm}`, background: `${C.surface}`, border: `1px solid ${C.line}`, marginBottom: 18 } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: r.flags.length ? 12 : 0 } },
       React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: `${C.ink}` } }, 'Prêt pour le jour J ?'),

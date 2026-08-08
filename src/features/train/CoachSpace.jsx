@@ -6,8 +6,8 @@ import { coachGreeting, coachReply } from './coachChat'
 const COACH = '#534ab7'
 
 const GROUPS = [
-  { level: 'alert', label: 'À traiter en priorité', color: '#c46a3a' },
-  { level: 'warn', label: 'À surveiller', color: '#c4a03a' },
+  { level: 'alert', label: 'À traiter en priorité', color: C.danger },
+  { level: 'warn', label: 'À surveiller', color: C.warn },
   { level: 'info', label: 'Conseils', color: C.primary },
 ]
 
@@ -33,7 +33,7 @@ function AdviceTab({ db, onAction }) {
     recos.length === 0
       ? React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 20px', gap: 12 } },
         React.createElement('div', { style: { width: 56, height: 56, borderRadius: 999, background: 'color-mix(in srgb, #4a8a6a 16%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-          React.createElement(Icon, { name: 'check', size: 26, color: '#4a8a6a' })),
+          React.createElement(Icon, { name: 'check', size: 26, color: C.success })),
         React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16 } }, 'Rien à signaler'),
         React.createElement('p', { style: { fontSize: 13, color: C.ink3, maxWidth: 280, lineHeight: 1.4 } }, 'Aucune recommandation active selon tes données actuelles. Reviens après avoir renseigné plus d\'informations (sommeil, séances, tests) pour des conseils plus précis.'))
       : GROUPS.map((g) => {

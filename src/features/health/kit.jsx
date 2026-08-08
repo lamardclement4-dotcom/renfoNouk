@@ -6,26 +6,32 @@ import React from 'react'
 // on les fige ici en constantes littérales cohérentes avec le reste
 // (fond clair, surfaces blanches, accent bleu).
 // ============================================================
+// Les couleurs pointent vers des variables CSS plutôt que des valeurs
+// littérales : changer de thème revient alors à réécrire les variables sur
+// <html>, sans re-rendu ni refonte des composants (les styles en ligne
+// résolvent var() au moment du peinturage). Attention : var() ne se résout
+// PAS dans les attributs de présentation SVG — dans du SVG il faut passer
+// la couleur par `style`, jamais par `fill=`/`stroke=`.
 export const C = {
-  bg: '#f6f7f9',
-  surface: '#fff',
-  surface2: '#f1f3f6',
-  ink: '#111827',
-  ink2: '#5b6472',
-  ink3: '#98a1ae',
-  line: '#e8ebef',
-  primary: '#2d7ff9',
+  bg: 'var(--c-bg)',
+  surface: 'var(--c-surface)',
+  surface2: 'var(--c-surface2)',
+  ink: 'var(--c-ink)',
+  ink2: 'var(--c-ink2)',
+  ink3: 'var(--c-ink3)',
+  line: 'var(--c-line)',
+  primary: 'var(--c-primary)',
   // Accents sémantiques : chaque métrique garde la même couleur partout
   // (calories/série en orange, glucides et réussite en vert, lipides en
   // jaune), ce qui rend les anneaux lisibles sans légende.
-  accent: '#2d7ff9',
-  success: '#2fb865',
-  warn: '#f0b429',
-  danger: '#e5533d',
-  calorie: '#ff8a3d',
-  protein: '#2d7ff9',
-  carb: '#2fb865',
-  fat: '#f2b93b',
+  accent: 'var(--c-primary)',
+  success: 'var(--c-success)',
+  warn: 'var(--c-warn)',
+  danger: 'var(--c-danger)',
+  calorie: 'var(--c-calorie)',
+  protein: 'var(--c-protein)',
+  carb: 'var(--c-carb)',
+  fat: 'var(--c-fat)',
   radius: 22,
   radiusSm: 16,
   radiusXs: 12,
@@ -38,31 +44,125 @@ export const C = {
 }
 
 // Dégradés de fond par onglet : ce sont eux qui donnent son identité à
-// chaque écran (vert tendre sur Progrès, bleu sur l'accueil), le reste de
-// l'interface restant blanc et neutre.
+// chaque écran. Ils sont eux aussi pilotés par variables pour suivre le
+// thème (un dégradé clair sur fond sombre serait illisible).
 export const GRADIENTS = {
-  accueil: 'linear-gradient(180deg, #dbeafe 0%, #eef4fd 22%, #f6f7f9 46%)',
-  progres: 'linear-gradient(180deg, #d6f5e3 0%, #eaf8f0 22%, #f6f7f9 46%)',
-  entrainer: 'linear-gradient(180deg, #ffe8d6 0%, #fdf1e7 22%, #f6f7f9 46%)',
-  sante: 'linear-gradient(180deg, #e5e0fb 0%, #f0edfc 22%, #f6f7f9 46%)',
-  profil: 'linear-gradient(180deg, #e6eaf0 0%, #f0f2f6 22%, #f6f7f9 46%)',
+  accueil: 'var(--g-accueil)',
+  progres: 'var(--g-progres)',
+  entrainer: 'var(--g-entrainer)',
+  sante: 'var(--g-sante)',
+  profil: 'var(--g-profil)',
 }
 
-// Teintes par module (valeurs exactes de MODULE_TINTS de l'ancienne app).
+// ------------------------------------------------------------
+// Thèmes. Chacun redéfinit la palette complète ; `dark` sert à adapter ce
+// qui ne peut pas l'être par une simple couleur (barre d'état du système,
+// opacité des voiles). L'ordre de la liste est celui affiché dans Profil.
+// ------------------------------------------------------------
+const grad = (a, b, c) => `linear-gradient(180deg, ${a} 0%, ${b} 22%, ${c} 46%)`
+
+export const THEMES = [
+  {
+    id: 'clair', label: 'Clair', hint: 'Bleu, lumineux',
+    swatch: ['#2d7ff9', '#2fb865', '#ff8a3d'],
+    vars: {
+      '--c-bg': '#f6f7f9', '--c-surface': '#ffffff', '--c-surface2': '#f1f3f6',
+      '--c-ink': '#111827', '--c-ink2': '#5b6472', '--c-ink3': '#98a1ae', '--c-line': '#e8ebef',
+      '--c-primary': '#2d7ff9', '--c-success': '#2fb865', '--c-warn': '#f0b429', '--c-danger': '#e5533d',
+      '--c-calorie': '#ff8a3d', '--c-protein': '#2d7ff9', '--c-carb': '#2fb865', '--c-fat': '#f2b93b',
+      '--m-hydra': '#2e7d9e', '--m-sleep': '#4a6fa5', '--m-cycle': '#b5566a', '--m-mind': '#3f8f8a',
+      '--g-accueil': grad('#dbeafe', '#eef4fd', '#f6f7f9'),
+      '--g-progres': grad('#d6f5e3', '#eaf8f0', '#f6f7f9'),
+      '--g-entrainer': grad('#ffe8d6', '#fdf1e7', '#f6f7f9'),
+      '--g-sante': grad('#e5e0fb', '#f0edfc', '#f6f7f9'),
+      '--g-profil': grad('#e6eaf0', '#f0f2f6', '#f6f7f9'),
+    },
+  },
+  {
+    id: 'foret', label: 'Forêt', hint: 'Vert, apaisant',
+    swatch: ['#2f9e63', '#3f8f8a', '#e0913a'],
+    vars: {
+      '--c-bg': '#f5f8f5', '--c-surface': '#ffffff', '--c-surface2': '#eef4ef',
+      '--c-ink': '#14241c', '--c-ink2': '#546b5e', '--c-ink3': '#93a89b', '--c-line': '#e2ebe4',
+      '--c-primary': '#2f9e63', '--c-success': '#2f9e63', '--c-warn': '#d9a13c', '--c-danger': '#c9553f',
+      '--c-calorie': '#e0913a', '--c-protein': '#3f8f8a', '--c-carb': '#2f9e63', '--c-fat': '#d9a13c',
+      '--m-hydra': '#2f8f9e', '--m-sleep': '#4a6b8f', '--m-cycle': '#a8577a', '--m-mind': '#3f8f8a',
+      '--g-accueil': grad('#d5efdf', '#e8f5ec', '#f5f8f5'),
+      '--g-progres': grad('#cfeada', '#e4f2e9', '#f5f8f5'),
+      '--g-entrainer': grad('#f6e7d3', '#f2eee4', '#f5f8f5'),
+      '--g-sante': grad('#d8ecec', '#e7f3f2', '#f5f8f5'),
+      '--g-profil': grad('#e4ebe6', '#eef3ef', '#f5f8f5'),
+    },
+  },
+  {
+    id: 'couchant', label: 'Couchant', hint: 'Terracotta, chaleureux',
+    swatch: ['#c25a3f', '#b5566a', '#bd923f'],
+    vars: {
+      '--c-bg': '#faf8f5', '--c-surface': '#ffffff', '--c-surface2': '#f4f0ea',
+      '--c-ink': '#2b2320', '--c-ink2': '#6d5f58', '--c-ink3': '#a99a92', '--c-line': '#ece4dc',
+      '--c-primary': '#c25a3f', '--c-success': '#5b8a72', '--c-warn': '#bd923f', '--c-danger': '#b5566a',
+      '--c-calorie': '#d2703f', '--c-protein': '#a3526b', '--c-carb': '#5b8a72', '--c-fat': '#bd923f',
+      '--m-hydra': '#2e7d9e', '--m-sleep': '#4a6fa5', '--m-cycle': '#b5566a', '--m-mind': '#3f8f8a',
+      '--g-accueil': grad('#fbe3d4', '#f8ece2', '#faf8f5'),
+      '--g-progres': grad('#e6efe0', '#f0f2ea', '#faf8f5'),
+      '--g-entrainer': grad('#fadfd2', '#f7ebe2', '#faf8f5'),
+      '--g-sante': grad('#f4dfe4', '#f7eaed', '#faf8f5'),
+      '--g-profil': grad('#efe8e0', '#f5f0ea', '#faf8f5'),
+    },
+  },
+  {
+    id: 'nuit', label: 'Nuit', hint: 'Sombre, repose les yeux', dark: true,
+    swatch: ['#4c8dff', '#35c07a', '#ff9d4d'],
+    vars: {
+      '--c-bg': '#0e1117', '--c-surface': '#171b23', '--c-surface2': '#1f242e',
+      '--c-ink': '#eef1f6', '--c-ink2': '#a4adbb', '--c-ink3': '#727d8e', '--c-line': '#272d38',
+      '--c-primary': '#4c8dff', '--c-success': '#35c07a', '--c-warn': '#e8bd52', '--c-danger': '#f2684f',
+      '--c-calorie': '#ff9d4d', '--c-protein': '#4c8dff', '--c-carb': '#35c07a', '--c-fat': '#e8bd52',
+      '--m-hydra': '#3fa9c9', '--m-sleep': '#7b93e0', '--m-cycle': '#e0709a', '--m-mind': '#4fb8b0',
+      '--g-accueil': grad('#17233a', '#131a26', '#0e1117'),
+      '--g-progres': grad('#132a20', '#111d18', '#0e1117'),
+      '--g-entrainer': grad('#2a1d13', '#1d1712', '#0e1117'),
+      '--g-sante': grad('#1f1a2e', '#171522', '#0e1117'),
+      '--g-profil': grad('#161a21', '#12151b', '#0e1117'),
+    },
+  },
+]
+
+export const DEFAULT_THEME = 'clair'
+export const THEME_KEY = 'renfo:theme'
+
+// Écrit la palette du thème sur <html>. Appelée au démarrage puis à chaque
+// changement dans Profil ; un id inconnu retombe sur le thème par défaut
+// pour qu'une valeur périmée en base ne laisse pas l'interface sans
+// couleurs.
+export function applyTheme(id) {
+  const t = THEMES.find((x) => x.id === id) || THEMES.find((x) => x.id === DEFAULT_THEME)
+  const root = document.documentElement
+  for (const [k, v] of Object.entries(t.vars)) root.style.setProperty(k, v)
+  root.style.colorScheme = t.dark ? 'dark' : 'light'
+  root.dataset.theme = t.id
+  return t.id
+}
+
+// Teintes par module. Elles réutilisent les rôles d'accent déjà définis
+// (un module de récupération est vert comme la réussite, la nutrition
+// verte comme les glucides…) et n'introduisent que les quatre teintes qui
+// n'avaient pas d'équivalent, pour que chaque thème reste léger à décrire
+// tout en gardant les modules distinguables.
 export const MODULE_TINTS = {
-  mobilite: '#6f8fa6',
-  renfo: '#bf6a40',
-  fullbody: '#bd923f',
-  plyo: '#a85a36',
-  recup: '#5b8a72',
-  nutrition: '#6f8a3a',
-  hydratation: '#2e7d9e',
-  sommeil: '#4a6fa5',
-  prevention: '#5f7d8c',
-  cycle: '#b5566a',
-  esprit: '#3f8f8a',
-  complements: '#b8934a',
-  danger: '#b5566a',
+  mobilite: 'var(--c-protein)',
+  renfo: 'var(--c-calorie)',
+  fullbody: 'var(--c-fat)',
+  plyo: 'var(--c-danger)',
+  recup: 'var(--c-success)',
+  nutrition: 'var(--c-carb)',
+  hydratation: 'var(--m-hydra)',
+  sommeil: 'var(--m-sleep)',
+  prevention: 'var(--c-ink2)',
+  cycle: 'var(--m-cycle)',
+  esprit: 'var(--m-mind)',
+  complements: 'var(--c-warn)',
+  danger: 'var(--c-danger)',
 }
 
 // ------------------------------------------------------------
@@ -331,9 +431,12 @@ export function Ring({ size = 250, stroke = 12, progress = 0, track = C.surface2
   const r = (size - stroke) / 2
   const circ = 2 * Math.PI * r
   return React.createElement('div', { style: { position: 'relative', width: size, height: size, flex: '0 0 auto', animation: pulse ? 'ringPulse 3s ease-in-out infinite' : 'none' } },
+    // Les couleurs passent par `style` et non par l'attribut `stroke` :
+    // les attributs de présentation SVG ne résolvent pas var(), et toute
+    // la palette est désormais en variables CSS (thèmes).
     React.createElement('svg', { width: size, height: size, style: { transform: 'rotate(-90deg)' } },
-      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: track, strokeWidth: stroke }),
-      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', stroke: color, strokeWidth: stroke, strokeLinecap: 'round', strokeDasharray: circ, strokeDashoffset: circ * (1 - Math.max(0, Math.min(1, progress))), style: { transition: 'stroke-dashoffset .4s linear' } })),
+      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', strokeWidth: stroke, style: { stroke: track } }),
+      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', strokeWidth: stroke, strokeLinecap: 'round', strokeDasharray: circ, strokeDashoffset: circ * (1 - Math.max(0, Math.min(1, progress))), style: { stroke: color, transition: 'stroke-dashoffset .4s linear' } })),
     React.createElement('div', { style: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }, children))
 }
 
