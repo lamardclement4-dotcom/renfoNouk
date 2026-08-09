@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card, BigStat, Bar, SegPills, isoToday } from '../health/kit'
 import { weightAnalysis, weightSeries, trendLine, dayDiff } from './weightIntel'
+import ScaleImport from './ScaleImport'
+import { METRICS } from './scaleOcr'
 
 const h = React.createElement
 
@@ -88,12 +90,14 @@ export default function WeightSpace({ db, store, onClose }) {
   // La pesée fait autorité sur le poids du profil : sans cette
   // synchronisation, les cibles nutrition et hydratation resteraient
   // figées sur la valeur d'inscription.
-  function saveWeight(kg, dateISO) {
+  // `extra` porte la composition corporelle issue d'une balance connectée
+  // (masse grasse, muscle, eau…) ; une saisie manuelle n'en a pas.
+  function saveWeight(kg, dateISO, extra) {
     const v = Math.round(Number(kg) * 10) / 10
     if (!(v > 0)) return
     const date = dateISO || isoToday()
     const next = (db.weightLog || []).filter((e) => e && e.date !== date)
-    next.push({ date, kg: v })
+    next.push({ date, kg: v, ...(extra || {}) })
     next.sort((a, b) => a.date.localeCompare(b.date))
     const patch = { weightLog: next.slice(-1000) }
     if (date === next[next.length - 1].date) {
@@ -181,10 +185,41 @@ export default function WeightSpace({ db, store, onClose }) {
           h('span', { style: { fontSize: 12, color: C.ink2, fontWeight: 600 } }, a.bmi.label))
         : h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 10 } }, 'Renseigne ta taille dans le profil pour afficher l’IMC.')),
 
+    // ─── Composition corporelle ─────────────────────────────────
+    // Affichée seulement si une balance en a fourni : une saisie manuelle
+    // ne contient que le poids, une carte vide n'aurait rien à dire.
+    (() => {
+      const withBody = a.series.filter((e) => METRICS.some((m) => m.key !== 'kg' && e[m.key] != null))
+      if (!withBody.length) return null
+      const last = withBody[withBody.length - 1]
+      const prev = withBody.length > 1 ? withBody[withBody.length - 2] : null
+      const shown = METRICS.filter((m) => m.key !== 'kg' && last[m.key] != null)
+      return h(Card, { style: { marginBottom: 12 } },
+        h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 } },
+          h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16 } }, 'Composition corporelle'),
+          h('span', { style: { fontSize: 11.5, color: C.ink3 } }, fmtShort(last.date))),
+        shown.map((m, i) => {
+          const before = prev && prev[m.key] != null ? prev[m.key] : null
+          const d = before != null ? Math.round((last[m.key] - before) * 10) / 10 : null
+          // Moins de gras et plus de muscle vont dans le bon sens : la
+          // couleur du delta dépend donc de la mesure, pas de son signe.
+          const better = d == null || d === 0 ? null : (m.key === 'fatPct' || m.key === 'visceral' || m.key === 'metabolicAge') ? d < 0 : d > 0
+          return h('div', { key: m.key, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
+            h('span', { style: { flex: 1, fontSize: 13.5, color: C.ink2 } }, m.label),
+            d != null && d !== 0 && h('span', { style: { fontSize: 12, fontWeight: 700, color: better ? C.success : C.danger } }, signed(d, m.decimals)),
+            h('span', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 800 } }, last[m.key].toFixed(m.decimals),
+              m.unit && h('span', { style: { fontSize: 11, color: C.ink3, fontWeight: 600, marginLeft: 2 } }, m.unit)))
+        }))
+    })(),
+
     // ─── Actions ────────────────────────────────────────────────
     h('div', { style: { display: 'flex', gap: 10, marginBottom: 16 } },
       h('button', { onClick: () => setSheet({ kind: 'weigh' }), style: { flex: 1, padding: 14, borderRadius: 999, background: C.primary, color: '#fff', fontWeight: 800, fontSize: 14.5, border: 'none', cursor: 'pointer', boxShadow: `0 12px 24px -14px ${C.primary}` } }, 'Me peser'),
       h('button', { onClick: () => setSheet({ kind: 'goal' }), style: { flex: 1, padding: 14, borderRadius: 999, background: C.surface, color: C.ink2, fontWeight: 700, fontSize: 14.5, border: `1.5px solid ${C.line}`, cursor: 'pointer' } }, goal > 0 ? 'Modifier l’objectif' : 'Définir un objectif')),
+
+    h('button', { onClick: () => setSheet({ kind: 'import' }), style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, width: '100%', marginBottom: 16, padding: 13, borderRadius: 999, background: C.surface, border: `1.5px dashed ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14, cursor: 'pointer' } },
+      h(Icon, { name: 'plus', size: 17, color: C.primary }),
+      'Importer une capture de ma balance'),
 
     // ─── Historique ─────────────────────────────────────────────
     hasData && h(Card, null,
@@ -204,7 +239,13 @@ export default function WeightSpace({ db, store, onClose }) {
             h('span', { style: { fontSize: 11, color: C.ink3, fontWeight: 600, marginLeft: 2 } }, 'kg')))
       })),
 
-    sheet && h(WeightSheet, {
+    sheet && sheet.kind === 'import' && h(ScaleImport, {
+      defaultDate: isoToday(),
+      onClose: () => setSheet(null),
+      onSave: ({ date, kg, ...rest }) => saveWeight(kg, date, rest),
+    }),
+
+    sheet && sheet.kind !== 'import' && h(WeightSheet, {
       sheet,
       fallback: a.count ? a.current : 70,
       goal,

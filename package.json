@@ -13,7 +13,8 @@
     "@supabase/supabase-js": "^2.110.7",
     "dexie": "^4.4.4",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
