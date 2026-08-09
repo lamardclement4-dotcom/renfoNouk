@@ -7,6 +7,8 @@ import PhysicalTestsSpace, { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import SleepSpace from '../health/Sleep'
 import HealthHome from '../health/HealthHome'
 import { HealthScoreCard, PeakHomeCard } from './cards'
+import WeightSpace from '../profil/WeightSpace'
+import { weightAnalysis } from '../profil/weightIntel'
 
 // Pilliers/recos renvoient soit un id pilier générique (hydration, load…)
 // soit déjà l'id d'espace Santé en français (hydratation, sommeil…) — le
@@ -48,6 +50,34 @@ function WeekPicker({ offset, setOffset }) {
           onClick: () => { setOffset(wk); setOpen(false) },
           style: { display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: wk === offset ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: wk === offset ? 700 : 500, color: wk === offset ? C.primary : C.ink },
         }, wk === 0 ? 'Cette semaine' : fmtWeekLabel(new Date(thisMonday.getTime() + wk * 7 * 86400000)))))))
+}
+
+// Raccourci du suivi de poids sur Progrès : tendance lissée, rythme
+// hebdomadaire et avancement vers l'objectif. Invite à démarrer quand
+// aucune pesée n'existe, plutôt que de rester une carte vide.
+function WeightCard({ db, onOpen }) {
+  const a = weightAnalysis(db.weightLog, { goal: Number(db.weightGoal) || 0, heightCm: Number((db.profilePhys || {}).taille) || 0 })
+  const goal = Number(db.weightGoal) || 0
+  const col = a.rate == null || Math.abs(a.rate) < 0.05 ? C.ink2 : a.rate < 0 ? C.success : C.calorie
+  return h('button', {
+    onClick: onOpen,
+    style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: C.shadowSm, marginBottom: 14, cursor: 'pointer', font: 'inherit', color: 'inherit' },
+  },
+    h('div', { style: { width: 44, height: 44, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      h(Icon, { name: 'chart', size: 21, color: C.primary })),
+    h('div', { style: { flex: 1, minWidth: 0 } },
+      h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3 } }, 'Suivi du poids'),
+      a.count
+        ? h(React.Fragment, null,
+          h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 } },
+            h('span', { style: { fontFamily: C.font, fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' } }, a.smoothed.toFixed(1)),
+            h('span', { style: { fontSize: 12, color: C.ink3, fontWeight: 700 } }, 'kg'),
+            a.rate != null && h('span', { style: { fontSize: 12, fontWeight: 700, color: col, marginLeft: 4 } },
+              (a.rate > 0 ? '+' : a.rate < 0 ? '−' : '') + Math.abs(a.rate).toFixed(2) + ' kg/sem.')),
+          h('div', { style: { fontSize: 12, color: C.ink3, marginTop: 2 } },
+            a.progress != null ? `${a.progress} % de l’objectif (${goal.toFixed(1)} kg)` : `${a.count} pesée${a.count > 1 ? 's' : ''} enregistrée${a.count > 1 ? 's' : ''}`))
+        : h('div', { style: { fontSize: 13, color: C.ink3, marginTop: 3 } }, 'Enregistre ta première pesée')),
+    h(Icon, { name: 'arrow', size: 18, color: C.ink3, style: { flex: '0 0 auto' } }))
 }
 
 function sectionTitle(txt, action) {
@@ -104,6 +134,9 @@ export default function ProgressSpace({ userId, onClose }) {
 
   if (flow === 'mobility' || flow === 'program' || flow === 'planner' || flow === 'peak' || flow === 'recovery') {
     return h(TrainSpace, { userId, initialTile: flow, embedded: true, onClose: () => setFlow(null) })
+  }
+  if (flow === 'weight') {
+    return h(WeightSpace, { db, store, onClose: () => setFlow(null) })
   }
   if (flow === 'tests') {
     return h(PhysicalTestsSpace, { userId, onClose: () => setFlow(null) })
@@ -359,6 +392,7 @@ export default function ProgressSpace({ userId, onClose }) {
             h('span', { style: { fontSize: 8.5, color: C.ink3, fontWeight: 600 } }, WEEK_DAYS[k])))),
         h('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 8 } }, 'Record ', db.record, ' j'))),
 
+    h(WeightCard, { db, onOpen: () => setFlow('weight') }),
     h(PeakHomeCard, { db, onPeak: () => setFlow('peak') }),
     h(HealthScoreCard, { db, onAction: handleAction }),
 
