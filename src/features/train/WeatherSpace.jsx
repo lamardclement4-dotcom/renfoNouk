@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card, isoToday } from '../health/kit'
 import { WEATHER_FIELDS, parseWeatherText } from './weatherOcr'
-import { weatherAdvice, adjustPace, fmtPace } from './weatherIntel'
+import { weatherAdvice, adjustPace, fmtPace, ENVIRONMENTS, DEFAULT_ENV, envInfo, SUN_OPTIONS, PRECIP_OPTIONS, AIRFLOW_OPTIONS } from './weatherIntel'
 
 const h = React.createElement
 
@@ -25,16 +25,29 @@ export default function WeatherSpace({ db, store, onClose }) {
     return o
   })
   const [mins, setMins] = useState(60)
+  const [environment, setEnvironment] = useState(() => (saved && saved.environment) || DEFAULT_ENV)
+  const [choices, setChoices] = useState(() => ({
+    sun: (saved && saved.sun) || 'variable',
+    precip: (saved && saved.precip) || 'sec',
+    airflow: (saved && saved.airflow) || 'aucun',
+  }))
+  const env = envInfo(environment)
+  // Les champs dépendent du lieu : le vent et les UV n'ont pas de sens en
+  // salle, la température de l'eau n'en a qu'en piscine.
+  const visibleFields = WEATHER_FIELDS.filter((f) =>
+    f.envs === 'all' || (f.envs === 'outdoor' && env.outdoor) || (f.envs === 'water' && env.water))
   const [phase, setPhase] = useState('idle') // idle | reading
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState(null)
   const [rejected, setRejected] = useState([])
 
-  const conditions = {}
-  for (const f of WEATHER_FIELDS) {
+  const conditions = { environment }
+  for (const f of visibleFields) {
     const n = parseFloat(String(fields[f.key] ?? '').replace(',', '.'))
     if (Number.isFinite(n)) conditions[f.key] = n
   }
+  if (env.outdoor) { conditions.sun = choices.sun; conditions.precip = choices.precip }
+  if (!env.outdoor) conditions.airflow = choices.airflow
   const advice = weatherAdvice(conditions, { sessionMins: mins })
 
   async function handleFile(file) {
@@ -82,6 +95,21 @@ export default function WeatherSpace({ db, store, onClose }) {
     onClose,
     bg: 'entrainer',
   },
+    // ─── Lieu ───────────────────────────────────────────────────
+    // Premier choix de l'écran : il commande les champs pertinents et le
+    // ton des conseils.
+    h(Card, { style: { marginBottom: 12 } },
+      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 10 } }, 'Où t’entraînes-tu ?'),
+      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
+        ENVIRONMENTS.map((e) => {
+          const on = e.id === environment
+          return h('button', {
+            key: e.id,
+            onClick: () => setEnvironment(e.id),
+            style: { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: on ? '#fff' : C.ink2, background: on ? C.primary : C.surface, border: `1px solid ${on ? C.primary : C.line}` },
+          }, h(Icon, { name: e.icon, size: 15, color: on ? '#fff' : C.ink3 }), e.label)
+        }))),
+
     // ─── Import ─────────────────────────────────────────────────
     h(Card, { style: { marginBottom: 12 } },
       phase === 'reading'
@@ -108,7 +136,7 @@ export default function WeatherSpace({ db, store, onClose }) {
     // ─── Saisie ─────────────────────────────────────────────────
     h(Card, { style: { marginBottom: 12 } },
       h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 6 } }, 'Conditions'),
-      WEATHER_FIELDS.map((f, i) => h('label', { key: f.key, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
+      visibleFields.map((f, i) => h('label', { key: f.key, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
         h('span', { style: { flex: 1, fontSize: 13.5, fontWeight: 600, color: conditions[f.key] != null ? C.ink : C.ink3 } }, f.label),
         h('input', {
           type: 'number', inputMode: 'decimal', placeholder: '—',
@@ -117,6 +145,20 @@ export default function WeatherSpace({ db, store, onClose }) {
           style: { width: 82, textAlign: 'right', padding: '8px 10px', borderRadius: C.radiusXs, border: `1.5px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' },
         }),
         h('span', { style: { width: 36, fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, f.unit)))),
+
+    // ─── Choix qualitatifs ──────────────────────────────────────
+    h(Card, { style: { marginBottom: 12 } },
+      env.outdoor
+        ? h(React.Fragment, null,
+          h(ChoiceRow, { label: 'Ensoleillement', options: SUN_OPTIONS, value: choices.sun, onChange: (v) => setChoices((c) => ({ ...c, sun: v })) }),
+          h(ChoiceRow, { label: 'Précipitations', options: PRECIP_OPTIONS, value: choices.precip, onChange: (v) => setChoices((c) => ({ ...c, precip: v })), divider: true }))
+        : h(ChoiceRow, {
+          label: 'Circulation d’air',
+          hint: env.stationary ? 'Sur engin fixe, c’est le facteur le plus déterminant : sans flux d’air, la chaleur ne s’évacue pas.' : null,
+          options: AIRFLOW_OPTIONS,
+          value: choices.airflow,
+          onChange: (v) => setChoices((c) => ({ ...c, airflow: v })),
+        })),
 
     // ─── Adaptation ─────────────────────────────────────────────
     advice
@@ -127,7 +169,8 @@ export default function WeatherSpace({ db, store, onClose }) {
               h(Icon, { name: advice.risk.level === 'ok' ? 'check' : 'alert', size: 22, color: riskCol })),
             h('div', { style: { flex: 1, minWidth: 0 } },
               h('div', { style: { fontWeight: 800, fontSize: 15.5, color: riskCol } }, advice.risk.label),
-              h('div', { style: { fontSize: 12.5, color: C.ink2, marginTop: 2 } }, 'Ressenti ', advice.feels, ' °C'))),
+              h('div', { style: { fontSize: 12.5, color: C.ink2, marginTop: 2 } }, 'Ressenti à l’effort ', advice.feels, ' °C',
+                advice.dewPoint != null ? ` · point de rosée ${advice.dewPoint} °C` : ''))),
 
           h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 } },
             [
@@ -166,4 +209,20 @@ export default function WeatherSpace({ db, store, onClose }) {
       onClick: save,
       style: { width: '100%', padding: 15, borderRadius: 999, background: advice ? C.primary : C.surface2, color: advice ? '#fff' : C.ink3, fontWeight: 800, fontSize: 15, border: 'none', cursor: advice ? 'pointer' : 'default' },
     }, saved ? 'Mettre à jour les conditions du jour' : 'Enregistrer les conditions du jour'))
+}
+
+// Ligne de choix : un libellé, une aide optionnelle, et des pastilles.
+function ChoiceRow({ label, hint, options, value, onChange, divider }) {
+  return h('div', { style: { paddingTop: divider ? 12 : 0, marginTop: divider ? 12 : 0, borderTop: divider ? `1px solid ${C.line}` : 'none' } },
+    h('div', { style: { fontSize: 13, fontWeight: 700, marginBottom: hint ? 4 : 8 } }, label),
+    hint && h('div', { style: { fontSize: 11.5, color: C.ink3, lineHeight: 1.4, marginBottom: 8 } }, hint),
+    h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7 } },
+      options.map((o) => {
+        const on = o.id === value
+        return h('button', {
+          key: o.id,
+          onClick: () => onChange(o.id),
+          style: { padding: '8px 13px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', color: on ? '#fff' : C.ink2, background: on ? C.primary : C.surface, border: `1px solid ${on ? C.primary : C.line}` },
+        }, o.label)
+      })))
 }

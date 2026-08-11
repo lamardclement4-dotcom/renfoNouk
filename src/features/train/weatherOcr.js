@@ -11,18 +11,28 @@
 // ============================================================
 
 export const WEATHER_FIELDS = [
-  { key: 'tempC', label: 'Température', unit: '°C', min: -50, max: 60, decimals: 0,
-    patterns: [/temp[ée]rature/, /\btemp\b/] },
-  { key: 'humidity', label: 'Humidité', unit: '%', min: 0, max: 100, decimals: 0,
+  // « Température ressentie » ne doit pas être lue comme la température
+  // réelle : le libellé le plus spécifique l'emporte, d'où l'exclusion.
+  { key: 'tempC', label: 'Température', unit: '°C', min: -50, max: 60, decimals: 0, envs: 'all',
+    patterns: [/temp[ée]rature/, /\btemp\b/], exclude: /ressenti|feels\s*like|apparent|eau|water/ },
+  { key: 'feelsLikeC', label: 'Ressenti', unit: '°C', min: -60, max: 70, decimals: 0, envs: 'outdoor',
+    patterns: [/ressenti/, /feels\s*like/, /apparent/] },
+  { key: 'humidity', label: 'Humidité', unit: '%', min: 0, max: 100, decimals: 0, envs: 'all',
     patterns: [/humidit[ée]/, /humidity/] },
-  { key: 'windKmh', label: 'Vent', unit: 'km/h', min: 0, max: 200, decimals: 0,
-    patterns: [/\bvent\b/, /\bwind\b/, /rafales?/] },
-  { key: 'uv', label: 'Indice UV', unit: '', min: 0, max: 15, decimals: 0,
+  { key: 'windKmh', label: 'Vent', unit: 'km/h', min: 0, max: 200, decimals: 0, envs: 'outdoor',
+    patterns: [/\bvent\b/, /\bwind\b/] },
+  { key: 'gustKmh', label: 'Rafales', unit: 'km/h', min: 0, max: 250, decimals: 0, envs: 'outdoor',
+    patterns: [/rafales?/, /\bgusts?\b/] },
+  { key: 'uv', label: 'Indice UV', unit: '', min: 0, max: 15, decimals: 0, envs: 'outdoor',
     patterns: [/indice\s*uv/, /\buv\b/] },
-  { key: 'aqi', label: 'Qualité de l’air', unit: '', min: 0, max: 500, decimals: 0,
+  { key: 'aqi', label: 'Qualité de l’air', unit: '', min: 0, max: 500, decimals: 0, envs: 'outdoor',
     patterns: [/qualit[ée]\s*(de\s*l.?)?air/, /\baqi\b/, /air\s*quality/] },
-  { key: 'altitudeM', label: 'Altitude', unit: 'm', min: 0, max: 9000, decimals: 0,
+  { key: 'pressure', label: 'Pression', unit: 'hPa', min: 850, max: 1100, decimals: 0, envs: 'outdoor',
+    patterns: [/pression/, /pressure/] },
+  { key: 'altitudeM', label: 'Altitude', unit: 'm', min: 0, max: 9000, decimals: 0, envs: 'outdoor',
     patterns: [/altitude/, /\belevation\b/] },
+  { key: 'waterTempC', label: 'Température de l’eau', unit: '°C', min: 0, max: 45, decimals: 0, envs: 'water',
+    patterns: [/temp[ée]rature\s*(de\s*l.?)?eau/, /water\s*temp/] },
 ]
 
 export function normLine(s) {
@@ -60,6 +70,7 @@ export function parseWeatherText(raw) {
     const norm = normLine(lines[i])
     for (const f of WEATHER_FIELDS) {
       if (values[f.key] !== undefined) continue
+      if (f.exclude && f.exclude.test(norm)) continue
       if (!f.patterns.some((p) => p.test(norm))) continue
       let source = norm
       let v = parseNumber(norm.replace(/[a-z°/%]+/g, ' '))
@@ -68,7 +79,7 @@ export function parseWeatherText(raw) {
         v = parseNumber(source.replace(/[a-z°/%]+/g, ' '))
       }
       if (v == null) { rejected.push({ key: f.key, label: f.label, reason: 'valeur illisible' }); continue }
-      if (f.key === 'tempC') v = toCelsius(v, source)
+      if (f.key === 'tempC' || f.key === 'feelsLikeC' || f.key === 'waterTempC') v = toCelsius(v, source)
       if (v < f.min || v > f.max) { rejected.push({ key: f.key, label: f.label, reason: `valeur hors plage (${v})` }); continue }
       values[f.key] = Math.round(v)
     }
