@@ -174,6 +174,9 @@ export function useNutritionStore(userId) {
     // Suivi du poids : historique des pesées ({date, kg}) et poids visé.
     weightLog: phys.weightLog || [],
     weightGoal: phys.weightGoal || null,
+    // Conditions météo par jour, pour adapter la charge et relire
+    // après coup dans quelles conditions une séance a été faite.
+    weatherLog: phys.weatherLog || {},
     // Thème choisi, pour le retrouver d'un appareil à l'autre.
     theme: phys.theme || null,
     streak: phys.streak || 0,

@@ -20,6 +20,7 @@ import { SPORTS } from './trainData'
 import { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
+import { feelsLike, extraHydrationMlPerHour } from './weatherIntel'
 
 function num(v, def) { const n = Number(v); return Number.isFinite(n) ? n : (def || 0) }
 function round(v) { return Math.round(v) }
@@ -40,8 +41,13 @@ export function hydricTargetMl(db) {
   const rate = sp.intensite === 'leger' ? 400 : sp.intensite === 'intense' ? 800 : 600
   let base = 30 * weightKg(db)
   const effort = num(sp.min, 0) / 60 * rate
-  if (sp.climat === 'chaud') base *= 1.1
-  return round((base + effort) / 50) * 50
+  // Conditions relevées du jour : elles priment sur le réglage manuel
+  // « climat chaud », qui reste le repli quand aucune météo n'est saisie.
+  const wx = (db.weatherLog || {})[todayISO()]
+  const feels = wx ? feelsLike(wx) : null
+  const extra = feels != null ? extraHydrationMlPerHour(feels) * (num(sp.min, 0) / 60) : 0
+  if (feels == null && sp.climat === 'chaud') base *= 1.1
+  return round((base + effort + extra) / 50) * 50
 }
 
 export function hydroDay(db, iso) {

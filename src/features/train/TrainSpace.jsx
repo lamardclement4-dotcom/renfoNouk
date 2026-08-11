@@ -13,6 +13,7 @@ import PliometrieSpace from './PliometrieSpace'
 import CoachSpace from './CoachSpace'
 import PeakSpace from './PeakSpace'
 import PlannerSpace from './PlannerSpace'
+import WeatherSpace from './WeatherSpace'
 import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
 import HealthHome from '../health/HealthHome'
 
@@ -38,7 +39,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   // les cartes du Coach et son chat pour ouvrir directement le bon module.
   // 'session:<id>' ouvre l'écran Detail d'une séance précise (le check
   // openId passe avant les tiles, donc ça marche depuis le Coach aussi).
-  const ENTRAINER_ACTIONS = new Set(['mobility', 'program', 'planner', 'recovery', 'peak', 'tests'])
+  const ENTRAINER_ACTIONS = new Set(['mobility', 'program', 'planner', 'recovery', 'peak', 'tests', 'weather'])
   function handleCoachAction(action) {
     if (!action) return
     if (action.startsWith('session:')) { setOpenId(action.slice(8)); return }
@@ -85,6 +86,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   if (tile === 'peak') return React.createElement(PeakSpace, { db, store, onClose: backToHub, onMobility: () => setTile('mobility'), onProgram: () => setTile('program'), onRecovery: () => setTile('recovery'), onTests: () => setTile('tests'), onNutrition: () => setHealthTile('nutrition'), onCycle: () => setHealthTile('cycle') })
   if (tile === 'tests') return React.createElement(PhysicalTestsSpace, { userId, onClose: backToHub })
   if (tile === 'planner') return React.createElement(PlannerSpace, { db, store, onClose: backToHub })
+  if (tile === 'weather') return React.createElement(WeatherSpace, { db, store, onClose: backToHub })
 
   const tiles = [
     { ic: 'target', tint: MODULE_TINTS.mobilite, lab: 'Test de mobilité', sub: db.mobility ? `Score : ${db.mobility.score}/100` : '9 questions', on: 'mobility' },
@@ -98,6 +100,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
     { ic: 'calendar', tint: '#7d9471', lab: 'Calendrier', sub: "Organise ta semaine d'entraînement", on: 'planner' },
     { ic: 'target', tint: '#5b6fa5', lab: 'Tests physiques', sub: null, on: 'tests' },
     { ic: 'spark', tint: '#534ab7', lab: 'Coach', sub: 'Recommandations', on: 'coach' },
+    { ic: 'wave', tint: MODULE_TINTS.hydratation, lab: 'Conditions', sub: 'Météo · adaptation de la charge', on: 'weather' },
     { ic: 'target', tint: '#a3526b', lab: 'Pic de forme', sub: db.peakGoals && db.peakGoals.length ? `${db.peakGoals.length} objectif${db.peakGoals.length > 1 ? 's' : ''} programmé${db.peakGoals.length > 1 ? 's' : ''}` : 'Programme tes échéances', on: 'peak' },
   ]
 
