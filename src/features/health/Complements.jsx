@@ -37,10 +37,32 @@ const COMPS = {
 const ALL_COMPS = [...COMPS.A.items, ...COMPS.B.items, ...COMPS.C.items]
 const COMP_BY_ID = Object.fromEntries(ALL_COMPS.map((c) => [c.id, c]))
 
+const navBtn = { width: 38, height: 38, borderRadius: 999, flex: '0 0 auto', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
+
+// Décale une date ISO d'un nombre de jours, en UTC pur : construire la
+// date en heure locale puis repasser par toISOString décale d'un jour dans
+// les fuseaux en avance sur UTC.
+function shiftISO(iso, delta) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const x = new Date(Date.UTC(y, m - 1, d))
+  x.setUTCDate(x.getUTCDate() + delta)
+  return x.toISOString().slice(0, 10)
+}
+
+function fmtDay(iso) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const label = new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
 function ComplementsTab({ db, store }) {
   const [grp, setGrp] = useState('A')
   const [q, setQ] = useState('')
-  const day = isoToday()
+  // Les prises sont déjà stockées par date : il ne manquait que la
+  // navigation pour rattraper un oubli de la veille ou relire une semaine.
+  const [day, setDay] = useState(isoToday())
+  const today = isoToday()
+  const isToday = day === today
   const plan = db.suppPlan || []
   const taken = (db.suppTaken || {})[day] || []
   const g = COMPS[grp]
@@ -59,6 +81,21 @@ function ComplementsTab({ db, store }) {
   const query = q.trim().toLowerCase()
   const results = query ? ALL_COMPS.filter((c) => (c.n + ' ' + c.e).toLowerCase().includes(query)) : []
   const planItems = plan.map((id) => COMP_BY_ID[id]).filter(Boolean)
+
+  // Bandeau des sept jours autour de la date affichée (lundi → dimanche),
+  // avec le nombre de prises de chaque jour : les oublis se repèrent d'un
+  // coup d'œil sans ouvrir chaque journée.
+  const weekStrip = (() => {
+    const [y, m, d] = day.split('-').map(Number)
+    const ref = new Date(Date.UTC(y, m - 1, d))
+    const monday = shiftISO(day, -(((ref.getUTCDay() + 6) % 7)))
+    const letters = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+    return letters.map((letter, i) => {
+      const iso = shiftISO(monday, i)
+      const count = ((db.suppTaken || {})[iso] || []).length
+      return { iso, letter, count, future: iso > today, pct: planItems.length ? Math.min(1, count / planItems.length) : 0 }
+    })
+  })()
 
   const SuppCard = (it) => {
     const sel = inPlan(it.id)
@@ -99,15 +136,45 @@ function ComplementsTab({ db, store }) {
             ? React.createElement('div', { style: { fontSize: 13, color: C.ink2, padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface2, lineHeight: 1.5 } }, 'Aucun complément documenté ne correspond. Seuls les compléments avec des données (dose, preuve) sont proposés.')
             : React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } }, results.map((it) => SuppCard(it))))
       : React.createElement(React.Fragment, null,
+          // Navigation de date : flèches jour par jour, retour direct à
+          // aujourd'hui, et bandeau de semaine pour repérer les oublis.
+          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 } },
+            React.createElement('button', { onClick: () => setDay(shiftISO(day, -1)), 'aria-label': 'Jour précédent', style: navBtn }, React.createElement(Icon, { name: 'back', size: 17 })),
+            React.createElement('div', { style: { flex: 1, textAlign: 'center', minWidth: 0 } },
+              React.createElement('div', { style: { fontWeight: 700, fontSize: 14.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, isToday ? 'Aujourd’hui' : fmtDay(day)),
+              !isToday && React.createElement('button', { onClick: () => setDay(today), style: { background: 'none', border: 'none', color: SUPP, fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '2px 0 0' } }, 'Revenir à aujourd’hui')),
+            React.createElement('button', {
+              onClick: () => { if (!isToday) setDay(shiftISO(day, 1)) },
+              disabled: isToday, 'aria-label': 'Jour suivant',
+              style: { ...navBtn, opacity: isToday ? 0.35 : 1, cursor: isToday ? 'default' : 'pointer' },
+            }, React.createElement(Icon, { name: 'next', size: 17 }))),
+
+          planItems.length > 0 && React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 14 } },
+            weekStrip.map((w) => React.createElement('button', {
+              key: w.iso,
+              onClick: () => setDay(w.iso),
+              style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', padding: 0, cursor: 'pointer' },
+            },
+              React.createElement('span', { style: { fontSize: 10.5, fontWeight: 700, color: w.iso === day ? SUPP : C.ink3 } }, w.letter),
+              React.createElement('span', {
+                style: {
+                  width: '100%', height: 26, borderRadius: 8,
+                  border: w.iso === day ? `2px solid ${SUPP}` : `1px solid ${C.line}`,
+                  background: w.pct > 0 ? `color-mix(in srgb, ${SUPP} ${Math.round(w.pct * 70) + 15}%, ${C.surface})` : C.surface,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10.5, fontWeight: 700, color: w.pct >= 0.6 ? '#fff' : C.ink3,
+                },
+              }, w.future ? '' : w.count)))),
+
           React.createElement('div', { style: { padding: '15px 16px', borderRadius: C.radius, background: `color-mix(in srgb, ${SUPP} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${SUPP} 28%, ${C.line})`, marginBottom: 18 } },
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 9, marginBottom: planItems.length ? 12 : 0 } },
               React.createElement(Icon, { name: 'calendar', size: 20, color: SUPP }),
               React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16 } }, 'Mon plan de prise'),
               planItems.length > 0 && React.createElement('span', { style: { marginLeft: 'auto' } }, React.createElement(Pill, { tint: SUPP }, taken.length + '/' + planItems.length))),
             planItems.length === 0
-              ? React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 8, lineHeight: 1.5 } }, 'Coche « Ajouter au plan » sur les compléments que tu prends : ils se rangent ici avec une coche « pris aujourd’hui ».')
+              ? React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 8, lineHeight: 1.5 } }, 'Coche « Ajouter au plan » sur les compléments que tu prends : ils se rangent ici avec une coche de prise, jour par jour.')
               : React.createElement(React.Fragment, null,
-                  React.createElement('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Pris aujourd’hui'),
+                  React.createElement('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, isToday ? 'Pris aujourd’hui' : 'Pris ce jour-là'),
                   React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 } },
                     planItems.map((it) => {
                       const t = taken.includes(it.id)
