@@ -203,13 +203,16 @@ export function extraHydrationMlPerHour(feels) {
 }
 
 // ─── Synthèse ────────────────────────────────────────────────
-export function weatherAdvice(conditions, { sessionMins = 60 } = {}) {
+export function weatherAdvice(conditions, { sessionMins = 60, acclimation } = {}) {
   const c = conditions || {}
   const env = envInfo(c.environment)
   const feels = effectiveTemp(c)
   if (feels == null) return null
 
-  const heat = heatPenalty(feels)
+  // L'acclimatation atténue la pénalité thermique : après une dizaine de
+  // jours d'exposition, la même chaleur pèse nettement moins.
+  const rawHeat = heatPenalty(feels)
+  const heat = acclimation && acclimation.factor != null ? Math.round(rawHeat * acclimation.factor) : rawHeat
   const alt = env.outdoor ? altitudePenalty(c.altitudeM) : 0
   const wind = env.outdoor ? windPenalty(c.windKmh) : 0
   const water = env.water ? waterPenalty(c.waterTempC) : 0
@@ -259,10 +262,11 @@ export function weatherAdvice(conditions, { sessionMins = 60 } = {}) {
     if (w != null && w > 29) tips.push('Eau chaude : sur les séries longues la chaleur ne s’évacue plus, bois entre les séries malgré la sensation de fraîcheur.')
   }
 
+  if (rawHeat > heat) tips.push(`Ton acclimatation ramène la pénalité de ${rawHeat} % à ${heat} % — l’exposition répétée paie.`)
   if (!tips.length) tips.push('Rien à ajuster : les conditions se prêtent à une séance normale.')
 
   const volumeCut = effort >= 20 ? Math.min(30, Math.round(effort * 0.6)) : 0
-  return { feels, heat, alt, wind, water, effort, volumeCut, risk, hydration, tips, dewPoint: dp, dewVerdict: dpVerdict, env }
+  return { feels, heat, rawHeat, acclimation: acclimation || null, alt, wind, water, effort, volumeCut, risk, hydration, tips, dewPoint: dp, dewVerdict: dpVerdict, env }
 }
 
 export function adjustPace(secPerKm, effortPct) {
@@ -282,4 +286,55 @@ export function fmtPace(secPerKm) {
 // encore feelsLike sur des conditions sans lieu explicite.
 export function feelsLike(c) {
   return effectiveTemp(c || {})
+}
+
+// ============================================================
+// Acclimatation et charge pondérée.
+// ============================================================
+
+// L'organisme s'adapte à la chaleur : volume plasmatique en hausse,
+// sudation plus précoce et moins salée. L'essentiel se joue en une dizaine
+// de jours d'exposition répétée. Un coureur habitué à s'entraîner à 30 °C
+// ne subit pas la même pénalité qu'un autre qui découvre la canicule, et
+// ignorer cette différence rendrait le conseil faux pour les deux.
+export const ACCLIM_WINDOW_DAYS = 14
+export const ACCLIM_MAX_REDUCTION = 0.4
+
+export function heatAcclimation(weatherLog, refDate = new Date()) {
+  const log = weatherLog || {}
+  const end = new Date(refDate); end.setHours(0, 0, 0, 0)
+  let days = 0
+  for (let i = 0; i < ACCLIM_WINDOW_DAYS; i++) {
+    const d = new Date(end); d.setDate(end.getDate() - i)
+    const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    const c = log[iso]
+    if (!c) continue
+    const feels = effectiveTemp(c)
+    if (feels != null && feels >= 25) days++
+  }
+  // Progression linéaire jusqu'à dix jours d'exposition, puis plateau.
+  const ratio = Math.min(1, days / 10)
+  return { days, factor: 1 - ACCLIM_MAX_REDUCTION * ratio, ratio }
+}
+
+export function acclimationLabel(acc) {
+  if (!acc || acc.days === 0) return { level: 'none', text: 'Aucune exposition récente à la chaleur : la pénalité s’applique pleinement.' }
+  if (acc.ratio >= 1) return { level: 'full', text: `${acc.days} jours d’exposition sur ${ACCLIM_WINDOW_DAYS} : tu es acclimaté, la pénalité est réduite d’environ ${Math.round(ACCLIM_MAX_REDUCTION * 100)} %.` }
+  return { level: 'partial', text: `${acc.days} jour${acc.days > 1 ? 's' : ''} d’exposition sur ${ACCLIM_WINDOW_DAYS} : acclimatation en cours, pénalité réduite d’environ ${Math.round(ACCLIM_MAX_REDUCTION * acc.ratio * 100)} %.` }
+}
+
+// Coefficient de charge : une heure à 33 °C sollicite davantage qu'une
+// heure à 15 °C. Le multiplicateur permet de compter des « minutes
+// équivalentes » dans le suivi de charge, plutôt que des minutes brutes
+// qui sous-estimeraient l'effort réel fourni en conditions difficiles.
+export function loadMultiplier(conditions, { acclimation } = {}) {
+  const c = conditions || {}
+  const feels = effectiveTemp(c)
+  if (feels == null) return 1
+  const env = envInfo(c.environment)
+  let pct = heatPenalty(feels)
+  if (acclimation && acclimation.factor != null) pct *= acclimation.factor
+  if (env.outdoor) pct += altitudePenalty(c.altitudeM) + windPenalty(c.windKmh)
+  if (env.water) pct += waterPenalty(c.waterTempC)
+  return Math.round((1 + Math.min(45, pct) / 100) * 100) / 100
 }

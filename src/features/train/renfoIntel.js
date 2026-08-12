@@ -20,7 +20,7 @@ import { SPORTS } from './trainData'
 import { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
-import { feelsLike, extraHydrationMlPerHour } from './weatherIntel'
+import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 
 function num(v, def) { const n = Number(v); return Number.isFinite(n) ? n : (def || 0) }
 function round(v) { return Math.round(v) }
@@ -454,6 +454,12 @@ export function acwrRisk(db) {
   const sessions = db.planningSessions || []
   const now = new Date(); now.setHours(0, 0, 0, 0)
   const nowMs = now.getTime()
+  // Charge pondérée par les conditions : une heure à 33 °C sollicite plus
+  // qu'une heure à 15 °C. Compter des minutes brutes sous-estimerait
+  // l'effort réel et laisserait passer une montée de charge dangereuse
+  // pendant une canicule. L'acclimatation atténue la pondération.
+  const weather = db.weatherLog || {}
+  const acclim = heatAcclimation(weather, now)
   function minsInWindow(daysBack) {
     const startMs = nowMs - daysBack * 86400000
     let sum = 0
@@ -461,9 +467,10 @@ export function acwrRisk(db) {
       if (!s || s.statut !== 'realise' || !s.date) continue
       const t = new Date(s.date + 'T00:00:00').getTime()
       if (t > nowMs || t <= startMs) continue
-      sum += dureeToMins(s.duree)
+      const c = weather[s.date]
+      sum += dureeToMins(s.duree) * (c ? loadMultiplier(c, { acclimation: acclim }) : 1)
     }
-    return sum
+    return Math.round(sum)
   }
   const hasAny = sessions.some((s) => s && s.statut === 'realise' && s.date)
   if (!hasAny) return { available: false, reason: 'no_data' }

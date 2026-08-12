@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card, isoToday } from '../health/kit'
 import { WEATHER_FIELDS, parseWeatherText } from './weatherOcr'
-import { weatherAdvice, adjustPace, fmtPace, ENVIRONMENTS, DEFAULT_ENV, envInfo, SUN_OPTIONS, PRECIP_OPTIONS, AIRFLOW_OPTIONS } from './weatherIntel'
+import { weatherAdvice, adjustPace, fmtPace, ENVIRONMENTS, DEFAULT_ENV, envInfo, SUN_OPTIONS, PRECIP_OPTIONS, AIRFLOW_OPTIONS, heatAcclimation, acclimationLabel, effectiveTemp, loadMultiplier } from './weatherIntel'
 
 const h = React.createElement
 
@@ -16,14 +16,27 @@ const RISK_COLOR = { ok: C.success, moderate: C.warn, high: C.calorie, danger: C
 
 const DURATIONS = [30, 45, 60, 90, 120]
 
+function fmtDay(iso) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+}
+
 export default function WeatherSpace({ db, store, onClose }) {
-  const today = isoToday()
-  const saved = (db.weatherLog || {})[today] || null
-  const [fields, setFields] = useState(() => {
+  // La date est modifiable : on note souvent les conditions après coup, et
+  // une séance passée doit pouvoir être documentée.
+  const [date, setDate] = useState(isoToday())
+  const saved = (db.weatherLog || {})[date] || null
+  const [fields, setFields] = useState({})
+  const [loadedFor, setLoadedFor] = useState(null)
+
+  // Recharge le formulaire quand on change de date, sans écraser une
+  // saisie en cours sur la même date.
+  if (loadedFor !== date) {
     const o = {}
     if (saved) for (const f of WEATHER_FIELDS) if (saved[f.key] != null) o[f.key] = String(saved[f.key])
-    return o
-  })
+    setFields(o)
+    setLoadedFor(date)
+  }
   const [mins, setMins] = useState(60)
   const [environment, setEnvironment] = useState(() => (saved && saved.environment) || DEFAULT_ENV)
   const [choices, setChoices] = useState(() => ({
@@ -31,6 +44,8 @@ export default function WeatherSpace({ db, store, onClose }) {
     precip: (saved && saved.precip) || 'sec',
     airflow: (saved && saved.airflow) || 'aucun',
   }))
+  const acclim = heatAcclimation(db.weatherLog, new Date())
+  const acclimText = acclimationLabel(acclim)
   const env = envInfo(environment)
   // Les champs dépendent du lieu : le vent et les UV n'ont pas de sens en
   // salle, la température de l'eau n'en a qu'en piscine.
@@ -48,7 +63,7 @@ export default function WeatherSpace({ db, store, onClose }) {
   }
   if (env.outdoor) { conditions.sun = choices.sun; conditions.precip = choices.precip }
   if (!env.outdoor) conditions.airflow = choices.airflow
-  const advice = weatherAdvice(conditions, { sessionMins: mins })
+  const advice = weatherAdvice(conditions, { sessionMins: mins, acclimation: acclim })
 
   async function handleFile(file) {
     if (!file) return
@@ -79,8 +94,8 @@ export default function WeatherSpace({ db, store, onClose }) {
   }
 
   function save() {
-    if (!Object.keys(conditions).length) return
-    store.set({ weatherLog: { ...(db.weatherLog || {}), [today]: { ...conditions, date: today } } })
+    if (!advice) return
+    store.set({ weatherLog: { ...(db.weatherLog || {}), [date]: { ...conditions, date } } })
   }
 
   // Allure de référence du profil, s'il en a une : sert à montrer
@@ -95,6 +110,24 @@ export default function WeatherSpace({ db, store, onClose }) {
     onClose,
     bg: 'entrainer',
   },
+    // ─── Date ───────────────────────────────────────────────────
+    h(Card, { style: { marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 } },
+      h('span', { style: { flex: 1, fontSize: 13.5, fontWeight: 600 } }, 'Date'),
+      h('input', {
+        type: 'date', value: date, max: isoToday(),
+        onChange: (e) => e.target.value && setDate(e.target.value),
+        style: { padding: '9px 11px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none' },
+      })),
+
+    // ─── Acclimatation ──────────────────────────────────────────
+    // Adaptation physiologique réelle : après une dizaine de jours
+    // d'exposition, la même chaleur pèse nettement moins.
+    acclim.days > 0 && h(Card, { style: { marginBottom: 12, display: 'flex', gap: 11 } },
+      h(Icon, { name: 'flame', size: 19, color: C.calorie, style: { flexShrink: 0, marginTop: 2 } }),
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        h('div', { style: { fontWeight: 700, fontSize: 14 } }, 'Acclimatation à la chaleur'),
+        h('div', { style: { fontSize: 12.5, color: C.ink2, marginTop: 3, lineHeight: 1.45 } }, acclimText.text))),
+
     // ─── Lieu ───────────────────────────────────────────────────
     // Premier choix de l'écran : il commande les champs pertinents et le
     // ton des conseils.
@@ -208,7 +241,33 @@ export default function WeatherSpace({ db, store, onClose }) {
       disabled: !advice,
       onClick: save,
       style: { width: '100%', padding: 15, borderRadius: 999, background: advice ? C.primary : C.surface2, color: advice ? '#fff' : C.ink3, fontWeight: 800, fontSize: 15, border: 'none', cursor: advice ? 'pointer' : 'default' },
-    }, saved ? 'Mettre à jour les conditions du jour' : 'Enregistrer les conditions du jour'))
+    }, saved ? 'Mettre à jour ces conditions' : 'Enregistrer ces conditions'),
+
+    // ─── Historique ─────────────────────────────────────────────
+    (() => {
+      const entries = Object.values(db.weatherLog || {})
+        .filter((c) => c && c.date)
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 20)
+      if (!entries.length) return null
+      return h(Card, { style: { marginTop: 14 } },
+        h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 4 } }, 'Historique'),
+        h('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 8 } }, 'Touche une ligne pour la reprendre.'),
+        entries.map((c, i) => {
+          const f = effectiveTemp(c)
+          const mult = loadMultiplier(c, { acclimation: acclim })
+          const e = envInfo(c.environment)
+          return h('button', {
+            key: c.date,
+            onClick: () => setDate(c.date),
+            style: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 0', background: 'none', border: 'none', borderTop: i ? `1px solid ${C.line}` : 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit', color: 'inherit' },
+          },
+            h(Icon, { name: e.icon, size: 15, color: C.ink3, style: { flexShrink: 0 } }),
+            h('span', { style: { flex: 1, minWidth: 0, fontSize: 13, color: C.ink2 } }, fmtDay(c.date), ' · ', e.label),
+            f != null && h('span', { style: { fontSize: 13, fontWeight: 700 } }, f, ' °C'),
+            mult > 1 && h('span', { style: { fontSize: 11.5, fontWeight: 700, color: C.calorie, minWidth: 42, textAlign: 'right' } }, '×', mult.toFixed(2)))
+        }))
+    })())
 }
 
 // Ligne de choix : un libellé, une aide optionnelle, et des pastilles.
