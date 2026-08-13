@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SpaceBanner, SecLab, NoteBox, Pill, Choice, isoToday } from './kit'
+import { detectInteractions, slotConflicts, personalDose, groupBySlot, adherenceBySupp, cureStatus } from './suppIntel'
 
 const SUPP = MODULE_TINTS.complements
 
@@ -85,6 +86,11 @@ function ComplementsTab({ db, store }) {
   // Bandeau des sept jours autour de la date affichée (lundi → dimanche),
   // avec le nombre de prises de chaque jour : les oublis se repèrent d'un
   // coup d'œil sans ouvrir chaque journée.
+  const weightKg = Number((db.profilePhys || {}).poids) || 0
+  const interactions = detectInteractions(plan)
+  const sameSlot = new Set(slotConflicts(plan).map((i) => i.a + '|' + i.b))
+  const adherence = adherenceBySupp(plan, db.suppTaken, { days: 14, today })
+
   const weekStrip = (() => {
     const [y, m, d] = day.split('-').map(Number)
     const ref = new Date(Date.UTC(y, m - 1, d))
@@ -175,19 +181,73 @@ function ComplementsTab({ db, store }) {
               ? React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 8, lineHeight: 1.5 } }, 'Coche « Ajouter au plan » sur les compléments que tu prends : ils se rangent ici avec une coche de prise, jour par jour.')
               : React.createElement(React.Fragment, null,
                   React.createElement('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, isToday ? 'Pris aujourd’hui' : 'Pris ce jour-là'),
-                  React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 } },
-                    planItems.map((it) => {
-                      const t = taken.includes(it.id)
-                      return React.createElement('button', { key: it.id, onClick: () => toggleTaken(it.id), style: { display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: C.radiusSm, border: `1px solid ${C.line}`, background: C.surface, cursor: 'pointer' } },
-                        React.createElement('span', { style: { width: 24, height: 24, borderRadius: 999, flex: '0 0 auto', border: '2px solid ' + (t ? SUPP : C.line), background: t ? SUPP : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, t && React.createElement(Icon, { name: 'check', size: 14, color: '#fff' })),
-                        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                          React.createElement('div', { style: { fontWeight: 600, fontSize: 14 } }, it.n),
-                          React.createElement('div', { style: { fontSize: 12, color: C.ink3 } }, it.m)))
-                    })),
+                  // Regroupé par moment de la journée : une liste à plat ne
+                  // dit pas quoi prendre maintenant, alors que c'est la
+                  // seule question au moment de cocher.
+                  React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+                    groupBySlot(planItems).map((g) => React.createElement('div', { key: g.id },
+                      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 } },
+                        React.createElement(Icon, { name: g.icon, size: 13, color: SUPP }),
+                        React.createElement('span', { style: { fontSize: 12, fontWeight: 700, color: C.ink2 } }, g.label)),
+                      React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 } },
+                        g.items.map((it) => {
+                          const t = taken.includes(it.id)
+                          const dose = personalDose(it.id, weightKg)
+                          return React.createElement('button', { key: it.id, onClick: () => toggleTaken(it.id), style: { display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: C.radiusSm, border: `1px solid ${C.line}`, background: C.surface, cursor: 'pointer' } },
+                            React.createElement('span', { style: { width: 24, height: 24, borderRadius: 999, flex: '0 0 auto', border: '2px solid ' + (t ? SUPP : C.line), background: t ? SUPP : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, t && React.createElement(Icon, { name: 'check', size: 14, color: '#fff' })),
+                            React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                              React.createElement('div', { style: { fontWeight: 600, fontSize: 14 } }, it.n),
+                              React.createElement('div', { style: { fontSize: 12, color: C.ink3 } }, dose ? dose.text + ' pour toi' : it.m)))
+                        }))))),
                   React.createElement('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '14px 0 8px' } }, 'Rythme des cures'),
                   React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
                     planItems.map((x) => React.createElement('div', { key: x.id, style: { fontSize: 13, color: C.ink2, lineHeight: 1.4 } }, React.createElement('strong', { style: { color: C.ink } }, x.n), ' — ', x.cure))),
                   React.createElement('button', { onClick: () => store.set({ suppPlan: [] }), style: { width: '100%', marginTop: 12, padding: 12, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Vider le plan'))),
+
+          // ─── Interactions ─────────────────────────────────────
+          // Le catalogue signalait « à distance du fer » dans un texte que
+          // personne ne rapproche du reste du plan. Ici les paires
+          // réellement présentes sont confrontées.
+          interactions.length > 0 && React.createElement('div', { style: { marginBottom: 18 } },
+            React.createElement(SecLab, null, 'Interactions de ton plan'),
+            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+              interactions.map((i, k) => {
+                const col = i.kind === 'synergy' ? '#2fb865' : i.severity === 'high' ? C.danger : i.severity === 'moderate' ? C.warn : C.ink3
+                const both = sameSlot.has(i.a + '|' + i.b)
+                const na = (COMP_BY_ID[i.a] || {}).n || i.a
+                const nb = (COMP_BY_ID[i.b] || {}).n || i.b
+                return React.createElement('div', { key: k, style: { display: 'flex', gap: 10, padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${col} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${col} 26%, ${C.line})` } },
+                  React.createElement(Icon, { name: i.kind === 'synergy' ? 'check' : 'alert', size: 16, color: col, style: { flexShrink: 0, marginTop: 2 } }),
+                  React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                    React.createElement('div', { style: { fontSize: 13, fontWeight: 700, marginBottom: 3 } }, na, ' + ', nb,
+                      i.kind === 'debated' ? React.createElement('span', { style: { fontSize: 11, fontWeight: 600, color: C.ink3, marginLeft: 6 } }, '· débattu') : null),
+                    React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } }, i.text),
+                    both && React.createElement('div', { style: { fontSize: 11.5, fontWeight: 700, color: col, marginTop: 4 } }, 'Tous deux rangés au même moment de la journée : décale l’un des deux.')))
+              })),
+            React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 8, lineHeight: 1.45, fontStyle: 'italic' } },
+              'Repères d’absorption d’usage courant, pas un avis médical.')),
+
+          // ─── Observance par complément ────────────────────────
+          // Le taux global masque le détail : on peut être à 80 % en
+          // oubliant toujours le même produit, ce qui est l'information
+          // utile.
+          adherence.length > 0 && React.createElement('div', { style: { marginBottom: 18 } },
+            React.createElement(SecLab, null, 'Observance sur 14 jours'),
+            React.createElement('div', { style: { background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, padding: '4px 14px' } },
+              adherence.map((r, k) => {
+                const it = COMP_BY_ID[r.id]
+                if (!it) return null
+                const cure = cureStatus(r.id, db.suppTaken, today)
+                const col = r.pct >= 80 ? '#2fb865' : r.pct >= 50 ? C.warn : C.danger
+                return React.createElement('div', { key: r.id, style: { padding: '11px 0', borderTop: k ? `1px solid ${C.line}` : 'none' } },
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+                    React.createElement('span', { style: { flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.n),
+                    React.createElement('span', { style: { fontSize: 11.5, color: C.ink3 } }, r.taken, '/', r.days, ' j'),
+                    React.createElement('span', { style: { fontFamily: C.font, fontSize: 14.5, fontWeight: 800, color: col, minWidth: 42, textAlign: 'right' } }, r.pct, ' %')),
+                  React.createElement('div', { style: { width: '100%', height: 5, borderRadius: 999, background: C.surface2, overflow: 'hidden', marginTop: 6 } },
+                    React.createElement('div', { style: { width: r.pct + '%', height: '100%', borderRadius: 999, background: col } })),
+                  cure && cure.flag && React.createElement('div', { style: { fontSize: 11.5, color: cure.flag.level === 'warn' ? C.warn : C.ink3, marginTop: 5, lineHeight: 1.4 } }, cure.flag.text))
+              }))),
 
           React.createElement(Choice, { tint: SUPP, value: grp, set: setGrp, options: [{ id: 'A', lab: 'Performance' }, { id: 'B', lab: 'Récup' }, { id: 'C', lab: 'Santé' }] }),
           React.createElement('div', { style: { height: 14 } }),
