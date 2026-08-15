@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, isoToday } from './kit'
+import { sleepAnalysis, BASE_NEED } from './sleepIntel'
+import { rolling7Mins } from '../train/renfoIntel'
 
 const SLEEP_COL = MODULE_TINTS.sommeil
 
@@ -134,6 +136,64 @@ function fmtDay(iso) {
   const days = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.']
   return days[dd.getDay()] + ' ' + (+p[2]) + ' ' + MONTHS[+p[1] - 1]
 }
+// Un bandeau chiffré + son commentaire. Le chiffre seul ne dit pas quoi
+// en faire, d'où la phrase qui l'accompagne systématiquement.
+function AnaRow({ label, value, hint, color }) {
+  return React.createElement('div', { style: { padding: '11px 0', borderBottom: `1px solid ${C.line}` } },
+    React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 } },
+      React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: C.ink2 } }, label),
+      React.createElement('div', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 800, color: color || C.ink, flex: '0 0 auto' } }, value)),
+    hint ? React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 4, lineHeight: 1.45 } }, hint) : null)
+}
+
+// Ce que quatorze nuits disent et qu'une nuit isolée ne peut pas dire :
+// la dispersion des durées, l'écart semaine / week-end, et l'effet des
+// séances sur la nuit qui suit.
+function AnalysisBlock({ ana }) {
+  if (!ana.nights) return null
+  const reg = ana.regularity
+  const cu = ana.catchUp
+  const at = ana.afterTraining
+  const lvlColor = (l) => (l === 'alert' ? '#c4503a' : l === 'warn' ? C.warn : C.success)
+  const rows = []
+  if (reg) {
+    rows.push(React.createElement(AnaRow, {
+      key: 'reg', label: 'Régularité des durées', color: lvlColor(reg.level),
+      value: '± ' + reg.sd.toFixed(1).replace('.', ',') + ' h',
+      hint: reg.text,
+    }))
+  }
+  if (cu) {
+    rows.push(React.createElement(AnaRow, {
+      key: 'cu', label: 'Semaine vs week-end', color: cu.flagged ? C.warn : C.ink,
+      value: String(cu.weekday).replace('.', ',') + ' h → ' + String(cu.weekend).replace('.', ',') + ' h',
+      hint: cu.flagged
+        ? `Tu dors ${String(cu.gap).replace('.', ',')} h de plus le week-end : le besoin est présent toute la semaine, c’est l’occasion de dormir qui manque en semaine.`
+        : 'Durées comparables en semaine et le week-end : pas de restriction à rattraper.',
+    }))
+  }
+  if (at) {
+    rows.push(React.createElement(AnaRow, {
+      key: 'at', label: 'Nuit après une séance', color: at.flagged ? C.warn : C.ink,
+      value: String(at.afterTraining).replace('.', ',') + ' h vs ' + String(at.afterRest).replace('.', ',') + ' h',
+      hint: at.flagged
+        ? `Tu dors ${String(Math.abs(at.diff)).replace('.', ',')} h de moins après une séance (${at.nightsAfter} nuits comparées). Regarde l’horaire de tes séances tardives et la caféine en fin de journée.`
+        : `Les séances ne dégradent pas ta nuit (${at.nightsAfter} nuits comparées).`,
+    }))
+  }
+  if (!rows.length && !ana.tips) return null
+  return React.createElement('div', { style: { borderRadius: 14, padding: '14px 16px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}` } },
+    React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 2 } }, 'Analyse sur 14 jours'),
+    rows.length ? rows : React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, padding: '8px 0' } }, 'Encore trop peu de nuits enregistrées pour analyser la régularité — compte au moins trois nuits.'),
+    (ana.tips || []).length ? React.createElement('div', { style: { marginTop: 12 } },
+      (ana.tips || []).map((t, i) => React.createElement('div', {
+        key: i,
+        style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: i ? 8 : 0 },
+      },
+        React.createElement('span', { style: { color: SLEEP_COL, fontWeight: 800, flex: '0 0 auto' } }, '•'),
+        React.createElement('span', null, t)))) : null)
+}
+
 function HistoryTab({ db, store }) {
   const log = db.sleepLog || {}
   const dates = Object.keys(log).filter((d) => log[d] && log[d].hours).sort().reverse()
@@ -147,9 +207,15 @@ function HistoryTab({ db, store }) {
   const avgH = recent.reduce((a, d) => a + (log[d].hours || 0), 0) / recent.length
   const qs = recent.filter((d) => log[d].quality)
   const avgQ = qs.length ? qs.reduce((a, d) => a + log[d].quality, 0) / qs.length : null
-  const SLEEP_REF = 8
-  const debtTotal = recent.reduce((a, d) => a + Math.max(0, SLEEP_REF - (log[d].hours || 0)), 0)
-  const debtLabel = Math.floor(debtTotal) + ' h' + (Math.round((debtTotal % 1) * 60) ? ' ' + Math.round((debtTotal % 1) * 60) : '')
+  // La dette est calculée sur la quinzaine glissante, et contre un besoin
+  // relevé par le volume d'entraînement : comparer un athlète en grosse
+  // semaine à une norme fixe de huit heures masquerait son déficit réel.
+  const weeklyMins = rolling7Mins(db)
+  const ana = sleepAnalysis(db, { days: 14, today: isoToday(), weeklyTrainingMins: weeklyMins })
+  const need = ana.need || BASE_NEED
+  const debtTotal = ana.debt ? ana.debt.net : 0
+  const debtLabel = (debtTotal <= 0 ? '0' : Math.floor(debtTotal)) + ' h'
+    + (debtTotal > 0 && Math.round((debtTotal % 1) * 60) ? ' ' + Math.round((debtTotal % 1) * 60) : '')
   const debtLevel = debtTotal < 3 ? 'faible' : debtTotal < 8 ? 'modérée' : 'élevée'
   const debtColor = debtTotal < 3 ? C.success : debtTotal < 8 ? C.warn : '#c4503a'
   const effList = recent.map((d) => Math.max(60, 100 - (log[d].awakenings || 0) * 12))
@@ -175,7 +241,7 @@ function HistoryTab({ db, store }) {
       React.createElement('div', { style: { flex: 1, borderRadius: 14, padding: '14px 16px', background: `color-mix(in srgb, ${debtColor} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${debtColor} 28%, ${C.line})` } },
         React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 } }, 'Dette de sommeil'),
         React.createElement('div', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 22, color: debtColor } }, debtLabel),
-        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3 } }, 'Cumul · ' + debtLevel)),
+        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3 } }, '14 j · ' + debtLevel + ' · besoin ' + need + ' h')),
       React.createElement('div', { style: { flex: 1, borderRadius: 14, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}` } },
         React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 } }, 'Efficacité estimée'),
         React.createElement('div', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 22, color: C.ink } }, avgEff + ' %'),
@@ -187,6 +253,7 @@ function HistoryTab({ db, store }) {
       React.createElement('div', { style: { flex: 1, borderRadius: 14, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}` } },
         React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 } }, 'Qualité moy.'),
         React.createElement('div', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 24, color: C.ink } }, avgQ != null ? Math.round(avgQ * 10) / 10 + ' / 5' : '—'))),
+    React.createElement(AnalysisBlock, { ana }),
     React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 } }, recent.length + ' dernière' + (recent.length > 1 ? 's' : '') + ' nuit' + (recent.length > 1 ? 's' : '')),
     React.createElement('div', { style: { maxHeight: 280, overflowY: 'auto' } },
       recent.map((d) => {

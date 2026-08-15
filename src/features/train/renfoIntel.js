@@ -21,6 +21,7 @@ import { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
+import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 
 function num(v, def) { const n = Number(v); return Number.isFinite(n) ? n : (def || 0) }
 function round(v) { return Math.round(v) }
@@ -90,6 +91,31 @@ export function dureeToMins(duree) {
   if (DUREE_MINS[duree]) return DUREE_MINS[duree]
   const n = parseInt(duree, 10)
   return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+// Minutes d'entraînement sur les sept derniers jours glissants.
+// weekRetro() raisonne en semaine calendaire, ce qui fait tomber le volume
+// à zéro le lundi matin alors que la charge de la veille pèse encore sur
+// la récupération. La fenêtre glissante donne la charge réellement subie.
+export function rolling7Mins(db, today) {
+  const ref = today || todayISO()
+  const from = (() => {
+    const [y, m, d] = ref.split('-').map(Number)
+    const x = new Date(Date.UTC(y, m - 1, d))
+    x.setUTCDate(x.getUTCDate() - 6)
+    return x.toISOString().slice(0, 10)
+  })()
+  const inRange = (d) => d >= from && d <= ref
+  let mins = 0
+  for (const s of (db && db.planningSessions) || []) {
+    if (!s || s.statut !== 'realise' || !s.date || !inRange(s.date)) continue
+    mins += dureeToMins(s.duree)
+  }
+  for (const e of (db && db.sessionLog) || []) {
+    if (!e || !e.date || !inRange(e.date)) continue
+    mins += num(e.mins, 0)
+  }
+  return mins
 }
 
 export function mondayOf(d) {
@@ -376,7 +402,21 @@ export function pillarSleep(db) {
   } else if (aw === 1) {
     detail += ' · 1 réveil'
   }
-  return { id: 'sleep', label: 'Sommeil', score, status: 'ok', detail, extra: { hours: h, quality: s.quality || null, awakenings: aw } }
+  // Une bonne nuit isolée ne solde pas une semaine de restriction : la
+  // dette accumulée sur la quinzaine pèse aussi sur le score, sans quoi le
+  // pilier afficherait 100 au lendemain de six nuits à cinq heures.
+  const series = sleepSeries(db.sleepLog, { days: 14, today: todayISO() })
+  const need = neededHours(rolling7Mins(db))
+  const debt = sleepDebt(series, need)
+  let debtPen = 0
+  if (debt && series.length >= 4 && debt.net > 2) {
+    debtPen = round(clamp((debt.net - 2) * 2, 0, 20))
+    score = round(clamp(score - debtPen, 0, 100))
+    // Le besoin relevé par la charge doit être dit, sinon une pénalité
+    // tombant sur des nuits de huit heures paraît arbitraire.
+    detail += ` · dette ${debt.net} h sur ${debt.nights} nuits${need > 8 ? ` (besoin ${need} h vu ta charge)` : ''} (−${debtPen})`
+  }
+  return { id: 'sleep', label: 'Sommeil', score, status: 'ok', detail, extra: { hours: h, quality: s.quality || null, awakenings: aw, debt: debt || null, debtPen } }
 }
 
 export function pillarMobility(db) {
@@ -785,6 +825,22 @@ export function recommendations(db) {
     if (avg3 < 6.5) {
       push('alert', 'moon', `Moyenne de ${avg3.toFixed(1)} h de sommeil sur les 3 dernières nuits — dette de sommeil qui s'installe, pas juste une mauvaise nuit isolée. Priorise le repos avant que ça n'affecte tes séances.`, 'sommeil')
     }
+  }
+
+  // --- Irrégularité et rattrapage du week-end ---
+  // Deux signaux que la moyenne des nuits ne peut pas produire : quelqu'un
+  // à 7,5 h de moyenne peut alterner 5 h et 10 h, ce qu'aucune des règles
+  // ci-dessus ne voit. Et ce sont des leviers plus actionnables qu'une
+  // injonction à « dormir plus ».
+  const sleepAna = sleepAnalysis(db, { days: 14, today: iso, weeklyTrainingMins: rolling7Mins(db, iso) })
+  if (sleepAna.regularity && sleepAna.regularity.level === 'alert') {
+    push('warn', 'moon', `Tes nuits varient fortement d'une nuit à l'autre (±${String(sleepAna.regularity.sd).replace('.', ',')} h autour de ${String(sleepAna.regularity.mean).replace('.', ',')} h) — stabiliser tes horaires de coucher pèse autant que rallonger une nuit.`, 'sommeil')
+  }
+  if (sleepAna.catchUp && sleepAna.catchUp.flagged) {
+    push('info', 'moon', `Tu dors ${String(sleepAna.catchUp.gap).replace('.', ',')} h de plus le week-end qu'en semaine — le besoin est là toute la semaine, c'est l'occasion de dormir qui manque.`, 'sommeil')
+  }
+  if (sleepAna.afterTraining && sleepAna.afterTraining.flagged) {
+    push('info', 'moon', `Tu dors ${String(Math.abs(sleepAna.afterTraining.diff)).replace('.', ',')} h de moins les nuits qui suivent une séance — regarde l'horaire de tes entraînements tardifs et la caféine en fin de journée.`, 'sommeil')
   }
 
   // --- Prévention / douleur ---
