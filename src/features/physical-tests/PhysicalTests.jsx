@@ -11,16 +11,19 @@ import { Icon, GRADIENTS, C } from '../health/kit'
 // omis en attendant que ce module soit porté.
 // ============================================================
 
+// Ces jetons étaient figés sur la palette claire : l'écran restait blanc
+// sur les thèmes sombres. Ils pointent désormais vers les variables CSS
+// du kit, comme le reste de l'application.
 const TESTS_COLOR = '#5b6fa5'
-const SURFACE = '#fff'
-const SURFACE2 = '#f5f4ef'
-const INK = '#2b2b2b'
-const INK2 = '#666'
-const INK3 = '#999'
-const LINE = '#e8ebef'
-const RADIUS = 16
-const RADIUS_SM = 12
-const FONT = '-apple-system, BlinkMacSystemFont, sans-serif'
+const SURFACE = C.surface
+const SURFACE2 = C.surface2
+const INK = C.ink
+const INK2 = C.ink2
+const INK3 = C.ink3
+const LINE = C.line
+const RADIUS = C.radiusSm
+const RADIUS_SM = C.radiusXs
+const FONT = C.font
 
 /* ─── Normes scientifiques par sexe et tranche d'âge ────────────────────────
    Sources : Cooper (1968), ACSM Guidelines for Exercise Testing (11e éd. 2021),

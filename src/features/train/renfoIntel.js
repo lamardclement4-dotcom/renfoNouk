@@ -20,6 +20,7 @@ import { SPORTS } from './trainData'
 import { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
+import { cycleAnalysis, PMS_WINDOW_DAYS } from '../health/cycleIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 
@@ -983,8 +984,26 @@ export function recommendations(db) {
   // --- Cycle menstruel : repère phase lutéale (preuve modérée, variabilité individuelle) ---
   if (db.cycle && db.cycle.enabled && db.cycle.startDate) {
     const cyc = cycleInfo(db.cycle)
-    if (cyc.phase === 'luteale') {
+    const cAna = cycleAnalysis(db.cycle)
+    // Quand le ressenti enregistré montre un contraste net entre phases, il
+    // vaut mieux que le repère générique : c'est la physiologie de la
+    // personne, pas une moyenne de population.
+    const eContrast = cAna.energy && cAna.energy.significant ? cAna.energy : null
+    if (eContrast && eContrast.low.phase === cyc.phase) {
+      push('info', 'wave', `Phase ${eContrast.low.label.toLowerCase()} — c'est là que ton énergie est la plus basse d'après ce que tu as noté (${String(eContrast.low.mean).replace('.', ',')}/5 contre ${String(eContrast.high.mean).replace('.', ',')} en phase ${eContrast.high.label.toLowerCase()}). Une séance plus légère aujourd'hui est cohérente avec ton propre historique.`, 'cycle')
+    } else if (eContrast && eContrast.high.phase === cyc.phase) {
+      push('info', 'wave', `Phase ${eContrast.high.label.toLowerCase()} — ton énergie y est la plus haute d'après ton suivi (${String(eContrast.high.mean).replace('.', ',')}/5). Bonne fenêtre pour tes séances les plus exigeantes.`, 'cycle')
+    } else if (cyc.phase === 'luteale') {
       push('info', 'wave', "Phase lutéale de ton cycle — la perception d'effort peut être légèrement plus élevée chez certaines personnes. Repère individuel, pas une règle universelle.", 'cycle')
+    }
+    // Les jours prémenstruels se déduisent des règles réellement
+    // enregistrées, pas d'une phase théorique.
+    if (cAna.pms && cAna.pms.flagged && cyc.daysToNext <= PMS_WINDOW_DAYS) {
+      const list = cAna.pms.topSymptoms.map((s) => s.symptom.toLowerCase()).join(', ')
+      push('info', 'wave', `Tes règles sont attendues dans ${cyc.daysToNext} jour(s) : c'est la fenêtre où tu notes le plus de symptômes${list ? ` (${list})` : ''}. Prévoir une semaine plus légère vaut mieux que la subir.`, 'cycle')
+    }
+    if (cAna.stats && cAna.stats.level === 'warn' && cAna.stats.count >= 3) {
+      push('info', 'wave', `Tes cycles varient de ${cAna.stats.spread} jours (${cAna.stats.min} à ${cAna.stats.max}) : les prédictions de phase restent approximatives, fie-toi d'abord à ton ressenti. Si cela dure, c'est à évoquer avec un professionnel de santé.`, 'cycle')
     }
   }
 
