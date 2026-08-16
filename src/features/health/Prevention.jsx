@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SpaceBanner, SecLab, NoteBox, SegTabs, isoToday } from './kit'
+import { preventionAnalysis, RECO } from './preventionIntel'
+import { acwrRisk } from '../train/renfoIntel'
 
 const PREV = MODULE_TINTS.prevention
 
@@ -40,21 +42,6 @@ const QUIZ = [
   { theme: 'Douleur', q: 'Elle évolue plutôt…', opts: [['S’améliore', 0, 'mieux'], ['Stable', 1, 'stable'], ['Empire', 3, 'pire']], painOnly: true, tag: 'pain_evo', flag: true },
 ]
 
-const RECO = {
-  charge: 'Charge en hausse → progression plus graduelle (~10 %/sem max) + jours de repos.',
-  recup: 'Récup/sommeil à soigner → vise 7–9 h, ajoute mobilité et une vraie journée off.',
-  energie: 'Énergie → vérifie tes apports (onglet Nutrition). En cas de doute, parles-en à un professionnel.',
-  prop: 'Équilibre faible → travaille la proprioception (équilibre unipodal, surfaces instables).',
-  hanche: 'Hanche/valgus → renforce abducteurs et fessiers (coquille, abductions, pont).',
-  echauffement: 'Échauffement → 5–10 min progressif + quelques gammes avant les séances intenses.',
-  terrain: 'Terrain → varie les surfaces et introduis tout changement progressivement.',
-  materiel: 'Chaussures → change de modèle en douceur (alterne ancien/nouveau sur 2–3 semaines).',
-  cheville: 'Cheville raide → mobilité de cheville (genou au mur, fentes mobiles, mollets).',
-  mobilite: 'Souplesse limitée → mobilité ciblée ischios/mollets/hanches au quotidien.',
-  core: 'Gainage faible → renforce le tronc (planches, dead bug, anti-rotation).',
-  technique: 'Foulée → vise une cadence un peu plus élevée et un appui sous le centre de gravité.',
-  antecedent: 'Zone sensible récurrente → renfo ciblé + surveille la charge ; si ça revient, bilan pro.',
-}
 
 function painAdvice(k) {
   const { region: r, struct: st, point: pt, trigger: tg, when: wn, swell: sw, evo: ev, dur: du, load: ld } = k
@@ -150,12 +137,44 @@ function BilanTab({ db, store }) {
   }, [atResults, ans, hasPain])
 
   // Persistance du bilan dans le store (effet toujours appelé, jamais conditionnel).
+  //
+  // Chaque bilan écrasait le précédent : impossible de savoir si le risque
+  // avait baissé après avoir corrigé quelque chose. On conserve désormais
+  // l'historique, et on tient un journal des épisodes de douleur — leur
+  // durée étant ce qui distingue une gêne passagère d'un problème à faire
+  // voir, et ce que `pain.recordedAt` ne permettait pas de relire.
   useEffect(() => {
     if (!result || !store) return
-    store.set({ prevention: {
-      date: isoToday(), score: Math.round(result.ratio * 100), level: result.level.l, tags: [...result.tags],
-      pain: hasPain ? { active: true, region: result.pk.region || null, struct: result.pk.struct || null, urgent: !!(result.adv && result.adv.urgent), flag: !!result.flag, recordedAt: Date.now() } : null,
-    } })
+    const date = isoToday()
+    const entry = {
+      date, score: Math.round(result.ratio * 100), level: result.level.l, tags: [...result.tags],
+      pain: hasPain ? { region: result.pk.region || null, struct: result.pk.struct || null, urgent: !!(result.adv && result.adv.urgent) } : null,
+    }
+    const region = result.pk.region || null
+    const urgent = !!(result.adv && result.adv.urgent)
+    store.set((s) => {
+      const log = ((s && s.preventionLog) || []).filter((b) => b && b.date !== date)
+      const eps = ((s && s.painEpisodes) || []).slice()
+      const openIdx = (() => { for (let i = eps.length - 1; i >= 0; i--) if (eps[i] && !eps[i].end) return i; return -1 })()
+      if (hasPain) {
+        if (openIdx < 0) eps.push({ region, struct: result.pk.struct || null, start: date, end: null, urgent })
+        else if (eps[openIdx].region !== region) {
+          // Une douleur ailleurs est un autre épisode : la fusionner
+          // gonflerait artificiellement la durée de la première.
+          eps[openIdx] = { ...eps[openIdx], end: date }
+          eps.push({ region, struct: result.pk.struct || null, start: date, end: null, urgent })
+        } else {
+          eps[openIdx] = { ...eps[openIdx], urgent: urgent || !!eps[openIdx].urgent, struct: result.pk.struct || eps[openIdx].struct }
+        }
+      } else if (openIdx >= 0) {
+        eps[openIdx] = { ...eps[openIdx], end: date }
+      }
+      return {
+        prevention: { ...entry, pain: hasPain ? { active: true, ...entry.pain, flag: !!result.flag, recordedAt: Date.now() } : null },
+        preventionLog: log.concat([entry]).sort((a, b) => a.date.localeCompare(b.date)).slice(-60),
+        painEpisodes: eps.slice(-40),
+      }
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result?.level.l, hasPain, result?.flag, result?.ratio])
 
@@ -202,7 +221,16 @@ function BilanTab({ db, store }) {
             React.createElement('div', { style: { width: 30, height: 30, borderRadius: 9, flex: '0 0 auto', background: `color-mix(in srgb, ${PREV} 14%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: 'check', size: 16, color: PREV })),
             React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.45 } }, RECO[t]))))),
       React.createElement('button', { onClick: () => { setAns({}); setStep(-1) }, style: { ...ghostBtn, marginTop: 10 } }, 'Refaire le bilan'),
-      hasPain && React.createElement('button', { onClick: () => store.set((s) => ({ prevention: { ...(s.prevention || {}), pain: null } })), style: { ...ghostBtn, marginTop: 8, color: C.ink3 } }, 'Marquer la douleur comme résolue'),
+      hasPain && React.createElement('button', {
+        onClick: () => store.set((s) => {
+          // Clore l'épisode plutôt que de l'effacer : c'est ce qui rend les
+          // récurrences visibles d'un épisode à l'autre.
+          const eps = ((s && s.painEpisodes) || []).slice()
+          for (let i = eps.length - 1; i >= 0; i--) if (eps[i] && !eps[i].end) { eps[i] = { ...eps[i], end: isoToday() }; break }
+          return { prevention: { ...(s.prevention || {}), pain: null }, painEpisodes: eps }
+        }),
+        style: { ...ghostBtn, marginTop: 8, color: C.ink3 },
+      }, 'Marquer la douleur comme résolue'),
       React.createElement(NoteBox, { tint: PREV }, 'Ce bilan oriente la prévention ; il ne remplace pas un professionnel.'))
   }
 
@@ -272,6 +300,94 @@ function BlessuresTab() {
     React.createElement(NoteBox, { tint: PREV }, 'Sert à reconnaître et prévenir, pas à diagnostiquer. En cas de doute, on lève le pied — et on consulte.'))
 }
 
+// ── Onglet "Suivi" : ce que la répétition des bilans révèle ──
+const LEVEL_COL = { alert: '#a23a4f', warn: '#b5566a', info: PREV, ok: C.success, flat: C.ink3, aging: C.warn, stale: '#b5566a', fresh: C.success, absent: C.ink3 }
+
+function SuiviTab({ db }) {
+  const acwr = React.useMemo(() => { try { return acwrRisk(db) } catch { return null } }, [db])
+  const ana = preventionAnalysis(db, { acwr })
+  const hist = ana.history
+
+  const card = (children, tint) => React.createElement('div', {
+    style: {
+      padding: '15px 16px', borderRadius: C.radius,
+      background: tint ? `color-mix(in srgb, ${tint} 9%, ${C.surface})` : C.surface,
+      border: `1px solid ${tint ? `color-mix(in srgb, ${tint} 28%, ${C.line})` : C.line}`,
+    },
+  }, children)
+  const lab = (t) => React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 } }, t)
+  const body = (t, col) => React.createElement('div', { style: { fontSize: 13.5, color: col || C.ink2, lineHeight: 1.5 } }, t)
+
+  if (ana.freshness.level === 'absent' && !ana.pain) {
+    return React.createElement('div', { style: { textAlign: 'center', padding: '40px 14px', color: C.ink3, fontSize: 13.5, lineHeight: 1.5 } },
+      React.createElement(Icon, { name: 'shield', size: 28, color: C.line, style: { marginBottom: 12 } }),
+      React.createElement('div', null, 'Fais le bilan de prévention une première fois : c’est en le refaisant que l’évolution de ton risque devient lisible.'))
+  }
+
+  // Courbe du risque au fil des bilans. Un score isolé ne dit pas s'il
+  // monte ou descend, qui est pourtant la seule question qui compte ici.
+  const chart = hist.length >= 2 ? (() => {
+    const w = 300, h = 64
+    const xs = hist.map((_, i) => (hist.length === 1 ? w / 2 : i / (hist.length - 1) * w))
+    const ys = hist.map((b) => h - (Math.max(0, Math.min(100, b.score)) / 100) * h)
+    const d = xs.map((x, i) => (i ? 'L' : 'M') + x.toFixed(1) + ' ' + ys[i].toFixed(1)).join(' ')
+    return React.createElement('div', { style: { marginTop: 12 } },
+      React.createElement('svg', { width: '100%', height: h + 12, viewBox: `0 0 ${w} ${h + 12}`, preserveAspectRatio: 'none' },
+        React.createElement('path', { d, fill: 'none', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: PREV } }),
+        xs.map((x, i) => React.createElement('circle', { key: i, cx: x, cy: ys[i], r: 3.5, style: { fill: PREV } }))),
+      React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: C.ink3, marginTop: 2 } },
+        React.createElement('span', null, hist[0].date.slice(8) + '/' + hist[0].date.slice(5, 7)),
+        React.createElement('span', null, 'risque ' + hist[0].score + ' % → ' + hist[hist.length - 1].score + ' %'),
+        React.createElement('span', null, hist[hist.length - 1].date.slice(8) + '/' + hist[hist.length - 1].date.slice(5, 7))))
+  })() : null
+
+  return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+    ana.pain ? card([
+      React.createElement('div', { key: 'l' }, lab('Douleur en cours')),
+      React.createElement('div', { key: 'b' }, body(ana.pain.text, C.ink)),
+      React.createElement('div', { key: 'd', style: { fontSize: 11.5, color: C.ink3, marginTop: 8 } }, 'Signalée le ' + ana.pain.episode.start.split('-').reverse().join('/')),
+    ], LEVEL_COL[ana.pain.level]) : null,
+
+    card([
+      React.createElement('div', { key: 'l' }, lab('Évolution du risque')),
+      React.createElement('div', { key: 'b' }, body(ana.trend ? ana.trend.text : 'Un seul bilan enregistré : refais-le dans quelques semaines pour voir l’évolution.', ana.trend && ana.trend.level === 'warn' ? '#b5566a' : C.ink2)),
+      chart,
+      React.createElement('div', { key: 'f', style: { fontSize: 11.5, color: C.ink3, marginTop: chart ? 8 : 6 } }, ana.freshness.text),
+    ], ana.trend && ana.trend.level === 'warn' ? '#b5566a' : null),
+
+    ana.tags.persistent.length || ana.tags.resolved.length || ana.tags.appeared.length ? card([
+      React.createElement('div', { key: 'l' }, lab('Tes points faibles d’un bilan à l’autre')),
+      ana.tags.persistent.length ? React.createElement('div', { key: 'p', style: { marginTop: 4 } },
+        ana.tags.persistent.map((p) => React.createElement('div', { key: p.tag, style: { display: 'flex', gap: 9, alignItems: 'flex-start', marginTop: 8 } },
+          React.createElement('span', { style: { padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontWeight: 800, background: `color-mix(in srgb, ${PREV} 16%, ${C.surface})`, color: PREV, flex: '0 0 auto' } }, p.bilans + '×'),
+          React.createElement('span', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.45 } }, RECO[p.tag] || p.tag)))) : null,
+      ana.tags.resolved.length ? React.createElement('div', { key: 'r', style: { fontSize: 12.5, color: C.success, marginTop: 10, fontWeight: 600 } }, 'Résolu depuis le bilan précédent : ' + ana.tags.resolved.join(', ')) : null,
+      ana.tags.appeared.length ? React.createElement('div', { key: 'a', style: { fontSize: 12.5, color: C.warn, marginTop: 6, fontWeight: 600 } }, 'Nouveau : ' + ana.tags.appeared.join(', ')) : null,
+    ]) : null,
+
+    ana.recurrent.length ? card([
+      React.createElement('div', { key: 'l' }, lab('Zones qui reviennent')),
+      React.createElement('div', { key: 'b', style: { fontSize: 12, color: C.ink3, marginBottom: 8, lineHeight: 1.45 } }, 'Déduites de tes épisodes enregistrés, pas de ta mémoire.'),
+      ana.recurrent.map((r) => React.createElement('div', { key: r.region, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '8px 0', borderBottom: `1px solid ${C.line}` } },
+        React.createElement('span', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink2, textTransform: 'capitalize' } }, r.label),
+        React.createElement('span', { style: { fontSize: 12, color: C.ink3 } }, r.episodes + ' épisodes' + (r.totalDays ? ' · ' + r.totalDays + ' j cumulés' : '')))),
+    ], '#b5566a') : null,
+
+    ana.loadCheck ? card([
+      React.createElement('div', { key: 'l' }, lab('Charge déclarée vs mesurée')),
+      React.createElement('div', { key: 'b' }, body(ana.loadCheck.text)),
+    ], ana.loadCheck.level === 'warn' ? C.warn : null) : null,
+
+    card([
+      React.createElement('div', { key: 'l' }, lab('Ce qu’on en retient')),
+      ana.tips.map((t, i) => React.createElement('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: C.ink2, lineHeight: 1.5, marginTop: i ? 9 : 2 } },
+        React.createElement('span', { style: { color: PREV, fontWeight: 800, flex: '0 0 auto' } }, '•'),
+        React.createElement('span', null, t))),
+    ]),
+
+    React.createElement(NoteBox, { tint: PREV }, 'Repères d’orientation, pas un diagnostic. Une douleur qui empire, réveille la nuit, se situe sur un point précis ou sur l’os relève d’un professionnel de santé.'))
+}
+
 export default function PreventionSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [tab, setTab] = useState('bilan')
@@ -279,7 +395,8 @@ export default function PreventionSpace({ userId, onClose }) {
     return React.createElement(FlowSpace, { bg: 'sante', title: 'Prévention', onClose, tint: PREV }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
   }
   return React.createElement(FlowSpace, { bg: 'sante', title: 'Prévention', onClose, tint: PREV },
-    React.createElement(SegTabs, { tint: PREV, value: tab, onChange: setTab, tabs: [{ id: 'bilan', lab: 'Bilan' }, { id: 'blessures', lab: 'Blessures' }] }),
+    React.createElement(SegTabs, { tint: PREV, value: tab, onChange: setTab, tabs: [{ id: 'bilan', lab: 'Bilan' }, { id: 'suivi', lab: 'Suivi' }, { id: 'blessures', lab: 'Blessures' }] }),
     tab === 'bilan' && React.createElement(BilanTab, { db, store }),
+    tab === 'suivi' && React.createElement(SuiviTab, { db }),
     tab === 'blessures' && React.createElement(BlessuresTab, null))
 }

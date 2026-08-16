@@ -21,6 +21,7 @@ import { TESTS_DEF } from '../physical-tests/PhysicalTests'
 import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
 import { cycleAnalysis, PMS_WINDOW_DAYS } from '../health/cycleIntel'
+import { painDuration, bilanFreshness, preventionAnalysis, RECO as PREVENTION_RECO, PAIN_SUBACUTE_DAYS, PAIN_CHRONIC_DAYS } from '../health/preventionIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 
@@ -431,11 +432,33 @@ export function pillarPrevention(db) {
   const p = db.prevention
   if (!p || p.score == null) return { id: 'prevention', label: 'Prévention', score: null, status: 'absent', detail: 'Fais le bilan de prévention pour activer ce score.' }
   const base = clamp(100 - num(p.score, 0), 0, 100)
-  const painPenalty = p.pain && p.pain.active ? (p.pain.urgent ? 40 : 20) : 0
-  const score = round(clamp(base - painPenalty, 0, 100))
+  // La durée de la douleur était stockée mais jamais relue : une gêne de
+  // trois jours et une gêne de six semaines pesaient exactement pareil,
+  // alors que c'est justement l'installation dans le temps qui doit
+  // faire réagir.
+  const pd = painDuration(db)
+  let painPenalty = 0
+  if (p.pain && p.pain.active) {
+    painPenalty = p.pain.urgent ? 40 : 20
+    if (pd && !p.pain.urgent) {
+      if (pd.days >= PAIN_CHRONIC_DAYS) painPenalty = 35
+      else if (pd.days >= PAIN_SUBACUTE_DAYS) painPenalty = 27
+    }
+  }
+  // Un bilan de quatre mois décrivait une situation révolue tout en
+  // pilotant le score comme s'il était frais. On ne l'invalide pas, on
+  // rapproche son score de la neutralité à mesure qu'il vieillit.
+  const fresh = bilanFreshness(db)
+  let score = round(clamp(base - painPenalty, 0, 100))
+  if (fresh.level === 'stale') score = round(score + (60 - score) * 0.5)
+  else if (fresh.level === 'aging') score = round(score + (60 - score) * 0.25)
   let detail = `Risque ${(p.level || '').toLowerCase()}`
-  if (p.pain && p.pain.active) detail += p.pain.urgent ? ' · douleur à surveiller de près' : ' · douleur active'
-  return { id: 'prevention', label: 'Prévention', score, status: 'ok', detail, extra: { level: p.level, pain: p.pain || null, date: p.date } }
+  if (p.pain && p.pain.active) {
+    detail += p.pain.urgent ? ' · douleur à surveiller de près'
+      : pd ? ` · douleur au ${pd.region} depuis ${pd.days} j` : ' · douleur active'
+  }
+  if (fresh.level === 'stale' || fresh.level === 'aging') detail += ` · bilan vieux de ${fresh.days} j`
+  return { id: 'prevention', label: 'Prévention', score, status: 'ok', detail, extra: { level: p.level, pain: p.pain || null, date: p.date, painDays: pd ? pd.days : null, freshness: fresh } }
 }
 
 // Charge d'entraînement de la semaine en cours. weekRetro fusionne déjà
@@ -846,19 +869,42 @@ export function recommendations(db) {
 
   // --- Prévention / douleur ---
   const prev = pillarPrevention(db)
+  const prevAna = preventionAnalysis(db, { today: iso, acwr })
   if (prev.status === 'ok' && prev.extra.pain && prev.extra.pain.active) {
-    push(prev.extra.pain.urgent ? 'alert' : 'warn', 'shield',
+    // La durée change la conduite à tenir : passé trois semaines, ce n'est
+    // plus « adapte tes séances », c'est « fais-la voir ».
+    const pd = prevAna.pain
+    push(prev.extra.pain.urgent || (pd && pd.level === 'alert') ? 'alert' : 'warn', 'shield',
       prev.extra.pain.urgent
         ? 'Douleur signalée comme préoccupante lors de ton dernier bilan de prévention — arrête les impacts et consulte un professionnel de santé.'
-        : 'Douleur active signalée dans ton bilan de prévention — adapte tes séances tant qu\'elle n\'est pas résolue.', 'prevention')
+        : pd ? pd.text
+          : 'Douleur active signalée dans ton bilan de prévention — adapte tes séances tant qu\'elle n\'est pas résolue.', 'prevention')
     if (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
       push('alert', 'shield', 'Douleur active et charge d\'entraînement élevée en même temps — combinaison à risque, priorise la récupération avant de reprendre l\'intensité.', 'prevention')
     }
   } else if (prev.status === 'absent') {
     push('info', 'shield', 'Tu n\'as pas encore fait ton bilan de prévention — utile pour repérer tes facteurs de risque de blessure avant qu\'ils ne posent problème.', 'prevention')
-  } else if (prev.status === 'ok' && prev.extra.date) {
-    const days = Math.floor((new Date(iso + 'T00:00:00') - new Date(prev.extra.date + 'T00:00:00')) / 86400000)
-    if (days > 60) push('info', 'shield', `Ton dernier bilan de prévention date de ${days} jours — refais-le pour un état des lieux à jour.`, 'prevention')
+  } else if (prev.status === 'ok' && prevAna.freshness.level !== 'fresh') {
+    push('info', 'shield', `${prevAna.freshness.text} Le score de prévention s'appuie dessus, donc il vieillit avec lui.`, 'prevention')
+  }
+  // Une zone qui revient n'appelle pas la même réponse qu'une première
+  // gêne : le questionnaire posait la question, l'application peut
+  // maintenant y répondre à partir des épisodes enregistrés.
+  if (prevAna.recurrent.length) {
+    const r = prevAna.recurrent[0]
+    push('warn', 'shield', `Le ${r.label} t'a déjà gêné ${r.episodes} fois${r.totalDays ? ` (${r.totalDays} jours cumulés)` : ''} — une zone qui récidive demande un renforcement ciblé et un avis professionnel, pas seulement du repos entre deux épisodes.`, 'prevention')
+  }
+  // Le questionnaire demande si la charge a augmenté ; les séances
+  // enregistrées le mesurent. Quand la mesure contredit la déclaration,
+  // le dire vaut mieux que laisser le score reposer sur un souvenir.
+  if (prevAna.loadCheck && prevAna.loadCheck.level === 'warn') {
+    push('warn', 'shield', prevAna.loadCheck.text, 'prevention')
+  }
+  // Un point faible qui traverse plusieurs bilans est le seul sur lequel
+  // rien n'a bougé — donc celui qui mérite l'effort.
+  const stuck = prevAna.tags.persistent.find((t) => t.bilans >= 3)
+  if (stuck) {
+    push('info', 'shield', `Ce point ressort sur tes ${stuck.bilans} derniers bilans de prévention : ${(PREVENTION_RECO[stuck.tag] || stuck.tag)}`, 'prevention')
   }
 
   // --- Mobilité ---
