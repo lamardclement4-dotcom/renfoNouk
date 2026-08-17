@@ -19,13 +19,19 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
   const { db, loading } = useNutritionStore(userId)
   const [space, setSpace] = useState(initialSpace || null)
 
-  if (space === 'nutrition') return React.createElement(NutritionSpace, { userId, onClose: () => setSpace(null) })
-  if (space === 'hydratation') return React.createElement(HydrationSpace, { userId, onClose: () => setSpace(null) })
-  if (space === 'sommeil') return React.createElement(SleepSpace, { userId, onClose: () => setSpace(null) })
-  if (space === 'prevention') return React.createElement(PreventionSpace, { userId, onClose: () => setSpace(null) })
-  if (space === 'cycle') return React.createElement(CycleSpace, { userId, onClose: () => setSpace(null) })
-  if (space === 'esprit') return React.createElement(BreathingSpace, { onClose: () => setSpace(null) })
-  if (space === 'complements') return React.createElement(ComplementsSpace, { userId, onClose: () => setSpace(null) })
+  // Quand l'écran est ouvert en profondeur depuis ailleurs (une
+  // recommandation, l'accueil, la progression), fermer doit ramener à
+  // l'appelant, pas déposer sur la grille des sept tuiles que la personne
+  // n'a jamais demandée. Même correctif que côté entraînement.
+  const backToHub = embedded ? onClose : () => setSpace(null)
+
+  if (space === 'nutrition') return React.createElement(NutritionSpace, { userId, onClose: backToHub })
+  if (space === 'hydratation') return React.createElement(HydrationSpace, { userId, onClose: backToHub })
+  if (space === 'sommeil') return React.createElement(SleepSpace, { userId, onClose: backToHub })
+  if (space === 'prevention') return React.createElement(PreventionSpace, { userId, onClose: backToHub })
+  if (space === 'cycle') return React.createElement(CycleSpace, { userId, onClose: backToHub })
+  if (space === 'esprit') return React.createElement(BreathingSpace, { userId, onClose: backToHub })
+  if (space === 'complements') return React.createElement(ComplementsSpace, { userId, onClose: backToHub })
 
   if (loading) {
     return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font } }, 'Chargement...')

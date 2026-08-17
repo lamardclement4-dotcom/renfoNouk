@@ -22,6 +22,7 @@ import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
 import { cycleAnalysis, PMS_WINDOW_DAYS } from '../health/cycleIntel'
 import { painDuration, bilanFreshness, preventionAnalysis, RECO as PREVENTION_RECO, PAIN_SUBACUTE_DAYS, PAIN_CHRONIC_DAYS } from '../health/preventionIntel'
+import { mindAnalysis, breathSessions } from '../health/mindIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 
@@ -1023,8 +1024,25 @@ export function recommendations(db) {
   }
 
   // --- Stress/charge élevée sans outil de régulation récent ---
+  // La condition ne vérifiait pas la seconde moitié de sa propre phrase :
+  // faute de journal, la suggestion tombait même sur quelqu'un qui venait
+  // de faire sa séance. Les séances étant maintenant enregistrées, on ne
+  // propose que si rien n'a été fait dans la semaine.
+  const mind = mindAnalysis(db, { today: iso })
   if (acwr.available && acwr.level === 'Vigilance renforcée') {
-    push('warn', 'wave', "Charge d'entraînement élevée — une courte séance de respiration ou de préparation mentale peut t'aider à mieux gérer cette période.", 'esprit')
+    const recentBreath = breathSessions(db, { days: 7, today: iso }).length
+    if (!recentBreath) {
+      push('warn', 'wave', "Charge d'entraînement élevée et aucune séance de respiration cette semaine — quelques minutes de respiration guidée ou de préparation mentale peuvent aider à mieux gérer cette période.", 'esprit')
+    }
+  }
+  // Un objectif sans rappel est un objectif oublié : c'est précisément le
+  // « T » de SMART que l'écran laissait filer.
+  if (mind.goals.late.length) {
+    const g = mind.goals.late[0]
+    push('warn', 'target', `Ton objectif « ${(g.goal.s || 'sans titre').slice(0, 60)} » a dépassé son échéance de ${Math.abs(g.status.days)} jour(s) — le conclure ou le redater vaut mieux que le laisser courir.`, 'esprit')
+  } else if (mind.goals.soon.length) {
+    const g = mind.goals.soon[0]
+    push('info', 'target', `Échéance proche pour « ${(g.goal.s || 'ton objectif').slice(0, 60)} » : ${g.status.text.toLowerCase()}`, 'esprit')
   }
 
   // --- Cycle menstruel : repère phase lutéale (preuve modérée, variabilité individuelle) ---
