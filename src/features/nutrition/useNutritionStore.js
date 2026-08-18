@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib'
 
-const DAYS_HISTORY = 10
+// Fenêtre de journal chargée au montage. Elle valait 10 jours, ce qui
+// suffisait aux graphes de sept jours mais tronquait silencieusement toutes
+// les analyses : nutriIntel et hydroIntel raisonnent sur 28 jours, et
+// estimateTDEE aussi. Une moyenne « sur 28 jours » calculée sur 10 jours de
+// données disponibles n'était pas approximative, elle était fausse — et rien
+// ne le signalait. 35 jours couvrent la fenêtre d'analyse avec de la marge,
+// pour 35 lignes au plus.
+const DAYS_HISTORY = 35
 
 function isoDaysAgo(n) {
   const d = new Date()
@@ -14,6 +21,48 @@ function isoDaysAgo(n) {
 const NUTRITION_KEYS = ['foodFav', 'foodTargets', 'hydroSport', 'hydroPrefs', 'diagHistory']
 // Clés à routage spécial : ni top-level phys, ni phys.nutrition.
 const SPECIAL_KEYS = ['profilePhys', 'foodLog', 'hydroLog', 'cycle', 'goals', 'sensitiveZones']
+
+// Journaux indexés par date qui n'étaient jamais élagués. Ils vivent dans la
+// colonne `phys`, relue et réécrite EN ENTIER à chaque écriture : après
+// quelques années, cocher un complément renvoyait des centaines de kilo-octets
+// de sommeil et de météo à chaque clic. On garde treize mois — de quoi couvrir
+// toutes les fenêtres d'analyse et une comparaison d'une année sur l'autre —
+// et on élague au passage, une seule fois, dans le store plutôt que dans
+// chaque écran.
+const DATE_KEYED_LOGS = ['sleepLog', 'suppTaken', 'recoveryLog', 'weatherLog']
+const LOG_RETENTION_DAYS = 400
+// Listes qui grossissent lentement mais sans borne.
+const CAPPED_LISTS = { physTests: 400, customGoals: 200, peakGoals: 100 }
+
+function pruneDateMap(obj, maxDays) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
+  const keys = Object.keys(obj).filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k))
+  // Les clés non datées ne sont pas de notre ressort : on les conserve telles
+  // quelles plutôt que de supprimer une donnée qu'on ne sait pas interpréter.
+  const others = Object.keys(obj).filter((k) => !/^\d{4}-\d{2}-\d{2}$/.test(k))
+  if (keys.length <= maxDays) return obj
+  const kept = keys.sort().slice(-maxDays)
+  const out = {}
+  for (const k of others) out[k] = obj[k]
+  for (const k of kept) out[k] = obj[k]
+  return out
+}
+
+function prunePatch(patch) {
+  let out = patch
+  for (const k of DATE_KEYED_LOGS) {
+    if (k in out) {
+      const pruned = pruneDateMap(out[k], LOG_RETENTION_DAYS)
+      if (pruned !== out[k]) out = { ...out, [k]: pruned }
+    }
+  }
+  for (const [k, cap] of Object.entries(CAPPED_LISTS)) {
+    if (k in out && Array.isArray(out[k]) && out[k].length > cap) {
+      out = { ...out, [k]: out[k].slice(-cap) }
+    }
+  }
+  return out
+}
 
 function pick(obj, keys) {
   return Object.fromEntries(keys.filter((k) => k in obj).map((k) => [k, obj[k]]))
@@ -157,74 +206,95 @@ export function useNutritionStore(userId) {
   // les entrées ci-dessous surchargent avec les valeurs dérivées/imbriquées.
   const todayISO = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') })()
 
-  const db = {
-    ...phys,
-    profilePhys: phys,
-    cycle,
-    foodFav: phys.nutrition?.foodFav || [],
-    foodTargets: phys.nutrition?.foodTargets || null,
-    hydroSport: phys.nutrition?.hydroSport || {},
-    hydroPrefs: phys.nutrition?.hydroPrefs || {},
-    diagHistory: phys.nutrition?.diagHistory || [],
-    physTests: phys.physTests || [],
-    foodLog: Object.fromEntries(Object.entries(dayRows).map(([d, v]) => [d, v.food || []])),
-    hydroLog: Object.fromEntries(Object.entries(dayRows).map(([d, v]) => [d, v.hydration || []])),
-    week: phys.week || [0, 0, 0, 0, 0, 0, 0],
-    sessionLog: phys.sessionLog || [],
+  // Une seule définition, utilisée pour le rendu comme pour l'état
+  // synchrone. Les raccourcis d'écriture lisaient `db`, reconstruit depuis
+  // l'état React : deux appels dans le même tick voyaient la même valeur
+  // périmée, et le premier était écrasé — un objectif ajouté juste après un
+  // autre disparaissait. Les refs, elles, sont à jour immédiatement.
+  const buildDb = (physSrc, cycleSrc, goalsSrc, zonesSrc, rowsSrc) => ({
+    ...physSrc,
+    profilePhys: physSrc,
+    cycle: cycleSrc,
+    foodFav: physSrc.nutrition?.foodFav || [],
+    foodTargets: physSrc.nutrition?.foodTargets || null,
+    hydroSport: physSrc.nutrition?.hydroSport || {},
+    hydroPrefs: physSrc.nutrition?.hydroPrefs || {},
+    diagHistory: physSrc.nutrition?.diagHistory || [],
+    physTests: physSrc.physTests || [],
+    foodLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.food || []])),
+    hydroLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.hydration || []])),
+    week: physSrc.week || [0, 0, 0, 0, 0, 0, 0],
+    sessionLog: physSrc.sessionLog || [],
     // Suivi du poids : historique des pesées ({date, kg}) et poids visé.
-    weightLog: phys.weightLog || [],
-    weightGoal: phys.weightGoal || null,
+    weightLog: physSrc.weightLog || [],
+    weightGoal: physSrc.weightGoal || null,
     // Conditions météo par jour, pour adapter la charge et relire
     // après coup dans quelles conditions une séance a été faite.
-    weatherLog: phys.weatherLog || {},
+    weatherLog: physSrc.weatherLog || {},
     // Thème choisi, pour le retrouver d'un appareil à l'autre.
-    theme: phys.theme || null,
-    streak: phys.streak || 0,
-    sessionsTotal: phys.sessionsTotal || 0,
-    minutesTotal: phys.minutesTotal || 0,
-    record: phys.record || 0,
-    goals: { dailyMin: 10, weeklySessions: 4, ...goals },
-    completedToday: phys.lastSessionISO === todayISO,
-    customGoals: phys.customGoals || [],
-    mobility: phys.mobility || null,
-    mobilityHistory: phys.mobilityHistory || [],
-    program: phys.program || null,
-    peakGoals: phys.peakGoals || [],
-    recoveryLog: phys.recoveryLog || {},
-    sensitiveZones,
-  }
+    theme: physSrc.theme || null,
+    streak: physSrc.streak || 0,
+    sessionsTotal: physSrc.sessionsTotal || 0,
+    minutesTotal: physSrc.minutesTotal || 0,
+    record: physSrc.record || 0,
+    goals: { dailyMin: 10, weeklySessions: 4, ...goalsSrc },
+    completedToday: physSrc.lastSessionISO === todayISO,
+    customGoals: physSrc.customGoals || [],
+    mobility: physSrc.mobility || null,
+    mobilityHistory: physSrc.mobilityHistory || [],
+    program: physSrc.program || null,
+    peakGoals: physSrc.peakGoals || [],
+    recoveryLog: physSrc.recoveryLog || {},
+    sensitiveZones: zonesSrc,
+  })
+
+  const db = buildDb(phys, cycle, goals, sensitiveZones, dayRows)
+  // État à jour à l'instant même, y compris les écritures de ce tick.
+  const liveDb = () => buildDb(physRef.current, cycleRef.current, goalsRef.current, sensitiveZonesRef.current, dayRowsRef.current)
 
   const store = {
     get: () => db,
     ensureDay,
     set: (patchOrFn) => {
-      const patch = typeof patchOrFn === 'function' ? patchOrFn(db) : patchOrFn
+      // La forme fonction reçoit l'état à jour, pas celui du dernier rendu :
+      // deux `set` dans le même tick composaient sinon sur la même base
+      // périmée, et le premier était perdu.
+      const patch = prunePatch(typeof patchOrFn === 'function' ? patchOrFn(liveDb()) : patchOrFn)
 
-      if ('profilePhys' in patch) savePhys(() => patch.profilePhys)
+      // Un même `set` pouvait déclencher jusqu'à trois UPDATE Supabase sur
+      // la colonne `phys` — une par catégorie de clés. Chacune écrit
+      // l'objet entier : si elles arrivaient dans le désordre, la moins
+      // complète gagnait et la donnée la plus récente était perdue.
+      // `saveWeight` était exactement dans ce cas (weightLog + profilePhys).
+      // On compose donc une seule fois, puis on écrit une seule fois.
+      const nutriInPatch = NUTRITION_KEYS.filter((k) => k in patch)
+      const topKeys = Object.keys(patch).filter((k) => !SPECIAL_KEYS.includes(k) && !NUTRITION_KEYS.includes(k))
+      const touchesPhys = 'profilePhys' in patch || nutriInPatch.length > 0 || topKeys.length > 0
+      if (touchesPhys) {
+        savePhys((prev) => {
+          // `profilePhys` désigne la colonne entière : le patch la remplace,
+          // les autres clés viennent ensuite s'y appliquer.
+          let next = 'profilePhys' in patch ? { ...patch.profilePhys } : { ...prev }
+          if (nutriInPatch.length) next = { ...next, nutrition: { ...next.nutrition, ...pick(patch, nutriInPatch) } }
+          if (topKeys.length) next = { ...next, ...pick(patch, topKeys) }
+          return next
+        })
+      }
+
       if ('cycle' in patch) saveCycle(() => patch.cycle)
       if ('goals' in patch) saveGoals(() => patch.goals)
       if ('sensitiveZones' in patch) saveSensitiveZones(() => patch.sensitiveZones)
 
-      const nutriInPatch = NUTRITION_KEYS.filter((k) => k in patch)
-      if (nutriInPatch.length) {
-        savePhys((prev) => ({ ...prev, nutrition: { ...prev.nutrition, ...pick(patch, nutriInPatch) } }))
-      }
-
-      // Toute autre clé (physTests, sleepLog, suppPlan, painBilan, breathLog,
-      // cycleDiag…) atterrit au niveau racine de phys.
-      const topKeys = Object.keys(patch).filter((k) => !SPECIAL_KEYS.includes(k) && !NUTRITION_KEYS.includes(k))
-      if (topKeys.length) {
-        savePhys((prev) => ({ ...prev, ...pick(patch, topKeys) }))
-      }
-
       if ('foodLog' in patch) {
+        const cur = dayRowsRef.current
         for (const [date, entries] of Object.entries(patch.foodLog)) {
-          if (entries !== db.foodLog[date]) saveDay(date, { food: entries })
+          if (entries !== (cur[date] && cur[date].food)) saveDay(date, { food: entries })
         }
       }
       if ('hydroLog' in patch) {
+        const cur = dayRowsRef.current
         for (const [date, entries] of Object.entries(patch.hydroLog)) {
-          if (entries !== db.hydroLog[date]) saveDay(date, { hydration: entries })
+          if (entries !== (cur[date] && cur[date].hydration)) saveDay(date, { hydration: entries })
         }
       }
     },
@@ -232,54 +302,53 @@ export function useNutritionStore(userId) {
     // Actions dédiées au module Entraîner — équivalents des méthodes du store
     // local-only de l'ancienne app (Store.completeSession, Store.saveMobility…),
     // réécrites en termes de store.set pour rester compatibles Supabase.
-    completeSession: (mins, meta = {}) => {
+    completeSession: (mins, meta = {}) => store.set((s) => {
       const day = (new Date().getDay() + 6) % 7 // 0=lundi … 6=dimanche
-      const week = [...db.week]
+      const week = [...s.week]
       week[day] = (week[day] || 0) + mins
-      const newStreak = db.completedToday ? db.streak : db.streak + 1
+      const newStreak = s.completedToday ? s.streak : s.streak + 1
       // Séance programme/catalogue jouée via le lecteur intégré : la seule
       // trace qu'on en garde était le compteur "cette semaine" ci-dessus,
       // qui ne se recale jamais sur une vraie date — impossible de la
       // retrouver dans une rétrospective de semaines passées. On log
       // aussi la date exacte ici pour que ce soit possible.
-      const log = [...db.sessionLog, { date: todayISO, mins, title: meta.title || null, cat: meta.cat || null }].slice(-300)
-      store.set({
+      const log = [...s.sessionLog, { date: todayISO, mins, title: meta.title || null, cat: meta.cat || null }].slice(-300)
+      return {
         week,
         sessionLog: log,
-        sessionsTotal: db.sessionsTotal + 1,
-        minutesTotal: db.minutesTotal + mins,
+        sessionsTotal: s.sessionsTotal + 1,
+        minutesTotal: s.minutesTotal + mins,
         streak: newStreak,
-        record: Math.max(db.record, newStreak),
+        record: Math.max(s.record, newStreak),
         lastSessionISO: todayISO,
-      })
-    },
-    saveMobility: (m) => {
-      const hist = db.mobilityHistory.filter((h) => h.date !== m.date)
-      store.set({ mobility: m, mobilityHistory: [...hist, m].slice(-30) })
-    },
+      }
+    }),
+    saveMobility: (m) => store.set((s) => {
+      const hist = s.mobilityHistory.filter((h) => h.date !== m.date)
+      return { mobility: m, mobilityHistory: [...hist, m].slice(-30) }
+    }),
     saveProgram: (p) => store.set({ program: p }),
     clearProgram: () => store.set({ program: null }),
-    markProgramDone: (id) => {
-      if (!db.program) return
-      store.set({ program: { ...db.program, done: { ...(db.program.done || {}), [id]: true } } })
-    },
-    logRecovery: (id) => {
-      const log = { ...db.recoveryLog }
+    markProgramDone: (id) => store.set((s) => (
+      s.program ? { program: { ...s.program, done: { ...(s.program.done || {}), [id]: true } } } : {}
+    )),
+    logRecovery: (id) => store.set((s) => {
+      const log = { ...s.recoveryLog }
       const day = log[todayISO] || []
       log[todayISO] = day.includes(id) ? day : [...day, id]
-      store.set({ recoveryLog: log })
-    },
-    addPeakGoal: (goal) => store.set({ peakGoals: [...db.peakGoals, { id: 'pk' + Date.now(), ...goal }] }),
-    updatePeakGoal: (id, patch) => store.set({ peakGoals: db.peakGoals.map((g) => g.id === id ? { ...g, ...patch } : g) }),
-    removePeakGoal: (id) => store.set({ peakGoals: db.peakGoals.filter((g) => g.id !== id) }),
+      return { recoveryLog: log }
+    }),
+    addPeakGoal: (goal) => store.set((s) => ({ peakGoals: [...s.peakGoals, { id: 'pk' + Date.now(), ...goal }] })),
+    updatePeakGoal: (id, patch) => store.set((s) => ({ peakGoals: s.peakGoals.map((g) => g.id === id ? { ...g, ...patch } : g) })),
+    removePeakGoal: (id) => store.set((s) => ({ peakGoals: s.peakGoals.filter((g) => g.id !== id) })),
     // Les objectifs n'avaient aucune date : un objectif posé hier et un
     // autre qui traîne depuis six mois se ressemblaient exactement. On
     // horodate la création et l'accomplissement, sans quoi rien n'est
     // analysable. Les entrées antérieures restent sans date et sont
     // traitées comme telles plutôt que de s'en voir inventer une.
-    addGoal: (label) => store.set({ customGoals: [...db.customGoals, { id: 'g' + Date.now(), label, done: false, createdAt: todayISO }] }),
-    updateGoal: (id, patch) => store.set({
-      customGoals: db.customGoals.map((g) => {
+    addGoal: (label) => store.set((s) => ({ customGoals: [...s.customGoals, { id: 'g' + Date.now(), label, done: false, createdAt: todayISO }] })),
+    updateGoal: (id, patch) => store.set((s) => ({
+      customGoals: s.customGoals.map((g) => {
         if (g.id !== id) return g
         const next = { ...g, ...patch }
         if (patch && Object.prototype.hasOwnProperty.call(patch, 'done')) {
@@ -287,9 +356,9 @@ export function useNutritionStore(userId) {
         }
         return next
       }),
-    }),
-    removeGoal: (id) => store.set({ customGoals: db.customGoals.filter((g) => g.id !== id) }),
-    setGoal: (key, val) => store.set({ goals: { ...db.goals, [key]: val } }),
+    })),
+    removeGoal: (id) => store.set((s) => ({ customGoals: s.customGoals.filter((g) => g.id !== id) })),
+    setGoal: (key, val) => store.set((s) => ({ goals: { ...s.goals, [key]: val } })),
     setSensitiveZones: (zones) => store.set({ sensitiveZones: zones }),
   }
 
