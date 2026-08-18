@@ -23,6 +23,7 @@ import { cycleInfo } from '../health/Cycle'
 import { cycleAnalysis, PMS_WINDOW_DAYS } from '../health/cycleIntel'
 import { painDuration, bilanFreshness, preventionAnalysis, RECO as PREVENTION_RECO, PAIN_SUBACUTE_DAYS, PAIN_CHRONIC_DAYS } from '../health/preventionIntel'
 import { mindAnalysis, breathSessions } from '../health/mindIntel'
+import { muscuAnalysis, groupVerdict, SERIES_HIGH } from './muscuIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 
@@ -1020,6 +1021,28 @@ export function recommendations(db) {
     if (daysSinceLast <= 14 && h.last.charge < h.record.charge * 0.8) {
       push('info', 'dumbbell', `${name} : dernière charge ${h.last.charge} kg, nettement sous ton record de ${h.record.charge} kg — normal après une pause, mais surveille si ça persiste sur plusieurs séances.`, 'planner')
       break
+    }
+  }
+
+  // --- Musculation : volume, équilibre et stagnation ---
+  // Les séries étaient enregistrées une par une sans jamais être relues :
+  // rien ne disait si un muscle était délaissé, si la poussée écrasait le
+  // tirage, ni si un mouvement plafonnait.
+  const mus = muscuAnalysis(db, { days: 28, today: iso })
+  if (mus.sessions >= 3) {
+    if (mus.balance && mus.balance.flags.length) {
+      push('warn', 'dumbbell', mus.balance.flags[0].text, 'planner')
+    }
+    if (mus.stalls.length) {
+      const st = mus.stalls[0]
+      push('info', 'dumbbell', `${st.name} plafonne autour de ${st.best.best1RM} kg estimés depuis plusieurs séances — faire varier les répétitions, le tempo, ou insérer une semaine allégée débloque plus souvent qu'insister à la même charge.`, 'planner')
+    }
+    const over = mus.volumes.filter((v) => groupVerdict(v.seriesPerWeek).level === 'high')
+    if (over.length) {
+      push('info', 'dumbbell', `${over[0].group} : ${String(over[0].seriesPerWeek).replace('.', ',')} séries par semaine, au-dessus du repère habituel de ${SERIES_HIGH}. Au-delà, le rendement supplémentaire devient discutable et la récupération plus difficile.`, 'planner')
+    }
+    if (mus.idle.length) {
+      push('info', 'dumbbell', `${mus.idle[0].name} n'a pas été travaillé depuis ${mus.idle[0].daysSinceLast} jours alors que tu le suivais régulièrement.`, 'planner')
     }
   }
 

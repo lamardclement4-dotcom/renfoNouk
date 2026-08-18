@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE, EQUIP, searchExercises, exercisesOfGroup } from './plannerData'
+import { estimate1RM, suggestLoad } from './muscuIntel'
 import { dureeToMins, projectedAcwr, consecutiveDaysBefore, taperSuggestedMins } from './renfoIntel'
 import { computePeakPlan } from './PeakSpace'
 
@@ -333,8 +334,10 @@ function ExerciseSetRow({ exIdx, setIdx, set, onUpdate, onRemove }) {
 
 function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemoveSet, onRemove }) {
   const h = history && history[ex.name]
-  const last = h && h.last ? `Dernière : ${h.last.charge}kg × ${h.last.reps}` : ''
+  const last = h && h.last ? `Dernière : ${h.last.charge}kg × ${h.last.reps}${h.last.rpe ? ` · RPE ${h.last.rpe}` : ''}` : ''
   const record = h && h.record ? `🏆 ${h.record.charge}kg` : ''
+  const est = h && h.best1RM ? `≈ ${h.best1RM.value}kg max estimé` : ''
+  const sug = h && h.last && h.last.charge ? suggestLoad(h.last.charge, { rpe: h.last.rpe, group: ex.group }) : null
   const sets = ex.sets || []
   return React.createElement('div', { style: { padding: 12, borderRadius: C.radiusSm, background: C.surface2, marginBottom: 10 } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 } },
@@ -343,8 +346,10 @@ function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemoveSet, on
         React.createElement('div', { style: { fontSize: 11.5, color: C.ink3 } }, ex.group)),
       React.createElement('div', { style: { textAlign: 'right' } },
         record && React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.primary } }, record),
+        est && React.createElement('div', { style: { fontSize: 10, color: C.ink3 } }, est),
         last && React.createElement('div', { style: { fontSize: 10, color: C.ink3 } }, last),
         React.createElement('button', { onClick: () => onRemove(idx), style: { fontSize: 12.5, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', marginTop: 3, padding: '9px 4px 9px 14px' } }, 'Retirer'))),
+    sug && sug.reason ? React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, lineHeight: 1.4, marginBottom: 9, paddingBottom: 9, borderBottom: `1px solid ${C.line}` } }, sug.reason) : null,
     sets.map((set, si) => React.createElement(ExerciseSetRow, { key: si, exIdx: idx, setIdx: si, set, onUpdate: onUpdateSet, onRemove: sets.length > 1 ? () => onRemoveSet(idx, si) : null })),
     React.createElement('button', { onClick: () => onAddSet(idx), style: { width: '100%', padding: '8px 0', borderRadius: 8, background: 'transparent', border: `1px dashed ${C.line}`, color: C.ink3, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', marginTop: 4 } }, '+ Ajouter une série'))
 }
@@ -370,8 +375,12 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
   const results = query.trim() ? searchExercises(query, { equip }) : (group ? exercisesOfGroup(group, equip) : [])
 
   function addEx(name, grp) {
+    // L'ancien code ajoutait 2,5 kg à l'aveugle : le même incrément sur une
+    // presse à cuisses que sur des élévations latérales, et sans regarder
+    // le RPE de la dernière fois — pourtant saisi série par série.
     const h = exerciseHistory && exerciseHistory[name]
-    const sc = h && h.last ? h.last.charge + 2.5 : ''
+    const sug = h && h.last ? suggestLoad(h.last.charge, { rpe: h.last.rpe, group: grp }) : null
+    const sc = sug ? sug.charge : ''
     setExercises([...exercises, { name, group: grp, sets: [{ mode: 'reps', series: 4, reps: 8, duree: 30, charge: sc, rpe: '', repos: 90 }] }])
     setQuery('')
   }
@@ -695,12 +704,28 @@ export default function PlannerSpace({ db, store, onClose }) {
     if (MUSCU_SPORTS.includes(sess.sport) && sess.statut === 'realise' && sess.exercises && sess.exercises.length) {
       const hist = { ...exerciseHistory }
       sess.exercises.forEach((ex) => {
-        const maxCharge = Math.max(...ex.sets.map((st) => st.charge || 0))
-        const lastSet = ex.sets[0] || {}
-        const prevRecord = hist[ex.name] && hist[ex.name].record
+        // `last` prenait `ex.sets[0]`, c'est-à-dire la PREMIÈRE série de la
+        // séance — souvent un échauffement — tout en s'appelant « dernière
+        // charge » et en servant à proposer la charge suivante. On retient
+        // la série la plus lourde, cohérent avec le record.
+        const sets = ex.sets || []
+        const top = sets.reduce((a, st) => ((st.charge || 0) > (a.charge || 0) ? st : a), sets[0] || {})
+        const maxCharge = Math.max(...sets.map((st) => st.charge || 0), 0)
+        // Le record en charge brute classait 100 kg × 1 au-dessus de
+        // 90 kg × 10, qui est pourtant nettement plus fort. On garde aussi
+        // la meilleure force estimée, qui compare ce qui est comparable.
+        const best1RM = sets.reduce((best, st) => {
+          const e = estimate1RM(st.charge, st.reps)
+          return e != null && (best == null || e > best) ? e : best
+        }, null)
+        const prev = hist[ex.name] || {}
+        const prevRecord = prev.record
         hist[ex.name] = {
-          last: { charge: lastSet.charge || 0, reps: lastSet.reps || 0, date: sess.date },
+          last: { charge: top.charge || 0, reps: top.reps || 0, rpe: top.rpe || 0, date: sess.date },
           record: (!prevRecord || maxCharge > prevRecord.charge) ? { charge: maxCharge, date: sess.date } : prevRecord,
+          best1RM: (best1RM != null && (prev.best1RM == null || best1RM > prev.best1RM.value))
+            ? { value: best1RM, date: sess.date }
+            : (prev.best1RM || null),
         }
       })
       patch.exerciseHistory = hist

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { C, Icon, Ring, FlowSpace, isoToday, Card, BigStat, Bar, SegPills } from '../health/kit'
+import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { trainingStats, trainingTotals, weekRetro, weeksTrend, mondayOf, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import TrainSpace from '../train/TrainSpace'
@@ -342,6 +343,78 @@ export default function ProgressSpace({ userId, onClose }) {
     }
   }
 
+  // ── Musculation : volume par muscle, équilibre, progression ──
+  // Tout était enregistré série par série sans jamais être relu : ni le
+  // volume par groupe, ni la répartition poussée/tirage, ni la
+  // progression réelle d'un exercice.
+  let muscuBlock = null
+  const mus = muscuAnalysis(db, { days: 28 })
+  if (mus.sessions > 0) {
+    const maxSeries = Math.max(...mus.volumes.map((v) => v.seriesPerWeek), SERIES_LOW)
+    const VCOL = { low: C.warn, ok: C.success, high: '#c4503a' }
+    // Les trois exercices les plus travaillés, avec leur progression réelle
+    // en force estimée — la seule façon de comparer 90 kg × 10 et 100 kg × 1.
+    const tops = mus.tracked.slice(0, 3)
+      .map((t) => exerciseProgress(db, t.name, { days: 180 }))
+      .filter((x) => x && x.sessions >= 2)
+
+    muscuBlock = h('div', null,
+      sectionTitle('Musculation · 28 jours'),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 } },
+        [
+          { big: String(mus.sessions), lab: 'séances' },
+          { big: String(mus.totalSeries), lab: 'séries' },
+          { big: mus.tonnage >= 1000 ? Math.round(mus.tonnage / 1000) + ' t' : mus.tonnage + ' kg', lab: 'tonnage' },
+        ].map((x, i) => h('div', { key: i, style: { background: C.surface, borderRadius: C.radiusSm, padding: '14px 10px', border: `1px solid ${C.line}`, textAlign: 'center' } },
+          h('div', { style: { fontFamily: C.font, fontSize: 21, fontWeight: 800, lineHeight: 1 } }, x.big),
+          h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 5, fontWeight: 600 } }, x.lab)))),
+
+      mus.volumes.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em' } }, 'Séries par semaine et par muscle'),
+        h('div', { style: { fontSize: 11.5, color: C.ink3, margin: '4px 0 11px', lineHeight: 1.45 } }, `Repère d’usage courant : ${SERIES_LOW} à ${SERIES_HIGH} séries hebdomadaires par groupe.`),
+        mus.volumes.map((v) => {
+          const vd = groupVerdict(v.seriesPerWeek)
+          return h('div', { key: v.group, style: { display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 } },
+            h('div', { style: { fontSize: 12, color: C.ink2, fontWeight: 600, flex: '0 0 94px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, v.group),
+            h('div', { style: { flex: 1, height: 8, borderRadius: 999, background: C.surface2, overflow: 'hidden' } },
+              h('div', { style: { width: Math.round(v.seriesPerWeek / maxSeries * 100) + '%', height: '100%', borderRadius: 999, background: VCOL[vd.level] } })),
+            h('div', { style: { fontSize: 12, fontWeight: 700, color: VCOL[vd.level], flex: '0 0 34px', textAlign: 'right' } }, String(v.seriesPerWeek).replace('.', ',')))
+        })) : null,
+
+      mus.balance && (mus.balance.push + mus.balance.pull > 0 || mus.balance.lower > 0) ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 } }, 'Équilibre'),
+        [
+          { a: mus.balance.push, b: mus.balance.pull, la: 'Poussée', lb: 'Tirage' },
+          { a: mus.balance.upper, b: mus.balance.lower, la: 'Haut', lb: 'Bas' },
+        ].map((r, i) => {
+          const tot = r.a + r.b
+          return h('div', { key: i, style: { marginBottom: i ? 0 : 12 } },
+            h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 12, color: C.ink2, fontWeight: 600, marginBottom: 5 } },
+              h('span', null, r.la + ' ' + r.a), h('span', null, r.b + ' ' + r.lb)),
+            h('div', { style: { display: 'flex', height: 8, borderRadius: 999, overflow: 'hidden', background: C.surface2 } },
+              h('div', { style: { width: (tot ? r.a / tot * 100 : 50) + '%', background: C.primary } }),
+              h('div', { style: { flex: 1, background: `color-mix(in srgb, ${C.primary} 32%, ${C.surface2})` } })))
+        }),
+        (mus.balance.flags || []).map((f, i) => h('div', { key: f.id, style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` } }, f.text))) : null,
+
+      tops.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em' } }, 'Force estimée'),
+        h('div', { style: { fontSize: 11.5, color: C.ink3, margin: '4px 0 10px', lineHeight: 1.45 } }, 'Calculée sur la série la plus lourde rapportée à ses répétitions, pour comparer ce qui est comparable.'),
+        tops.map((t, i) => h('div', { key: t.name, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
+          h('div', { style: { flex: 1, minWidth: 0 } },
+            h('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, t.name),
+            h('div', { style: { fontSize: 11.5, color: t.stalled ? C.warn : C.ink3, marginTop: 2 } },
+              t.stalled ? 'plafonne sur les dernières séances' : `${t.gain >= 0 ? '+' : '−'}${String(Math.abs(t.gain)).replace('.', ',')} kg sur ${t.sessions} séances`)),
+          h('div', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: t.stalled ? C.warn : C.primary, flex: '0 0 auto' } },
+            String(t.last.best1RM).replace('.', ','), h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 1 } }, 'kg'))))) : null,
+
+      mus.tips.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 9 } }, 'Ce qu’on en retient'),
+        mus.tips.map((t, i) => h('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: i ? 8 : 0 } },
+          h('span', { style: { color: C.primary, fontWeight: 800, flex: '0 0 auto' } }, '•'),
+          h('span', null, t)))) : null)
+  }
+
   // ── Tests physiques ──
   const TC = '#5b6fa5'
   const allTests = db.physTests || []
@@ -484,6 +557,6 @@ export default function ProgressSpace({ userId, onClose }) {
         h('div', { style: { fontFamily: C.font, fontSize: 24, fontWeight: 700, lineHeight: 1 } }, s.big),
         h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5, fontWeight: 600 } }, s.lab)))),
 
-    todayBlock, goalsBlock, trainBlock, recordsBlock, testsBlock, mobBlock, mobEvoBlock, progBlock, suppBlock,
+    todayBlock, goalsBlock, trainBlock, recordsBlock, muscuBlock, testsBlock, mobBlock, mobEvoBlock, progBlock, suppBlock,
     h('div', { style: { height: 8 } }))
 }
