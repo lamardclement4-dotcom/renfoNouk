@@ -5,7 +5,8 @@ import TrainSpace from './features/train/TrainSpace'
 import ProgressSpace from './features/progress/ProgressSpace'
 import ProfilSpace from './features/profil/ProfilSpace'
 import AccueilSpace from './features/home/AccueilSpace'
-import { Icon, C } from './features/health/kit'
+import { Icon, C, SyncBanner } from './features/health/kit'
+import { useNutritionStore } from './features/nutrition/useNutritionStore'
 
 // ============================================================
 // Hook d'authentification
@@ -646,9 +647,14 @@ const NAV = [
 function Home({ profile, signOut, refreshProfile }) {
   const [space, setSpace] = useState('accueil')
   const userId = profile.id
+  // Le hook partage son état par utilisateur : cet appel ne crée pas de
+  // copie supplémentaire, il s'abonne simplement pour connaître l'état
+  // d'enregistrement et pouvoir l'afficher où que l'on soit dans l'app.
+  const { sync, retrySync } = useNutritionStore(userId)
 
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
+      <SyncBanner sync={sync} onRetry={retrySync} />
       {space === 'accueil' && <AccueilSpace userId={userId} profile={profile} onProfil={() => setSpace('profil')} />}
       {space === 'entrainer' && <TrainSpace userId={userId} onClose={() => setSpace('accueil')} />}
       {space === 'sante' && <HealthHome userId={userId} onClose={() => setSpace('accueil')} />}

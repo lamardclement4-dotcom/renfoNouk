@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib'
+import { createSyncQueue } from './syncQueue'
 
 // Fenêtre de journal chargée au montage. Elle valait 10 jours, ce qui
 // suffisait aux graphes de sept jours mais tronquait silencieusement toutes
@@ -101,8 +102,27 @@ function getInstance(userId) {
       // ligne » et lançaient chacun un INSERT : ligne dupliquée, et au
       // rechargement l'une écrasait l'autre.
       dayWrites: {},
+      // Toute écriture passe par la file : elle réessaie, survit à un
+      // rechargement, et rend visible ce qui n'est pas encore parti.
+      queue: null, sync: { status: 'idle', pending: 0, lastError: null },
       notify() { for (const l of this.listeners) l() },
     }
+    inst.queue = createSyncQueue({ userId })
+    inst.queue.setHandlers({
+      phys: (t, payload) => supabase.from('profiles').update({ phys: payload }).eq('id', userId),
+      cycle: (t, payload) => supabase.from('profiles').update({ cycle: payload }).eq('id', userId),
+      goals: (t, payload) => supabase.from('profiles').update({ goals: payload }).eq('id', userId),
+      zones: (t, payload) => supabase.from('profiles').update({ sensitive_zones: payload }).eq('id', userId),
+      day: async (t, payload) => {
+        const date = t.slice(4)
+        const existingId = inst.rowIds[date]
+        if (existingId) return supabase.from('nutrition_logs').update({ data: payload, updated_at: new Date().toISOString() }).eq('id', existingId)
+        const res = await supabase.from('nutrition_logs').insert({ user_id: userId, date, data: payload }).select('id').single()
+        if (!res.error && res.data) inst.rowIds[date] = res.data.id
+        return res
+      },
+    })
+    inst.queue.subscribe((st) => { inst.sync = st; inst.notify() })
     instances.set(userId, inst)
   }
   return inst
@@ -137,6 +157,20 @@ export function useNutritionStore(userId) {
         rows[r.date] = { food: r.data?.food || [], hydration: r.data?.hydration || [] }
         inst.rowIds[r.date] = r.id
       }
+      // Écritures d'une session précédente jamais parties (onglet fermé
+      // pendant une coupure). Elles décrivent l'état local le plus récent :
+      // elles doivent primer sur l'instantané serveur, sinon la personne
+      // verrait sa saisie « disparaître » au rechargement avant de la voir
+      // revenir une fois la file vidée.
+      const pending = inst.queue.restorePending()
+      for (const [target, payload] of Object.entries(pending)) {
+        if (target === 'phys') inst.phys = payload
+        else if (target === 'cycle') inst.cycle = payload
+        else if (target === 'goals') inst.goals = payload
+        else if (target === 'zones') inst.sensitiveZones = payload
+        else if (target.startsWith('day:')) rows[target.slice(4)] = { food: payload.food || [], hydration: payload.hydration || [] }
+        inst.queue.enqueue(target, payload)
+      }
       inst.dayRows = rows
       inst.loading = false
       inst.notify()
@@ -166,9 +200,7 @@ export function useNutritionStore(userId) {
     const next = typeof patchFn === 'function' ? patchFn(prev) : { ...prev, ...patchFn }
     physRef.current = next
     notify()
-    supabase.from('profiles').update({ phys: next }).eq('id', userId).then(({ error }) => {
-      if (error) console.error('[store] échec sauvegarde phys', error.message)
-    })
+    if (inst) inst.queue.enqueue('phys', next)
   }, [userId])
 
   const saveCycle = useCallback((patchFn) => {
@@ -176,9 +208,7 @@ export function useNutritionStore(userId) {
     const next = typeof patchFn === 'function' ? patchFn(prev) : { ...prev, ...patchFn }
     cycleRef.current = next
     notify()
-    supabase.from('profiles').update({ cycle: next }).eq('id', userId).then(({ error }) => {
-      if (error) console.error('[store] échec sauvegarde cycle', error.message)
-    })
+    if (inst) inst.queue.enqueue('cycle', next)
   }, [userId])
 
   const saveGoals = useCallback((patchFn) => {
@@ -186,9 +216,7 @@ export function useNutritionStore(userId) {
     const next = typeof patchFn === 'function' ? patchFn(prev) : { ...prev, ...patchFn }
     goalsRef.current = next
     notify()
-    supabase.from('profiles').update({ goals: next }).eq('id', userId).then(({ error }) => {
-      if (error) console.error('[store] échec sauvegarde objectifs', error.message)
-    })
+    if (inst) inst.queue.enqueue('goals', next)
   }, [userId])
 
   const saveSensitiveZones = useCallback((patchFn) => {
@@ -196,9 +224,7 @@ export function useNutritionStore(userId) {
     const next = typeof patchFn === 'function' ? patchFn(prev) : patchFn
     sensitiveZonesRef.current = next
     notify()
-    supabase.from('profiles').update({ sensitive_zones: next }).eq('id', userId).then(({ error }) => {
-      if (error) console.error('[store] échec sauvegarde zones sensibles', error.message)
-    })
+    if (inst) inst.queue.enqueue('zones', next)
   }, [userId])
 
   // Ne charge que les DAYS_HISTORY derniers jours au montage (voir load() plus
@@ -224,22 +250,10 @@ export function useNutritionStore(userId) {
     dayRowsRef.current = nextAll
     notify()
 
-    // Les écritures d'une même date sont mises à la queue leu leu : la
-    // suivante ne part qu'une fois l'identifiant de ligne connu, ce qui
-    // transforme le second INSERT en UPDATE.
-    const queue = inst ? (inst.dayWrites[date] || Promise.resolve()) : Promise.resolve()
-    const run = queue.then(() => {
-      const data = { food: dayRowsRef.current[date]?.food || [], hydration: dayRowsRef.current[date]?.hydration || [] }
-      const existingId = rowIds.current[date]
-      const write = existingId
-        ? supabase.from('nutrition_logs').update({ data, updated_at: new Date().toISOString() }).eq('id', existingId)
-        : supabase.from('nutrition_logs').insert({ user_id: userId, date, data }).select('id').single()
-      return Promise.resolve(write).then((res) => {
-        if (res && res.error) { console.error('[store] échec sauvegarde journal', res.error.message); return }
-        if (!existingId && res && res.data) rowIds.current[date] = res.data.id
-      })
-    })
-    if (inst) inst.dayWrites[date] = run.catch(() => {})
+    // La file sérialise déjà par cible : une seule entrée par date, avec
+    // la dernière charge utile. Deux ajouts rapprochés ne peuvent donc plus
+    // produire deux INSERT concurrents.
+    if (inst) inst.queue.enqueue('day:' + date, { food: nextDay.food || [], hydration: nextDay.hydration || [] })
   }, [userId])
 
   // Reconstitue le "db" plat attendu par les composants portés de l'ancienne app.
@@ -403,5 +417,10 @@ export function useNutritionStore(userId) {
     setSensitiveZones: (zones) => store.set({ sensitiveZones: zones }),
   }
 
-  return { db, store, loading }
+  // État de synchronisation, pour que l'écran puisse dire ce qui n'est pas
+  // encore enregistré au lieu de laisser croire que tout est sauvegardé.
+  const sync = inst ? inst.sync : { status: 'idle', pending: 0, lastError: null }
+  const retrySync = () => { if (inst) inst.queue.retryNow() }
+
+  return { db, store, loading, sync, retrySync }
 }

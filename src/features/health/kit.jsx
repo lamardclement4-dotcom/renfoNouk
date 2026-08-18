@@ -535,3 +535,39 @@ export function fmtDate(iso) {
   if (!iso) return ''
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+
+// ── État d'enregistrement ────────────────────────────────────
+// Une écriture qui échouait finissait dans un console.error : l'écran
+// affichait la saisie, elle n'était jamais partie, et personne ne le
+// savait. Ce bandeau n'apparaît que lorsqu'il y a quelque chose à dire.
+export function SyncBanner({ sync, onRetry }) {
+  if (!sync || sync.status === 'idle' || sync.status === 'saving') return null
+  const isError = sync.status === 'error'
+  const tint = isError ? 'var(--c-danger)' : C.warn
+  return React.createElement('div', {
+    role: 'status',
+    style: {
+      position: 'fixed', left: 12, right: 12, bottom: 'calc(76px + env(safe-area-inset-bottom))',
+      zIndex: 90, maxWidth: 436, margin: '0 auto',
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '11px 14px', borderRadius: C.radiusSm,
+      background: `color-mix(in srgb, ${tint} 14%, ${C.surface})`,
+      border: `1px solid color-mix(in srgb, ${tint} 40%, ${C.line})`,
+      boxShadow: C.shadow, fontFamily: C.font,
+    },
+  },
+    React.createElement(Icon, { name: isError ? 'shield' : 'clock', size: 16, color: tint, style: { flex: '0 0 auto' } }),
+    React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+      React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink, lineHeight: 1.35 } },
+        isError
+          ? 'Enregistrement impossible'
+          : `${sync.pending} modification${sync.pending > 1 ? 's' : ''} en attente d’enregistrement`),
+      React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2, lineHeight: 1.4 } },
+        isError
+          ? 'Tes données restent sur cet appareil et repartiront dès que possible.'
+          : 'Elles partiront dès le retour du réseau — tu peux continuer.')),
+    isError && onRetry ? React.createElement('button', {
+      onClick: onRetry,
+      style: { flex: '0 0 auto', padding: '7px 12px', borderRadius: 999, border: 'none', background: tint, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+    }, 'Réessayer') : null)
+}
