@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { Icon, C, GRADIENTS } from '../health/kit'
+import { hydroAnalysis, CAF_HALF_LIFE_H } from './hydroIntel'
 
 // ============================================================
 // Hydratation unifiée (Eau + Boissons + Caféine + Sucres),
@@ -316,6 +317,71 @@ function TodayTab({ db, store }) {
         "Eau ~35 ml/kg/j (EFSA/ANSES) — café et thé comptent dans les apports. Caféine < 400 mg/j (EFSA 2015). Sucres libres < 50 g/j, idéal < 25 g (OMS 2015).")))
 }
 
+// ── Analyse sur 28 jours ──
+// L'écran ne montrait que trois totaux quotidiens. L'horodatage de chaque
+// boisson n'était lu nulle part, et la préférence « coupure caféine du
+// soir » servait à composer une phrase de conseil sans jamais être
+// comparée à ce qui avait réellement été bu.
+function HydroAnalysis({ db, targetMl }) {
+  const ana = hydroAnalysis(db, { days: 28, targetMl })
+  const LVL = { ok: 'var(--c-success)', info: INK3, warn: C.warn, alert: '#c4503a', none: INK3 }
+  const card = (children, tint) => React.createElement('div', {
+    style: {
+      padding: '14px 15px', borderRadius: RADIUS_SM, marginBottom: 10,
+      background: tint ? `color-mix(in srgb, ${tint} 9%, ${SURFACE})` : SURFACE,
+      border: `1px solid ${tint ? `color-mix(in srgb, ${tint} 26%, ${LINE})` : LINE}`,
+    },
+  }, children)
+  const lab = (t) => React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 } }, t)
+  const body = (t, col) => React.createElement('div', { style: { fontSize: 12.5, color: col || INK2, lineHeight: 1.5 } }, t)
+
+  if (!ana.series.length) return null
+
+  const lc = ana.lateCaffeine
+  return React.createElement('div', null,
+    React.createElement('div', { style: ST.secLab }, 'Analyse — 28 derniers jours'),
+
+    ana.adherence ? card([
+      React.createElement('div', { key: 'l' }, lab('Cible atteinte')),
+      React.createElement('div', { key: 'v', style: { display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 4 } },
+        React.createElement('span', { style: { fontSize: 21, fontWeight: 800, color: LVL[ana.adherence.level] } }, ana.adherence.hit + '/' + ana.adherence.days),
+        React.createElement('span', { style: { fontSize: 12, color: INK3, fontWeight: 600 } }, 'jours')),
+      React.createElement('div', { key: 't' }, body(ana.adherence.text)),
+    ], ana.adherence.level === 'ok' ? null : C.warn) : null,
+
+    lc && lc.trackedDays ? card([
+      React.createElement('div', { key: 'l' }, lab(`Caféine après ${ana.cutoff} h`)),
+      React.createElement('div', { key: 't' }, body(lc.text)),
+      lc.meanResidual != null ? React.createElement('div', { key: 'r', style: { fontSize: 11.5, color: INK3, marginTop: 6, lineHeight: 1.45 } },
+        `Il reste en moyenne ${lc.meanResidual} mg en circulation à 23 h (demi-vie de ${CAF_HALF_LIFE_H} h).`) : null,
+    ], lc.level === 'warn' ? C.warn : null) : null,
+
+    ana.vsSleep ? card([
+      React.createElement('div', { key: 'l' }, lab('Caféine du soir et sommeil')),
+      React.createElement('div', { key: 't' }, body(
+        ana.vsSleep.flagged
+          ? `Les nuits suivant une caféine tardive : ${ana.vsSleep.hoursLate} h et qualité ${ana.vsSleep.qualityLate}/5, contre ${ana.vsSleep.hoursOther} h et ${ana.vsSleep.qualityOther}/5 les autres nuits.`
+          : `Aucun écart net entre les nuits suivant une caféine tardive (${ana.vsSleep.nightsLate}) et les autres (${ana.vsSleep.nightsOther}).`)),
+      React.createElement('div', { key: 'n', style: { fontSize: 11, color: INK3, marginTop: 6 } }, 'Calculé sur ton propre historique.'),
+    ], ana.vsSleep.flagged ? C.warn : null) : null,
+
+    ana.distribution ? card([
+      React.createElement('div', { key: 'l' }, lab('Répartition dans la journée')),
+      React.createElement('div', { key: 'b', style: { display: 'flex', height: 9, borderRadius: 999, overflow: 'hidden', marginBottom: 8 } },
+        React.createElement('div', { style: { width: ana.distribution.morningPct + '%', background: COL_EAU } }),
+        React.createElement('div', { style: { flex: 1, background: `color-mix(in srgb, ${COL_EAU} 35%, ${SURFACE2})` } }),
+        React.createElement('div', { style: { width: ana.distribution.eveningPct + '%', background: C.warn } })),
+      React.createElement('div', { key: 't' }, body(ana.distribution.text)),
+    ], ana.distribution.level === 'warn' ? C.warn : null) : null,
+
+    card([
+      React.createElement('div', { key: 'l' }, lab('Ce qu’on en retient')),
+      ana.tips.map((t, i) => React.createElement('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: INK2, lineHeight: 1.5, marginTop: i ? 8 : 0 } },
+        React.createElement('span', { style: { color: COL_EAU, fontWeight: 800, flex: '0 0 auto' } }, '•'),
+        React.createElement('span', null, t))),
+    ]))
+}
+
 function TrendsTab({ db, store }) {
   const poids = Number((db.profilePhys || {}).poids) || 70
   const today = isoToday()
@@ -365,6 +431,8 @@ function TrendsTab({ db, store }) {
       React.createElement('select', { value: cutoff, onChange: (e) => store.set({ hydroPrefs: { ...(db.hydroPrefs || {}), eveningCutoff: parseInt(e.target.value, 10) } }),
         style: { padding: '6px 10px', border: `1.5px solid ${LINE}`, borderRadius: RADIUS_XS, background: '#f6f7f9', fontSize: 13, color: INK, cursor: 'pointer' } },
         [12, 13, 14, 15, 16, 17, 18].map((h) => React.createElement('option', { key: h, value: h }, h + 'h00')))),
+
+    React.createElement(HydroAnalysis, { db, targetMl: Math.round(poids * 35) }),
 
     React.createElement('div', { style: ST.secLab }, 'Électrolytes'),
     React.createElement('div', { style: ST.noteBox(COL_EAU) },

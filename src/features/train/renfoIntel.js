@@ -25,6 +25,7 @@ import { cycleAnalysis, PMS_WINDOW_DAYS } from '../health/cycleIntel'
 import { painDuration, bilanFreshness, preventionAnalysis, RECO as PREVENTION_RECO, PAIN_SUBACUTE_DAYS, PAIN_CHRONIC_DAYS } from '../health/preventionIntel'
 import { mindAnalysis, breathSessions } from '../health/mindIntel'
 import { muscuAnalysis, groupVerdict, SERIES_HIGH } from './muscuIntel'
+import { hydroAnalysis } from '../hydration/hydroIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 
@@ -851,6 +852,27 @@ export function recommendations(db) {
     const avg3 = last3Nights.reduce((a, b) => a + b, 0) / 3
     if (avg3 < 6.5) {
       push('alert', 'moon', `Moyenne de ${avg3.toFixed(1)} h de sommeil sur les 3 dernières nuits — dette de sommeil qui s'installe, pas juste une mauvaise nuit isolée. Priorise le repos avant que ça n'affecte tes séances.`, 'sommeil')
+    }
+  }
+
+  // --- Hydratation, caféine et sucres ---
+  // L'horodatage de chaque boisson n'était lu nulle part, et la
+  // préférence de coupure du soir n'était comparée à rien.
+  const hydAna = hydroAnalysis(db, { days: 28, today: iso, targetMl: hydricTargetMl(db) })
+  if (hydAna.series.length >= 5) {
+    if (hydAna.vsSleep && hydAna.vsSleep.flagged) {
+      push('warn', 'cup', `Les nuits qui suivent une caféine après ${hydAna.cutoff} h sont plus courtes ou moins bonnes que les autres dans ton propre historique (${hydAna.vsSleep.hoursLate} h et qualité ${hydAna.vsSleep.qualityLate}/5, contre ${hydAna.vsSleep.hoursOther} h et ${hydAna.vsSleep.qualityOther}/5).`, 'hydratation')
+    } else if (hydAna.lateCaffeine && hydAna.lateCaffeine.level === 'warn') {
+      push('info', 'cup', `${hydAna.lateCaffeine.text} Avec une demi-vie d'environ six heures, il en reste ${hydAna.lateCaffeine.meanResidual} mg en moyenne au coucher.`, 'hydratation')
+    }
+    if (hydAna.adherence && hydAna.adherence.level === 'alert') {
+      push('warn', 'drop', hydAna.adherence.text + ' Une moyenne correcte peut masquer une majorité de journées en dessous.', 'hydratation')
+    }
+    if (hydAna.distribution && hydAna.distribution.level === 'warn') {
+      push('info', 'drop', hydAna.distribution.text, 'hydratation')
+    }
+    if (hydAna.sugar && hydAna.sugar.level === 'warn') {
+      push('info', 'drop', hydAna.sugar.text, 'hydratation')
     }
   }
 
