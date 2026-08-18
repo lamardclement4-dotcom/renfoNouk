@@ -133,6 +133,16 @@ export function slotConflicts(plan) {
 }
 
 // ─── Observance ──────────────────────────────────────────────
+// Jour courant en heure LOCALE. `new Date().toISOString()` renvoie le jour
+// UTC : dans un fuseau en avance sur UTC, entre minuit et deux heures du
+// matin, il désigne la veille — la prise du jour n'était alors pas comptée
+// et la série paraissait rompue.
+const todayISO = () => {
+  const d = new Date()
+  const p = (n) => (n < 10 ? '0' + n : '' + n)
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+}
+
 const shiftISO = (iso, delta) => {
   const [y, m, d] = iso.split('-').map(Number)
   const x = new Date(Date.UTC(y, m - 1, d))
@@ -144,7 +154,7 @@ const shiftISO = (iso, delta) => {
 // masque le détail : on peut être à 80 % tout en oubliant toujours le
 // même produit, ce qui est précisément l'information utile.
 export function adherenceBySupp(plan, suppTaken, { days = 14, today } = {}) {
-  const ref = today || new Date().toISOString().slice(0, 10)
+  const ref = today || todayISO()
   const log = suppTaken || {}
   return (plan || []).map((id) => {
     let taken = 0
@@ -158,7 +168,7 @@ export function adherenceBySupp(plan, suppTaken, { days = 14, today } = {}) {
 
 // Jours consécutifs de prise en remontant depuis la date de référence.
 export function currentStreak(id, suppTaken, today) {
-  const ref = today || new Date().toISOString().slice(0, 10)
+  const ref = today || todayISO()
   const log = suppTaken || {}
   let n = 0
   for (let i = 0; i < 400; i++) {
@@ -186,7 +196,7 @@ export const CURES = {
 
 // Première et dernière prise enregistrées, et durée écoulée.
 export function cureStatus(id, suppTaken, today) {
-  const ref = today || new Date().toISOString().slice(0, 10)
+  const ref = today || todayISO()
   const log = suppTaken || {}
   const dates = Object.keys(log).filter((d) => (log[d] || []).includes(id)).sort()
   if (!dates.length) return null

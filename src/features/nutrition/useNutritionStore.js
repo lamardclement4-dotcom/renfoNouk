@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib'
 
 // Fenêtre de journal chargée au montage. Elle valait 10 jours, ce qui
@@ -78,60 +78,89 @@ function pick(obj, keys) {
 //   - foodFav/…/diagHistory -> imbriqués sous profiles.phys.nutrition
 //   - toute autre clé (physTests, sleepLog, suppPlan, painBilan, breathLog…)
 //                        -> stockée au niveau racine de profiles.phys
+// ─── État partagé par utilisateur ────────────────────────────
+// Chaque appel du hook tenait sa propre copie de `phys`. Or plusieurs
+// écrans sont montés en même temps : Progrès reste monté pendant qu'il
+// affiche Tests physiques ou Sommeil, et chacun appelait le hook. Deux
+// copies indépendantes du même profil, donc : enregistrer un test depuis
+// Progrès, revenir, puis cocher un objectif réécrivait le profil depuis la
+// copie périmée de Progrès — et le test disparaissait sans erreur.
+//
+// L'état vit désormais une seule fois par utilisateur, et tous les écrans
+// montés s'y abonnent : une écriture les met tous à jour ensemble.
+const instances = new Map()
+
+function getInstance(userId) {
+  let inst = instances.get(userId)
+  if (!inst) {
+    inst = {
+      phys: {}, cycle: {}, goals: {}, sensitiveZones: [], dayRows: {},
+      rowIds: {}, loading: true, started: false, listeners: new Set(),
+      notify() { for (const l of this.listeners) l() },
+    }
+    instances.set(userId, inst)
+  }
+  return inst
+}
+
 export function useNutritionStore(userId) {
-  const [loading, setLoading] = useState(true)
-  const [phys, setPhys] = useState({})
-  const [cycle, setCycle] = useState({})
-  const [goals, setGoals] = useState({})
-  const [sensitiveZones, setSensitiveZones] = useState([])
-  const [dayRows, setDayRows] = useState({}) // { [date]: { food, hydration } }
-  const rowIds = useRef({})
-  // Miroirs synchrones de l'état, pour calculer le "next" en dehors des
-  // updaters de setState : React (StrictMode) peut invoquer un updater deux
-  // fois, ce qui déclencherait deux fois l'écriture Supabase si elle vivait
-  // à l'intérieur du callback passé à setState.
-  const physRef = useRef({})
-  const cycleRef = useRef({})
-  const goalsRef = useRef({})
-  const sensitiveZonesRef = useRef([])
-  const dayRowsRef = useRef({})
+  const inst = userId ? getInstance(userId) : null
+  const [, bump] = useState(0)
 
   useEffect(() => {
-    let active = true
-    if (!userId) return
+    if (!inst) return undefined
+    const listener = () => bump((n) => n + 1)
+    inst.listeners.add(listener)
+    return () => { inst.listeners.delete(listener) }
+  }, [inst])
+
+  useEffect(() => {
+    if (!userId || !inst || inst.started) return
+    inst.started = true
     async function load() {
       const since = isoDaysAgo(DAYS_HISTORY)
       const [{ data: profileRow }, { data: logRows }] = await Promise.all([
         supabase.from('profiles').select('phys,cycle,sensitive_zones,goals').eq('id', userId).single(),
         supabase.from('nutrition_logs').select('id,date,data').eq('user_id', userId).gte('date', since),
       ])
-      if (!active) return
-      physRef.current = profileRow?.phys || {}
-      cycleRef.current = profileRow?.cycle || {}
-      goalsRef.current = profileRow?.goals || {}
-      sensitiveZonesRef.current = profileRow?.sensitive_zones || []
-      setPhys(physRef.current)
-      setCycle(cycleRef.current)
-      setGoals(goalsRef.current)
-      setSensitiveZones(sensitiveZonesRef.current)
+      inst.phys = profileRow?.phys || {}
+      inst.cycle = profileRow?.cycle || {}
+      inst.goals = profileRow?.goals || {}
+      inst.sensitiveZones = profileRow?.sensitive_zones || []
       const rows = {}
       for (const r of logRows || []) {
         rows[r.date] = { food: r.data?.food || [], hydration: r.data?.hydration || [] }
-        rowIds.current[r.date] = r.id
+        inst.rowIds[r.date] = r.id
       }
-      dayRowsRef.current = rows
-      setDayRows(rows)
-      setLoading(false)
+      inst.dayRows = rows
+      inst.loading = false
+      inst.notify()
     }
     load()
-    return () => { active = false }
-  }, [userId])
+    return undefined
+  }, [userId, inst])
+
+  // Vues stables sur l'état partagé, pour que le reste du fichier garde sa
+  // forme d'origine.
+  const physRef = { get current() { return inst ? inst.phys : {} }, set current(v) { if (inst) inst.phys = v } }
+  const cycleRef = { get current() { return inst ? inst.cycle : {} }, set current(v) { if (inst) inst.cycle = v } }
+  const goalsRef = { get current() { return inst ? inst.goals : {} }, set current(v) { if (inst) inst.goals = v } }
+  const sensitiveZonesRef = { get current() { return inst ? inst.sensitiveZones : [] }, set current(v) { if (inst) inst.sensitiveZones = v } }
+  const dayRowsRef = { get current() { return inst ? inst.dayRows : {} }, set current(v) { if (inst) inst.dayRows = v } }
+  const rowIds = { get current() { return inst ? inst.rowIds : {} } }
+  const loading = inst ? inst.loading : true
+  const phys = physRef.current
+  const cycle = cycleRef.current
+  const goals = goalsRef.current
+  const sensitiveZones = sensitiveZonesRef.current
+  const dayRows = dayRowsRef.current
+  const notify = () => { if (inst) inst.notify() }
 
   const savePhys = useCallback((patchFn) => {
     const prev = physRef.current
     const next = typeof patchFn === 'function' ? patchFn(prev) : { ...prev, ...patchFn }
     physRef.current = next
-    setPhys(next)
+    notify()
     supabase.from('profiles').update({ phys: next }).eq('id', userId).then(({ error }) => {
       if (error) console.error('[store] échec sauvegarde phys', error.message)
     })
@@ -141,7 +170,7 @@ export function useNutritionStore(userId) {
     const prev = cycleRef.current
     const next = typeof patchFn === 'function' ? patchFn(prev) : { ...prev, ...patchFn }
     cycleRef.current = next
-    setCycle(next)
+    notify()
     supabase.from('profiles').update({ cycle: next }).eq('id', userId).then(({ error }) => {
       if (error) console.error('[store] échec sauvegarde cycle', error.message)
     })
@@ -151,7 +180,7 @@ export function useNutritionStore(userId) {
     const prev = goalsRef.current
     const next = typeof patchFn === 'function' ? patchFn(prev) : { ...prev, ...patchFn }
     goalsRef.current = next
-    setGoals(next)
+    notify()
     supabase.from('profiles').update({ goals: next }).eq('id', userId).then(({ error }) => {
       if (error) console.error('[store] échec sauvegarde objectifs', error.message)
     })
@@ -161,7 +190,7 @@ export function useNutritionStore(userId) {
     const prev = sensitiveZonesRef.current
     const next = typeof patchFn === 'function' ? patchFn(prev) : patchFn
     sensitiveZonesRef.current = next
-    setSensitiveZones(next)
+    notify()
     supabase.from('profiles').update({ sensitive_zones: next }).eq('id', userId).then(({ error }) => {
       if (error) console.error('[store] échec sauvegarde zones sensibles', error.message)
     })
@@ -179,7 +208,7 @@ export function useNutritionStore(userId) {
       const day = { food: data?.data?.food || [], hydration: data?.data?.hydration || [] }
       if (data) rowIds.current[date] = data.id
       dayRowsRef.current = { ...dayRowsRef.current, [date]: day }
-      setDayRows(dayRowsRef.current)
+      notify()
     })
   }, [userId])
 
@@ -188,7 +217,7 @@ export function useNutritionStore(userId) {
     const nextDay = { ...prevDay, ...partial }
     const nextAll = { ...dayRowsRef.current, [date]: nextDay }
     dayRowsRef.current = nextAll
-    setDayRows(nextAll)
+    notify()
 
     const data = { food: nextDay.food || [], hydration: nextDay.hydration || [] }
     const existingId = rowIds.current[date]

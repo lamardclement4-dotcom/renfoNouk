@@ -20,6 +20,16 @@ const num = (v) => {
   return Number.isFinite(n) ? n : null
 }
 
+// Jour courant en heure LOCALE. `new Date().toISOString()` renvoie le jour
+// UTC : dans un fuseau en avance sur UTC, entre minuit et deux heures du
+// matin, il désigne la veille — la prise du jour n'était alors pas comptée
+// et la série paraissait rompue.
+const todayISO = () => {
+  const d = new Date()
+  const p = (n) => (n < 10 ? '0' + n : '' + n)
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+}
+
 const shiftISO = (iso, delta) => {
   const [y, m, d] = iso.split('-').map(Number)
   const x = new Date(Date.UTC(y, m - 1, d))
@@ -35,7 +45,7 @@ export function dowOf(iso) {
 
 // Nuits renseignées sur la fenêtre, de la plus ancienne à la plus récente.
 export function sleepSeries(sleepLog, { days = 14, today } = {}) {
-  const ref = today || new Date().toISOString().slice(0, 10)
+  const ref = today || todayISO()
   const log = sleepLog || {}
   const out = []
   for (let i = days - 1; i >= 0; i--) {
