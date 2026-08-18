@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { C, Icon, Ring, FlowSpace, isoToday, Card, BigStat, Bar, SegPills } from '../health/kit'
 import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
 import { testsAnalysis } from '../physical-tests/testsIntel'
+import { mobilityAnalysis } from '../train/mobilityIntel'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { trainingStats, trainingTotals, weekRetro, weeksTrend, mondayOf, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import TrainSpace from '../train/TrainSpace'
@@ -236,113 +237,54 @@ export default function ProgressSpace({ userId, onClose }) {
       weakZones.map((z, i) => h('span', { key: i, style: { fontSize: 12.5, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'color-mix(in srgb, #c4a03a 14%, ' + C.surface + ')', color: '#9a7a1a', border: '1px solid color-mix(in srgb, #c4a03a 30%, ' + C.line + ')' } }, z))) : null)
 
   // ── Évolution mobilité ──
-  const mobHist = (db.mobilityHistory || []).slice().sort((a, b) => a.date.localeCompare(b.date))
+  // Seul le score global était tracé. Il peut rester plat pendant qu'une
+  // zone progresse et qu'une autre se dégrade — c'est ce détail qui dit
+  // où porter le travail.
+  const mAna = mobilityAnalysis(db)
+  const mobHist = mAna.history
   let mobEvoBlock = null
-  if (mobHist.length >= 2) {
-    const mhMax = Math.max(...mobHist.map((e) => e.score), 100)
+  if (mobHist.length >= 1) {
+    const ZC = { up: C.success, down: '#c4503a', flat: C.ink3 }
+    const VCOL = (v) => (v <= 1 ? '#c4503a' : v === 2 ? C.warn : C.success)
     const mhLast = mobHist[mobHist.length - 1]
-    const mhPrev = mobHist[mobHist.length - 2]
-    const mhDelta = mhLast.score - mhPrev.score
-    const mhRecent = mobHist.slice(-8)
-    const mhBarW = 22, mhGap = 8, mhH = 64
-    const mhW = mhRecent.length * (mhBarW + mhGap) - mhGap
-    const mhFmtDate = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    const g = mAna.trend
     mobEvoBlock = h('div', null,
-      sectionTitle('Évolution mobilité'),
+      sectionTitle('Mobilité par zone'),
       h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, marginBottom: 10 } },
-        h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 } },
+        h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 } },
           h('div', { style: { fontFamily: C.font, fontSize: 26, fontWeight: 800, color: C.primary } }, mhLast.score),
           h('span', { style: { fontSize: 13, color: C.ink3 } }, '/100'),
-          h('span', { style: { fontSize: 12.5, fontWeight: 700, marginLeft: 4, color: mhDelta >= 0 ? C.success : '#c4503a' } }, (mhDelta >= 0 ? '▲+' : '▼') + mhDelta + ' vs précédent')),
-        h('svg', { width: '100%', height: mhH + 22, viewBox: `0 0 ${mhW} ${mhH + 22}`, preserveAspectRatio: 'xMidYMax meet' },
-          mhRecent.map((e, i) => {
-            const bh = Math.max(4, Math.round(e.score / mhMax * mhH))
-            const bx = i * (mhBarW + mhGap)
-            const isLast = i === mhRecent.length - 1
-            return h('g', { key: e.date },
-              h('rect', { x: bx, y: mhH - bh, width: mhBarW, height: bh, rx: 4, style: { fill: isLast ? C.primary : `color-mix(in srgb, ${C.primary} 35%, ${C.surface2})` } }),
-              h('text', { x: bx + mhBarW / 2, y: mhH + 16, textAnchor: 'middle', fontSize: 9.5, fontWeight: 600, style: { fill: C.ink3 } }, mhFmtDate(e.date)))
-          })),
-        h('p', { style: { fontSize: 12, color: C.ink3, marginTop: 10, lineHeight: 1.4 } }, mobHist.length + " test·s enregistré" + (mobHist.length > 1 ? 's' : '') + ' · score auto-évalué, indicatif')))
+          g ? h('span', { style: { fontSize: 12.5, fontWeight: 700, marginLeft: 4, color: g.delta >= 0 ? C.success : '#c4503a' } },
+            (g.delta >= 0 ? '▲+' : '▼') + g.delta + ' vs précédent') : null),
+        h('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 14 } }, mAna.freshness.text),
+        mAna.zones.map((z, i) => h('div', { key: z.id, style: { display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 } },
+          h('div', { style: { fontSize: 12, color: C.ink2, fontWeight: 600, flex: '0 0 108px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, z.label),
+          h('div', { style: { flex: 1, display: 'flex', gap: 3 } },
+            [1, 2, 3].map((n) => h('div', { key: n, style: { flex: 1, height: 8, borderRadius: 999, background: z.last.val >= n ? VCOL(z.last.val) : C.surface2 } }))),
+          z.count > 1 && z.dir !== 'flat'
+            ? h('span', { style: { fontSize: 11, fontWeight: 800, color: ZC[z.dir], flex: '0 0 auto' } }, z.dir === 'up' ? '▲' : '▼')
+            : h('span', { style: { flex: '0 0 auto', width: 8 } }),
+          z.stuck ? h('span', { style: { fontSize: 10, fontWeight: 700, color: '#c4503a', flex: '0 0 auto' } }, 'bloquée') : null))),
+
+      mAna.corroboration.length ? h('div', { style: { background: `color-mix(in srgb, #c4503a 8%, ${C.surface})`, border: '1px solid color-mix(in srgb, #c4503a 26%, ' + C.line + ')', borderRadius: C.radiusSm, padding: '14px 15px', marginBottom: 10 } },
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 } }, 'Confirmé par plusieurs sources'),
+        mAna.corroboration.map((c) => h('div', { key: c.id, style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: 4 } },
+          h('strong', null, c.label), ' — ', c.sources.join(', ')))) : null,
+
+      mAna.program ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '14px 15px', marginBottom: 10 } },
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 } }, 'Programme ciblé'),
+        h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5 } },
+          `${mAna.program.done} séance sur ${mAna.program.sessions} réalisée`
+          + (mAna.program.ageDays != null ? ` · créé il y a ${mAna.program.ageDays} jours` : '')
+          + (mAna.program.stillRelevant ? '' : ' · ne cible plus tes zones les plus raides'))) : null,
+
+      h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 9 } }, 'Ce qu’on en retient'),
+        mAna.tips.map((t, i) => h('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: i ? 8 : 0 } },
+          h('span', { style: { color: C.primary, fontWeight: 800, flex: '0 0 auto' } }, '•'),
+          h('span', null, t)))))
   }
 
-  // ── Programme correctif ──
-  let progBlock = null
-  if (db.program && db.program.sessions && db.program.sessions.length) {
-    const sess = db.program.sessions
-    const dn = db.program.done || {}
-    const done = sess.filter((s) => dn[s.id]).length
-    const pct = Math.round(done / sess.length * 100)
-    progBlock = h('div', null,
-      sectionTitle('Programme correctif'),
-      tile({
-        onClick: () => setFlow('program'),
-        left: iconBadge('route', C.carb),
-        title: `${done}/${sess.length} séances réalisées`,
-        sub: db.program.weak && db.program.weak.length ? `Cible : ${db.program.weak.join(', ')}` : 'Programme personnalisé',
-        right: h(Ring, { size: 44, stroke: 6, progress: pct / 100, color: C.carb, track: C.surface2 },
-          h('div', { style: { fontFamily: C.font, fontSize: 11, fontWeight: 700, color: C.carb } }, pct + '%')),
-      }))
-  }
-
-  // ── Compléments ──
-  let suppBlock = null
-  const plan = db.suppPlan || []
-  if (plan.length) {
-    const taken = ((db.suppTaken || {})[today] || []).filter((id) => plan.includes(id))
-    const pct = Math.round(taken.length / plan.length * 100)
-    suppBlock = h('div', null,
-      sectionTitle('Compléments', h('span', { style: { fontSize: 12, color: C.ink3, fontWeight: 600 } }, 'hors score santé')),
-      tile({
-        left: h(Ring, { size: 46, stroke: 6, progress: pct / 100, color: C.carb, track: C.surface2 },
-          h('div', { style: { fontFamily: C.font, fontSize: 13, fontWeight: 700, color: C.carb } }, taken.length + '/' + plan.length)),
-        title: "Pris aujourd'hui",
-        sub: pct === 100 ? 'Plan du jour complété' : "Suivi d'observance",
-      }))
-  }
-
-  // ── Entraînement + Records ──
-  const ts = trainingStats(db)
-  let trainBlock = null, recordsBlock = null
-  if (ts.hasData) {
-    const statMini = (big, lab, unit) => h('div', { style: { background: C.surface, borderRadius: C.radiusSm, padding: '16px 12px', border: `1px solid ${C.line}`, textAlign: 'center' } },
-      h('div', { style: { fontFamily: C.font, fontSize: 22, fontWeight: 700, lineHeight: 1 } }, big, unit ? h('span', { style: { fontSize: 13, fontWeight: 600, color: C.ink3, marginLeft: 2 } }, unit) : null),
-      h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 5, fontWeight: 600 } }, lab))
-    const tm = ts.courseTrendMax || 1
-    trainBlock = h('div', null,
-      sectionTitle('Entraînement', h('button', { onClick: () => setFlow('planner'), style: { fontSize: 13, fontWeight: 600, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Planning')),
-      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 12 } },
-        statMini(ts.weekSessions, 'séances (sem.)'), statMini(ts.weekKm, 'km (sem.)'), statMini(ts.monthSessions, 'séances (mois)'), statMini(ts.monthKm, 'km (mois)')),
-      ts.sports.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, marginBottom: 12 } },
-        h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Répartition des sports · depuis le début'),
-        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
-          ts.sports.map((sp) => h('div', { key: sp.id, style: { display: 'flex', alignItems: 'center', gap: 10 } },
-            h('div', { style: { width: 82, fontSize: 13, fontWeight: 600, flex: '0 0 auto' } }, sp.label),
-            h('div', { style: { flex: 1, height: 8, borderRadius: 999, background: C.surface2, overflow: 'hidden' } },
-              h('div', { style: { height: '100%', width: sp.pct + '%', borderRadius: 999, background: sp.color } })),
-            h('div', { style: { width: 28, textAlign: 'right', fontSize: 13, fontWeight: 700, flex: '0 0 auto' } }, sp.count))))) : null,
-      tm > 0 ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, marginBottom: 12 } },
-        h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Course · 8 dernières semaines'),
-        h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 5, height: 64 } },
-          ts.courseTrend.map((km, i) => h('div', { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
-            h('div', { style: { width: '100%', height: 48, display: 'flex', alignItems: 'flex-end' } },
-              h('div', { style: { width: '100%', height: `${km > 0 ? Math.max(km / tm * 100, 6) : 0}%`, borderRadius: '5px 5px 0 0', background: i === ts.courseTrend.length - 1 ? '#e07b54' : `color-mix(in srgb,#e07b54 55%,${C.surface2})` } })),
-            h('div', { style: { fontSize: 9.5, color: C.ink3, fontWeight: 600 } }, km > 0 ? Math.round(km) : ''))))) : null)
-
-    if (ts.records.length || ts.perche) {
-      recordsBlock = h('div', null,
-        sectionTitle('Records personnels'),
-        h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 10 } },
-          ts.perche ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderBottom: ts.records.length ? `1px solid ${C.line}` : 'none' } },
-            h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: 'color-mix(in srgb,#7a6fa5 14%,' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'bolt', size: 17, color: '#7a6fa5' })),
-            h('div', { style: { flex: 1, fontSize: 14, fontWeight: 600 } }, 'Saut à la perche'),
-            h('div', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: '#7a6fa5' } }, ts.perche, h('span', { style: { fontSize: 12, fontWeight: 600, marginLeft: 1 } }, 'm'))) : null,
-          ts.records.map((r, i) => h('div', { key: r.name, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderTop: i || ts.perche ? `1px solid ${C.line}` : 'none' } },
-            h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: `color-mix(in srgb,${C.primary} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'dumbbell', size: 16, color: C.primary })),
-            h('div', { style: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, r.name),
-            h('div', { style: { fontFamily: C.font, fontSize: 16, fontWeight: 800, color: C.primary, flex: '0 0 auto' } }, r.charge, h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 1 } }, 'kg'))))))
-    }
-  }
 
   // ── Musculation : volume par muscle, équilibre, progression ──
   // Tout était enregistré série par série sans jamais être relu : ni le

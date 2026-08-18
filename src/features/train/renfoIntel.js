@@ -26,6 +26,7 @@ import { painDuration, bilanFreshness, preventionAnalysis, RECO as PREVENTION_RE
 import { mindAnalysis, breathSessions } from '../health/mindIntel'
 import { muscuAnalysis, groupVerdict, SERIES_HIGH } from './muscuIntel'
 import { hydroAnalysis } from '../hydration/hydroIntel'
+import { mobilityAnalysis } from './mobilityIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 
@@ -940,11 +941,26 @@ export function recommendations(db) {
       ? 'Ta mobilité de cheville limite potentiellement tes performances — ajoute des exercices ciblés.'
       : `Zones de mobilité à travailler : ${mob.extra.weak.join(', ')}.`, 'mobility')
   }
-  if (mob.status === 'ok' && mob.extra.date) {
-    const days = Math.floor((new Date(iso + 'T00:00:00') - new Date(mob.extra.date + 'T00:00:00')) / 86400000)
-    if (days > 30 && mob.extra.score < 60) {
-      push('info', 'target', `Ton dernier test de mobilité (score ${mob.extra.score}/100) date de ${days} jours — un nouveau test t'aiderait à voir si tu as progressé.`, 'mobility')
-    }
+  // Le détail par zone n'était jamais relu, ni le programme généré à
+  // partir de ces zones — pourtant tous deux conservés.
+  const mobAna = mobilityAnalysis(db, { today: iso })
+  if (mobAna.corroboration.length) {
+    const c = mobAna.corroboration[0]
+    push('warn', 'target', `${c.label} ressort dans ${c.count} sources indépendantes (${c.sources.join(', ')}) — un signal bien plus solide qu'une mesure isolée, et une zone à traiter en priorité.`, 'mobility')
+  }
+  if (mobAna.hidden && mobAna.hidden.masked) {
+    push('info', 'target', `Ton score de mobilité n'a bougé que de ${mobAna.hidden.globalDelta > 0 ? '+' : ''}${mobAna.hidden.globalDelta} points, mais il recouvre des mouvements opposés : ${mobAna.hidden.up.map((m) => m.label.toLowerCase()).join(', ')} en progrès, ${mobAna.hidden.down.map((m) => m.label.toLowerCase()).join(', ')} en recul.`, 'mobility')
+  }
+  if (mobAna.stuck.length) {
+    push('warn', 'target', `${mobAna.stuck[0].label} reste raide sur tes derniers bilans : insister avec la même routine n'a rien changé, il vaut mieux varier l'approche ou faire évaluer la zone.`, 'mobility')
+  }
+  if (mobAna.program && mobAna.program.untouched && mobAna.program.ageDays >= 14) {
+    push('info', 'target', `Ton programme de mobilité a ${mobAna.program.ageDays} jours et aucune de ses ${mobAna.program.sessions} séances n'a été faite.`, 'mobility')
+  } else if (mobAna.program && !mobAna.program.stillRelevant) {
+    push('info', 'target', "Ton programme de mobilité cible des zones qui ne sont plus tes plus raides d'après ton dernier test — le régénérer le remettra en phase.", 'mobility')
+  }
+  if (mob.status === 'ok' && mobAna.freshness.level !== 'fresh') {
+    push('info', 'target', mobAna.freshness.text, 'mobility')
   }
 
   // --- Croisement sport × mobilité (nouveau, au-delà de l'ancienne app) :
