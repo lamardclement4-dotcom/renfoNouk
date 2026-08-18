@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
-import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE } from './plannerData'
+import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE, EQUIP, searchExercises, exercisesOfGroup } from './plannerData'
 import { dureeToMins, projectedAcwr, consecutiveDaysBefore, taperSuggestedMins } from './renfoIntel'
 import { computePeakPlan } from './PeakSpace'
 
@@ -12,9 +12,11 @@ const MUSCU_SPORTS = ['muscu', 'crossfit', 'callisthenie', 'gym', 'halterophilie
 // "reprendre ma séance Jambes" plutôt qu'un simple "reprendre la dernière
 // séance de muscu" qui pourrait être une séance haut du corps.
 const GROUP_FAMILY = {
-  Quadriceps: 'Jambes', 'Ischio-jamb.': 'Jambes', Fessiers: 'Jambes', Mollets: 'Jambes',
-  Pectoraux: 'Haut du corps', Dos: 'Haut du corps', Épaules: 'Haut du corps', Biceps: 'Haut du corps', Triceps: 'Haut du corps',
+  Quadriceps: 'Jambes', 'Ischio-jamb.': 'Jambes', Fessiers: 'Jambes', Mollets: 'Jambes', Adducteurs: 'Jambes',
+  Pectoraux: 'Haut du corps', Dos: 'Haut du corps', Épaules: 'Haut du corps', Biceps: 'Haut du corps',
+  Triceps: 'Haut du corps', Trapèzes: 'Haut du corps', 'Avant-bras': 'Haut du corps',
   Abdominaux: 'Core', Lombaires: 'Core',
+  Haltérophilie: 'Mixte', Callisthénie: 'Mixte',
 }
 const FAMILY_ICON = { 'Jambes': '🦵', 'Haut du corps': '💪', Core: '🧱', Mixte: '🔀' }
 function muscuFamily(exercises) {
@@ -347,16 +349,30 @@ function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemoveSet, on
     React.createElement('button', { onClick: () => onAddSet(idx), style: { width: '100%', padding: '8px 0', borderRadius: 8, background: 'transparent', border: `1px dashed ${C.line}`, color: C.ink3, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', marginTop: 4 } }, '+ Ajouter une série'))
 }
 
+// Filtres de matériel : le premier critère quand on prépare une séance
+// est de savoir ce dont on dispose. « Tout » d'abord, puis du plus
+// courant en salle au plus autonome.
+const EQUIP_FILTERS = [
+  { id: null, lab: 'Tout' },
+  { id: EQUIP.MACHINE, lab: 'Machine' },
+  { id: EQUIP.POULIE, lab: 'Poulie' },
+  { id: EQUIP.BARRE, lab: 'Barre' },
+  { id: EQUIP.HALTERES, lab: 'Haltères' },
+  { id: EQUIP.CORPS, lab: 'Poids du corps' },
+]
+
 function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
   const [query, setQuery] = useState('')
-  const results = query.trim()
-    ? Object.entries(EXERCISES_DB).flatMap(([g, list]) => list.filter((e) => e.toLowerCase().includes(query.toLowerCase())).map((e) => ({ n: e, g }))).slice(0, 8)
-    : []
+  const [equip, setEquip] = useState(null)
+  const [group, setGroup] = useState(null)
+  // Sans parcours par groupe, il fallait connaître le nom exact pour
+  // trouver un exercice — ce qui suppose de savoir ce qu'on cherche.
+  const results = query.trim() ? searchExercises(query, { equip }) : (group ? exercisesOfGroup(group, equip) : [])
 
-  function addEx(name, group) {
+  function addEx(name, grp) {
     const h = exerciseHistory && exerciseHistory[name]
     const sc = h && h.last ? h.last.charge + 2.5 : ''
-    setExercises([...exercises, { name, group, sets: [{ mode: 'reps', series: 4, reps: 8, duree: 30, charge: sc, rpe: '', repos: 90 }] }])
+    setExercises([...exercises, { name, group: grp, sets: [{ mode: 'reps', series: 4, reps: 8, duree: 30, charge: sc, rpe: '', repos: 90 }] }])
     setQuery('')
   }
   function removeEx(idx) { setExercises(exercises.filter((_, i) => i !== idx)) }
@@ -380,14 +396,46 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
   }
 
   const sportLabels = { muscu: '💪 Musculation', crossfit: '🏋️ Crossfit', callisthenie: '🤸 Callisthénie', gym: '🤸 Gym', halterophilie: '🏋️ Haltérophilie' }
+
+  const chip = (active, label, onClick, key) => React.createElement('button', {
+    key, onClick,
+    style: {
+      padding: '6px 11px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+      border: '1.5px solid ' + (active ? C.primary : C.line),
+      background: active ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface,
+      color: active ? C.primary : C.ink2,
+    },
+  }, label)
+
+  const row = (r, i, last) => React.createElement('button', {
+    key: r.n + i,
+    onClick: () => addEx(r.n, r.g),
+    style: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 13px', background: 'none', border: 'none', borderBottom: last ? 'none' : `1px solid ${C.line}`, cursor: 'pointer', textAlign: 'left' },
+  },
+    React.createElement('span', { style: { fontSize: 13.5, fontWeight: 600, color: C.ink, minWidth: 0 } }, r.n),
+    React.createElement('span', { style: { display: 'flex', gap: 6, alignItems: 'center', flex: '0 0 auto' } },
+      r.equip ? React.createElement('span', { style: { fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: C.surface2, color: C.ink3 } }, r.equip) : null,
+      React.createElement('span', { style: { fontSize: 11.5, color: C.ink3 } }, r.g)))
+
   return React.createElement('div', { style: { marginBottom: 16 } },
     React.createElement('div', { style: fieldLabel() }, sportLabels[sport] || '💪 Musculation'),
-    React.createElement('div', { style: { position: 'relative', marginBottom: 12 } },
-      React.createElement('input', { type: 'text', placeholder: 'Rechercher un exercice…', value: query, onChange: (e) => setQuery(e.target.value), style: fieldInputStyle }),
-      results.length > 0 && React.createElement('div', { style: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', zIndex: 5, boxShadow: '0 8px 20px -8px rgba(0,0,0,.2)' } },
-        results.map((r, i) => React.createElement('button', { key: i, onClick: () => addEx(r.n, r.g), style: { width: '100%', display: 'flex', justifyContent: 'space-between', padding: '10px 13px', background: 'none', border: 'none', borderBottom: i < results.length - 1 ? `1px solid ${C.line}` : 'none', cursor: 'pointer', textAlign: 'left' } },
-          React.createElement('span', { style: { fontSize: 13.5, fontWeight: 600 } }, r.n),
-          React.createElement('span', { style: { fontSize: 11.5, color: C.ink3 } }, r.g))))),
+    React.createElement('input', { type: 'text', placeholder: 'Rechercher un exercice…', value: query, onChange: (e) => setQuery(e.target.value), style: fieldInputStyle }),
+
+    React.createElement('div', { style: { display: 'flex', gap: 6, overflowX: 'auto', padding: '9px 0 2px', WebkitOverflowScrolling: 'touch' } },
+      EQUIP_FILTERS.map((f) => chip(equip === f.id, f.lab, () => setEquip(f.id), f.lab))),
+
+    !query.trim() ? React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 } },
+      Object.keys(EXERCISES_DB).map((g) => chip(group === g, g, () => setGroup(group === g ? null : g), g))) : null,
+
+    results.length > 0 ? React.createElement('div', { style: { marginTop: 10, marginBottom: 12, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', maxHeight: 320, overflowY: 'auto' } },
+      results.map((r, i) => row(r, i, i === results.length - 1))) : null,
+
+    query.trim() && results.length === 0 ? React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, padding: '10px 2px', marginBottom: 6 } },
+      equip ? `Aucun exercice « ${query} » avec ce matériel — essaie « Tout ».` : `Aucun exercice ne correspond à « ${query} ».`) : null,
+
+    !query.trim() && !group ? React.createElement('p', { style: { fontSize: 12, color: C.ink3, margin: '10px 0 12px', lineHeight: 1.45 } },
+      `Cherche un exercice, ou choisis un groupe musculaire ci-dessus. ${Object.values(EXERCISES_DB).flat().length} exercices disponibles.`) : null,
+
     exercises.map((ex, i) => React.createElement(ExerciseCard, { key: i, ex, idx: i, history: exerciseHistory, onUpdateSet: updateSet, onAddSet: addSet, onRemoveSet: removeSet, onRemove: removeEx })),
     exercises.length === 0 && React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, textAlign: 'center', padding: '10px 0' } }, 'Cherche et ajoute un exercice ci-dessus.'))
 }
