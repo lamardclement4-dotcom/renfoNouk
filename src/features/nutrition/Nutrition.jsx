@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { FOODS, COURSE_REF, DIAG_QUESTIONS, PILIERS } from './nutritionData'
 import { buildConseils } from './diagEngine'
+import { nutriAnalysis } from './nutriIntel'
 import { useNutritionStore } from './useNutritionStore'
 import { Icon, C, GRADIENTS } from '../health/kit'
 
@@ -611,8 +612,84 @@ function FoodTab({ db, store }) {
           React.createElement('div', { style: { width: '100%', height: h, borderRadius: 6, background: isSel ? NUTRI : `color-mix(in srgb, ${NUTRI} 30%, ${SURFACE2})` } }),
           React.createElement('span', { style: { fontSize: 10, color: isSel ? NUTRI : INK3, fontWeight: isSel ? 700 : 600 } }, new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'narrow' })))
       })),
+    React.createElement(NutriAnalysis, { db }),
     React.createElement(NoteBox, { tint: NUTRI }, "Journal sauvegardé et lié à ton compte. Valeurs indicatives (base d'aliments simplifiée) — pour un suivi clinique, voir un professionnel."),
     tgtSheet && React.createElement(TargetSheet, { targets, body: db.profilePhys || {}, onSave: (t) => store.set({ foodTargets: t }), onClose: () => setTgtSheet(false) }))
+}
+
+// ── Analyse sur 28 jours ──
+// L'écran ne montrait que le total du jour face aux objectifs et un
+// graphe de calories sur sept jours. L'alimentation ne se juge pourtant
+// pas sur une journée : ce qui compte est la moyenne, les protéines
+// rapportées au poids, et la régularité.
+function NutriAnalysis({ db }) {
+  const ana = nutriAnalysis(db, { days: 28 })
+  const LVL = { low: '#c47a3a', high: '#c47a3a', ok: 'var(--c-success)', warn: 'var(--c-warn)', under: '#c47a3a', over: '#c47a3a' }
+  const card = (children) => React.createElement('div', { style: { padding: '15px 16px', borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 12 } }, children)
+  const lab = (t) => React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 } }, t)
+
+  if (!ana.averages) {
+    return React.createElement('div', null,
+      React.createElement(SecLab, null, 'Analyse sur 28 jours'),
+      card(React.createElement('div', { style: { fontSize: 13, color: INK2, lineHeight: 1.5 } }, ana.tips[0])))
+  }
+
+  const a = ana.averages
+  return React.createElement('div', null,
+    React.createElement(SecLab, null, 'Analyse sur 28 jours'),
+    card([
+      React.createElement('div', { key: 'l' }, lab('Moyennes par jour')),
+      React.createElement('div', { key: 'g', style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 } },
+        [
+          { v: a.kcal, u: 'kcal', l: 'Calories' },
+          { v: a.prot, u: 'g', l: 'Protéines' },
+          { v: a.fib, u: 'g', l: 'Fibres' },
+        ].map((x) => React.createElement('div', { key: x.l, style: { textAlign: 'center' } },
+          React.createElement('div', { style: { fontFamily: FONT, fontSize: 20, fontWeight: 800, color: NUTRI } }, x.v),
+          React.createElement('div', { style: { fontSize: 10.5, color: INK3, marginTop: 2, fontWeight: 600 } }, x.l + ' (' + x.u + ')')))),
+      React.createElement('div', { key: 'f', style: { fontSize: 11.5, color: INK3, marginTop: 10, lineHeight: 1.45 } }, ana.logging.text),
+    ]),
+
+    ana.protein ? card([
+      React.createElement('div', { key: 'l' }, lab('Protéines rapportées à ton poids')),
+      React.createElement('div', { key: 'v', style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+        React.createElement('span', { style: { fontFamily: FONT, fontSize: 24, fontWeight: 800, color: LVL[ana.protein.level] } }, String(ana.protein.perKg).replace('.', ',')),
+        React.createElement('span', { style: { fontSize: 13, color: INK3, fontWeight: 600 } }, 'g/kg')),
+      React.createElement('div', { key: 't', style: { fontSize: 12.5, color: INK2, lineHeight: 1.5, marginTop: 6 } }, ana.protein.text),
+      React.createElement('div', { key: 'c', style: { fontSize: 11.5, color: INK3, marginTop: 4 } }, `Soit ${ana.protein.targetMin} à ${ana.protein.targetMax} g par jour à ${ana.protein.weightKg} kg.`),
+    ]) : null,
+
+    ana.split ? card([
+      React.createElement('div', { key: 'l' }, lab('Répartition des calories')),
+      React.createElement('div', { key: 'b', style: { display: 'flex', height: 10, borderRadius: 999, overflow: 'hidden', marginBottom: 10 } },
+        [['p', '#7c9a8e'], ['g', '#c79a4a'], ['l', '#b5827a']].map(([k, col]) =>
+          React.createElement('div', { key: k, style: { width: ana.split[k] + '%', background: col } }))),
+      ana.split.items.map((m, i) => React.createElement('div', { key: m.key, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '5px 0', borderTop: i ? `1px solid ${LINE}` : 'none' } },
+        React.createElement('span', { style: { fontSize: 12.5, color: INK2, fontWeight: 600 } }, m.label),
+        React.createElement('span', { style: { fontSize: 12.5, fontWeight: 700, color: LVL[m.level] } }, String(m.pct).replace('.', ',') + ' %',
+          React.createElement('span', { style: { fontSize: 11, color: INK3, fontWeight: 600, marginLeft: 6 } }, `(${m.lo}–${m.hi} %)`)))),
+    ]) : null,
+
+    ana.gaps && ana.gaps.length ? card([
+      React.createElement('div', { key: 'l' }, lab('Moyenne vs objectifs')),
+      ana.gaps.map((g, i) => React.createElement('div', { key: g.key, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '6px 0', borderTop: i ? `1px solid ${LINE}` : 'none' } },
+        React.createElement('span', { style: { fontSize: 12.5, color: INK2, fontWeight: 600 } }, g.label),
+        React.createElement('span', { style: { fontSize: 12.5, color: INK3 } },
+          `${g.value} / ${g.target} ${g.unit}`,
+          React.createElement('span', { style: { fontWeight: 800, color: LVL[g.level], marginLeft: 8 } }, (g.pct > 0 ? '+' : '') + String(g.pct).replace('.', ',') + ' %')))),
+    ]) : null,
+
+    ana.consistency ? card([
+      React.createElement('div', { key: 'l' }, lab('Régularité')),
+      React.createElement('div', { key: 't', style: { fontSize: 12.5, color: INK2, lineHeight: 1.5 } }, ana.consistency.text),
+    ]) : null,
+
+    card([
+      React.createElement('div', { key: 'l' }, lab('Ce qu’on en retient')),
+      ana.tips.map((t, i) => React.createElement('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: INK2, lineHeight: 1.5, marginTop: i ? 8 : 0 } },
+        React.createElement('span', { style: { color: NUTRI, fontWeight: 800, flex: '0 0 auto' } }, '•'),
+        React.createElement('span', null, t))),
+    ]))
 }
 
 // ============================================================

@@ -199,19 +199,29 @@ export function impliedBalance(rateKgPerWeek) {
 // l'individu. Elle n'a toutefois de sens que si le journal alimentaire est
 // suffisamment rempli — d'où le nombre de jours couverts et le niveau de
 // confiance renvoyés, plutôt qu'un chiffre présenté comme acquis.
-export function estimateTDEE(log, foodLog, { windowDays = 28, minDays = 10 } = {}) {
+// Seuil au-dessous duquel une journée du journal décrit un oubli de
+// saisie plutôt qu'un apport réel (aligné sur MIN_LOGGED_KCAL côté
+// nutrition, dupliqué ici pour garder ce module sans dépendance).
+export const MIN_LOGGED_KCAL = 600
+
+export function estimateTDEE(log, foodLog, { windowDays = 28, minDays = 10, minKcalPerDay = MIN_LOGGED_KCAL } = {}) {
   const series = weightSeries(log, 0)
   if (series.length < 2) return null
   const rate = weeklyRate(series, windowDays)
   if (rate == null) return null
   const last = series[series.length - 1].date
+  // Toute journée à plus de zéro calorie comptait comme une journée
+  // d'apport : celle où l'on a noté un fruit puis oublié le reste entrait
+  // dans la moyenne pour 90 kcal, la tirait vers le bas, et faisait
+  // ressortir un métabolisme artificiellement faible — donc un conseil
+  // faux. On ne retient que les journées réellement renseignées.
   const days = []
   for (const [date, entries] of Object.entries(foodLog || {})) {
     if (!Array.isArray(entries) || entries.length === 0) continue
     const d = dayDiff(date, last)
     if (d < 0 || d > windowDays) continue
     const kcal = entries.reduce((a, e) => a + (Number(e && e.k) || 0), 0)
-    if (kcal > 0) days.push(kcal)
+    if (kcal >= minKcalPerDay) days.push(kcal)
   }
   if (days.length < minDays) return { insufficient: true, loggedDays: days.length, minDays }
   const meanIntake = Math.round(days.reduce((a, b) => a + b, 0) / days.length)
