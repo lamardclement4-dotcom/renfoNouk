@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, isoToday } from './kit'
-import { mindAnalysis, breathStats, goals, goalStatus, goalCompleteness, GOAL_FIELDS } from './mindIntel'
+import { breathStats, goals, goalStatus, goalCompleteness, GOAL_FIELDS } from './mindIntel'
 
 const BR = MODULE_TINTS.esprit
 

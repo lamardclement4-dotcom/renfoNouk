@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { C, Icon, Ring, FlowSpace, isoToday, Card, BigStat, Bar, SegPills } from '../health/kit'
 import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
+import { testsAnalysis } from '../physical-tests/testsIntel'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { trainingStats, trainingTotals, weekRetro, weeksTrend, mondayOf, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import TrainSpace from '../train/TrainSpace'
-import PhysicalTestsSpace, { TESTS_DEF } from '../physical-tests/PhysicalTests'
+import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
 import SleepSpace from '../health/Sleep'
 import HealthHome from '../health/HealthHome'
 import { HealthScoreCard, PeakHomeCard } from './cards'
@@ -424,21 +425,46 @@ export default function ProgressSpace({ userId, onClose }) {
   const age = Number(pp.age) || 30
   let testsBlock = null
   if (allTests.length > 0) {
-    const byId = {}
-    allTests.forEach((t) => { if (!byId[t.testId] || t.date > byId[t.testId].date) byId[t.testId] = t })
-    const tids = Object.keys(byId)
+    // Seule la valeur la plus récente était relue : « Cooper 2400 m,
+    // Bien », sans dire si c'était mieux ou moins bien qu'avant, ni depuis
+    // quand la mesure datait. Un test d'il y a huit mois s'affichait
+    // exactement comme celui d'hier.
+    const tAna = testsAnalysis(db, { sexe, age })
+    const DIR_COL = { up: C.success, down: '#c4503a', flat: C.ink3 }
+    const FRESH_COL = { fresh: C.ink3, due: C.warn, stale: '#c4503a', absent: C.ink3 }
     testsBlock = h('div', null,
       sectionTitle('Tests physiques', h('button', { onClick: () => setFlow('tests'), style: { fontSize: 13, fontWeight: 600, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Voir tout')),
+      tAna.profile ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
+        h(Ring, { size: 62, stroke: 7, progress: tAna.profile.score / 100, color: TC },
+          h('span', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: TC } }, tAna.profile.score)),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink } }, 'Profil physique'),
+          h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.45 } },
+            `${tAna.profile.tested}/${tAna.profile.total} tests passés`
+            + (tAna.profile.spread >= 2 ? ` · ${tAna.profile.strongest.label.toLowerCase()} devant ${tAna.profile.weakest.label.toLowerCase()}` : '')))) : null,
       h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 10 } },
-        tids.map((tid, i) => {
-          const e = byId[tid]
-          const def = TESTS_DEF.find((d) => d.id === tid)
-          const interp = def ? def.interpret(e.value, sexe, age) : { level: 'Acceptable', color: C.warn }
-          return h('div', { key: tid, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderTop: i ? `1px solid ${C.line}` : 'none' } },
-            h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: `color-mix(in srgb,${TC} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'chart', size: 16, color: TC })),
-            h('div', { style: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, LABEL[tid] || tid),
-            h('div', { style: { fontFamily: C.font, fontSize: 16, fontWeight: 800, color: interp.color, flex: '0 0 auto' } }, e.value, h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 1, color: C.ink3 } }, (def && def.unit) || '')))
-        })))
+        (tAna.profile ? tAna.profile.items : []).map((it, i) => {
+          const ch = it.change
+          const fr = it.freshness
+          return h('div', { key: it.testId, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderTop: i ? `1px solid ${C.line}` : 'none' } },
+            h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: `color-mix(in srgb,${TC} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+              h(Icon, { name: 'chart', size: 16, color: TC })),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: { fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.label),
+              h('div', { style: { fontSize: 11, color: FRESH_COL[fr.level], marginTop: 2 } },
+                (ch && ch.dir !== 'flat'
+                  ? `${ch.delta > 0 ? '+' : '−'}${Math.abs(ch.delta)} ${it.unit} vs précédent · `
+                  : it.count > 1 ? 'stable · ' : '')
+                + (fr.level === 'due' || fr.level === 'stale' ? `à refaire (${fr.days} j)` : `il y a ${fr.days} j`))),
+            ch && ch.dir !== 'flat' ? h('span', { style: { fontSize: 12, fontWeight: 800, color: DIR_COL[ch.dir], flex: '0 0 auto' } }, ch.dir === 'up' ? '▲' : '▼') : null,
+            h('div', { style: { fontFamily: C.font, fontSize: 16, fontWeight: 800, color: it.level ? it.level.color : C.ink, flex: '0 0 auto' } },
+              it.last.value, h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 2 } }, it.unit)))
+        })),
+      tAna.tips.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 9 } }, 'Ce qu’on en retient'),
+        tAna.tips.map((x, i) => h('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: i ? 8 : 0 } },
+          h('span', { style: { color: TC, fontWeight: 800, flex: '0 0 auto' } }, '•'),
+          h('span', null, x)))) : null)
   } else {
     testsBlock = h('div', null,
       sectionTitle('Tests physiques'),

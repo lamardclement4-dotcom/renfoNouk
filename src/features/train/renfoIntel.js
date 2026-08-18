@@ -18,6 +18,7 @@
 // ============================================================
 import { SPORTS } from './trainData'
 import { TESTS_DEF } from '../physical-tests/PhysicalTests'
+import { testsAnalysis } from '../physical-tests/testsIntel'
 import { computePeakPlan } from './PeakSpace'
 import { cycleInfo } from '../health/Cycle'
 import { cycleAnalysis, PMS_WINDOW_DAYS } from '../health/cycleIntel'
@@ -982,6 +983,22 @@ export function recommendations(db) {
     })
     if (weak.length) {
       push('warn', 'chart', `Tests physiques : niveau faible en ${weak.join(', ')}. Tes séances de renfo et mobilité devraient cibler ces zones en priorité.`, 'tests')
+    }
+
+    // Seule la dernière valeur était regardée. Un test en recul net d'un
+    // passage à l'autre, ou une mesure vieille de six mois affichée comme
+    // si elle décrivait l'état actuel, passaient inaperçus.
+    const tAna = testsAnalysis(db, { sexe, age, today: iso })
+    if (tAna.regressions.length) {
+      const r = tAna.regressions[0]
+      push('warn', 'chart', `${r.label} en recul de ${Math.abs(r.change.pct)} % depuis ton passage précédent (${r.change.prev.value} → ${r.last.value} ${r.unit}) — au-delà de ${r.change.floor} %, ce n'est plus du bruit de mesure.`, 'tests')
+    }
+    if (tAna.improved.length) {
+      const i = tAna.improved[0]
+      push('info', 'chart', `${i.label} : ${i.change.delta > 0 ? '+' : '−'}${Math.abs(i.change.delta)} ${i.unit} depuis ton passage précédent${i.isBest ? ", c'est ton meilleur résultat" : ''}.`, 'tests')
+    }
+    if (tAna.next) {
+      push('info', 'chart', `Test à refaire : ${tAna.next.label.toLowerCase()} (${tAna.next.reason}). Un test physique ne vaut que par sa répétition.`, 'tests')
     }
 
     // --- Croisement test physique × zone de mobilité (nouveau) : quand un
