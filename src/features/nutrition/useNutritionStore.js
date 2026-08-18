@@ -96,6 +96,11 @@ function getInstance(userId) {
     inst = {
       phys: {}, cycle: {}, goals: {}, sensitiveZones: [], dayRows: {},
       rowIds: {}, loading: true, started: false, listeners: new Set(),
+      // Écriture en cours par date. Sans elle, deux ajouts rapprochés sur
+      // une journée encore absente en base voyaient tous deux « pas de
+      // ligne » et lançaient chacun un INSERT : ligne dupliquée, et au
+      // rechargement l'une écrasait l'autre.
+      dayWrites: {},
       notify() { for (const l of this.listeners) l() },
     }
     instances.set(userId, inst)
@@ -219,15 +224,22 @@ export function useNutritionStore(userId) {
     dayRowsRef.current = nextAll
     notify()
 
-    const data = { food: nextDay.food || [], hydration: nextDay.hydration || [] }
-    const existingId = rowIds.current[date]
-    const write = existingId
-      ? supabase.from('nutrition_logs').update({ data, updated_at: new Date().toISOString() }).eq('id', existingId)
-      : supabase.from('nutrition_logs').insert({ user_id: userId, date, data }).select('id').single()
-    write.then((res) => {
-      if (res.error) { console.error('[store] échec sauvegarde journal', res.error.message); return }
-      if (!existingId && res.data) rowIds.current[date] = res.data.id
+    // Les écritures d'une même date sont mises à la queue leu leu : la
+    // suivante ne part qu'une fois l'identifiant de ligne connu, ce qui
+    // transforme le second INSERT en UPDATE.
+    const queue = inst ? (inst.dayWrites[date] || Promise.resolve()) : Promise.resolve()
+    const run = queue.then(() => {
+      const data = { food: dayRowsRef.current[date]?.food || [], hydration: dayRowsRef.current[date]?.hydration || [] }
+      const existingId = rowIds.current[date]
+      const write = existingId
+        ? supabase.from('nutrition_logs').update({ data, updated_at: new Date().toISOString() }).eq('id', existingId)
+        : supabase.from('nutrition_logs').insert({ user_id: userId, date, data }).select('id').single()
+      return Promise.resolve(write).then((res) => {
+        if (res && res.error) { console.error('[store] échec sauvegarde journal', res.error.message); return }
+        if (!existingId && res && res.data) rowIds.current[date] = res.data.id
+      })
     })
+    if (inst) inst.dayWrites[date] = run.catch(() => {})
   }, [userId])
 
   // Reconstitue le "db" plat attendu par les composants portés de l'ancienne app.
