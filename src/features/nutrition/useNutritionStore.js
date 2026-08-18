@@ -272,8 +272,22 @@ export function useNutritionStore(userId) {
     addPeakGoal: (goal) => store.set({ peakGoals: [...db.peakGoals, { id: 'pk' + Date.now(), ...goal }] }),
     updatePeakGoal: (id, patch) => store.set({ peakGoals: db.peakGoals.map((g) => g.id === id ? { ...g, ...patch } : g) }),
     removePeakGoal: (id) => store.set({ peakGoals: db.peakGoals.filter((g) => g.id !== id) }),
-    addGoal: (label) => store.set({ customGoals: [...db.customGoals, { id: 'g' + Date.now(), label, done: false }] }),
-    updateGoal: (id, patch) => store.set({ customGoals: db.customGoals.map((g) => g.id === id ? { ...g, ...patch } : g) }),
+    // Les objectifs n'avaient aucune date : un objectif posé hier et un
+    // autre qui traîne depuis six mois se ressemblaient exactement. On
+    // horodate la création et l'accomplissement, sans quoi rien n'est
+    // analysable. Les entrées antérieures restent sans date et sont
+    // traitées comme telles plutôt que de s'en voir inventer une.
+    addGoal: (label) => store.set({ customGoals: [...db.customGoals, { id: 'g' + Date.now(), label, done: false, createdAt: todayISO }] }),
+    updateGoal: (id, patch) => store.set({
+      customGoals: db.customGoals.map((g) => {
+        if (g.id !== id) return g
+        const next = { ...g, ...patch }
+        if (patch && Object.prototype.hasOwnProperty.call(patch, 'done')) {
+          next.doneAt = patch.done ? (g.doneAt || todayISO) : null
+        }
+        return next
+      }),
+    }),
     removeGoal: (id) => store.set({ customGoals: db.customGoals.filter((g) => g.id !== id) }),
     setGoal: (key, val) => store.set({ goals: { ...db.goals, [key]: val } }),
     setSensitiveZones: (zones) => store.set({ sensitiveZones: zones }),

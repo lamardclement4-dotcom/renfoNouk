@@ -27,6 +27,7 @@ import { mindAnalysis, breathSessions } from '../health/mindIntel'
 import { muscuAnalysis, groupVerdict, SERIES_HIGH } from './muscuIntel'
 import { hydroAnalysis } from '../hydration/hydroIntel'
 import { mobilityAnalysis } from './mobilityIntel'
+import { diagAnalysis } from '../nutrition/diagIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 
@@ -931,6 +932,26 @@ export function recommendations(db) {
   const stuck = prevAna.tags.persistent.find((t) => t.bilans >= 3)
   if (stuck) {
     push('info', 'shield', `Ce point ressort sur tes ${stuck.bilans} derniers bilans de prévention : ${(PREVENTION_RECO[stuck.tag] || stuck.tag)}`, 'prevention')
+  }
+
+  // --- Diagnostic nutrition et objectifs personnels ---
+  // Les cinq scores par pilier n'étaient jamais comparés dans le temps, et
+  // deux d'entre eux — hydratation, récupération — portent sur des choses
+  // que l'application mesure par ailleurs. C'est le seul endroit où le
+  // déclaratif et le mesuré peuvent se contredire.
+  const diagAna = diagAnalysis(db, {
+    today: iso,
+    hydro: hydAna,
+    sleep: sleepAna,
+  })
+  for (const c of diagAna.contradictions) {
+    push(c.level === 'warn' ? 'warn' : 'info', 'apple', c.text, 'nutrition')
+  }
+  if (diagAna.hidden && diagAna.hidden.masked) {
+    push('info', 'apple', `Ton score de diagnostic n'a bougé que de ${diagAna.hidden.globalDelta > 0 ? '+' : ''}${diagAna.hidden.globalDelta} points, mais il recouvre des mouvements opposés : ${diagAna.hidden.up.map((m) => m.label.toLowerCase()).join(', ')} en progrès, ${diagAna.hidden.down.map((m) => m.label.toLowerCase()).join(', ')} en recul.`, 'nutrition')
+  }
+  if (diagAna.goals && diagAna.goals.stale.length) {
+    push('info', 'target', `${diagAna.goals.stale.length} objectif${diagAna.goals.stale.length > 1 ? 's personnels traînent' : ' personnel traîne'} depuis plus de deux mois — le reformuler ou l'abandonner vaut mieux que le laisser courir.`, 'planner')
   }
 
   // --- Mobilité ---
