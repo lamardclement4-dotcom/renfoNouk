@@ -28,6 +28,8 @@ import { muscuAnalysis, groupVerdict, SERIES_HIGH } from './muscuIntel'
 import { hydroAnalysis } from '../hydration/hydroIntel'
 import { mobilityAnalysis } from './mobilityIntel'
 import { diagAnalysis } from '../nutrition/diagIntel'
+import { nutriAnalysis } from '../nutrition/nutriIntel'
+import { weightSeries, weeklyRate } from '../profil/weightIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 
@@ -1047,7 +1049,27 @@ export function recommendations(db) {
     // Seule la dernière valeur était regardée. Un test en recul net d'un
     // passage à l'autre, ou une mesure vieille de six mois affichée comme
     // si elle décrivait l'état actuel, passaient inaperçus.
-    const tAna = testsAnalysis(db, { sexe, age, today: iso })
+    // Le contexte change le sens d'un recul : après trois semaines sans
+    // courir il est attendu, pendant une hausse de volume il alerte. Et les
+    // tests au poids du corps bougent mécaniquement quand le poids change.
+    const tAna = testsAnalysis(db, {
+      sexe, age, today: iso,
+      trainingMins: rolling7Mins(db, iso),
+      trainingMinsPrev: rolling7Mins(db, todayISOFrom(new Date(new Date(iso + 'T12:00:00').getTime() - 7 * 86400000))),
+      weightDelta: (() => {
+        const series = weightSeries(db.weightLog, 0)
+        if (series.length < 2) return null
+        const last = series[series.length - 1]
+        // Poids au moment de l'avant-dernier passage du test, pour comparer
+        // ce qui a changé entre les deux mesures.
+        const prevTest = (db.physTests || []).filter((t) => t && t.date).sort((a, b) => a.date.localeCompare(b.date))
+        if (prevTest.length < 2) return null
+        const ref = prevTest[prevTest.length - 2].date
+        const near = series.filter((e) => e.date <= ref)
+        if (!near.length) return null
+        return Math.round((last.kg - near[near.length - 1].kg) * 10) / 10
+      })(),
+    })
     if (tAna.regressions.length) {
       const r = tAna.regressions[0]
       push('warn', 'chart', `${r.label} en recul de ${Math.abs(r.change.pct)} % depuis ton passage précédent (${r.change.prev.value} → ${r.last.value} ${r.unit}) — au-delà de ${r.change.floor} %, ce n'est plus du bruit de mesure.`, 'tests')
@@ -1104,7 +1126,18 @@ export function recommendations(db) {
   // Les séries étaient enregistrées une par une sans jamais être relues :
   // rien ne disait si un muscle était délaissé, si la poussée écrasait le
   // tirage, ni si un mouvement plafonnait.
-  const mus = muscuAnalysis(db, { days: 28, today: iso })
+  // La muscu ne voyait ni le sommeil, ni les protéines, ni le poids : elle
+  // concluait « varie les répétitions » alors que la cause est souvent
+  // ailleurs. On lui passe le contexte des autres modules.
+  const nutAna = nutriAnalysis(db, { days: 28, today: iso })
+  const weightRate = (() => {
+    const series = weightSeries(db.weightLog, 0)
+    return series.length >= 2 ? weeklyRate(series, 28) : null
+  })()
+  const mus = muscuAnalysis(db, {
+    days: 28, today: iso,
+    sleep: sleepAna, protein: nutAna.protein, weightRate,
+  })
   if (mus.sessions >= 3) {
     if (mus.balance && mus.balance.flags.length) {
       push('warn', 'dumbbell', mus.balance.flags[0].text, 'planner')
@@ -1127,7 +1160,7 @@ export function recommendations(db) {
   // faute de journal, la suggestion tombait même sur quelqu'un qui venait
   // de faire sa séance. Les séances étant maintenant enregistrées, on ne
   // propose que si rien n'a été fait dans la semaine.
-  const mind = mindAnalysis(db, { today: iso })
+  const mind = mindAnalysis(db, { today: iso, acwr, sleep: sleepAna })
   if (acwr.available && acwr.level === 'Vigilance renforcée') {
     const recentBreath = breathSessions(db, { days: 7, today: iso }).length
     if (!recentBreath) {

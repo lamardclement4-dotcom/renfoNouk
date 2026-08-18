@@ -150,13 +150,54 @@ export function goalCompleteness(draft) {
   return { filled, total: GOAL_FIELDS.length + 1, dated, complete: filled === GOAL_FIELDS.length && dated }
 }
 
+// ─── Croisement avec la charge et le sommeil ────────────────
+// Ces protocoles servent à réguler le stress, et l'application mesure par
+// ailleurs deux choses qui en sont de bons indicateurs : une charge
+// d'entraînement en zone de vigilance, et un sommeil dégradé. La pratique
+// vivait pourtant dans son coin, sans jamais être rapprochée du moment où
+// elle serait le plus utile.
+export const STRESS_WINDOW_DAYS = 7
+
+export function pressureSignals({ acwr = null, sleep = null } = {}) {
+  const out = []
+  if (acwr && acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
+    out.push({ id: 'charge', text: `ta charge d'entraînement est en ${acwr.level.toLowerCase()}` })
+  }
+  if (sleep && sleep.regularity && sleep.regularity.level === 'alert') {
+    out.push({ id: 'regularite', text: 'tes nuits sont très irrégulières' })
+  } else if (sleep && sleep.debt && sleep.debt.net >= 5) {
+    out.push({ id: 'dette', text: `tu accumules ${sleep.debt.net} h de dette de sommeil` })
+  }
+  return out
+}
+
+// Pratique récente rapportée aux moments où elle serait utile.
+export function practiceVsPressure(db, { today, acwr = null, sleep = null } = {}) {
+  const signals = pressureSignals({ acwr, sleep })
+  if (!signals.length) return null
+  const recent = breathSessions(db, { days: STRESS_WINDOW_DAYS, today }).length
+  return {
+    signals, recentSessions: recent,
+    // Le reproche ne vaut que si rien n'a été fait : quelqu'un qui pratique
+    // déjà n'a pas besoin qu'on le lui rappelle.
+    flagged: recent === 0,
+    text: recent === 0
+      ? `Aucune séance de respiration cette semaine alors que ${signals.map((x) => x.text).join(' et ')}.`
+      : `${recent} séance${recent > 1 ? 's' : ''} cette semaine, sur une période où ${signals.map((x) => x.text).join(' et ')} — c'est exactement le moment.`,
+  }
+}
+
 // ─── Synthèse ────────────────────────────────────────────────
-export function mindAnalysis(db, { today, days = 30 } = {}) {
+export function mindAnalysis(db, { today, days = 30, acwr = null, sleep = null } = {}) {
   const ref = today || todayISO()
   const breath = breathStats(db, { days, today: ref })
   const g = goalProgressSummary(db, ref)
+  const pressure = practiceVsPressure(db, { today: ref, acwr, sleep })
 
   const tips = []
+  // Le rapprochement passe devant : il dit quand la pratique compte, pas
+  // seulement combien on en a fait.
+  if (pressure && pressure.flagged) tips.push(pressure.text)
   if (g.late.length) {
     tips.push(`${g.late.length} objectif${g.late.length > 1 ? 's ont' : ' a'} dépassé son échéance : conclure ou redater vaut mieux que laisser courir, un objectif périmé cesse d’en être un.`)
   }
@@ -183,5 +224,5 @@ export function mindAnalysis(db, { today, days = 30 } = {}) {
   }
   if (!tips.length) tips.push('Pratique régulière et objectifs à jour. Rien à ajuster.')
 
-  return { breath, goals: g, tips }
+  return { breath, goals: g, pressure, tips }
 }

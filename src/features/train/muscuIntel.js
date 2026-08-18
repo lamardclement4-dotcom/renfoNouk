@@ -296,7 +296,41 @@ export function lastPerformance(db, name, { days = 180, today } = {}) {
 // ─── Synthèse ────────────────────────────────────────────────
 export const IDLE_DAYS = 21
 
-export function muscuAnalysis(db, { days = 28, today } = {}) {
+// ─── Contexte : pourquoi ça plafonne ────────────────────────
+// Dire « tu plafonnes, varie les répétitions » à quelqu'un en déficit
+// calorique ou avec quinze heures de dette de sommeil est un mauvais
+// conseil : la charge ne monte pas parce que le corps n'en a pas les
+// moyens, pas parce que le programme manque de variété. Ces trois
+// éléments vivaient chacun dans leur module sans jamais se rencontrer.
+export const PROT_MIN_FOR_GAIN = 1.4
+export const DEFICIT_RATE_KG_WEEK = -0.3
+export const SLEEP_DEBT_HOURS = 5
+
+export function stallContext({ sleep = null, protein = null, weightRate = null } = {}) {
+  const out = []
+  if (sleep && sleep.debt && sleep.debt.net >= SLEEP_DEBT_HOURS) {
+    out.push({
+      id: 'sommeil', level: 'warn',
+      text: `${sleep.debt.net} h de dette de sommeil sur ${sleep.debt.nights} nuits — la force ne progresse pas bien sur un déficit de récupération.`,
+    })
+  }
+  if (protein && protein.perKg != null && protein.perKg < PROT_MIN_FOR_GAIN) {
+    out.push({
+      id: 'proteines', level: 'warn',
+      text: `${String(protein.perKg).replace('.', ',')} g/kg de protéines, sous le repère de ${PROT_MIN_FOR_GAIN} — il manque de quoi construire.`,
+    })
+  }
+  const r = num(weightRate)
+  if (r != null && r <= DEFICIT_RATE_KG_WEEK) {
+    out.push({
+      id: 'deficit', level: 'info',
+      text: `tu perds ${Math.abs(Math.round(r * 100) / 100)} kg par semaine — plafonner en force pendant une perte de poids est attendu, et conserver ses charges y est déjà un résultat.`,
+    })
+  }
+  return out
+}
+
+export function muscuAnalysis(db, { days = 28, today, sleep = null, protein = null, weightRate = null } = {}) {
   const ref = today || todayISO()
   const sessions = muscuSessions(db, { days, today: ref })
   const rows = setRows(db, { days, today: ref })
@@ -312,6 +346,7 @@ export function muscuAnalysis(db, { days = 28, today } = {}) {
     if (p && p.stalled) stalls.push({ ...p, group: t.group })
   }
   const idle = tracked.filter((t) => t.daysSinceLast >= IDLE_DAYS && t.sessions >= 2)
+  const context = stallContext({ sleep, protein, weightRate })
 
   const tips = []
   if (!sessions.length) {
@@ -322,7 +357,13 @@ export function muscuAnalysis(db, { days = 28, today } = {}) {
     if (bal && bal.flags.length) tips.push(bal.flags[0].text)
     if (stalls.length) {
       const s = stalls[0]
-      tips.push(`${s.name} plafonne depuis ${STALL_SESSIONS} séances autour de ${s.best.best1RM} kg estimés. Faire varier les répétitions, le tempo ou insérer une semaine allégée débloque plus souvent qu'insister à la même charge.`)
+      // Le contexte passe avant le conseil technique : si la cause est
+      // ailleurs, varier les répétitions ne servira à rien.
+      if (context.length) {
+        tips.push(`${s.name} plafonne autour de ${s.best.best1RM} kg estimés, et ce n'est probablement pas le programme : ${context.map((c) => c.text).join(' Et ')}`)
+      } else {
+        tips.push(`${s.name} plafonne depuis ${STALL_SESSIONS} séances autour de ${s.best.best1RM} kg estimés. Faire varier les répétitions, le tempo ou insérer une semaine allégée débloque plus souvent qu'insister à la même charge.`)
+      }
     }
     if (over.length) tips.push(`${over[0].group} : ${over[0].seriesPerWeek} séries par semaine, au-dessus du repère habituel de ${SERIES_HIGH}. Le rendement supplémentaire y devient discutable.`)
     if (under.length && under.length <= 4) tips.push(`Peu de volume sur ${under.map((u) => u.group).join(', ')} (moins de ${SERIES_LOW} séries par semaine).`)
@@ -334,6 +375,6 @@ export function muscuAnalysis(db, { days = 28, today } = {}) {
 
   return {
     days, sessions: sessions.length, totalSeries, tonnage,
-    volumes: vols, balance: bal, tracked, stalls, idle, tips,
+    volumes: vols, balance: bal, tracked, stalls, idle, context, tips,
   }
 }

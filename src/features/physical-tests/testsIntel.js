@@ -190,9 +190,46 @@ export function nextTest(db, today) {
   return { testId: due[0].id, label: TEST_LABELS[due[0].id] || (def && def.label) || due[0].id, reason: `passé il y a ${due[0].f.days} jours`, days: due[0].f.days }
 }
 
+// ─── Contexte d'une régression ──────────────────────────────
+// Annoncer « endurance en recul de 12 % » sans regarder ce qui s'est passé
+// à côté est trompeur dans les deux sens : un recul après trois semaines
+// sans courir n'a rien d'inquiétant, alors qu'un recul pendant une hausse
+// de volume est un signal de surcharge. Et les tests au poids du corps —
+// pompes, squats, gainage — bougent mécaniquement quand le poids change,
+// sans que la force ait varié.
+export const BODYWEIGHT_TESTS = ['push30', 'squat30', 'gai_max']
+export const VOLUME_DROP_PCT = 40
+export const VOLUME_RISE_PCT = 40
+export const WEIGHT_SHIFT_KG = 2
+
+export function changeContext(testId, { trainingMins = null, trainingMinsPrev = null, weightDelta = null } = {}) {
+  const out = []
+  const cur = num(trainingMins)
+  const prev = num(trainingMinsPrev)
+  if (cur != null && prev != null && prev > 0) {
+    const pct = Math.round((cur - prev) / prev * 100)
+    if (pct <= -VOLUME_DROP_PCT) {
+      out.push({ id: 'volume-bas', level: 'info', text: `ton volume d'entraînement a baissé de ${Math.abs(pct)} % sur la période — un recul est attendu, ce n'est pas une perte de potentiel` })
+    } else if (pct >= VOLUME_RISE_PCT) {
+      out.push({ id: 'volume-haut', level: 'warn', text: `ton volume a augmenté de ${pct} % sur la même période — reculer en s'entraînant plus oriente vers une récupération insuffisante` })
+    }
+  }
+  const wd = num(weightDelta)
+  if (wd != null && Math.abs(wd) >= WEIGHT_SHIFT_KG && BODYWEIGHT_TESTS.includes(testId)) {
+    out.push({
+      id: 'poids', level: 'info',
+      text: wd > 0
+        ? `tu as pris ${Math.round(wd * 10) / 10} kg : ce test se fait au poids du corps, il devient mécaniquement plus dur`
+        : `tu as perdu ${Math.abs(Math.round(wd * 10) / 10)} kg : ce test se fait au poids du corps, il devient mécaniquement plus facile`,
+    })
+  }
+  return out
+}
+
 // ─── Synthèse ────────────────────────────────────────────────
-export function testsAnalysis(db, { sexe = 'h', age = 30, today } = {}) {
+export function testsAnalysis(db, { sexe = 'h', age = 30, today, trainingMins = null, trainingMinsPrev = null, weightDelta = null } = {}) {
   const opts = { sexe, age, today }
+  const ctxOpts = { trainingMins, trainingMinsPrev, weightDelta }
   const profile = fitnessProfile(db, opts)
   const regs = regressions(db, opts)
   const next = nextTest(db, today)
@@ -205,7 +242,13 @@ export function testsAnalysis(db, { sexe = 'h', age = 30, today } = {}) {
   } else {
     if (regs.length) {
       const r = regs[0]
-      tips.push(`${r.label} en recul de ${Math.abs(r.change.pct)} % depuis le passage précédent (${r.change.prev.value} → ${r.last.value} ${r.unit}). Au-delà de ${r.change.floor} %, ce n’est plus du bruit de mesure.`)
+      const ctx = changeContext(r.testId, ctxOpts)
+      const base = `${r.label} en recul de ${Math.abs(r.change.pct)} % depuis le passage précédent (${r.change.prev.value} → ${r.last.value} ${r.unit}).`
+      // Le contexte passe avant le rappel sur le bruit : il change le sens
+      // de la baisse, pas seulement sa fiabilité.
+      tips.push(ctx.length
+        ? `${base} À replacer dans son contexte : ${ctx.map((c) => c.text).join(', et ')}.`
+        : `${base} Au-delà de ${r.change.floor} %, ce n’est plus du bruit de mesure.`)
     }
     if (improved.length) {
       const i = improved[0]
@@ -229,5 +272,5 @@ export function testsAnalysis(db, { sexe = 'h', age = 30, today } = {}) {
   }
   if (!tips.length) tips.push('Profil complet et à jour. Rien à ajuster.')
 
-  return { profile, regressions: regs, improved, next, tips }
+  return { profile, regressions: regs, improved, next, context: regs.length ? changeContext(regs[0].testId, ctxOpts) : [], tips }
 }
