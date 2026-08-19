@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE, EQUIP, searchExercises, exercisesOfGroup } from './plannerData'
+import { plannerAnalysis } from './plannerIntel'
 import { estimate1RM, suggestLoad } from './muscuIntel'
 import { dureeToMins, projectedAcwr, consecutiveDaysBefore, taperSuggestedMins } from './renfoIntel'
 import { computePeakPlan } from './PeakSpace'
@@ -682,6 +683,56 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
       initial && React.createElement('button', { onClick: () => onDelete(initial.id), style: { width: '100%', marginTop: 10, padding: 13, borderRadius: 999, background: 'transparent', border: `1px solid ${C.line}`, color: '#b3402e', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, '🗑 Supprimer cette séance')))
 }
 
+// ── Bilan de la semaine planifiée ──
+// Le rapport charge aiguë / chronique ne comptait que les séances déjà
+// faites : l'application savait dire après coup qu'une semaine avait été
+// trop lourde, jamais avant. Or le planning contient précisément ce qu'on
+// a l'intention de faire, et c'est le seul moment où l'on peut encore
+// changer d'avis.
+function WeekBrief({ db, weekOf }) {
+  const ana = plannerAnalysis(db, { weekOf })
+  const LVL = { ok: C.success, low: C.ink3, info: C.ink3, warn: C.warn, alert: '#c4503a' }
+  if (!ana.structure.all.length) return null
+
+  const load = ana.load
+  const ratioCol = load.available && load.verdict ? LVL[load.verdict.level] : C.ink3
+  const stat = (v, l, col) => React.createElement('div', { style: { flex: 1, textAlign: 'center' } },
+    React.createElement('div', { style: { fontFamily: C.font, fontSize: 19, fontWeight: 800, color: col || C.ink } }, v),
+    React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 2, fontWeight: 600 } }, l))
+
+  return React.createElement('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '14px 15px', marginBottom: 14 } },
+    React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 } }, 'Bilan de la semaine'),
+
+    React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 12 } },
+      stat(load.available ? String(load.ratio).replace('.', ',') : '—', 'charge projetée', ratioCol),
+      stat(String(ana.structure.totalLoad), 'charge totale'),
+      stat(String(ana.structure.restDays), 'jours de repos'),
+      stat(String(ana.structure.hardDays), 'séances dures')),
+
+    // Répartition jour par jour : c'est le contraste entre les journées,
+    // pas leur somme, qui distingue une semaine tenable d'une semaine plate.
+    React.createElement('div', { style: { display: 'flex', gap: 4, alignItems: 'flex-end', height: 46, marginBottom: 4 } },
+      (() => {
+        const max = Math.max(...ana.structure.days.map((d) => d.load), 1)
+        return ana.structure.days.map((d) => React.createElement('div', { key: d.date, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 } },
+          React.createElement('div', { style: { width: '100%', height: 34, display: 'flex', alignItems: 'flex-end' } },
+            React.createElement('div', {
+              style: {
+                width: '100%', height: d.load > 0 ? Math.max(4, Math.round(d.load / max * 34)) : 3,
+                borderRadius: 4,
+                background: d.rest ? C.surface2 : d.hard ? C.warn : C.primary,
+              },
+            })),
+          React.createElement('span', { style: { fontSize: 9.5, color: C.ink3, fontWeight: 600 } }, ['L', 'M', 'M', 'J', 'V', 'S', 'D'][d.dow]))
+        )
+      })()),
+    React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: ana.tips.length ? 12 : 0 } }, 'Orange = séance exigeante · gris = repos'),
+
+    ana.tips.map((t, i) => React.createElement('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: i ? 8 : 0 } },
+      React.createElement('span', { style: { color: C.primary, fontWeight: 800, flex: '0 0 auto' } }, '•'),
+      React.createElement('span', null, t))))
+}
+
 // ============================================================
 // Calendrier — planning des séances (créer/voir/modifier/supprimer),
 // vues jour/semaine/mois, champs par sport (distance/allure/FC pour la
@@ -792,6 +843,7 @@ export default function PlannerSpace({ db, store, onClose }) {
         React.createElement(Icon, { name: 'next', size: 16 }))),
 
     view === 'day' && React.createElement(DayView, { date, sessions, onOpen: openEdit, onAdd: openAdd }),
+    view === 'week' && React.createElement(WeekBrief, { db, weekOf: isoDate(date) }),
     view === 'week' && React.createElement(WeekView, { date, sessions, onOpen: openEdit, onAdd: openAdd }),
     view === 'month' && React.createElement(MonthView, { date, sessions, onGoDay: goDay }),
 

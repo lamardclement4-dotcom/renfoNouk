@@ -27,6 +27,7 @@ import { mindAnalysis, breathSessions } from '../health/mindIntel'
 import { muscuAnalysis, groupVerdict, SERIES_HIGH } from './muscuIntel'
 import { hydroAnalysis } from '../hydration/hydroIntel'
 import { mobilityAnalysis } from './mobilityIntel'
+import { plannerAnalysis } from './plannerIntel'
 import { diagAnalysis } from '../nutrition/diagIntel'
 import { nutriAnalysis } from '../nutrition/nutriIntel'
 import { weightSeries, weeklyRate } from '../profil/weightIntel'
@@ -1384,6 +1385,28 @@ export function recommendations(db) {
   const painActiveForRecov = prev.status === 'ok' && prev.extra.pain && prev.extra.pain.active && !prev.extra.pain.urgent
   if ((loadHighForRecov || painActiveForRecov) && (daysSinceRecov == null || daysSinceRecov >= 5)) {
     push('info', 'leaf', 'Charge élevée ou douleur active sans séance de récupération récente — une routine guidée (étirements, auto-massage) peut réduire la sensation de fatigue et de courbatures.', 'recovery')
+  }
+
+  // --- Semaine planifiée : ce qu'elle va coûter ---
+  // L'ACWR ne comptait que les séances faites : l'application signalait une
+  // surcharge une fois qu'elle avait eu lieu. La projection le dit avant,
+  // c'est-à-dire quand on peut encore alléger.
+  const plan = plannerAnalysis(db, { today: iso })
+  if (plan.load.available && plan.load.verdict && plan.load.plannedLoad > 0) {
+    if (plan.load.verdict.level === 'alert') {
+      push('warn', 'calendar', `Si tu fais tout ce qui est prévu cette semaine, ton rapport charge aiguë / chronique finira à ${String(plan.load.ratio).replace('.', ',')} — ${plan.load.verdict.text}. Il est à ${String(plan.load.currentRatio).replace('.', ',')} pour l'instant : alléger ou déplacer une séance suffit souvent.`, 'planner')
+    } else if (plan.load.verdict.level === 'warn') {
+      push('info', 'calendar', `Ta semaine planifiée amènerait ta charge à ${String(plan.load.ratio).replace('.', ',')} — ${plan.load.verdict.text}. À surveiller sans forcément changer quoi que ce soit.`, 'planner')
+    }
+  }
+  for (const f of plan.structure.flags) {
+    push(f.level === 'warn' ? 'warn' : 'info', 'calendar', f.text, 'planner')
+  }
+  if (plan.monotony && plan.monotony.level !== 'ok') {
+    push('info', 'calendar', plan.monotony.text, 'planner')
+  }
+  if (plan.adherence && plan.adherence.level === 'warn') {
+    push('info', 'calendar', plan.adherence.text, 'planner')
   }
 
   // --- Séance planifiée dans les 48h alors qu'un risque est actif ---
