@@ -30,6 +30,7 @@ import { mobilityAnalysis } from './mobilityIntel'
 import { plannerAnalysis } from './plannerIntel'
 import { climbAnalysis } from './climbIntel'
 import { enduranceAnalysis } from './enduranceIntel'
+import { sprintAnalysis, fmtSprintTime, windLabel } from './sprintIntel'
 import { diagAnalysis } from '../nutrition/diagIntel'
 import { nutriAnalysis } from '../nutrition/nutriIntel'
 import { weightSeries, weeklyRate } from '../profil/weightIntel'
@@ -1410,6 +1411,28 @@ export function recommendations(db) {
   }
   if (endur.swim.strokes && endur.swim.strokes.only) {
     push('info', 'wave', endur.swim.strokes.text, 'planner')
+  }
+
+  // --- Sprint ---
+  // Le chrono était noté sans le vent : une performance ventée passait
+  // pour un record et faisait croire à une progression qui n'a pas eu lieu.
+  const spr = sprintAnalysis(db, { days: 730, today: iso })
+  if (spr.volume.jump) {
+    push('warn', 'bolt', spr.volume.jump.text, 'planner')
+  }
+  const assisted = spr.records.filter((r) => r.windAssisted)
+  if (assisted.length) {
+    const r = assisted[0]
+    push('info', 'bolt', `Ton meilleur ${r.label} est ${fmtSprintTime(r.any.sec)} avec ${windLabel(r.any.wind)} de vent, au-delà de la limite homologable. Ta référence reste ${fmtSprintTime(r.legal.sec)}.`, 'planner')
+  }
+  for (const e of spr.endurance) {
+    if (e.level !== 'ok') push('info', 'bolt', e.text, 'planner')
+  }
+  if (spr.shortRec && spr.shortRec.length >= 2) {
+    push('info', 'bolt', spr.shortRec[0].text, 'planner')
+  }
+  if (spr.reaction && spr.reaction.level !== 'ok') {
+    push('info', 'bolt', spr.reaction.text, 'planner')
   }
 
   // --- Escalade ---

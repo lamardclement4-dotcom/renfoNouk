@@ -4,6 +4,7 @@ import { SPORTS } from './trainData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE, EQUIP, searchExercises, exercisesOfGroup } from './plannerData'
 import { plannerAnalysis } from './plannerIntel'
 import { SCALES, STYLES, ANGLES, LIEUX, PRISES, gradeIndex } from './climbIntel'
+import { EVENTS as SPRINT_EVENTS, STARTS as SPRINT_STARTS, parseSprintTime, windLegal, windLabel, WIND_LEGAL_MAX } from './sprintIntel'
 import { estimate1RM, suggestLoad } from './muscuIntel'
 import { dureeToMins, projectedAcwr, consecutiveDaysBefore, taperSuggestedMins } from './renfoIntel'
 import { computePeakPlan } from './PeakSpace'
@@ -241,6 +242,81 @@ function CourseFields({ sport, data, setData }) {
         React.createElement('input', { type: 'text', placeholder: 'Allure (auto)', value: allure, readOnly: true, style: { ...fieldInputStyle, color: C.ink3 } }),
         React.createElement('input', { type: 'number', placeholder: 'FC moy. (bpm)', value: data.fc || '', onChange: (e) => upd('fc', e.target.value), style: fieldInputStyle }),
         React.createElement('input', { type: 'number', placeholder: 'Dénivelé+ (m)', value: data.denivele || '', onChange: (e) => upd('denivele', e.target.value), style: { ...fieldInputStyle, gridColumn: '1 / -1' } })))
+}
+
+// Sprint : performances chronométrées.
+//
+// Le sprint partageait l'écran de la course : temps en minutes-secondes et
+// allure au kilomètre. Ni l'un ni l'autre ne convient — un 100 m se mesure
+// au centième, et une allure au kilomètre sur 60 m ne veut rien dire. Il
+// manquait surtout le vent : un chrono venté n'est comparable à rien, ni
+// homologable nulle part.
+function SprintPerfFields({ data, setData }) {
+  const perfs = Array.isArray(data.perfs) ? data.perfs : []
+  const [epreuve, setEpreuve] = useState('100')
+  const [temps, setTemps] = useState('')
+  const [vent, setVent] = useState('')
+  const [depart, setDepart] = useState('blocs')
+  const [reaction, setReaction] = useState('')
+
+  const valid = parseSprintTime(temps) != null
+  const legal = windLegal(epreuve, vent === '' ? null : Number(vent))
+
+  const addPerf = () => {
+    if (!valid) return
+    setData({ ...data, perfs: [...perfs, {
+      id: 'p' + Date.now(), epreuve, temps,
+      vent: vent === '' ? null : Number(vent),
+      depart,
+      reaction: reaction === '' ? null : Number(reaction),
+    }] })
+    setTemps(''); setReaction('')
+  }
+  const removePerf = (id) => setData({ ...data, perfs: perfs.filter((x) => x.id !== id) })
+
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('div', { style: fieldLabel() }, '⚡ Performances chronométrées'),
+
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 } },
+      SPRINT_EVENTS.map((e) =>
+        React.createElement('button', { key: e.id, onClick: () => setEpreuve(e.id), style: { ...pillStyle(epreuve === e.id), padding: '5px 10px', fontSize: 12 } }, e.label))),
+
+    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 } },
+      React.createElement('input', { type: 'text', inputMode: 'decimal', placeholder: 'Temps (10.85)', value: temps, onChange: (e) => setTemps(e.target.value), style: fieldInputStyle }),
+      React.createElement('input', { type: 'number', step: '0.1', placeholder: 'Vent (m/s)', value: vent, onChange: (e) => setVent(e.target.value), style: fieldInputStyle })),
+
+    // Le message ne bloque pas la saisie : une performance ventée reste une
+    // performance, elle ne devient simplement pas une référence.
+    vent !== '' && !legal ? React.createElement('div', { style: { fontSize: 11.5, color: C.warn, lineHeight: 1.4, marginBottom: 8 } },
+      `Au-delà de ${String(WIND_LEGAL_MAX).replace('.', ',')} m/s, la performance n'est pas homologable. Elle sera enregistrée mais gardée à part de tes références.`) : null,
+
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 } },
+      SPRINT_STARTS.map((st) =>
+        React.createElement('button', { key: st.id, onClick: () => setDepart(st.id), style: pillStyle(depart === st.id) }, st.label))),
+
+    React.createElement('input', { type: 'number', step: '0.001', placeholder: 'Temps de réaction (0.185 s)', value: reaction, onChange: (e) => setReaction(e.target.value), style: { ...fieldInputStyle, marginBottom: 10 } }),
+
+    React.createElement('button', {
+      onClick: addPerf, disabled: !valid,
+      style: {
+        width: '100%', padding: 12, borderRadius: 999, border: 'none', marginBottom: 12,
+        background: valid ? C.primary : C.surface2, color: valid ? '#fff' : C.ink3,
+        fontSize: 14, fontWeight: 700, cursor: valid ? 'pointer' : 'default', fontFamily: C.font,
+      },
+    }, valid ? `Ajouter ${temps} sur ${(SPRINT_EVENTS.find((e) => e.id === epreuve) || {}).label}` : 'Saisis un temps (ex. 10.85)'),
+
+    perfs.length > 0 ? React.createElement('div', { style: { background: C.surface2, borderRadius: C.radiusSm, overflow: 'hidden' } },
+      perfs.map((x, i) => {
+        const ev = SPRINT_EVENTS.find((e) => e.id === x.epreuve) || {}
+        const ok = windLegal(x.epreuve, x.vent)
+        return React.createElement('div', { key: x.id || i, style: { display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px', borderTop: i ? `1px solid ${C.line}` : 'none' } },
+          React.createElement('span', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 14, color: C.ink, minWidth: 52 } }, x.temps),
+          React.createElement('span', { style: { fontSize: 11.5, color: C.ink3, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+            [ev.label, windLabel(x.vent), (SPRINT_STARTS.find((st) => st.id === x.depart) || {}).label, x.reaction ? 'TR ' + x.reaction : null].filter(Boolean).join(' · ')),
+          ok ? null : React.createElement('span', { style: { fontSize: 10, fontWeight: 700, color: C.warn, flex: '0 0 auto' } }, 'venté'),
+          React.createElement('button', { onClick: () => removePerf(x.id), 'aria-label': 'Retirer', style: { border: 'none', background: 'none', cursor: 'pointer', padding: '4px 2px' } },
+            React.createElement(Icon, { name: 'close', size: 13, color: C.ink3 })))
+      })) : null)
 }
 
 function PercheFields({ data, setData }) {
@@ -748,6 +824,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
           RESSENTI.map((r) => React.createElement('button', { key: r.val, onClick: () => setRessenti(r.val), title: r.l, style: { flex: 1, padding: '10px 0', borderRadius: C.radiusSm, fontSize: 22, cursor: 'pointer', border: '1.5px solid ' + (ressenti === r.val ? C.primary : C.line), background: ressenti === r.val ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface } }, r.e)))),
 
       (sport === 'course' || sport === 'sprint' || sport === 'trail') && React.createElement(CourseFields, { sport, data, setData }),
+      sport === 'sprint' && React.createElement(SprintPerfFields, { data, setData }),
       sport === 'perche' && React.createElement(PercheFields, { data, setData }),
       sport === 'escalade' && React.createElement(EscaladeFields, { data, setData }),
       sport && MUSCU_SPORTS.includes(sport) && React.createElement(MuscuFields, { sport, exercises, setExercises, exerciseHistory }),
