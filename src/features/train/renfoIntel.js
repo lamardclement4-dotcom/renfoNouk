@@ -28,6 +28,7 @@ import { muscuAnalysis, groupVerdict, SERIES_HIGH } from './muscuIntel'
 import { hydroAnalysis } from '../hydration/hydroIntel'
 import { mobilityAnalysis } from './mobilityIntel'
 import { plannerAnalysis } from './plannerIntel'
+import { climbAnalysis } from './climbIntel'
 import { diagAnalysis } from '../nutrition/diagIntel'
 import { nutriAnalysis } from '../nutrition/nutriIntel'
 import { weightSeries, weeklyRate } from '../profil/weightIntel'
@@ -1385,6 +1386,24 @@ export function recommendations(db) {
   const painActiveForRecov = prev.status === 'ok' && prev.extra.pain && prev.extra.pain.active && !prev.extra.pain.urgent
   if ((loadHighForRecov || painActiveForRecov) && (daysSinceRecov == null || daysSinceRecov >= 5)) {
     push('info', 'leaf', 'Charge élevée ou douleur active sans séance de récupération récente — une routine guidée (étirements, auto-massage) peut réduire la sensation de fatigue et de courbatures.', 'recovery')
+  }
+
+  // --- Escalade ---
+  // Le niveau était un texte libre, donc inexploitable. Depuis que chaque
+  // croix porte sa cotation et son style, on peut dire des choses qu'un
+  // simple « 6b+ » ne permettait pas.
+  const climb = climbAnalysis(db, { days: 180, today: iso })
+  if (climb.ascents.length >= 5) {
+    if (climb.fingers) {
+      for (const f of climb.fingers.flags) push('warn', 'dumbbell', f.text, 'planner')
+    }
+    for (const p of [climb.pyrVoie, climb.pyrBloc]) {
+      if (p && !p.solid && p.total >= 5) push('info', 'chart', p.text, 'planner')
+    }
+    for (const g of [climb.gapVoie, climb.gapBloc]) {
+      if (g && g.level === 'warn') push('info', 'chart', g.text, 'planner')
+    }
+    if (climb.angles && climb.angles.lopsided) push('info', 'chart', climb.angles.text, 'planner')
   }
 
   // --- Semaine planifiée : ce qu'elle va coûter ---

@@ -3,6 +3,7 @@ import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE, EQUIP, searchExercises, exercisesOfGroup } from './plannerData'
 import { plannerAnalysis } from './plannerIntel'
+import { SCALES, STYLES, ANGLES, gradeIndex } from './climbIntel'
 import { estimate1RM, suggestLoad } from './muscuIntel'
 import { dureeToMins, projectedAcwr, consecutiveDaysBefore, taperSuggestedMins } from './renfoIntel'
 import { computePeakPlan } from './PeakSpace'
@@ -258,19 +259,79 @@ function PercheFields({ data, setData }) {
       })))
 }
 
+// Escalade : saisie voie par voie.
+//
+// L'écran gardait un niveau en texte libre — « 6b+ » tapé à la main — et
+// deux compteurs. Rien n'en était exploitable : deux orthographes de la
+// même cotation ne se comparent pas, et un niveau sans style ne veut pas
+// dire grand-chose. Une voie enchaînée à vue et la même après dix essais
+// ne racontent pas la même séance. On enregistre donc chaque croix avec
+// sa cotation, son style et le profil du mur.
 function EscaladeFields({ data, setData }) {
-  const types = data.types || []
+  const ascents = Array.isArray(data.ascents) ? data.ascents : []
+  const [scale, setScale] = useState('voie')
+  const [grade, setGrade] = useState('')
+  const [style, setStyle] = useState('travail')
+  const [angle, setAngle] = useState(null)
+
+  const addAscent = () => {
+    if (!grade || gradeIndex(grade, scale) == null) return
+    setData({ ...data, ascents: [...ascents, { id: 'a' + Date.now(), grade, scale, style, angle }] })
+    setGrade('')
+  }
+  const removeAscent = (id) => setData({ ...data, ascents: ascents.filter((x) => x.id !== id) })
+
+  const sent = ascents.filter((x) => (STYLES.find((s) => s.id === x.style) || {}).sent)
+  const styleShort = (id) => (STYLES.find((s) => s.id === id) || {}).short || '—'
+
   return React.createElement('div', { style: { marginBottom: 16 } },
     React.createElement('div', { style: fieldLabel() }, '🧗 Escalade'),
-    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 } },
-      ['Bloc', 'Voie', 'Dalle', 'Dévers', 'Vertical'].map((t) => {
-        const active = types.includes(t)
-        return React.createElement('button', { key: t, onClick: () => setData({ ...data, types: active ? types.filter((x) => x !== t) : [...types, t] }), style: pillStyle(active) }, t)
-      })),
-    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
-      React.createElement('input', { type: 'text', placeholder: 'Niveau (6b+)', value: data.niveau || '', onChange: (e) => setData({ ...data, niveau: e.target.value }), style: fieldInputStyle }),
-      React.createElement('input', { type: 'number', placeholder: 'Nb voies', value: data.voies || '', onChange: (e) => setData({ ...data, voies: e.target.value }), style: fieldInputStyle }),
-      React.createElement('input', { type: 'number', placeholder: 'Nb blocs', value: data.blocs || '', onChange: (e) => setData({ ...data, blocs: e.target.value }), style: fieldInputStyle })))
+
+    // Les deux échelles ne se comparent pas : le choix conditionne la
+    // liste de cotations proposée.
+    React.createElement('div', { style: { display: 'flex', gap: 7, marginBottom: 10 } },
+      [['voie', 'Voie'], ['bloc', 'Bloc']].map(([id, lab]) =>
+        React.createElement('button', { key: id, onClick: () => { setScale(id); setGrade('') }, style: pillStyle(scale === id) }, lab))),
+
+    React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, 'Cotation'),
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 } },
+      (SCALES[scale] || []).map((g) =>
+        React.createElement('button', { key: g, onClick: () => setGrade(g), style: { ...pillStyle(grade === g), padding: '5px 9px', fontSize: 12 } }, g))),
+
+    React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, 'Style'),
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 4 } },
+      STYLES.map((st) =>
+        React.createElement('button', { key: st.id, onClick: () => setStyle(st.id), style: pillStyle(style === st.id) }, st.label))),
+    React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginBottom: 10, lineHeight: 1.4 } },
+      (STYLES.find((st) => st.id === style) || {}).desc),
+
+    React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, 'Profil du mur (facultatif)'),
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 } },
+      ANGLES.map((an) =>
+        React.createElement('button', { key: an.id, onClick: () => setAngle(angle === an.id ? null : an.id), style: pillStyle(angle === an.id) }, an.label))),
+
+    React.createElement('button', {
+      onClick: addAscent, disabled: !grade,
+      style: {
+        width: '100%', padding: 12, borderRadius: 999, border: 'none', marginBottom: 12,
+        background: grade ? C.primary : C.surface2, color: grade ? '#fff' : C.ink3,
+        fontSize: 14, fontWeight: 700, cursor: grade ? 'pointer' : 'default', fontFamily: C.font,
+      },
+    }, grade ? `Ajouter ${grade}` : 'Choisis une cotation'),
+
+    ascents.length > 0 ? React.createElement('div', { style: { background: C.surface2, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 8 } },
+      ascents.map((x, i) => React.createElement('div', { key: x.id || i, style: { display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px', borderTop: i ? `1px solid ${C.line}` : 'none' } },
+        React.createElement('span', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 14, color: C.ink, minWidth: 34 } }, x.grade),
+        React.createElement('span', { style: { fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: C.surface, color: C.ink3 } }, styleShort(x.style)),
+        React.createElement('span', { style: { flex: 1, fontSize: 11.5, color: C.ink3 } },
+          (x.scale === 'bloc' ? 'Bloc' : 'Voie') + (x.angle ? ' · ' + (ANGLES.find((an) => an.id === x.angle) || {}).label : '')),
+        React.createElement('button', { onClick: () => removeAscent(x.id), 'aria-label': 'Retirer', style: { border: 'none', background: 'none', color: C.ink3, cursor: 'pointer', padding: '4px 2px' } },
+          React.createElement(Icon, { name: 'close', size: 13, color: C.ink3 }))))) : null,
+
+    React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, lineHeight: 1.45 } },
+      ascents.length
+        ? `${ascents.length} voie${ascents.length > 1 ? 's' : ''} enregistrée${ascents.length > 1 ? 's' : ''}, dont ${sent.length} réussie${sent.length > 1 ? 's' : ''}.`
+        : 'Ajoute chaque voie avec son style : c’est ce qui permet de suivre un niveau à vue et un niveau après travail séparément.'))
 }
 
 function GenericSportFields({ sportId, data, setData }) {
