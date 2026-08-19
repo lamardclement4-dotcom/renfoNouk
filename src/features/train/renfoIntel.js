@@ -29,6 +29,7 @@ import { hydroAnalysis } from '../hydration/hydroIntel'
 import { mobilityAnalysis } from './mobilityIntel'
 import { plannerAnalysis } from './plannerIntel'
 import { climbAnalysis } from './climbIntel'
+import { enduranceAnalysis } from './enduranceIntel'
 import { diagAnalysis } from '../nutrition/diagIntel'
 import { nutriAnalysis } from '../nutrition/nutriIntel'
 import { weightSeries, weeklyRate } from '../profil/weightIntel'
@@ -1386,6 +1387,29 @@ export function recommendations(db) {
   const painActiveForRecov = prev.status === 'ok' && prev.extra.pain && prev.extra.pain.active && !prev.extra.pain.urgent
   if ((loadHighForRecov || painActiveForRecov) && (daysSinceRecov == null || daysSinceRecov >= 5)) {
     push('info', 'leaf', 'Charge élevée ou douleur active sans séance de récupération récente — une routine guidée (étirements, auto-massage) peut réduire la sensation de fatigue et de courbatures.', 'recovery')
+  }
+
+  // --- Endurance : course, vélo, natation ---
+  // Distance et temps étaient enregistrés depuis toujours sans qu'aucun
+  // record, aucune projection ni aucune progression de volume n'en soient
+  // tirés.
+  const endur = enduranceAnalysis(db, { days: 365, today: iso, weightKg: weightKg(db) })
+  if (endur.run.volume.jump) {
+    push('warn', 'route', endur.run.volume.jump.text, 'planner')
+  }
+  if (endur.run.cadence && endur.run.cadence.level !== 'ok') {
+    push('info', 'route', endur.run.cadence.text, 'planner')
+  }
+  if (endur.run.predictions.length && endur.run.records.length) {
+    const raced = new Set(endur.run.records.map((r) => r.id))
+    const unraced = endur.run.predictions.filter((p) => !raced.has(p.id))
+    if (unraced.length) {
+      const pick = unraced.reduce((m, p) => (p.km > m.km ? p : m), unraced[0])
+      push('info', 'route', `D'après ton ${pick.from.label} en ${pick.from.time}, tu vaudrais environ ${pick.time} sur ${pick.label.toLowerCase()} — une projection, pas une promesse.`, 'planner')
+    }
+  }
+  if (endur.swim.strokes && endur.swim.strokes.only) {
+    push('info', 'wave', endur.swim.strokes.text, 'planner')
   }
 
   // --- Escalade ---
