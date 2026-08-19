@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { C, Icon, SegTabs, GRADIENTS } from '../health/kit'
-import { recommendations } from './renfoIntel'
+import { recommendations, rankRecommendations } from './renfoIntel'
 import { coachGreeting, coachReply } from './coachChat'
 
 const COACH = '#534ab7'
@@ -22,7 +22,14 @@ const ACTION_LABELS = {
 
 // Onglet "Conseils" : les recommandations groupées par priorité (inchangé).
 function AdviceTab({ db, onAction }) {
-  const recos = recommendations(db)
+  // Sur un profil réel, l'écran affichait une vingtaine de conseils dont
+  // cinq sur la mobilité, qui noyaient une douleur installée depuis
+  // quarante jours. On montre d'abord une sélection courte et variée ; le
+  // reste est accessible, rien n'est perdu.
+  const all = recommendations(db)
+  const ranked = rankRecommendations(all)
+  const [showAll, setShowAll] = useState(false)
+  const recos = showAll ? ranked.top.concat(ranked.rest) : ranked.top
   return React.createElement(React.Fragment, null,
     React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: COACH, color: '#fff', marginBottom: 18 } },
       React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
@@ -59,6 +66,17 @@ function AdviceTab({ db, onAction }) {
               clickable && React.createElement(Icon, { name: 'arrow', size: 16, color: g.color, style: { flex: '0 0 auto', marginTop: 1 } }))
           }))
       }),
+
+    ranked.rest.length > 0 ? React.createElement('button', {
+      onClick: () => setShowAll(!showAll),
+      style: {
+        width: '100%', padding: '11px 14px', borderRadius: 999, marginBottom: 14,
+        border: `1.5px solid ${C.line}`, background: 'transparent', color: C.ink2,
+        fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: C.font,
+      },
+    }, showAll
+      ? 'Revenir à l’essentiel'
+      : `Voir les ${ranked.rest.length} autres recommandations`) : null,
 
     React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, marginTop: 8, background: `color-mix(in srgb, ${COACH} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${COACH} 22%, ${C.line})` } },
       React.createElement(Icon, { name: 'search', size: 16, color: COACH, style: { flex: '0 0 auto', marginTop: 2 } }),

@@ -1144,7 +1144,13 @@ export function recommendations(db) {
     }
     if (mus.stalls.length) {
       const st = mus.stalls[0]
-      push('info', 'dumbbell', `${st.name} plafonne autour de ${st.best.best1RM} kg estimés depuis plusieurs séances — faire varier les répétitions, le tempo, ou insérer une semaine allégée débloque plus souvent qu'insister à la même charge.`, 'planner')
+      // Le texte était réécrit ici au lieu de reprendre celui du module :
+      // l'écran Progrès affichait la version tenant compte du sommeil et
+      // des protéines, le Coach la version naïve « varie les répétitions ».
+      // Deux conseils contradictoires sur la même donnée.
+      push('info', 'dumbbell', mus.context.length
+        ? `${st.name} plafonne autour de ${st.best.best1RM} kg estimés, et ce n'est probablement pas le programme : ${mus.context.map((c) => c.text).join(' Et ')}`
+        : `${st.name} plafonne autour de ${st.best.best1RM} kg estimés depuis plusieurs séances — faire varier les répétitions, le tempo, ou insérer une semaine allégée débloque plus souvent qu'insister à la même charge.`, 'planner')
     }
     const over = mus.volumes.filter((v) => groupVerdict(v.seriesPerWeek).level === 'high')
     if (over.length) {
@@ -1387,4 +1393,82 @@ export function recommendations(db) {
   }
 
   return recos
+}
+
+// ─── Hiérarchisation des recommandations ────────────────────
+// Soixante-treize règles peuvent produire une vingtaine de conseils à la
+// fois. Sur un profil réel, cinq d'entre eux portaient sur la mobilité et
+// noyaient une douleur au genou installée depuis quarante jours. Une liste
+// que personne ne lit jusqu'au bout ne vaut pas mieux qu'une liste vide.
+//
+// Trois règles simples : on écarte les doublons, on limite ce qu'un même
+// domaine peut occuper, et on alterne les domaines pour que le premier
+// écran en couvre plusieurs plutôt que d'en épuiser un seul.
+export const MAX_PER_DOMAIN = 2
+export const TOP_COUNT = 8
+
+const LEVEL_RANK = { alert: 0, warn: 1, info: 2 }
+
+// Deux conseils qui commencent par la même chose disent presque toujours la
+// même chose : c'est le cas des règles qui se recoupent sur un même sujet.
+// Le domaine fait partie de l'empreinte, et on retient huit mots : à six,
+// des conseils qui ne partagent qu'une tournure d'ouverture se
+// confondaient. Mieux vaut laisser passer un quasi-doublon que supprimer
+// un conseil différent.
+const FINGERPRINT_WORDS = 8
+
+function fingerprint(reco) {
+  const words = (reco.text || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[0-9]+([.,][0-9]+)?/g, '#')
+    .replace(/[^a-z# ]/g, ' ')
+    .split(/\s+/).filter(Boolean).slice(0, FINGERPRINT_WORDS).join(' ')
+  return (reco.action || 'general') + '|' + words
+}
+
+export function rankRecommendations(recos, { max = TOP_COUNT, perDomain = MAX_PER_DOMAIN } = {}) {
+  const list = (recos || []).filter((r) => r && r.text)
+  const seen = new Set()
+  const unique = []
+  for (const r of list) {
+    const fp = fingerprint(r)
+    if (seen.has(fp)) continue
+    seen.add(fp)
+    unique.push(r)
+  }
+  const sorted = unique
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => (LEVEL_RANK[a.r.level] ?? 2) - (LEVEL_RANK[b.r.level] ?? 2) || a.i - b.i)
+    .map((x) => x.r)
+
+  // Un tour par domaine à la fois : le premier passage prend le meilleur
+  // conseil de chaque domaine, le second le suivant, et ainsi de suite.
+  const byDomain = new Map()
+  for (const r of sorted) {
+    const k = r.action || 'general'
+    if (!byDomain.has(k)) byDomain.set(k, [])
+    byDomain.get(k).push(r)
+  }
+  const top = []
+  const overflow = []
+  for (let round = 0; round < perDomain; round++) {
+    for (const items of byDomain.values()) {
+      if (items[round] && top.length < max) top.push(items[round])
+    }
+  }
+  for (const items of byDomain.values()) {
+    for (let k = 0; k < items.length; k++) {
+      if (!top.includes(items[k])) overflow.push(items[k])
+    }
+  }
+  // L'ordre de gravité doit tenir aussi à l'intérieur de la sélection.
+  top.sort((a, b) => (LEVEL_RANK[a.level] ?? 2) - (LEVEL_RANK[b.level] ?? 2) || sorted.indexOf(a) - sorted.indexOf(b))
+  overflow.sort((a, b) => (LEVEL_RANK[a.level] ?? 2) - (LEVEL_RANK[b.level] ?? 2) || sorted.indexOf(a) - sorted.indexOf(b))
+  return {
+    top, rest: overflow,
+    total: list.length,
+    duplicates: list.length - unique.length,
+    domains: byDomain.size,
+  }
 }

@@ -18,6 +18,9 @@
 // diététique.
 // ============================================================
 
+// Affichage des décimales à la française : « 1,4 » et non « 1.4 ».
+const fr = (v) => String(v).replace('.', ',')
+
 const num = (v) => {
   if (v === null || v === undefined || v === '') return null
   const n = Number(v)
@@ -129,10 +132,10 @@ export function proteinPerKg(avg, weightKg) {
   if (!avg || !w || w <= 0) return null
   const perKg = Math.round(avg.prot / w * 100) / 100
   let level, text
-  if (perKg < 1) { level = 'low'; text = `${perKg} g/kg : nettement sous le repère de ${PROT_MIN_ACTIVE} g/kg retenu pour quelqu’un qui s’entraîne régulièrement.` }
-  else if (perKg < PROT_MIN_ACTIVE) { level = 'low'; text = `${perKg} g/kg : sous le repère de ${PROT_MIN_ACTIVE} g/kg pour un entraînement régulier.` }
-  else if (perKg <= PROT_MAX_USEFUL) { level = 'ok'; text = `${perKg} g/kg : dans la fourchette de ${PROT_MIN_ACTIVE} à ${PROT_MAX_USEFUL} g/kg.` }
-  else { level = 'high'; text = `${perKg} g/kg : au-delà de ${PROT_MAX_USEFUL} g/kg, le supplément n’apporte pas grand-chose de plus.` }
+  if (perKg < 1) { level = 'low'; text = `${fr(perKg)} g/kg : nettement sous le repère de ${fr(PROT_MIN_ACTIVE)} g/kg retenu pour quelqu’un qui s’entraîne régulièrement.` }
+  else if (perKg < PROT_MIN_ACTIVE) { level = 'low'; text = `${fr(perKg)} g/kg : sous le repère de ${fr(PROT_MIN_ACTIVE)} g/kg pour un entraînement régulier.` }
+  else if (perKg <= PROT_MAX_USEFUL) { level = 'ok'; text = `${fr(perKg)} g/kg : dans la fourchette de ${fr(PROT_MIN_ACTIVE)} à ${fr(PROT_MAX_USEFUL)} g/kg.` }
+  else { level = 'high'; text = `${fr(perKg)} g/kg : au-delà de ${fr(PROT_MAX_USEFUL)} g/kg, le supplément n’apporte pas grand-chose de plus.` }
   return { perKg, weightKg: w, level, text, targetMin: Math.round(w * PROT_MIN_ACTIVE), targetMax: Math.round(w * PROT_MAX_USEFUL) }
 }
 

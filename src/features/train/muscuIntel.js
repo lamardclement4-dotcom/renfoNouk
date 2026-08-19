@@ -317,7 +317,7 @@ export function stallContext({ sleep = null, protein = null, weightRate = null }
   if (protein && protein.perKg != null && protein.perKg < PROT_MIN_FOR_GAIN) {
     out.push({
       id: 'proteines', level: 'warn',
-      text: `${String(protein.perKg).replace('.', ',')} g/kg de protéines, sous le repère de ${PROT_MIN_FOR_GAIN} — il manque de quoi construire.`,
+      text: `${String(protein.perKg).replace('.', ',')} g/kg de protéines, sous le repère de ${String(PROT_MIN_FOR_GAIN).replace('.', ',')} — il manque de quoi construire.`,
     })
   }
   const r = num(weightRate)
