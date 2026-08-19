@@ -3,7 +3,7 @@ import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE, EQUIP, searchExercises, exercisesOfGroup } from './plannerData'
 import { plannerAnalysis } from './plannerIntel'
-import { SCALES, STYLES, ANGLES, gradeIndex } from './climbIntel'
+import { SCALES, STYLES, ANGLES, LIEUX, PRISES, gradeIndex } from './climbIntel'
 import { estimate1RM, suggestLoad } from './muscuIntel'
 import { dureeToMins, projectedAcwr, consecutiveDaysBefore, taperSuggestedMins } from './renfoIntel'
 import { computePeakPlan } from './PeakSpace'
@@ -273,11 +273,24 @@ function EscaladeFields({ data, setData }) {
   const [grade, setGrade] = useState('')
   const [style, setStyle] = useState('travail')
   const [angle, setAngle] = useState(null)
+  const [lieu, setLieu] = useState('salle')
+  const [name, setName] = useState('')
+  const [attempts, setAttempts] = useState('')
+  const [prises, setPrises] = useState([])
+  const [detail, setDetail] = useState(false)
 
   const addAscent = () => {
     if (!grade || gradeIndex(grade, scale) == null) return
-    setData({ ...data, ascents: [...ascents, { id: 'a' + Date.now(), grade, scale, style, angle }] })
-    setGrade('')
+    setData({ ...data, ascents: [...ascents, {
+      id: 'a' + Date.now(), grade, scale, style, angle, lieu,
+      name: name.trim() || null,
+      attempts: attempts === '' ? null : Number(attempts) || null,
+      prises,
+    }] })
+    // Le nom et le nombre d'essais changent d'une voie à l'autre ; le
+    // profil, le lieu et les prises se répètent souvent dans une même
+    // séance, on les garde.
+    setGrade(''); setName(''); setAttempts('')
   }
   const removeAscent = (id) => setData({ ...data, ascents: ascents.filter((x) => x.id !== id) })
 
@@ -310,6 +323,27 @@ function EscaladeFields({ data, setData }) {
       ANGLES.map((an) =>
         React.createElement('button', { key: an.id, onClick: () => setAngle(angle === an.id ? null : an.id), style: pillStyle(angle === an.id) }, an.label))),
 
+    // Le détail sert aux voies qu'on suit dans le temps — un projet, une
+    // voie de falaise — pas à chaque échauffement : il reste replié.
+    React.createElement('button', {
+      onClick: () => setDetail(!detail),
+      style: { width: '100%', padding: '9px 12px', borderRadius: 999, marginBottom: 10, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: C.font },
+    }, detail ? 'Masquer le détail' : 'Nom, essais, lieu, prises…'),
+
+    detail ? React.createElement('div', { style: { marginBottom: 12 } },
+      React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8, marginBottom: 10 } },
+        React.createElement('input', { type: 'text', placeholder: 'Nom de la voie', value: name, onChange: (e) => setName(e.target.value), style: fieldInputStyle }),
+        React.createElement('input', { type: 'number', min: 1, placeholder: 'Essais', value: attempts, onChange: (e) => setAttempts(e.target.value), style: fieldInputStyle })),
+      React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, 'Lieu'),
+      React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 10 } },
+        LIEUX.map((l) => React.createElement('button', { key: l.id, onClick: () => setLieu(l.id), style: pillStyle(lieu === l.id) }, l.label))),
+      React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, 'Préhensions dominantes'),
+      React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
+        PRISES.map((pr) => {
+          const on = prises.includes(pr.id)
+          return React.createElement('button', { key: pr.id, onClick: () => setPrises(on ? prises.filter((x) => x !== pr.id) : [...prises, pr.id]), style: pillStyle(on) }, pr.label)
+        }))) : null,
+
     React.createElement('button', {
       onClick: addAscent, disabled: !grade,
       style: {
@@ -323,8 +357,13 @@ function EscaladeFields({ data, setData }) {
       ascents.map((x, i) => React.createElement('div', { key: x.id || i, style: { display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px', borderTop: i ? `1px solid ${C.line}` : 'none' } },
         React.createElement('span', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 14, color: C.ink, minWidth: 34 } }, x.grade),
         React.createElement('span', { style: { fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: C.surface, color: C.ink3 } }, styleShort(x.style)),
-        React.createElement('span', { style: { flex: 1, fontSize: 11.5, color: C.ink3 } },
-          (x.scale === 'bloc' ? 'Bloc' : 'Voie') + (x.angle ? ' · ' + (ANGLES.find((an) => an.id === x.angle) || {}).label : '')),
+        React.createElement('span', { style: { flex: 1, fontSize: 11.5, color: C.ink3, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+          [
+            x.name,
+            x.scale === 'bloc' ? 'Bloc' : 'Voie',
+            x.angle ? (ANGLES.find((an) => an.id === x.angle) || {}).label : null,
+            x.attempts ? x.attempts + ' essais' : null,
+          ].filter(Boolean).join(' · ')),
         React.createElement('button', { onClick: () => removeAscent(x.id), 'aria-label': 'Retirer', style: { border: 'none', background: 'none', color: C.ink3, cursor: 'pointer', padding: '4px 2px' } },
           React.createElement(Icon, { name: 'close', size: 13, color: C.ink3 }))))) : null,
 

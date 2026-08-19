@@ -142,7 +142,9 @@ export function sessionAscents(session) {
         style: STYLE_BY_ID[x.style] ? x.style : 'travail',
         angle: x.angle || null,
         attempts: num(x.attempts),
-        name: x.name || null,
+        name: (x.name || '').trim() || null,
+        lieu: x.lieu || null,
+        prises: Array.isArray(x.prises) ? x.prises : [],
       }
     })
     .filter((x) => x.index != null)
@@ -344,6 +346,231 @@ export function sessionStats(db, { days = 28, today } = {}) {
   }
 }
 
+
+// ─── Lieu et type de prises ──────────────────────────────────
+// Une cotation de falaise et une cotation de salle ne se valent pas :
+// l'écart usuel est d'un cran, parfois deux. Les mélanger dans un même
+// maximum donne un niveau qui ne correspond à rien.
+export const LIEUX = [
+  { id: 'salle', label: 'Salle' },
+  { id: 'falaise', label: 'Falaise' },
+]
+
+// Les types de préhension ne sollicitent ni les mêmes doigts ni les mêmes
+// tendons. Éviter systématiquement l'un d'eux crée un trou que la
+// cotation seule ne montre jamais.
+export const PRISES = [
+  { id: 'reglette', label: 'Réglettes', desc: 'Doigts fléchis, forte contrainte sur les poulies' },
+  { id: 'inversee', label: 'Inversées', desc: 'Traction vers le haut, sollicite les biceps et les épaules' },
+  { id: 'pince', label: 'Pinces', desc: 'Pouce en opposition' },
+  { id: 'plat', label: 'Plats', desc: 'Adhérence, force de compression' },
+  { id: 'bac', label: 'Bacs', desc: 'Préhension confortable' },
+  { id: 'mono', label: 'Mono / bi-doigts', desc: 'Contrainte très localisée, à doser' },
+]
+
+// ─── Niveau par profil de mur ────────────────────────────────
+// C'est la lecture la plus actionnable : quelqu'un qui sort du 7a en
+// dévers et du 6a en dalle n'a pas « un niveau 7a », il a une force de
+// doigts avancée et une technique de pied en retard. Le volume par
+// profil ne le dit pas — seul le niveau atteint dans chacun le dit.
+export const ANGLE_GAP_WIDE = 3
+
+export function gradeByAngle(list, scale = 'voie') {
+  const sent = list.filter((a) => a.scale === scale && isSent(a.style) && a.angle)
+  if (!sent.length) return null
+  const by = {}
+  for (const a of sent) {
+    if (!by[a.angle] || a.index > by[a.angle].index) by[a.angle] = a
+    by[a.angle].count = (by[a.angle].count || 0) + 1
+  }
+  const items = ANGLES
+    .filter((x) => by[x.id])
+    .map((x) => ({ id: x.id, label: x.label, desc: x.desc, grade: by[x.id].grade, index: by[x.id].index, count: by[x.id].count }))
+    .sort((a, b) => b.index - a.index)
+  if (items.length < 2) return { items, gap: null }
+  const best = items[0]
+  const worst = items[items.length - 1]
+  const gap = best.index - worst.index
+  return {
+    items, best, worst, gap,
+    lopsided: gap >= ANGLE_GAP_WIDE,
+    text: gap >= ANGLE_GAP_WIDE
+      ? `Tu sors du ${best.grade} en ${best.label.toLowerCase()} mais du ${worst.grade} en ${worst.label.toLowerCase()} : ${gap} cotations d'écart. Ce n'est pas un manque de niveau, c'est une qualité en retard — ${worst.desc.toLowerCase()}.`
+      : `Niveau homogène entre les profils (${items.map((x) => `${x.label.toLowerCase()} ${x.grade}`).join(', ')}).`,
+  }
+}
+
+// ─── Projets ouverts ─────────────────────────────────────────
+// Une voie essayée plusieurs fois sans être enchaînée est un projet. Le
+// grimpeur le sait, l'application non — alors qu'elle a le nom, la date
+// et le nombre d'essais. Un projet qui traîne depuis des mois mérite
+// d'être tranché : le reprendre sérieusement ou passer à autre chose.
+export const PROJECT_MIN_TRIES = 2
+export const PROJECT_STALE_DAYS = 60
+
+export function projects(list, { today } = {}) {
+  const ref = today || todayISO()
+  const named = list.filter((a) => a.name)
+  if (!named.length) return []
+  const by = {}
+  for (const a of named) {
+    const key = a.name.toLowerCase() + '|' + a.scale
+    if (!by[key]) by[key] = { name: a.name, scale: a.scale, grade: a.grade, index: a.index, tries: 0, sessions: new Set(), sent: null, first: a.date, last: a.date }
+    const p = by[key]
+    p.tries += a.attempts && a.attempts > 0 ? a.attempts : 1
+    p.sessions.add(a.date)
+    if (a.date < p.first) p.first = a.date
+    if (a.date > p.last) p.last = a.date
+    if (isSent(a.style) && (!p.sent || a.date < p.sent.date)) p.sent = { date: a.date, style: a.style }
+  }
+  return Object.values(by)
+    .map((p) => ({
+      ...p, sessions: p.sessions.size,
+      ageDays: daysBetween(p.first, ref),
+      idleDays: daysBetween(p.last, ref),
+      open: !p.sent,
+      stale: !p.sent && daysBetween(p.last, ref) >= PROJECT_STALE_DAYS,
+    }))
+    .filter((p) => p.tries >= PROJECT_MIN_TRIES || p.sent)
+    .sort((a, b) => (a.open === b.open ? b.tries - a.tries : a.open ? -1 : 1))
+}
+
+// ─── Efficacité des essais ───────────────────────────────────
+// Combien d'essais pour une croix. Le chiffre en soi ne dit rien — il
+// dépend du niveau visé — mais son évolution dit si l'on devient plus
+// efficace ou si l'on s'acharne davantage.
+export function attemptEfficiency(list, scale = 'voie', { months = 3 } = {}) {
+  const withTries = list.filter((a) => a.scale === scale && a.attempts && a.attempts > 0)
+  if (withTries.length < 6) return null
+  const byMonth = {}
+  for (const a of withTries) {
+    const m = a.date.slice(0, 7)
+    if (!byMonth[m]) byMonth[m] = { month: m, tries: 0, sends: 0 }
+    byMonth[m].tries += a.attempts
+    if (isSent(a.style)) byMonth[m].sends++
+  }
+  const rows = Object.values(byMonth)
+    .filter((r) => r.sends > 0)
+    .map((r) => ({ ...r, perSend: Math.round(r.tries / r.sends * 10) / 10 }))
+    .sort((a, b) => a.month.localeCompare(b.month))
+  if (rows.length < 2) return null
+  const first = rows[0]
+  const last = rows[rows.length - 1]
+  const delta = Math.round((last.perSend - first.perSend) * 10) / 10
+  return {
+    rows, first, last, delta,
+    level: delta <= -0.5 ? 'ok' : delta >= 0.5 ? 'info' : 'flat',
+    text: delta <= -0.5
+      ? `Tu enchaînes en ${last.perSend} essais en moyenne contre ${first.perSend} auparavant : tu deviens plus efficace, pas seulement plus fort.`
+      : delta >= 0.5
+        ? `Il te faut ${last.perSend} essais par croix contre ${first.perSend} auparavant — signe que tu vises plus dur, ou que tu t'acharnes davantage.`
+        : `Environ ${last.perSend} essais par croix, stable.`,
+  }
+}
+
+// ─── Plateau ─────────────────────────────────────────────────
+// Aucun nouveau maximum depuis longtemps, alors qu'on grimpe
+// régulièrement. Ce n'est pas un échec — les paliers font partie de la
+// progression — mais le dire évite de le vivre sans le voir.
+export const PLATEAU_DAYS = 120
+
+export function plateau(list, scale = 'voie', { today } = {}) {
+  const ref = today || todayISO()
+  const sent = list.filter((a) => a.scale === scale && isSent(a.style))
+  if (sent.length < 8) return null
+  const best = sent.reduce((m, a) => (a.index > m.index ? a : m), sent[0])
+  const days = daysBetween(best.date, ref)
+  // Encore faut-il avoir grimpé depuis : un plateau ne se constate pas
+  // pendant une interruption.
+  const since = sent.filter((a) => a.date > best.date).length
+  if (days < PLATEAU_DAYS || since < 5) return null
+  return {
+    grade: best.grade, date: best.date, days, sessionsSince: since,
+    text: `Ton meilleur ${scale === 'bloc' ? 'bloc' : 'niveau'} reste le ${best.grade} depuis ${days} jours, avec ${since} croix depuis. Les paliers font partie de la progression ; en sortir passe plus souvent par un changement de registre — profil, type de prises, volume — que par plus d'essais sur le même style de voie.`,
+  }
+}
+
+// ─── Structure de séance ─────────────────────────────────────
+// Attaquer sa séance directement au maximum est le meilleur moyen de se
+// blesser les doigts : les poulies demandent une montée en charge.
+export const WARMUP_GAP = 3
+
+export function sessionShape(session, best, scale = 'voie') {
+  const asc = sessionAscents(session).filter((a) => a.scale === scale)
+  if (asc.length < 3) return null
+  const b = best && (best.travail || best.flash || best.avue)
+  if (!b) return null
+  const first = asc[0]
+  const hardest = asc.reduce((m, a) => (a.index > m.index ? a : m), asc[0])
+  const warmedUp = b.index - first.index >= WARMUP_GAP
+  return {
+    first, hardest, warmedUp, count: asc.length,
+    text: warmedUp
+      ? null
+      : `Ta séance du ${session.date.split('-').reverse().join('/')} commence directement en ${first.grade}, à moins de ${WARMUP_GAP} cotations de ton maximum. Les poulies des doigts demandent une montée en charge progressive.`,
+  }
+}
+
+export function warmupCheck(db, { days = 60, today } = {}) {
+  const ref = today || todayISO()
+  const from = shiftISO(ref, -(days - 1))
+  const all = ascents(db, { days: 180, today: ref })
+  const best = bestByStyle(all, 'voie')
+  const bestB = bestByStyle(all, 'bloc')
+  const out = []
+  for (const s of (db && db.planningSessions) || []) {
+    if (!s || s.sport !== 'escalade' || s.statut !== 'realise') continue
+    if (!s.date || s.date < from || s.date > ref) continue
+    for (const [b, sc] of [[best, 'voie'], [bestB, 'bloc']]) {
+      const shape = sessionShape(s, b, sc)
+      if (shape && !shape.warmedUp) out.push(shape)
+    }
+  }
+  return out
+}
+
+// ─── Salle et falaise ────────────────────────────────────────
+export function lieuSplit(list, scale = 'voie') {
+  const known = list.filter((a) => a.scale === scale && isSent(a.style) && a.lieu)
+  if (known.length < 4) return null
+  const by = {}
+  for (const a of known) {
+    if (!by[a.lieu] || a.index > by[a.lieu].index) by[a.lieu] = a
+    by[a.lieu].count = (by[a.lieu].count || 0) + 1
+  }
+  const items = LIEUX.filter((l) => by[l.id]).map((l) => ({ id: l.id, label: l.label, grade: by[l.id].grade, index: by[l.id].index, count: by[l.id].count }))
+  if (items.length < 2) return { items, gap: null }
+  const salle = items.find((x) => x.id === 'salle')
+  const falaise = items.find((x) => x.id === 'falaise')
+  const gap = salle && falaise ? salle.index - falaise.index : null
+  return {
+    items, gap,
+    text: gap == null
+      ? null
+      : gap >= 2
+        ? `${gap} cotations d'écart entre ta salle (${salle.grade}) et ta falaise (${falaise.grade}). L'écart d'un cran est habituel ; au-delà, c'est souvent la lecture, la pose de pied sur rocher ou la gestion de l'engagement qui manquent, pas la force.`
+        : `Écart habituel entre salle (${salle.grade}) et falaise (${falaise.grade}).`,
+  }
+}
+
+// ─── Type de prises ──────────────────────────────────────────
+export function priseSplit(list) {
+  const all = list.flatMap((a) => a.prises)
+  if (all.length < 8) return null
+  const by = {}
+  for (const p of all) by[p] = (by[p] || 0) + 1
+  const items = PRISES.filter((p) => by[p.id]).map((p) => ({ ...p, count: by[p.id], pct: Math.round(by[p.id] / all.length * 100) })).sort((a, b) => b.count - a.count)
+  const missing = PRISES.filter((p) => !by[p.id] && p.id !== 'mono')
+  const dominant = items[0]
+  return {
+    items, missing, total: all.length,
+    lopsided: dominant && dominant.pct >= 60,
+    text: dominant && dominant.pct >= 60
+      ? `${dominant.pct} % de tes voies passent sur ${dominant.label.toLowerCase()}${missing.length ? `, et tu ne grimpes jamais sur ${missing.map((m) => m.label.toLowerCase()).join(' ni ')}` : ''}. Chaque préhension sollicite des tendons différents : n'en travailler qu'une crée un déséquilibre que la cotation ne montre pas.`
+      : `Préhensions variées : ${items.slice(0, 3).map((x) => `${x.label.toLowerCase()} ${x.pct} %`).join(', ')}.`,
+  }
+}
+
 // ─── Synthèse ────────────────────────────────────────────────
 export function climbAnalysis(db, { days = 180, today } = {}) {
   const ref = today || todayISO()
@@ -359,6 +586,16 @@ export function climbAnalysis(db, { days = 180, today } = {}) {
   const fingers = fingerLoad(db, { days: 28, today: ref })
   const progVoie = progression(list, 'voie')
   const progBloc = progression(list, 'bloc')
+  const angleVoie = gradeByAngle(list, 'voie')
+  const angleBloc = gradeByAngle(list, 'bloc')
+  const projs = projects(list, { today: ref })
+  const openProjects = projs.filter((p) => p.open)
+  const effVoie = attemptEfficiency(list, 'voie')
+  const platVoie = plateau(list, 'voie', { today: ref })
+  const platBloc = plateau(list, 'bloc', { today: ref })
+  const warmups = warmupCheck(db, { days: 60, today: ref })
+  const lieux = lieuSplit(list, 'voie')
+  const prises = priseSplit(list)
 
   const tips = []
   if (!list.length) {
@@ -367,7 +604,25 @@ export function climbAnalysis(db, { days = 180, today } = {}) {
     if (fingers) for (const f of fingers.flags) tips.push(f.text)
     for (const p of [pyrVoie, pyrBloc]) if (p && !p.solid) tips.push(p.text)
     for (const g of [gapVoie, gapBloc]) if (g && g.level !== 'ok') tips.push(g.text)
-    if (angles && angles.lopsided) tips.push(angles.text)
+    // Attaquer directement au maximum est la première cause de blessure
+    // aux doigts : ce conseil passe devant les autres.
+    if (warmups.length) tips.push(warmups[0].text)
+    // Le niveau atteint par profil est plus actionnable que le simple
+    // volume : il désigne la qualité en retard, pas seulement l'oubli.
+    for (const g of [angleVoie, angleBloc]) if (g && g.lopsided) tips.push(g.text)
+    if (angles && angles.lopsided && !(angleVoie && angleVoie.lopsided)) tips.push(angles.text)
+    if (prises && prises.lopsided) tips.push(prises.text)
+    const stale = openProjects.filter((p) => p.stale)
+    if (stale.length) {
+      const pj = stale[0]
+      tips.push(`« ${pj.name} » (${pj.grade}) est ouvert depuis ${pj.ageDays} jours, ${pj.tries} essais, et tu n'y es pas retourné depuis ${pj.idleDays} jours. Le reprendre sérieusement ou le laisser vaut mieux que le garder en suspens.`)
+    } else if (openProjects.length) {
+      const pj = openProjects[0]
+      tips.push(`${openProjects.length} projet${openProjects.length > 1 ? 's' : ''} en cours, dont « ${pj.name} » (${pj.grade}) à ${pj.tries} essais sur ${pj.sessions} séances.`)
+    }
+    for (const pl of [platVoie, platBloc]) if (pl) tips.push(pl.text)
+    if (lieux && lieux.gap != null && lieux.gap >= 2) tips.push(lieux.text)
+    if (effVoie && effVoie.level !== 'flat') tips.push(effVoie.text)
     for (const [p, lab] of [[progVoie, 'en voie'], [progBloc, 'en bloc']]) {
       if (p && p.months.length >= 3 && p.gain > 0) {
         tips.push(`Progression ${lab} : de ${p.first.grade} à ${p.last.grade} sur ${p.months.length} mois.`)
@@ -376,5 +631,10 @@ export function climbAnalysis(db, { days = 180, today } = {}) {
   }
   if (!tips.length) tips.push('Pratique équilibrée : pyramide solide, styles variés et charge des doigts maîtrisée.')
 
-  return { ascents: list, stats, bestVoie, bestBloc, gapVoie, gapBloc, pyrVoie, pyrBloc, angles, fingers, progVoie, progBloc, tips }
+  return {
+    ascents: list, stats, bestVoie, bestBloc, gapVoie, gapBloc, pyrVoie, pyrBloc,
+    angles, angleVoie, angleBloc, fingers, progVoie, progBloc,
+    projects: projs, openProjects, efficiency: effVoie,
+    plateauVoie: platVoie, plateauBloc: platBloc, warmups, lieux, prises, tips,
+  }
 }

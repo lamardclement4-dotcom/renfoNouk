@@ -1427,7 +1427,25 @@ export function recommendations(db) {
     for (const g of [climb.gapVoie, climb.gapBloc]) {
       if (g && g.level === 'warn') push('info', 'chart', g.text, 'planner')
     }
-    if (climb.angles && climb.angles.lopsided) push('info', 'chart', climb.angles.text, 'planner')
+    if (climb.angles && climb.angles.lopsided && !(climb.angleVoie && climb.angleVoie.lopsided)) push('info', 'chart', climb.angles.text, 'planner')
+    // Attaquer directement au maximum est la première cause de blessure
+    // aux doigts : ce signal passe avant les questions de progression.
+    if (climb.warmups && climb.warmups.length) push('warn', 'shield', climb.warmups[0].text, 'planner')
+    // Le niveau atteint par profil désigne la qualité en retard, là où le
+    // simple volume ne montrait qu'un oubli.
+    for (const g of [climb.angleVoie, climb.angleBloc]) {
+      if (g && g.lopsided) push('info', 'chart', g.text, 'planner')
+    }
+    if (climb.prises && climb.prises.lopsided) push('info', 'chart', climb.prises.text, 'planner')
+    const staleProj = (climb.openProjects || []).filter((p) => p.stale)
+    if (staleProj.length) {
+      const pj = staleProj[0]
+      push('info', 'target', `« ${pj.name} » (${pj.grade}) est ouvert depuis ${pj.ageDays} jours, ${pj.tries} essais, et tu n'y es pas retourné depuis ${pj.idleDays} jours. Le reprendre sérieusement ou le laisser vaut mieux que le garder en suspens.`, 'planner')
+    }
+    for (const pl of [climb.plateauVoie, climb.plateauBloc]) {
+      if (pl) push('info', 'chart', pl.text, 'planner')
+    }
+    if (climb.lieux && climb.lieux.gap != null && climb.lieux.gap >= 2) push('info', 'chart', climb.lieux.text, 'planner')
   }
 
   // --- Semaine planifiée : ce qu'elle va coûter ---
