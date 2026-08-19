@@ -280,6 +280,21 @@ function GenericSportFields({ sportId, data, setData }) {
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
       cfg.fields.map((f) => {
         const val = data[f.k]
+        // Le type `auto-allure` n'était traité nulle part ici : la fonction
+        // retombait sur `return null` et le champ Allure ne s'affichait
+        // simplement jamais en Demi-fond ni en Fond, alors qu'il figurait
+        // bien dans leur définition. La valeur est recalculée à l'affichage
+        // depuis distance et temps, comme dans l'écran Course.
+        if (f.t === 'auto-allure') {
+          const pace = computeAllure(data.distance, data.temps)
+          return React.createElement('div', { key: f.k, style: { gridColumn: '1 / -1' } },
+            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab),
+            React.createElement('input', {
+              type: 'text', readOnly: true, value: pace || '',
+              placeholder: 'Renseigne distance et temps',
+              style: { ...fieldInputStyle, color: pace ? C.primary : C.ink3, fontWeight: 700, background: C.surface2 },
+            }))
+        }
         if (f.t === 'num' || f.t === 'text' || f.t === 'time') {
           return React.createElement('input', { key: f.k, type: f.t === 'num' ? 'number' : 'text', step: f.step, placeholder: f.lab + (f.ph ? ` (${f.ph})` : ''), value: val || '', onChange: (e) => setData({ ...data, [f.k]: e.target.value }), style: fieldInputStyle })
         }

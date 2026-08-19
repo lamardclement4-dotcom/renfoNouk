@@ -540,7 +540,16 @@ export function acwrRisk(db) {
       const t = new Date(s.date + 'T00:00:00').getTime()
       if (t > nowMs || t <= startMs) continue
       const c = weather[s.date]
-      sum += dureeToMins(s.duree) * (c ? loadMultiplier(c, { acclimation: acclim }) : 1)
+      // La charge ne comptait que les minutes : une heure de récupération
+      // et une heure de match pesaient pareil. Le RPE, désormais saisi pour
+      // tous les sports, permet la charge de séance au sens usuel — durée ×
+      // intensité ressentie. On la ramène à l'échelle des minutes (RPE 5 =
+      // neutre) pour ne pas changer d'ordre de grandeur, et on retombe sur
+      // les minutes seules quand l'intensité n'est pas renseignée : mieux
+      // vaut une charge inchangée qu'une charge inventée.
+      const rpe = Number(s.data && s.data.rpe)
+      const intensity = Number.isFinite(rpe) && rpe > 0 ? rpe / 5 : 1
+      sum += dureeToMins(s.duree) * intensity * (c ? loadMultiplier(c, { acclimation: acclim }) : 1)
     }
     return Math.round(sum)
   }
