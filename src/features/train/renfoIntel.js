@@ -31,6 +31,7 @@ import { plannerAnalysis } from './plannerIntel'
 import { climbAnalysis } from './climbIntel'
 import { enduranceAnalysis } from './enduranceIntel'
 import { sprintAnalysis, fmtSprintTime, windLabel } from './sprintIntel'
+import { genericAnalysis } from './genericIntel'
 import { diagAnalysis } from '../nutrition/diagIntel'
 import { nutriAnalysis } from '../nutrition/nutriIntel'
 import { weightSeries, weeklyRate } from '../profil/weightIntel'
@@ -1411,6 +1412,17 @@ export function recommendations(db) {
   }
   if (endur.swim.strokes && endur.swim.strokes.only) {
     push('info', 'wave', endur.swim.strokes.text, 'planner')
+  }
+
+  // --- Tous les autres sports, par leurs propres champs ---
+  // Cent des cent vingt et un champs déclarés n'étaient relus par aucune
+  // analyse. Le moteur générique les lit tous : records, répartitions,
+  // fréquences. On n'en remonte qu'un par sport pour ne pas noyer le
+  // reste — le détail vit dans l'écran, pas dans les recommandations.
+  const gen = genericAnalysis(db, { days: 730, today: iso })
+  for (const sp of gen.bySport) {
+    if (!sp.tips.length) continue
+    push('info', 'chart', sp.tips[0], 'planner')
   }
 
   // --- Sprint ---
