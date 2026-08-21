@@ -20,6 +20,7 @@
 export const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search'
 export const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
 export const AIR_URL = 'https://air-quality-api.open-meteo.com/v1/air-quality'
+export const ARCHIVE_URL = 'https://archive-api.open-meteo.com/v1/archive'
 
 // Les vitesses sont demandées explicitement en km/h : le défaut du
 // service pourrait changer, et un vent en m/s pris pour des km/h
@@ -31,6 +32,21 @@ const CURRENT = [
 ].join(',')
 
 export const MAX_RESULTS = 5
+
+// Les mêmes grandeurs, heure par heure, pour un jour donné.
+const HOURLY = CURRENT
+
+// Le service de prévision couvre les quatre-vingt-douze derniers jours et
+// les seize prochains ; au-delà dans le passé, c'est l'archive qui répond.
+// Elle accuse quelques jours de retard, d'où le recouvrement plutôt qu'une
+// bascule à la date exacte.
+export const FORECAST_PAST_DAYS = 92
+export const FORECAST_AHEAD_DAYS = 16
+
+// Heure retenue quand rien ne la désigne : le milieu de journée, faute de
+// mieux. Une séance notée après coup porte souvent son heure, et c'est
+// alors celle-là qui prime.
+export const DEFAULT_HOUR = 12
 
 // `Number(null)` et `Number('')` valent zéro, et zéro passe `isFinite` : une
 // valeur absente deviendrait une mesure — un vent nul plutôt qu'un vent non
@@ -46,6 +62,16 @@ const round = (v, d = 0) => {
   if (n == null) return null
   const f = Math.pow(10, d)
   return Math.round(n * f) / f
+}
+
+// Arithmétique de dates en UTC pur. Construire une date en heure locale
+// puis la sérialiser décale d'un jour dans tous les fuseaux à l'est de
+// Greenwich — et une météo décalée d'un jour ne se voit pas.
+export function daysBetweenISO(from, to) {
+  const [ay, am, ad] = String(from).split('-').map(Number)
+  const [by, bm, bd] = String(to).split('-').map(Number)
+  if (!ay || !by) return null
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000)
 }
 
 // ─── Géocodage ──────────────────────────────────────────────
@@ -145,6 +171,73 @@ export function toConditions(forecast, air, place) {
   }
 }
 
+// ─── Un jour donné, heure par heure ─────────────────────────
+
+export function useArchive(date, today) {
+  const back = daysBetweenISO(date, today)
+  return back != null && back > FORECAST_PAST_DAYS
+}
+
+export function historyUrl(place, date, today) {
+  const q = new URLSearchParams({
+    latitude: String(place.lat), longitude: String(place.lon),
+    start_date: date, end_date: date, hourly: HOURLY,
+    wind_speed_unit: 'kmh', temperature_unit: 'celsius', timezone: 'auto',
+  })
+  return `${useArchive(date, today) ? ARCHIVE_URL : FORECAST_URL}?${q}`
+}
+
+export function airHistoryUrl(place, date) {
+  const q = new URLSearchParams({
+    latitude: String(place.lat), longitude: String(place.lon),
+    start_date: date, end_date: date, hourly: 'european_aqi', timezone: 'auto',
+  })
+  return `${AIR_URL}?${q}`
+}
+
+// L'heure demandée peut manquer dans la réponse : l'archive s'arrête à la
+// dernière heure disponible, et une journée d'un fuseau à décalage non
+// entier n'a pas toujours ses vingt-quatre entrées. On prend l'heure la
+// plus proche plutôt que rien.
+export function pickHourIndex(times, hour) {
+  if (!Array.isArray(times) || !times.length) return -1
+  const want = num(hour)
+  const target = want == null ? DEFAULT_HOUR : Math.min(23, Math.max(0, Math.round(want)))
+  let best = -1
+  let bestGap = Infinity
+  times.forEach((t, i) => {
+    const h = num(String(t).slice(11, 13))
+    if (h == null) return
+    const gap = Math.abs(h - target)
+    if (gap < bestGap) { bestGap = gap; best = i }
+  })
+  return best === -1 ? 0 : best
+}
+
+const at = (arr, i) => (Array.isArray(arr) && i >= 0 && i < arr.length ? arr[i] : null)
+
+export function toConditionsAt(payload, air, place, hour) {
+  const hr = (payload && payload.hourly) || {}
+  const i = pickHourIndex(hr.time, hour)
+  if (i < 0) return { fields: {}, choices: {}, observedAt: null }
+  const aq = air && air.hourly ? air.hourly : null
+  const aqIdx = aq ? pickHourIndex(aq.time, hour) : -1
+  const cur = {
+    time: at(hr.time, i),
+    temperature_2m: at(hr.temperature_2m, i),
+    apparent_temperature: at(hr.apparent_temperature, i),
+    relative_humidity_2m: at(hr.relative_humidity_2m, i),
+    wind_speed_10m: at(hr.wind_speed_10m, i),
+    wind_gusts_10m: at(hr.wind_gusts_10m, i),
+    uv_index: at(hr.uv_index, i),
+    pressure_msl: at(hr.pressure_msl, i),
+    weather_code: at(hr.weather_code, i),
+    cloud_cover: at(hr.cloud_cover, i),
+  }
+  const aqi = aq ? at(aq.european_aqi, aqIdx) : null
+  return toConditions({ current: cur }, aqi == null ? null : { current: { european_aqi: aqi } }, place)
+}
+
 // ─── Appels réseau ──────────────────────────────────────────
 // `fetch` est injectable : les tests couvrent les URL construites et la
 // transformation des réponses sans toucher au réseau.
@@ -172,4 +265,22 @@ export async function loadConditions(place, { fetch: doFetch } = {}) {
   let air = null
   try { air = await getJson(airUrl(place), doFetch) } catch { air = null }
   return toConditions(forecast, air, place)
+}
+
+// Relevé pour une date. Le jour même sans heure précise, on prend
+// l'observation courante — c'est la plus juste. Sinon on descend à l'heure
+// voulue, celle de la séance quand elle est connue.
+export async function loadConditionsFor(place, date, { hour, today, fetch: doFetch } = {}) {
+  const ref = today || todayISO()
+  if (date === ref && (hour == null || hour === '')) return loadConditions(place, { fetch: doFetch })
+  const weather = await getJson(historyUrl(place, date, ref), doFetch)
+  let air = null
+  try { air = await getJson(airHistoryUrl(place, date), doFetch) } catch { air = null }
+  return toConditionsAt(weather, air, place, hour)
+}
+
+function todayISO() {
+  const d = new Date()
+  const p = (n) => (n < 10 ? '0' + n : '' + n)
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
 }
