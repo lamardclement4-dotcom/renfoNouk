@@ -37,6 +37,10 @@ const shiftISO = (iso, delta) => {
   return x.toISOString().slice(0, 10)
 }
 
+// `weatherIntel` ne dépend de rien : l'importer ici ne rompt pas
+// l'indépendance du module.
+import { loadMultiplier, heatAcclimation } from './weatherIntel'
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -72,11 +76,21 @@ export function sessionRpe(s) {
   return r && r > 0 ? r : null
 }
 
-export function sessionLoad(s) {
+// La charge réalisée est pondérée par les conditions depuis longtemps : une
+// heure à 33 °C sollicite plus qu'une heure à 15 °C. La charge projetée, elle,
+// ne l'était pas — et l'ACWR compare précisément les deux. Pendant une
+// canicule, la charge chronique montait donc pendant que la projection restait
+// au niveau des minutes brutes : le ratio paraissait plus bas qu'il n'était, et
+// l'avertissement se taisait au moment où la chaleur rend la blessure plus
+// probable. Les deux côtés de la comparaison sont désormais pondérés pareil.
+export function sessionLoad(s, conditions, acclimation) {
   const mins = dureeToMins(s && s.duree)
   if (!mins) return 0
   const rpe = sessionRpe(s)
-  return Math.round(mins * (rpe ? rpe / NEUTRAL_RPE : 1))
+  // Sans conditions relevées, le multiplicateur vaut un : mieux vaut une
+  // charge inchangée qu'une charge inventée.
+  const wx = conditions ? loadMultiplier(conditions, { acclimation: acclimation || null }) : 1
+  return Math.round(mins * (rpe ? rpe / NEUTRAL_RPE : 1) * wx)
 }
 
 // Une séance est dite exigeante au-delà de RPE 7, seuil usuel de
@@ -116,13 +130,13 @@ export const ACWR_SWEET_LOW = 0.8
 export const ACWR_SWEET_HIGH = 1.3
 export const ACWR_DANGER = 1.5
 
-export function loadInWindow(sessions, { from, to, includePlanned = false }) {
+export function loadInWindow(sessions, { from, to, includePlanned = false, weather = null, acclimation = null }) {
   let sum = 0
   for (const s of sessions || []) {
     if (!s || !s.date || s.date < from || s.date > to) continue
     const counts = s.statut === 'realise' || (includePlanned && s.statut === 'planifie')
     if (!counts) continue
-    sum += sessionLoad(s)
+    sum += sessionLoad(s, weather ? weather[s.date] : null, acclimation)
   }
   return Math.round(sum)
 }
@@ -145,15 +159,22 @@ export function projectedLoad(db, { weekOf, today } = {}) {
   const end = week.sunday
   const acuteFrom = shiftISO(end, -6)
   const chronicFrom = shiftISO(end, -27)
-  const acute = loadInWindow(sessions, { from: acuteFrom, to: end, includePlanned: true })
-  const chronicTotal = loadInWindow(sessions, { from: chronicFrom, to: end, includePlanned: true })
+  // Les conditions relevées valent aussi pour les jours à venir : l'écran
+  // Conditions permet d'enregistrer la prévision d'une date planifiée.
+  const weather = (db && db.weatherLog) || {}
+  // `loadMultiplier` lit `.factor` sur cet objet : lui passer le seul nombre
+  // de jours ferait taire l'atténuation sans rien signaler.
+  const acclimation = heatAcclimation(weather, new Date(ref + 'T12:00:00'))
+  const win = { weather, acclimation }
+  const acute = loadInWindow(sessions, { from: acuteFrom, to: end, includePlanned: true, ...win })
+  const chronicTotal = loadInWindow(sessions, { from: chronicFrom, to: end, includePlanned: true, ...win })
   const chronicWeek = chronicTotal / 4
   if (chronicWeek <= 0) return { available: false, reason: 'pas assez d’historique' }
   const ratio = Math.round(acute / chronicWeek * 100) / 100
 
   // Ce que serait le ratio sans les séances encore à faire : l'écart entre
   // les deux dit ce que le planning ajoute réellement.
-  const acuteDone = loadInWindow(sessions, { from: acuteFrom, to: end, includePlanned: false })
+  const acuteDone = loadInWindow(sessions, { from: acuteFrom, to: end, includePlanned: false, ...win })
   const currentRatio = chronicWeek > 0 ? Math.round(acuteDone / chronicWeek * 100) / 100 : null
 
   return {

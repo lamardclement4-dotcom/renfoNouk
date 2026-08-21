@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card, isoToday } from '../health/kit'
 import { WEATHER_FIELDS, parseWeatherText } from './weatherOcr'
-import { searchCity, loadConditionsFor, placeLabel } from './weatherApi'
+import { searchCity, loadConditionsFor, placeLabel, FORECAST_AHEAD_DAYS } from './weatherApi'
 import { weatherAdvice, adjustPace, fmtPace, ENVIRONMENTS, DEFAULT_ENV, envInfo, SUN_OPTIONS, PRECIP_OPTIONS, AIRFLOW_OPTIONS, heatAcclimation, acclimationLabel, effectiveTemp, loadMultiplier } from './weatherIntel'
 
 const h = React.createElement
@@ -58,6 +58,13 @@ export default function WeatherSpace({ db, store, onClose }) {
   // suffit. La dernière ville est retenue pour que le cas courant tienne
   // en un appui.
   const isToday = date === isoToday()
+  const isFuture = date > isoToday()
+  const horizonISO = (() => {
+    const [y, m, d] = isoToday().split('-').map(Number)
+    const x = new Date(Date.UTC(y, m - 1, d))
+    x.setUTCDate(x.getUTCDate() + FORECAST_AHEAD_DAYS)
+    return x.toISOString().slice(0, 10)
+  })()
   const lastPlace = db.weatherPlace || null
   // Une séance notée après coup porte son heure : c'est celle-là qu'il faut
   // relever, pas le milieu de journée. Un 19 h d'août et un midi d'août ne
@@ -166,7 +173,10 @@ export default function WeatherSpace({ db, store, onClose }) {
     h(Card, { style: { marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 } },
       h('span', { style: { flex: 1, fontSize: 13.5, fontWeight: 600 } }, 'Date'),
       h('input', {
-        type: 'date', value: date, max: isoToday(),
+        // Le futur est ouvert jusqu'à l'horizon des prévisions : c'est ce qui
+        // permet d'enregistrer les conditions attendues d'une séance planifiée,
+        // et donc de peser la charge projetée comme la charge réalisée.
+        type: 'date', value: date, max: horizonISO,
         onChange: (e) => e.target.value && setDate(e.target.value),
         style: { padding: '9px 11px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none' },
       })),
@@ -232,8 +242,10 @@ export default function WeatherSpace({ db, store, onClose }) {
         h('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 8, lineHeight: 1.45 } },
           !env.outdoor
             ? `Entre ta ville pour relever les conditions extérieures${isToday ? '' : ` du ${fmtDay(date)}`}. En ${env.label.toLowerCase()}, elles ne décrivent pas ta séance — mais elles disent la chaleur du dehors, qui finit dans la pièce.`
-            : isToday
-              ? 'Entre ta ville : les champs ci-dessous sont remplis pour toi.'
+            : isFuture
+              ? `Entre ta ville : les conditions prévues le ${fmtDay(date)}${sessionHour != null ? ` à ${sessionHour} h` : ''} seront relevées — c'est ce qui permet de peser la charge de la semaine à venir.`
+              : isToday
+                ? 'Entre ta ville : les champs ci-dessous sont remplis pour toi.'
               : sessionHour != null
                 ? `Entre ta ville : les conditions du ${fmtDay(date)} à ${sessionHour} h, l'heure de ta séance, seront relevées.`
                 : `Entre ta ville : les conditions du ${fmtDay(date)} seront relevées.`),
