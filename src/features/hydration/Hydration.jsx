@@ -453,7 +453,7 @@ export default function HydrationSpace({ userId, onClose }) {
   const [tab, setTab] = useState('today')
 
   if (loading) {
-    return React.createElement('div', { style: { minHeight: '100vh', background: '#f6f7f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: INK3, fontFamily: FONT } }, 'Chargement...')
+    return React.createElement('div', { style: { minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: INK3, fontFamily: FONT } }, 'Chargement...')
   }
 
   const TABS = [

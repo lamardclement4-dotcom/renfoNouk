@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, Ring, FlowSpace, isoToday, Card, BigStat, Bar, SegPills } from '../health/kit'
+import { C, Icon, Ring, FlowSpace, isoToday, SegPills } from '../health/kit'
 import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
 import { testsAnalysis } from '../physical-tests/testsIntel'
 import { retroAnalysis } from '../train/retroIntel'
@@ -517,23 +517,19 @@ export default function ProgressSpace({ userId, onClose }) {
 
   // Le grand titre est rendu par FlowSpace : on enchaîne directement sur
   // les deux cartes de tête (volume de la semaine, série en cours).
-  return h(FlowSpace, { title: 'Progrès', onClose, fixed: false, bg: 'progres' },
-    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 } },
-      h(Card, { pad: 16 },
-        h(BigStat, { label: 'Cette semaine', value: totalMins, unit: 'min', color: C.ink, size: 34 }),
-        h(Bar, { pct: goalPct, color: C.success, style: { marginTop: 12 } }),
-        h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 6, fontWeight: 600 } }, doneCount, '/', weeklyGoal, ' séances')),
-      h(Card, { pad: 16, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' } },
-        h('div', { style: { position: 'relative', width: 54, height: 54, marginBottom: 6 } },
-          h(Ring, { size: 54, stroke: 5, progress: Math.min(1, streak / 14), color: C.calorie, track: C.surface2 },
-            h('span', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: C.calorie } }, streak))),
-        h('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.calorie } }, 'Jours de suite'),
-        h('div', { style: { display: 'flex', gap: 4, marginTop: 10 } },
-          selectedWeek.map((m, k) => h('div', { key: k, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 } },
-            h('div', { style: { width: 17, height: 17, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: m > 0 ? C.calorie : C.surface2 } },
-              m > 0 && h(Icon, { name: 'check', size: 10, color: '#fff' })),
-            h('span', { style: { fontSize: 8.5, color: C.ink3, fontWeight: 600 } }, WEEK_DAYS[k])))),
-        h('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 8 } }, 'Record ', db.record, ' j'))),
+  return h(FlowSpace, { title: 'Tes progrès', onClose, fixed: false, bg: 'progres' },
+    // Carte d'en-tête d'origine : l'anneau de série sur aplat terracotta,
+    // le compte de jours en grand et le record dessous. Le volume de la
+    // semaine et l'objectif de séances restent lisibles juste en dessous,
+    // sur la ligne du sélecteur de semaine.
+    h('div', { style: { position: 'relative', minHeight: 150, padding: 22, borderRadius: C.radius, background: C.primary, marginBottom: 18, boxShadow: `0 18px 40px -22px ${C.primary}` } },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 18 } },
+        h(Ring, { size: 92, stroke: 9, progress: Math.min(1, streak / 14), color: '#fff', track: 'rgba(255,255,255,.25)' },
+          h(Icon, { name: 'flame', size: 30, color: '#fff' })),
+        h('div', null,
+          h('div', { style: { fontFamily: C.font, fontSize: 40, fontWeight: 700, color: '#fff', lineHeight: 1 } }, streak),
+          h('div', { style: { color: 'rgba(255,255,255,.88)', fontSize: 15, fontWeight: 600 } }, 'jours de suite 🔥'),
+          h('div', { style: { color: 'rgba(255,255,255,.7)', fontSize: 13, marginTop: 2 } }, 'Record : ', db.record, ' jours')))),
 
     h(WeightCard, { db, onOpen: () => setFlow('weight') }),
     h(PeakHomeCard, { db, onPeak: () => setFlow('peak') }),

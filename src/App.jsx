@@ -369,7 +369,7 @@ function Onboarding({ userId, onDone }) {
         {stepId !== 'welcome' && stepId !== 'final' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 18 }}>
             {order.slice(1, -1).map((_, i) => (
-              <div key={i} style={{ flex: 1, height: 4, borderRadius: 999, background: i < idx ? '#2d7ff9' : '#eee' }} />
+              <div key={i} style={{ flex: 1, height: 4, borderRadius: 999, background: i < idx ? C.primary : C.line }} />
             ))}
             {idx > 0 && (
               <button type="button" onClick={back} style={{ marginLeft: 10, background: 'none', border: 'none', color: C.ink3, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>

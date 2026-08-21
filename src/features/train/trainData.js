@@ -339,7 +339,11 @@ function buildBlocks(keys, opts) {
   const sets = opts.sets || 1;
   const restSecs = opts.restSecs || 0;
   const seshCat = opts.cat || null;
-  const oneRound = keys.map((k) => {
+  // Le programme est relu depuis la base : une séance enregistrée par une
+  // version antérieure peut n'avoir aucune liste de mouvements, ou nommer un
+  // mouvement qui n'existe plus. L'écran d'accueil appelle ceci au rendu —
+  // sans garde, une donnée périmée le rendait entièrement inaccessible.
+  const oneRound = (Array.isArray(keys) ? keys : []).filter((k) => EX[k]).map((k) => {
     const e = EX[k];
     if (e.side) {
       return [
@@ -678,6 +682,7 @@ export const ZONES = {
 export const ZONE_ORDER = ["post", "hanches", "flechisseurs", "thoracique", "epaules", "nuque", "chevilles", "core", "equilibre"]
 
 export function sessionExercises(s) {
+  if (!s) return []
   return buildBlocks(s.keys, { sets: s.sets || 1, restSecs: s.restSecs || 0, cat: s.cat })
 }
 export function sessionDuration(s) {

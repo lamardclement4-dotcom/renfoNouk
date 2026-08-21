@@ -32,15 +32,16 @@ export const C = {
   protein: 'var(--c-protein)',
   carb: 'var(--c-carb)',
   fat: 'var(--c-fat)',
-  radius: 22,
-  radiusSm: 16,
-  radiusXs: 12,
-  font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif',
-  // Ombres très basses et diffuses : les cartes doivent flotter sur le
-  // fond dégradé sans halo marqué.
-  shadowSm: '0 1px 2px rgba(17,24,39,.04), 0 1px 3px rgba(17,24,39,.03)',
-  shadow: '0 2px 8px rgba(17,24,39,.05), 0 8px 24px -12px rgba(17,24,39,.10)',
-  shadowLg: '0 8px 30px -8px rgba(17,24,39,.14), 0 2px 8px rgba(17,24,39,.05)',
+  radius: 16,
+  radiusSm: 12,
+  radiusXs: 10,
+  font: '-apple-system, BlinkMacSystemFont, sans-serif',
+  // Ombres portées de l'habillage d'origine : plus courtes et plus
+  // marquées que les halos diffus de la refonte, elles posent la carte sur
+  // le fond au lieu de la faire flotter.
+  shadowSm: '0 1px 3px rgba(43,43,43,.06), 0 1px 2px rgba(43,43,43,.04)',
+  shadow: '0 4px 14px rgba(43,43,43,.07), 0 1px 3px rgba(43,43,43,.05)',
+  shadowLg: '0 12px 28px rgba(43,43,43,.1), 0 3px 8px rgba(43,43,43,.06)',
 }
 
 // Dégradés de fond par onglet : ce sont eux qui donnent son identité à
@@ -59,9 +60,26 @@ export const GRADIENTS = {
 // qui ne peut pas l'être par une simple couleur (barre d'état du système,
 // opacité des voiles). L'ordre de la liste est celui affiché dans Profil.
 // ------------------------------------------------------------
+const flat = (c) => `linear-gradient(180deg, ${c} 0%, ${c} 100%)`
 const grad = (a, b, c) => `linear-gradient(180deg, ${a} 0%, ${b} 22%, ${c} 46%)`
 
 export const THEMES = [
+  {
+    // Habillage d'origine, repris valeur pour valeur : terracotta sur crème,
+    // fond uni. Les dégradés par onglet sont arrivés avec la refonte du
+    // 7 août ; ici chaque écran retrouve le fond plat qu'il avait.
+    id: 'origine', label: 'Origine', hint: 'Terracotta sur crème, fond uni',
+    swatch: ['#c25a3f', '#5b8a72', '#d2703f'],
+    vars: {
+      '--c-bg': '#faf9f5', '--c-surface': '#ffffff', '--c-surface2': '#f5f4ef',
+      '--c-ink': '#2b2b2b', '--c-ink2': '#666666', '--c-ink3': '#999999', '--c-line': '#e6e3dd',
+      '--c-primary': '#c25a3f', '--c-success': '#5b8a72', '--c-warn': '#bd923f', '--c-danger': '#b5566a',
+      '--c-calorie': '#d2703f', '--c-protein': '#a3526b', '--c-carb': '#5b8a72', '--c-fat': '#bd923f',
+      '--m-hydra': '#2e7d9e', '--m-sleep': '#4a6fa5', '--m-cycle': '#b5566a', '--m-mind': '#3f8f8a',
+      '--g-accueil': flat('#faf9f5'), '--g-progres': flat('#faf9f5'), '--g-entrainer': flat('#faf9f5'),
+      '--g-sante': flat('#faf9f5'), '--g-profil': flat('#faf9f5'),
+    },
+  },
   {
     id: 'clair', label: 'Clair', hint: 'Bleu, lumineux',
     swatch: ['#2d7ff9', '#2fb865', '#ff8a3d'],
@@ -128,7 +146,7 @@ export const THEMES = [
   },
 ]
 
-export const DEFAULT_THEME = 'clair'
+export const DEFAULT_THEME = 'origine'
 export const THEME_KEY = 'renfo:theme'
 
 // Écrit la palette du thème sur <html>. Appelée au démarrage puis à chaque
