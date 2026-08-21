@@ -449,13 +449,45 @@ function EscaladeFields({ data, setData }) {
         : 'Ajoute chaque voie avec son style : c’est ce qui permet de suivre un niveau à vue et un niveau après travail séparément.'))
 }
 
+// Un triathlon propose douze champs, un football dix. Présentés d'un bloc,
+// ils se remplissent rarement au-delà des deux premiers, et la saisie donne
+// l'impression d'un formulaire à finir plutôt que d'une note rapide.
+//
+// Les listes de SPORT_FIELDS sont écrites du plus important au moins
+// important — distance et temps d'abord, réglages ensuite — donc les
+// premiers champs suffisent à décrire une séance. Le reste se replie.
+//
+// Deux exceptions, sans quoi le repli ferait perdre de l'information :
+// le ressenti, écrit en dernier dans trente-quatre sports sur trente-cinq
+// alors qu'il alimente le calcul de charge ; et tout champ déjà renseigné,
+// qu'il faut pouvoir relire et corriger sans avoir à déplier.
+export const ESSENTIAL_FIELDS = 4
+export const ALWAYS_SHOWN = ['rpe']
+
+export function hasValue(v) {
+  if (v == null) return false
+  if (Array.isArray(v)) return v.length > 0
+  if (typeof v === 'boolean') return v
+  return String(v).trim() !== ''
+}
+
+export function splitFields(fields, data) {
+  const shown = []
+  const folded = []
+  fields.forEach((f, i) => {
+    const essential = i < ESSENTIAL_FIELDS || ALWAYS_SHOWN.includes(f.k)
+    if (essential || hasValue(data[f.k])) shown.push(f)
+    else folded.push(f)
+  })
+  return { shown, folded }
+}
+
 function GenericSportFields({ sportId, data, setData }) {
+  const [detail, setDetail] = useState(false)
   const cfg = SPORT_FIELDS[sportId]
   if (!cfg) return null
-  return React.createElement('div', { style: { marginBottom: 16 } },
-    React.createElement('div', { style: fieldLabel() }, cfg.icon, ' ', cfg.label),
-    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
-      cfg.fields.map((f) => {
+  const { shown, folded } = splitFields(cfg.fields, data)
+  const renderField = (f) => {
         const val = data[f.k]
         // Le type `auto-allure` n'était traité nulle part ici : la fonction
         // retombait sur `return null` et le champ Allure ne s'affichait
@@ -496,8 +528,20 @@ function GenericSportFields({ sportId, data, setData }) {
               React.createElement('button', { onClick: () => setData({ ...data, [f.k]: false }), style: pillStyle(!cur) }, 'Non'),
               React.createElement('button', { onClick: () => setData({ ...data, [f.k]: true }), style: pillStyle(cur) }, 'Oui')))
         }
-        return null
-      })))
+    return null
+  }
+
+  const grid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('div', { style: fieldLabel() }, cfg.icon, ' ', cfg.label),
+    React.createElement('div', { style: grid }, shown.map(renderField)),
+    folded.length ? React.createElement('button', {
+      onClick: () => setDetail(!detail),
+      style: { width: '100%', padding: '9px 12px', borderRadius: 999, marginTop: 10, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+    }, detail ? 'Masquer le détail' : `Plus de détail (${folded.length})`) : null,
+    detail && folded.length
+      ? React.createElement('div', { style: { ...grid, marginTop: 10 } }, folded.map(renderField))
+      : null)
 }
 
 function ExerciseSetRow({ exIdx, setIdx, set, onUpdate, onRemove }) {
