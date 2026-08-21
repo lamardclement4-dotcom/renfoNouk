@@ -223,13 +223,20 @@ export default function WeatherSpace({ db, store, onClose }) {
       h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 6 } }, 'Conditions'),
 
       // ─── Relevé par ville, au-dessus des champs qu'il remplit ───
-      env.outdoor && h('div', { style: { marginBottom: 12 } },
+      // Affiché en toutes circonstances. Il ne l'était qu'en extérieur, au
+      // motif qu'aucun service ne sait ce qu'il fait dans une salle — mais
+      // le champ disparaissait alors sans un mot, et on le cherchait. En
+      // intérieur le relevé garde un sens : il décrit l'air du dehors, qui
+      // chauffe la pièce, et il donne l'altitude.
+      h('div', { style: { marginBottom: 12 } },
         h('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 8, lineHeight: 1.45 } },
-          isToday
-            ? 'Entre ta ville : les champs ci-dessous sont remplis pour toi.'
-            : sessionHour != null
-              ? `Entre ta ville : les conditions du ${fmtDay(date)} à ${sessionHour} h, l'heure de ta séance, seront relevées.`
-              : `Entre ta ville : les conditions du ${fmtDay(date)} seront relevées.`),
+          !env.outdoor
+            ? `Entre ta ville pour relever les conditions extérieures${isToday ? '' : ` du ${fmtDay(date)}`}. En ${env.label.toLowerCase()}, elles ne décrivent pas ta séance — mais elles disent la chaleur du dehors, qui finit dans la pièce.`
+            : isToday
+              ? 'Entre ta ville : les champs ci-dessous sont remplis pour toi.'
+              : sessionHour != null
+                ? `Entre ta ville : les conditions du ${fmtDay(date)} à ${sessionHour} h, l'heure de ta séance, seront relevées.`
+                : `Entre ta ville : les conditions du ${fmtDay(date)} seront relevées.`),
         h('div', { style: { display: 'flex', gap: 8 } },
           h('input', {
             type: 'text', value: city, placeholder: 'Lyon',
