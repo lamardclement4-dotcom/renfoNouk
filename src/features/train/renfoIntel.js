@@ -727,7 +727,7 @@ export function globalScore(db, iso) {
 
 // --- Stats d'entraînement (planning + historique d'exercices Supabase) ---
 const PALETTE = ['#e07b54', 'var(--c-carb)', 'var(--c-success)', 'var(--c-warn)', '#7a6fa5', '#4a8aa5', '#a5704a', '#9a7ab5', '#c4503a', 'var(--c-success)']
-function sportMeta(id) {
+export function sportMeta(id) {
   const sp = SPORTS.find((s) => s.id === id)
   const idx = SPORTS.findIndex((s) => s.id === id)
   return { label: sp ? sp.label : (id || 'Autre'), color: PALETTE[(idx < 0 ? 0 : idx) % PALETTE.length] }

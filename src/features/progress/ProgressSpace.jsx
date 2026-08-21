@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { C, Icon, Ring, FlowSpace, isoToday, Card, BigStat, Bar, SegPills } from '../health/kit'
 import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
 import { testsAnalysis } from '../physical-tests/testsIntel'
+import { retroAnalysis } from '../train/retroIntel'
+import { sportMeta } from '../train/renfoIntel'
 import { mobilityAnalysis } from '../train/mobilityIntel'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { trainingStats, trainingTotals, weekRetro, weeksTrend, mondayOf, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
@@ -160,6 +162,11 @@ export default function ProgressSpace({ userId, onClose }) {
   const retro = weekRetro(db, selectedMonday)
   const prevRetro = weekRetro(db, new Date(selectedMonday.getTime() - 7 * 86400000))
   const trend = weeksTrend(db, trendRange)
+  // La rétrospective ne comptait que des minutes : une heure de
+  // récupération et une heure de match pesaient pareil, l'écart au plan
+  // n'apparaissait pas, et rien ne disait ce qu'on avait fait de mieux.
+  const isoOf = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+  const story = retroAnalysis(db, { weekOf: isoOf(selectedMonday), sportMeta })
   const selectedWeek = retro.week
   const totalMins = retro.total
   const maxM = Math.max(...selectedWeek, 1)
@@ -441,6 +448,32 @@ export default function ProgressSpace({ userId, onClose }) {
       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 } },
         h(WeekPicker, { offset: weekOffset, setOffset: setWeekOffset }),
         h('div', { style: { fontSize: 13.5, color: C.ink3, fontWeight: 600 } }, doneCount, '/', weeklyGoal, ' séances · ', totalMins, ' min')),
+
+      // Le récit de la semaine : ce qu'on vient chercher en ouvrant une
+      // rétrospective, et qui ne s'y trouvait pas.
+      story.story.length ? h('div', { style: { background: C.surface2, borderRadius: C.radiusSm, padding: '13px 15px', marginBottom: 14 } },
+        story.story.map((line, i) => h('div', {
+          key: i,
+          style: {
+            fontSize: i === 0 ? 13.5 : 12.5,
+            fontWeight: i === 0 ? 700 : 400,
+            color: i === 0 ? C.ink : C.ink2,
+            lineHeight: 1.5, marginTop: i ? 6 : 0,
+          },
+        }, line))) : null,
+
+      // Charge et écart à l'habitude, que le total de minutes ne dit pas.
+      story.compare.meanBase ? h('div', { style: { display: 'flex', gap: 8, marginBottom: 14 } },
+        [
+          { v: String(story.consistency.total), l: 'charge' },
+          { v: story.compare.basePct == null ? '—' : (story.compare.basePct > 0 ? '+' : '') + story.compare.basePct + ' %', l: 'vs habituel',
+            c: story.compare.basePct == null ? C.ink3 : Math.abs(story.compare.basePct) < 20 ? C.ink : story.compare.basePct > 0 ? C.warn : C.ink3 },
+          { v: story.planFit.pct == null ? '—' : story.planFit.pct + ' %', l: 'plan tenu',
+            c: story.planFit.pct == null ? C.ink3 : story.planFit.pct >= 80 ? C.success : C.warn },
+          { v: String(story.consistency.rest), l: 'jours off' },
+        ].map((x, i) => h('div', { key: i, style: { flex: 1, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '11px 8px', textAlign: 'center' } },
+          h('div', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: x.c || C.ink } }, x.v),
+          h('div', { style: { fontSize: 10, color: C.ink3, marginTop: 2, fontWeight: 600 } }, x.l)))) : null,
       h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-end', height: 96, marginBottom: 14 } },
         selectedWeek.map((m, k) => {
           const done = m > 0
