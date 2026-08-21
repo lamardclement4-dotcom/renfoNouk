@@ -152,7 +152,7 @@ const ST = {
   delBtn: { width: 30, height: 30, borderRadius: 9, background: SURFACE2, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto', cursor: 'pointer', border: 'none' },
   primaryBtn: (col) => ({ width: '100%', padding: 13, borderRadius: 999, fontSize: 15, fontWeight: 800, border: 'none', color: '#fff', background: col, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }),
   noteBox: (col) => ({ display: 'flex', gap: 10, padding: '12px 13px', borderRadius: RADIUS_SM, fontSize: 12.5, color: INK2, lineHeight: 1.5, marginTop: 14, background: `color-mix(in srgb, ${col} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${col} 22%, ${LINE})` }),
-  fieldInput: { width: '100%', padding: '10px 13px', border: `1.5px solid ${LINE}`, borderRadius: RADIUS_XS, fontSize: 14, background: '#f6f7f9', color: INK, outline: 'none', boxSizing: 'border-box' },
+  fieldInput: { width: '100%', padding: '10px 13px', border: `1.5px solid ${LINE}`, borderRadius: RADIUS_XS, fontSize: 14, background: SURFACE2, color: INK, outline: 'none', boxSizing: 'border-box' },
 }
 
 function Alert({ type, children }) {
@@ -429,7 +429,7 @@ function TrendsTab({ db, store }) {
       React.createElement(Icon, { name: 'moon', size: 17, color: INK3 }),
       React.createElement('span', { style: { fontSize: 13, flex: 1 } }, 'Coupure caféine du soir'),
       React.createElement('select', { value: cutoff, onChange: (e) => store.set({ hydroPrefs: { ...(db.hydroPrefs || {}), eveningCutoff: parseInt(e.target.value, 10) } }),
-        style: { padding: '6px 10px', border: `1.5px solid ${LINE}`, borderRadius: RADIUS_XS, background: '#f6f7f9', fontSize: 13, color: INK, cursor: 'pointer' } },
+        style: { padding: '6px 10px', border: `1.5px solid ${LINE}`, borderRadius: RADIUS_XS, background: SURFACE2, fontSize: 13, color: INK, cursor: 'pointer' } },
         [12, 13, 14, 15, 16, 17, 18].map((h) => React.createElement('option', { key: h, value: h }, h + 'h00')))),
 
     React.createElement(HydroAnalysis, { db, targetMl: Math.round(poids * 35) }),

@@ -278,7 +278,7 @@ function BlessuresTab() {
       feux.map(([col, l, d], i) => React.createElement('div', { key: i, style: { display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}` } },
         React.createElement('span', { style: { width: 14, height: 14, borderRadius: 999, background: col, flex: '0 0 auto', marginTop: 3 } }),
         React.createElement('div', null, React.createElement('span', { style: { fontWeight: 700, fontSize: 14.5 } }, l), React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 1, lineHeight: 1.45 } }, d))))),
-    React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: 'color-mix(in srgb, #b5566a 9%, #fff)', border: '1px solid color-mix(in srgb, #b5566a 25%, #e8ebef)', marginBottom: 18 } },
+    React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: `color-mix(in srgb, #b5566a 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, #b5566a 25%, ${C.line})`, marginBottom: 18 } },
       React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15.5, color: '#b5566a' } }, 'Fracture de fatigue — à ne pas manquer'),
       React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 5, lineHeight: 1.5 } }, "Douleur à l'impact du pied, point précis au toucher, qui revient à la reprise. Facteurs : hausse de charge, < 7 h de sommeil, déficit énergétique, manque de vitamine D. Dès la suspicion → consulte.")),
     React.createElement(SecLab, null, 'Fiches par blessure'),

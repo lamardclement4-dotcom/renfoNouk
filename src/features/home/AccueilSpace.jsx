@@ -98,7 +98,7 @@ function renderHeroCard(heroInfo, onOpen, onPlanner) {
         h('div', { style: { color: 'rgba(255,255,255,.85)', fontSize: 14.5, marginTop: 6, display: 'flex', gap: 14, alignItems: 'center' } },
           h('span', { style: { display: 'inline-flex', gap: 5, alignItems: 'center' } }, h(Icon, { name: 'clock', size: 15 }), ' ', hero.mins, ' min'),
           h('span', { style: { display: 'inline-flex', gap: 5, alignItems: 'center' } }, h(Icon, { name: 'layers', size: 15 }), ' ', sessionExercises(hero).length, ' mvts'))),
-      h('span', { style: { position: 'absolute', right: 0, bottom: 0, width: 54, height: 54, borderRadius: 999, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px -8px rgba(0,0,0,.4)' } },
+      h('span', { style: { position: 'absolute', right: 0, bottom: 0, width: 54, height: 54, borderRadius: 999, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px -8px rgba(0,0,0,.4)' } },
         h(Icon, { name: 'play', size: 22, color: C.primary }))))
 }
 

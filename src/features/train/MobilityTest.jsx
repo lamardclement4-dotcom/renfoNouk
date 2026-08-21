@@ -97,7 +97,7 @@ export default function MobilityTest({ store, onClose, onProgram }) {
         React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, opacity: 0.85, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 6 } }, 'Ton programme sur-mesure'),
         React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 18, lineHeight: 1.2 } }, '3 séances ciblées sur tes zones les plus raides'),
         React.createElement('div', { style: { fontSize: 13.5, opacity: 0.9, marginTop: 6 } }, weak.map((w) => w.label).join(' · ')),
-        React.createElement('button', { onClick: buildProgram, style: { marginTop: 16, width: '100%', padding: 15, borderRadius: 999, background: '#fff', color: C.primary, fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 } },
+        React.createElement('button', { onClick: buildProgram, style: { marginTop: 16, width: '100%', padding: 15, borderRadius: 999, background: C.surface, color: C.primary, fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 } },
           React.createElement(Icon, { name: 'route', size: 18, color: C.primary }), ' Créer mon programme')),
 
       React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 18, paddingBottom: 10 } },

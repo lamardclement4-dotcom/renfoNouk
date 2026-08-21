@@ -437,7 +437,12 @@ export function pillarSleep(db) {
 export function pillarMobility(db) {
   const m = db.mobility
   if (!m || m.score == null) return { id: 'mobility', label: 'Mobilité / Prévention', score: null, status: 'absent', detail: 'Fais le test de mobilité pour activer le score.' }
-  const weak = (m.zones || []).filter((z) => z.val > 0 && z.val < 2).map((z) => z.label)
+  // `mobilityIntel` filtre déjà les bilans dont `zones` n'est pas un tableau ;
+  // ici la même donnée était lue sans garde, et une forme héritée d'une
+  // version antérieure faisait lever le calcul des piliers — donc l'écran
+  // Coach et l'écran Progrès d'un coup.
+  const zones = Array.isArray(m.zones) ? m.zones : []
+  const weak = zones.filter((z) => z && z.val > 0 && z.val < 2).map((z) => z.label)
   return { id: 'mobility', label: 'Mobilité / Prévention', score: round(clamp(num(m.score, 0), 0, 100)), status: 'ok', detail: (m.level || '') + (weak.length ? ` · zones faibles : ${weak.join(', ')}` : ''), extra: { weak } }
 }
 

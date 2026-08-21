@@ -145,7 +145,7 @@ function QuickProfileSheet({ sexe, age, onSave, onClose }) {
       React.createElement('div', { style: { marginBottom: 20 } },
         React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Âge'),
         React.createElement('input', { type: 'number', min: 14, max: 100, value: ag, onChange: (e) => setAg(e.target.value),
-          style: { width: '100%', padding: '13px 15px', borderRadius: RADIUS_SM, border: `1.5px solid ${LINE}`, background: '#f6f7f9', color: INK, fontSize: 16, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } })),
+          style: { width: '100%', padding: '13px 15px', borderRadius: RADIUS_SM, border: `1.5px solid ${LINE}`, background: SURFACE2, color: INK, fontSize: 16, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } })),
       React.createElement('div', { style: { display: 'flex', gap: 10 } },
         React.createElement('button', { onClick: onClose, style: { flex: 1, padding: 15, borderRadius: 999, background: SURFACE, border: `1px solid ${LINE}`, color: INK, fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Annuler'),
         React.createElement('button', { onClick: () => onSave(sx, Number(ag) || 30), style: { flex: 1, padding: 15, borderRadius: 999, background: TESTS_COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Enregistrer'))))
@@ -328,7 +328,7 @@ function TestDetail({ def, history, sexe, age, onSave, onDelete, onBack }) {
           React.createElement('span', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em' } }, isTimer ? 'Durée (secondes)' : 'Saisir le résultat'),
           React.createElement('div', { style: { position: 'relative' } },
             React.createElement('input', { type: def.input.type, min: def.input.min, max: def.input.max, step: def.input.step, placeholder: def.input.placeholder, value: val, onChange: (e) => setVal(e.target.value),
-              style: { width: '100%', marginTop: 6, padding: '14px 70px 14px 15px', borderRadius: RADIUS_SM, border: `1.5px solid ${LINE}`, background: '#f6f7f9', color: INK, fontSize: 20, fontWeight: 700, outline: 'none', boxSizing: 'border-box' } }),
+              style: { width: '100%', marginTop: 6, padding: '14px 70px 14px 15px', borderRadius: RADIUS_SM, border: `1.5px solid ${LINE}`, background: SURFACE2, color: INK, fontSize: 20, fontWeight: 700, outline: 'none', boxSizing: 'border-box' } }),
             React.createElement('span', { style: { position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: INK3, fontWeight: 600, pointerEvents: 'none' } }, def.unit)))),
 
       interp && val !== '' && React.createElement('div', { style: { padding: 16, borderRadius: RADIUS_SM, marginBottom: 16, background: `color-mix(in srgb, ${interp.color} 10%, ${SURFACE})`, border: `1.5px solid color-mix(in srgb, ${interp.color} 30%, ${LINE})` } },
@@ -404,7 +404,7 @@ export default function PhysicalTestsSpace({ userId, onClose }) {
 
     React.createElement(ProfileBadge, { sexe, age, onEdit: () => setProfOpen(true) }),
 
-    !hasProfile && React.createElement('div', { style: { padding: '12px 14px', borderRadius: RADIUS_SM, marginBottom: 14, fontSize: 13, color: INK2, background: 'color-mix(in srgb, #c4a03a 10%, #fff)', border: '1px solid color-mix(in srgb, #c4a03a 25%, #e8ebef)' } },
+    !hasProfile && React.createElement('div', { style: { padding: '12px 14px', borderRadius: RADIUS_SM, marginBottom: 14, fontSize: 13, color: INK2, background: `color-mix(in srgb, #c4a03a 10%, ${SURFACE})`, border: `1px solid color-mix(in srgb, #c4a03a 25%, ${LINE})` } },
       'Profil par défaut utilisé (Homme, 20-29 ans). Renseigne ton sexe et ton âge pour des normes précises.'),
 
     React.createElement('div', { style: { padding: 20, borderRadius: RADIUS, background: TESTS_COLOR, color: '#fff', marginBottom: 18, flexShrink: 0 } },
