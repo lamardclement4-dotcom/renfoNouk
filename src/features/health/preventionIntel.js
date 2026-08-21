@@ -26,6 +26,17 @@ const todayISO = () => {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
 }
 
+// Cinquante-huit fonctions d'analyse reçoivent leur date de référence dans un
+// objet d'options, seize la reçoivent en second argument. Passer `{ today }`
+// à l'une de ces seize ne levait pas à l'appel : la date devenait un objet, et
+// la panne surgissait plus loin, dans une comparaison de chaînes. Les deux
+// formes sont donc acceptées plutôt que de laisser le piège ouvert.
+function refDay(today) {
+  if (typeof today === 'string' && today) return today
+  if (today && typeof today === 'object' && typeof today.today === 'string') return today.today
+  return todayISO()
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -67,7 +78,7 @@ export const STALE_DAYS = 45
 export const VERY_STALE_DAYS = 90
 
 export function bilanFreshness(db, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const hist = bilanHistory(db)
   const last = hist.length ? hist[hist.length - 1].date : ((db && db.prevention && db.prevention.date) || null)
   if (!last || !/^\d{4}-\d{2}-\d{2}$/.test(last)) return { date: null, days: null, level: 'absent', text: 'Aucun bilan de prévention enregistré.' }
@@ -152,7 +163,7 @@ export function openEpisode(db) {
 // jours et une gêne de six semaines appelaient jusqu'ici exactement le
 // même message.
 export function painDuration(db, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const ep = openEpisode(db)
   if (!ep) return null
   const days = Math.max(0, daysBetween(ep.start, ref))
@@ -215,7 +226,7 @@ export function loadCrossCheck(db, acwr) {
 
 // ─── Synthèse ────────────────────────────────────────────────
 export function preventionAnalysis(db, { today, acwr } = {}) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const freshness = bilanFreshness(db, ref)
   const trend = riskTrend(db)
   const tags = tagPersistence(db)

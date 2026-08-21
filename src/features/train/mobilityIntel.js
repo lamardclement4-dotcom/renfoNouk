@@ -31,6 +31,17 @@ const todayISO = () => {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
 }
 
+// Cinquante-huit fonctions d'analyse reçoivent leur date de référence dans un
+// objet d'options, seize la reçoivent en second argument. Passer `{ today }`
+// à l'une de ces seize ne levait pas à l'appel : la date devenait un objet, et
+// la panne surgissait plus loin, dans une comparaison de chaînes. Les deux
+// formes sont donc acceptées plutôt que de laisser le piège ouvert.
+function refDay(today) {
+  if (typeof today === 'string' && today) return today
+  if (today && typeof today === 'object' && typeof today.today === 'string') return today.today
+  return todayISO()
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -58,7 +69,7 @@ export const RETEST_DAYS = 60
 export const STALE_DAYS = 120
 
 export function freshness(db, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const hist = history(db)
   const last = hist.length ? hist[hist.length - 1].date : ((db && db.mobility && db.mobility.date) || null)
   if (!last) return { level: 'absent', days: null, date: null, text: 'Aucun test de mobilité passé.' }
@@ -154,7 +165,7 @@ export function hiddenMoves(db, { minDelta = 1 } = {}) {
 // Il porte la date de sa création, les zones visées et les séances
 // réalisées. Rien ne relisait ces trois informations.
 export function programStatus(db, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const p = db && db.program
   if (!p || !Array.isArray(p.sessions) || !p.sessions.length) return null
   const done = p.done || {}
@@ -213,7 +224,7 @@ export function corroboration(db) {
 
 // ─── Synthèse ────────────────────────────────────────────────
 export function mobilityAnalysis(db, { today } = {}) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const hist = history(db)
   const zones = allZones(db)
   const fresh = freshness(db, ref)

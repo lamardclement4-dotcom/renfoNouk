@@ -29,6 +29,17 @@ const todayISO = () => {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
 }
 
+// Cinquante-huit fonctions d'analyse reçoivent leur date de référence dans un
+// objet d'options, seize la reçoivent en second argument. Passer `{ today }`
+// à l'une de ces seize ne levait pas à l'appel : la date devenait un objet, et
+// la panne surgissait plus loin, dans une comparaison de chaînes. Les deux
+// formes sont donc acceptées plutôt que de laisser le piège ouvert.
+function refDay(today) {
+  if (typeof today === 'string' && today) return today
+  if (today && typeof today === 'object' && typeof today.today === 'string') return today.today
+  return todayISO()
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -86,7 +97,7 @@ export const RETEST_DAYS = 84
 export const STALE_DAYS = 168
 
 export function freshness(db, testId, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const hist = testHistory(db, testId)
   if (!hist.length) return { level: 'absent', days: null, date: null, text: 'Jamais passé.' }
   const date = hist[hist.length - 1].date

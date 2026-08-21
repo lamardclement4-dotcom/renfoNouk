@@ -31,6 +31,17 @@ const shiftISO = (iso, delta) => {
   return x.toISOString().slice(0, 10)
 }
 
+// Cinquante-huit fonctions d'analyse reçoivent leur date de référence dans un
+// objet d'options, seize la reçoivent en second argument. Passer `{ today }`
+// à l'une de ces seize ne levait pas à l'appel : la date devenait un objet, et
+// la panne surgissait plus loin, dans une comparaison de chaînes. Les deux
+// formes sont donc acceptées plutôt que de laisser le piège ouvert.
+function refDay(today) {
+  if (typeof today === 'string' && today) return today
+  if (today && typeof today === 'object' && typeof today.today === 'string') return today.today
+  return todayISO()
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -39,7 +50,7 @@ export function daysBetween(a, b) {
 
 // ─── Séances de respiration ──────────────────────────────────
 export function breathSessions(db, { days = 30, today } = {}) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const from = shiftISO(ref, -(days - 1))
   return ((db && db.breathLog) || [])
     .filter((s) => s && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && s.date >= from && s.date <= ref && num(s.mins) > 0)
@@ -51,7 +62,7 @@ export function breathSessions(db, { days = 30, today } = {}) {
 // veille : quelqu'un qui a pratiqué hier soir mais pas encore aujourd'hui
 // n'a pas rompu sa série.
 export function breathStreak(db, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const dates = new Set(((db && db.breathLog) || []).filter((s) => s && s.date && num(s.mins) > 0).map((s) => s.date))
   if (!dates.size) return 0
   let start = ref
@@ -117,7 +128,7 @@ export function goals(db) {
 export const GOAL_SOON_DAYS = 7
 
 export function goalStatus(goal, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   if (!goal) return null
   if (goal.doneAt) return { level: 'done', days: null, text: `Atteint le ${goal.doneAt.split('-').reverse().join('/')}.` }
   if (!goal.due || !/^\d{4}-\d{2}-\d{2}$/.test(goal.due)) return { level: 'nodate', days: null, text: 'Sans échéance : un objectif daté a nettement plus de chances d’aboutir.' }
@@ -189,7 +200,7 @@ export function practiceVsPressure(db, { today, acwr = null, sleep = null } = {}
 
 // ─── Synthèse ────────────────────────────────────────────────
 export function mindAnalysis(db, { today, days = 30, acwr = null, sleep = null } = {}) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const breath = breathStats(db, { days, today: ref })
   const g = goalProgressSummary(db, ref)
   const pressure = practiceVsPressure(db, { today: ref, acwr, sleep })

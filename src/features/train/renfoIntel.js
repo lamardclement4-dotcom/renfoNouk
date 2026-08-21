@@ -52,6 +52,17 @@ function weightKg(db) {
   return w > 0 ? w : 70
 }
 
+// Cinquante-huit fonctions d'analyse reçoivent leur date de référence dans un
+// objet d'options, seize la reçoivent en second argument. Passer `{ today }`
+// à l'une de ces seize ne levait pas à l'appel : la date devenait un objet, et
+// la panne surgissait plus loin, dans une comparaison de chaînes. Les deux
+// formes sont donc acceptées plutôt que de laisser le piège ouvert.
+function refDay(today) {
+  if (typeof today === 'string' && today) return today
+  if (today && typeof today === 'object' && typeof today.today === 'string') return today.today
+  return todayISO()
+}
+
 export function hydricTargetMl(db) {
   const sp = db.hydroSport || {}
   const rate = sp.intensite === 'leger' ? 400 : sp.intensite === 'intense' ? 800 : 600
@@ -113,7 +124,7 @@ export function dureeToMins(duree) {
 // à zéro le lundi matin alors que la charge de la veille pèse encore sur
 // la récupération. La fenêtre glissante donne la charge réellement subie.
 export function rolling7Mins(db, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const from = (() => {
     const [y, m, d] = ref.split('-').map(Number)
     const x = new Date(Date.UTC(y, m - 1, d))

@@ -15,6 +15,17 @@
 // ─── Interactions ────────────────────────────────────────────
 // Uniquement des mécanismes bien établis. Les effets débattus sont
 // signalés comme tels plutôt que présentés comme acquis.
+// Cinquante-huit fonctions d'analyse reçoivent leur date de référence dans un
+// objet d'options, seize la reçoivent en second argument. Passer `{ today }`
+// à l'une de ces seize ne levait pas à l'appel : la date devenait un objet, et
+// la panne surgissait plus loin, dans une comparaison de chaînes. Les deux
+// formes sont donc acceptées plutôt que de laisser le piège ouvert.
+function refDay(today) {
+  if (typeof today === 'string' && today) return today
+  if (today && typeof today === 'object' && typeof today.today === 'string') return today.today
+  return todayISO()
+}
+
 export const INTERACTIONS = [
   {
     a: 'fer', b: 'calcium', kind: 'conflict', severity: 'high',
@@ -154,7 +165,7 @@ const shiftISO = (iso, delta) => {
 // masque le détail : on peut être à 80 % tout en oubliant toujours le
 // même produit, ce qui est précisément l'information utile.
 export function adherenceBySupp(plan, suppTaken, { days = 14, today } = {}) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const log = suppTaken || {}
   return (plan || []).map((id) => {
     let taken = 0
@@ -168,7 +179,7 @@ export function adherenceBySupp(plan, suppTaken, { days = 14, today } = {}) {
 
 // Jours consécutifs de prise en remontant depuis la date de référence.
 export function currentStreak(id, suppTaken, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const log = suppTaken || {}
   let n = 0
   for (let i = 0; i < 400; i++) {
@@ -196,7 +207,7 @@ export const CURES = {
 
 // Première et dernière prise enregistrées, et durée écoulée.
 export function cureStatus(id, suppTaken, today) {
-  const ref = today || todayISO()
+  const ref = refDay(today)
   const log = suppTaken || {}
   const dates = Object.keys(log).filter((d) => (log[d] || []).includes(id)).sort()
   if (!dates.length) return null
