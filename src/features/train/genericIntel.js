@@ -58,7 +58,11 @@ export function fieldValue(field, raw) {
 
 export function fmtValue(field, v) {
   if (v == null) return null
-  if (field.t === 'time') {
+  // Les enregistrements produits par `fieldRecords` portent `type`, les
+  // champs bruts de SPORT_FIELDS portent `t`. Seuls les premiers sont
+  // passés ici en pratique : la mise en forme des temps ne s'appliquait
+  // donc jamais, et un 40 min s'affichait « 2400 ».
+  if ((field.type || field.t) === 'time') {
     const h = Math.floor(v / 3600)
     const m = Math.floor((v % 3600) / 60)
     const s = Math.round(v % 60)
@@ -70,6 +74,20 @@ export function fmtValue(field, v) {
 
 // Libellé court, sans l'unité entre parenthèses que porte le champ de
 // saisie : « Buts marqués » plutôt que « Buts marqués (0) ».
+// Le libellé porte son unité entre parenthèses — « Distance (km) ». On la
+// récupère pour l'afficher à côté du chiffre : sans elle, un record se lit
+// « Distance 60 », qui ne veut rien dire. Toutes les parenthèses ne sont
+// pas des unités : « (RPE 1-10) », « (mm:ss) » ou « (optionnel) » précisent
+// une saisie, pas une grandeur, d'où une liste explicite.
+const UNITS = new Set(['m', 'cm', 'km', 'kg', 's', 'min', 'W', 'bpm', 'km/h', 'pas/min', 'tr/min', 'coups/min', '°C', 'milles', 'foulées'])
+
+export function unitOf(field) {
+  const m = /\(([^)]*)\)\s*$/.exec(String(field.lab || ''))
+  if (!m) return null
+  const u = m[1].trim()
+  return UNITS.has(u) ? u : null
+}
+
 export function shortLabel(field) {
   return String(field.lab || '').replace(/\s*\([^)]*\)\s*$/, '').trim()
 }
@@ -121,7 +139,7 @@ export function fieldRecords(db, sport, { days = 730, today } = {}) {
     const last = points[points.length - 1]
     const first = points[0]
     out.push({
-      key: f.k, label: shortLabel(f), unit: f.ph || null, dir: f.dir, type: f.t,
+      key: f.k, label: shortLabel(f), unit: unitOf(f), dir: f.dir, type: f.t,
       best, last, first, count: points.length, points,
       isRecent: best.date === last.date && points.length > 1,
       progress: points.length > 1 ? (f.dir === 'up' ? last.value - first.value : first.value - last.value) : null,

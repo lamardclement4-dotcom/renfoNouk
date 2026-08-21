@@ -128,6 +128,46 @@ function getInstance(userId) {
   return inst
 }
 
+// Forme exacte du `db` exposé aux écrans. Sortie du hook pour qu'un test
+// puisse rendre un écran sur la même structure que l'application, sans en
+// redéclarer une approximation qui dériverait en silence.
+export const buildDb = (physSrc, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO) => ({
+  ...physSrc,
+  profilePhys: physSrc,
+  cycle: cycleSrc,
+  foodFav: physSrc.nutrition?.foodFav || [],
+  foodTargets: physSrc.nutrition?.foodTargets || null,
+  hydroSport: physSrc.nutrition?.hydroSport || {},
+  hydroPrefs: physSrc.nutrition?.hydroPrefs || {},
+  diagHistory: physSrc.nutrition?.diagHistory || [],
+  physTests: physSrc.physTests || [],
+  foodLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.food || []])),
+  hydroLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.hydration || []])),
+  week: physSrc.week || [0, 0, 0, 0, 0, 0, 0],
+  sessionLog: physSrc.sessionLog || [],
+  // Suivi du poids : historique des pesées ({date, kg}) et poids visé.
+  weightLog: physSrc.weightLog || [],
+  weightGoal: physSrc.weightGoal || null,
+  // Conditions météo par jour, pour adapter la charge et relire
+  // après coup dans quelles conditions une séance a été faite.
+  weatherLog: physSrc.weatherLog || {},
+  // Thème choisi, pour le retrouver d'un appareil à l'autre.
+  theme: physSrc.theme || null,
+  streak: physSrc.streak || 0,
+  sessionsTotal: physSrc.sessionsTotal || 0,
+  minutesTotal: physSrc.minutesTotal || 0,
+  record: physSrc.record || 0,
+  goals: { dailyMin: 10, weeklySessions: 4, ...goalsSrc },
+  completedToday: physSrc.lastSessionISO === todayISO,
+  customGoals: physSrc.customGoals || [],
+  mobility: physSrc.mobility || null,
+  mobilityHistory: physSrc.mobilityHistory || [],
+  program: physSrc.program || null,
+  peakGoals: physSrc.peakGoals || [],
+  recoveryLog: physSrc.recoveryLog || {},
+  sensitiveZones: zonesSrc,
+})
+
 export function useNutritionStore(userId) {
   const inst = userId ? getInstance(userId) : null
   const [, bump] = useState(0)
@@ -266,46 +306,10 @@ export function useNutritionStore(userId) {
   // l'état React : deux appels dans le même tick voyaient la même valeur
   // périmée, et le premier était écrasé — un objectif ajouté juste après un
   // autre disparaissait. Les refs, elles, sont à jour immédiatement.
-  const buildDb = (physSrc, cycleSrc, goalsSrc, zonesSrc, rowsSrc) => ({
-    ...physSrc,
-    profilePhys: physSrc,
-    cycle: cycleSrc,
-    foodFav: physSrc.nutrition?.foodFav || [],
-    foodTargets: physSrc.nutrition?.foodTargets || null,
-    hydroSport: physSrc.nutrition?.hydroSport || {},
-    hydroPrefs: physSrc.nutrition?.hydroPrefs || {},
-    diagHistory: physSrc.nutrition?.diagHistory || [],
-    physTests: physSrc.physTests || [],
-    foodLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.food || []])),
-    hydroLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.hydration || []])),
-    week: physSrc.week || [0, 0, 0, 0, 0, 0, 0],
-    sessionLog: physSrc.sessionLog || [],
-    // Suivi du poids : historique des pesées ({date, kg}) et poids visé.
-    weightLog: physSrc.weightLog || [],
-    weightGoal: physSrc.weightGoal || null,
-    // Conditions météo par jour, pour adapter la charge et relire
-    // après coup dans quelles conditions une séance a été faite.
-    weatherLog: physSrc.weatherLog || {},
-    // Thème choisi, pour le retrouver d'un appareil à l'autre.
-    theme: physSrc.theme || null,
-    streak: physSrc.streak || 0,
-    sessionsTotal: physSrc.sessionsTotal || 0,
-    minutesTotal: physSrc.minutesTotal || 0,
-    record: physSrc.record || 0,
-    goals: { dailyMin: 10, weeklySessions: 4, ...goalsSrc },
-    completedToday: physSrc.lastSessionISO === todayISO,
-    customGoals: physSrc.customGoals || [],
-    mobility: physSrc.mobility || null,
-    mobilityHistory: physSrc.mobilityHistory || [],
-    program: physSrc.program || null,
-    peakGoals: physSrc.peakGoals || [],
-    recoveryLog: physSrc.recoveryLog || {},
-    sensitiveZones: zonesSrc,
-  })
 
-  const db = buildDb(phys, cycle, goals, sensitiveZones, dayRows)
+  const db = buildDb(phys, cycle, goals, sensitiveZones, dayRows, todayISO)
   // État à jour à l'instant même, y compris les écritures de ce tick.
-  const liveDb = () => buildDb(physRef.current, cycleRef.current, goalsRef.current, sensitiveZonesRef.current, dayRowsRef.current)
+  const liveDb = () => buildDb(physRef.current, cycleRef.current, goalsRef.current, sensitiveZonesRef.current, dayRowsRef.current, todayISO)
 
   const store = {
     get: () => db,

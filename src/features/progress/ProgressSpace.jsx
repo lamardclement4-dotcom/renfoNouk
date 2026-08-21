@@ -3,6 +3,7 @@ import { C, Icon, Ring, FlowSpace, isoToday, Card, BigStat, Bar, SegPills } from
 import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
 import { testsAnalysis } from '../physical-tests/testsIntel'
 import { retroAnalysis } from '../train/retroIntel'
+import RecordsSpace from './RecordsSpace'
 import { sportMeta } from '../train/renfoIntel'
 import { mobilityAnalysis } from '../train/mobilityIntel'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
@@ -142,6 +143,9 @@ export default function ProgressSpace({ userId, onClose }) {
   }
   if (flow === 'weight') {
     return h(WeightSpace, { db, store, onClose: () => setFlow(null) })
+  }
+  if (flow === 'records') {
+    return h(RecordsSpace, { userId, onClose: () => setFlow(null) })
   }
   if (flow === 'tests') {
     return h(PhysicalTestsSpace, { userId, onClose: () => setFlow(null) })
@@ -292,6 +296,97 @@ export default function ProgressSpace({ userId, onClose }) {
           h('span', null, t)))))
   }
 
+
+  // ── Programme correctif ──
+  let progBlock = null
+  if (db.program && db.program.sessions && db.program.sessions.length) {
+    const sess = db.program.sessions
+    const dn = db.program.done || {}
+    const done = sess.filter((s) => dn[s.id]).length
+    const pct = Math.round(done / sess.length * 100)
+    progBlock = h('div', null,
+      sectionTitle('Programme correctif'),
+      tile({
+        onClick: () => setFlow('program'),
+        left: iconBadge('route', C.carb),
+        title: `${done}/${sess.length} séances réalisées`,
+        sub: db.program.weak && db.program.weak.length ? `Cible : ${db.program.weak.join(', ')}` : 'Programme personnalisé',
+        right: h(Ring, { size: 44, stroke: 6, progress: pct / 100, color: C.carb, track: C.surface2 },
+          h('div', { style: { fontFamily: C.font, fontSize: 11, fontWeight: 700, color: C.carb } }, pct + '%')),
+      }))
+  }
+
+  // ── Compléments ──
+  let suppBlock = null
+  const plan = db.suppPlan || []
+  if (plan.length) {
+    const taken = ((db.suppTaken || {})[today] || []).filter((id) => plan.includes(id))
+    const pct = Math.round(taken.length / plan.length * 100)
+    suppBlock = h('div', null,
+      sectionTitle('Compléments', h('span', { style: { fontSize: 12, color: C.ink3, fontWeight: 600 } }, 'hors score santé')),
+      tile({
+        left: h(Ring, { size: 46, stroke: 6, progress: pct / 100, color: C.carb, track: C.surface2 },
+          h('div', { style: { fontFamily: C.font, fontSize: 13, fontWeight: 700, color: C.carb } }, taken.length + '/' + plan.length)),
+        title: "Pris aujourd'hui",
+        sub: pct === 100 ? 'Plan du jour complété' : "Suivi d'observance",
+      }))
+  }
+
+  // ── Entraînement + Records ──
+  const ts = trainingStats(db)
+  let trainBlock = null, recordsBlock = null
+  if (ts.hasData) {
+    const statMini = (big, lab, unit) => h('div', { style: { background: C.surface, borderRadius: C.radiusSm, padding: '16px 12px', border: `1px solid ${C.line}`, textAlign: 'center' } },
+      h('div', { style: { fontFamily: C.font, fontSize: 22, fontWeight: 700, lineHeight: 1 } }, big, unit ? h('span', { style: { fontSize: 13, fontWeight: 600, color: C.ink3, marginLeft: 2 } }, unit) : null),
+      h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 5, fontWeight: 600 } }, lab))
+    const tm = ts.courseTrendMax || 1
+    trainBlock = h('div', null,
+      sectionTitle('Entraînement', h('button', { onClick: () => setFlow('planner'), style: { fontSize: 13, fontWeight: 600, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Planning')),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 12 } },
+        statMini(ts.weekSessions, 'séances (sem.)'), statMini(ts.weekKm, 'km (sem.)'), statMini(ts.monthSessions, 'séances (mois)'), statMini(ts.monthKm, 'km (mois)')),
+      ts.sports.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, marginBottom: 12 } },
+        h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Répartition des sports · depuis le début'),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+          ts.sports.map((sp) => h('div', { key: sp.id, style: { display: 'flex', alignItems: 'center', gap: 10 } },
+            h('div', { style: { width: 82, fontSize: 13, fontWeight: 600, flex: '0 0 auto' } }, sp.label),
+            h('div', { style: { flex: 1, height: 8, borderRadius: 999, background: C.surface2, overflow: 'hidden' } },
+              h('div', { style: { height: '100%', width: sp.pct + '%', borderRadius: 999, background: sp.color } })),
+            h('div', { style: { width: 28, textAlign: 'right', fontSize: 13, fontWeight: 700, flex: '0 0 auto' } }, sp.count))))) : null,
+      tm > 0 ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, marginBottom: 12 } },
+        h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Course · 8 dernières semaines'),
+        h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 5, height: 64 } },
+          ts.courseTrend.map((km, i) => h('div', { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
+            h('div', { style: { width: '100%', height: 48, display: 'flex', alignItems: 'flex-end' } },
+              h('div', { style: { width: '100%', height: `${km > 0 ? Math.max(km / tm * 100, 6) : 0}%`, borderRadius: '5px 5px 0 0', background: i === ts.courseTrend.length - 1 ? '#e07b54' : `color-mix(in srgb,#e07b54 55%,${C.surface2})` } })),
+            h('div', { style: { fontSize: 9.5, color: C.ink3, fontWeight: 600 } }, km > 0 ? Math.round(km) : ''))))) : null)
+
+    const voirTout = h('button', {
+      onClick: () => setFlow('records'),
+      style: { fontSize: 13, fontWeight: 600, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' },
+    }, 'Tout voir')
+    if (ts.records.length || ts.perche) {
+      recordsBlock = h('div', null,
+        sectionTitle('Records personnels', voirTout),
+        h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 10 } },
+          ts.perche ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderBottom: ts.records.length ? `1px solid ${C.line}` : 'none' } },
+            h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: 'color-mix(in srgb,#7a6fa5 14%,' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'bolt', size: 17, color: '#7a6fa5' })),
+            h('div', { style: { flex: 1, fontSize: 14, fontWeight: 600 } }, 'Saut à la perche'),
+            h('div', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: '#7a6fa5' } }, ts.perche, h('span', { style: { fontSize: 12, fontWeight: 600, marginLeft: 1 } }, 'm'))) : null,
+          ts.records.map((r, i) => h('div', { key: r.name, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderTop: i || ts.perche ? `1px solid ${C.line}` : 'none' } },
+            h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: `color-mix(in srgb,${C.primary} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'dumbbell', size: 16, color: C.primary })),
+            h('div', { style: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, r.name),
+            h('div', { style: { fontFamily: C.font, fontSize: 16, fontWeight: 800, color: C.primary, flex: '0 0 auto' } }, r.charge, h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 1 } }, 'kg'))))))
+    } else {
+      recordsBlock = h('div', null,
+        sectionTitle('Records personnels', voirTout),
+        tile({
+          onClick: () => setFlow('records'),
+          left: iconBadge('trophy', C.primary),
+          title: 'Mes records',
+          sub: 'Course, sprint, escalade, force, tests',
+        }))
+    }
+  }
 
   // ── Musculation : volume par muscle, équilibre, progression ──
   // Tout était enregistré série par série sans jamais être relu : ni le
