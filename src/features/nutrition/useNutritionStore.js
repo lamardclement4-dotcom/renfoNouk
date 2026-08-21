@@ -30,7 +30,7 @@ const SPECIAL_KEYS = ['profilePhys', 'foodLog', 'hydroLog', 'cycle', 'goals', 's
 // toutes les fenêtres d'analyse et une comparaison d'une année sur l'autre —
 // et on élague au passage, une seule fois, dans le store plutôt que dans
 // chaque écran.
-const DATE_KEYED_LOGS = ['sleepLog', 'suppTaken', 'recoveryLog', 'weatherLog']
+const DATE_KEYED_LOGS = ['sleepLog', 'suppTaken', 'recoveryLog', 'weatherLog', 'vitalsLog']
 const LOG_RETENTION_DAYS = 400
 // Listes qui grossissent lentement mais sans borne.
 const CAPPED_LISTS = { physTests: 400, customGoals: 200, peakGoals: 100 }

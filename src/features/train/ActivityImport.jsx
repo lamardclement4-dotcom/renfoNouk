@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card } from '../health/kit'
 import { SPORTS } from './trainData'
 import { parseActivityFile, parseActivityText, toSession } from './activityParse'
+import { createHealthReader, createLineSplitter, toPatch } from './healthImport'
 
 const h = React.createElement
 
@@ -26,11 +27,12 @@ const ROWS = [
 
 const SOURCE_LABEL = { gpx: 'fichier GPX', tcx: 'fichier TCX', capture: 'capture d’écran' }
 
-export default function ActivityImport({ onSave, onClose }) {
+export default function ActivityImport({ onSave, onClose, db, store }) {
   const [phase, setPhase] = useState('idle') // idle | reading | preview
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState(null)
   const [draft, setDraft] = useState(null)
+  const [health, setHealth] = useState(null)
 
   function accept(activity, fallbackName) {
     if (!activity || (activity.km == null && activity.seconds == null)) {
@@ -46,6 +48,46 @@ export default function ActivityImport({ onSave, onClose }) {
     }
     setDraft(sess)
     setPhase('preview')
+  }
+
+  // L'export Santé pèse couramment plusieurs centaines de mégaoctets — des
+  // années de mesures à la minute. `file.text()` le chargerait d'un bloc et
+  // ferait tomber l'onglet. On le lit par tranches, en agrégeant au passage :
+  // la mémoire reste bornée quelle que soit la taille du fichier.
+  const SLICE = 4 * 1024 * 1024
+
+  async function handleHealth(file) {
+    if (!file) return
+    setError(null); setHealth(null); setPhase('reading'); setProgress(0)
+    try {
+      const reader = createHealthReader()
+      const split = createLineSplitter(reader.line)
+      for (let pos = 0; pos < file.size; pos += SLICE) {
+        split.chunk(await file.slice(pos, pos + SLICE).text())
+        setProgress(Math.min(99, Math.round((pos + SLICE) / file.size * 100)))
+        // Laisse respirer l'interface entre deux tranches, sinon la barre
+        // de progression ne s'affiche jamais.
+        await new Promise((r) => setTimeout(r, 0))
+      }
+      split.end()
+      const res = reader.result()
+      if (!res.seen) {
+        setError("Aucune donnée trouvée. Attendu : le fichier « export.xml » de l’archive Santé, décompressée au préalable.")
+        setPhase('idle')
+        return
+      }
+      setHealth(toPatch(res, db || {}))
+      setPhase('health')
+    } catch (e) {
+      setError('Lecture impossible : ' + (e && e.message ? e.message : 'fichier illisible'))
+      setPhase('idle')
+    }
+  }
+
+  function saveHealth() {
+    if (!health || !store) return
+    store.set(health.patch)
+    onClose()
   }
 
   async function handleFile(file) {
@@ -98,11 +140,27 @@ export default function ActivityImport({ onSave, onClose }) {
         h('div', { style: { fontSize: 12, color: C.ink3 } }, progress > 0 ? progress + ' %' : 'Préparation…'))
       : null,
 
-    phase !== 'preview' && phase !== 'reading' ? h('div', null,
+    phase !== 'preview' && phase !== 'reading' && phase !== 'health' ? h('div', null,
       h(Card, { style: { marginBottom: 12 } },
         pick('Fichier d’activité', 'Export GPX ou TCX — Strava, Garmin, Decathlon, Polar, Suunto…', '.gpx,.tcx,application/gpx+xml,text/xml')),
       h(Card, { style: { marginBottom: 12 } },
         pick('Capture d’écran', 'Le résumé de l’activité. La lecture se fait sur l’appareil, l’image n’est envoyée nulle part.', 'image/*')),
+      // Sur iPhone, c'est la seule voie automatique : Safari n'a pas le Web
+      // Bluetooth, et les API des fabricants exigent un serveur. Mais presque
+      // tous les bracelets déversent dans Santé, donc un seul importateur les
+      // couvre tous — sommeil, séances, pas, fréquence au repos.
+      h(Card, { style: { marginBottom: 12 } },
+        h('label', { style: { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '4px 0' } },
+          h('div', { style: { width: 42, height: 42, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${C.success} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+            h(Icon, { name: 'spark', size: 20, color: C.success })),
+          h('div', { style: { flex: 1, minWidth: 0 } },
+            h('div', { style: { fontWeight: 700, fontSize: 14.5 } }, 'Export Apple Santé'),
+            h('div', { style: { fontSize: 12, color: C.ink3, marginTop: 2, lineHeight: 1.4 } },
+              'Sommeil, séances, pas et fréquence au repos — de n’importe quel bracelet qui alimente Santé.')),
+          h('input', { type: 'file', accept: '.xml,text/xml', onChange: (e) => handleHealth(e.target.files && e.target.files[0]), style: { display: 'none' } }))),
+
+      h('p', { style: { fontSize: 12, color: C.ink3, lineHeight: 1.5, padding: '0 4px', marginBottom: 4 } },
+        'Pour l’export Santé : application Santé → ta photo en haut à droite → « Exporter toutes les données ». Enregistre l’archive dans Fichiers, ouvre-la pour la décompresser, puis choisis « export.xml ».'),
       h('p', { style: { fontSize: 12, color: C.ink3, lineHeight: 1.5, padding: '0 4px' } },
         'Le fichier exporté est plus fiable qu’une capture : il porte la trace complète, donc la distance réelle et le dénivelé. La capture dépanne quand l’export n’est pas à portée.'),
     ) : null,
@@ -110,6 +168,39 @@ export default function ActivityImport({ onSave, onClose }) {
     error ? h('div', { style: { display: 'flex', gap: 9, padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.danger} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.danger} 25%, ${C.line})`, marginBottom: 12 } },
       h(Icon, { name: 'alert', size: 16, color: C.danger, style: { flexShrink: 0, marginTop: 1 } }),
       h('span', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } }, error)) : null,
+
+    phase === 'health' && health ? h('div', null,
+      h(Card, { style: { marginBottom: 12 } },
+        h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 2 } }, 'Ce qui a été lu'),
+        h('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 12 } },
+          health.summary.records.toLocaleString('fr-FR'), ' enregistrements parcourus'),
+        [
+          ['Nuits ajoutées', health.summary.sleepAdded],
+          ['Nuits déjà notées, laissées telles quelles', health.summary.sleepKept],
+          ['Séances ajoutées', health.summary.addedSessions],
+          ['Séances déjà présentes, ignorées', health.summary.skippedSessions],
+          ['Journées de pas et de fréquence au repos', health.summary.vitalsAdded],
+        ].map(([lab, v], i) => h('div', { key: lab, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
+          h('span', { style: { flex: 1, fontSize: 13.5, fontWeight: 600, color: v ? C.ink : C.ink3 } }, lab),
+          h('span', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 700, color: v ? C.ink : C.ink3 } }, v))),
+        health.summary.unknownSport ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 10, lineHeight: 1.45 } },
+          health.summary.unknownSport, ' séance·s d’un sport que l’application ne couvre pas : laissées de côté plutôt que rangées au hasard.') : null,
+        health.summary.sleepFromBed ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 8, lineHeight: 1.45 } },
+          health.summary.sleepFromBed, ' nuit·s déduite·s du temps passé au lit, faute de sommeil mesuré — un peu surestimées.') : null),
+
+      h('p', { style: { fontSize: 12, color: C.ink3, lineHeight: 1.5, padding: '0 4px 12px' } },
+        'Rien de ce qui existe déjà n’est remplacé : une nuit ou une séance déjà notée garde sa saisie, avec son ressenti et ses notes.'),
+
+      h('div', { style: { display: 'flex', gap: 9 } },
+        h('button', {
+          onClick: () => { setHealth(null); setPhase('idle') },
+          style: { flex: 1, padding: '13px', borderRadius: C.radiusSm, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+        }, 'Annuler'),
+        h('button', {
+          onClick: saveHealth,
+          style: { flex: 2, padding: '13px', borderRadius: C.radiusSm, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+        }, 'Tout enregistrer')),
+    ) : null,
 
     phase === 'preview' && draft ? h('div', null,
       h(Card, { style: { marginBottom: 12 } },

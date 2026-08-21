@@ -1078,6 +1078,7 @@ export default function PlannerSpace({ db, store, onClose }) {
     }, React.createElement(Icon, { name: 'plus', size: 15, color: C.ink3 }), 'Importer une activité (Strava, Garmin, capture…)'),
 
     form === 'import' && React.createElement(ActivityImport, {
+      db, store,
       onSave: saveSession,
       onClose: () => setForm(null),
     }),
