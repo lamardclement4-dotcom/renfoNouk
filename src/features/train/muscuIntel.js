@@ -44,6 +44,14 @@ const shiftISO = (iso, delta) => {
   return x.toISOString().slice(0, 10)
 }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -71,7 +79,7 @@ export function estimate1RM(charge, reps) {
 export function muscuSessions(db, { days = 90, today } = {}) {
   const ref = today || todayISO()
   const from = shiftISO(ref, -(days - 1))
-  return ((db && db.planningSessions) || [])
+  return (asList(db && db.planningSessions))
     .filter((s) => s && s.statut === 'realise' && s.date && s.date >= from && s.date <= ref
       && MUSCU_SPORTS.includes(s.sport) && Array.isArray(s.exercises) && s.exercises.length)
     .slice()

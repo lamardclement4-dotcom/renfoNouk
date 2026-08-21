@@ -42,6 +42,14 @@ function refDay(today) {
   return todayISO()
 }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -52,7 +60,7 @@ export function daysBetween(a, b) {
 export function breathSessions(db, { days = 30, today } = {}) {
   const ref = refDay(today)
   const from = shiftISO(ref, -(days - 1))
-  return ((db && db.breathLog) || [])
+  return (asList(db && db.breathLog))
     .filter((s) => s && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && s.date >= from && s.date <= ref && num(s.mins) > 0)
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -63,7 +71,7 @@ export function breathSessions(db, { days = 30, today } = {}) {
 // n'a pas rompu sa série.
 export function breathStreak(db, today) {
   const ref = refDay(today)
-  const dates = new Set(((db && db.breathLog) || []).filter((s) => s && s.date && num(s.mins) > 0).map((s) => s.date))
+  const dates = new Set((asList(db && db.breathLog)).filter((s) => s && s.date && num(s.mins) > 0).map((s) => s.date))
   if (!dates.size) return 0
   let start = ref
   if (!dates.has(ref)) {
@@ -111,7 +119,7 @@ export const GOAL_FIELDS = [
 ]
 
 export function goals(db) {
-  return ((db && db.smartGoals) || [])
+  return (asList(db && db.smartGoals))
     .filter((g) => g && g.id)
     .slice()
     .sort((a, b) => {

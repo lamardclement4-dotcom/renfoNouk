@@ -37,6 +37,14 @@ const shiftISO = (iso, delta) => {
   return x.toISOString().slice(0, 10)
 }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -116,7 +124,7 @@ export function sprintPerfs(db, { days = 730, today } = {}) {
   const ref = today || todayISO()
   const from = shiftISO(ref, -(days - 1))
   const out = []
-  for (const s of (db && db.planningSessions) || []) {
+  for (const s of asList(db && db.planningSessions)) {
     if (!s || !SPRINT_SPORTS.includes(s.sport) || s.statut !== 'realise') continue
     if (!s.date || s.date < from || s.date > ref) continue
     const d = s.data || {}
@@ -268,7 +276,7 @@ export function sessionVolume(session) {
 
 export function volumeByWeek(db, { weeks = 8, today } = {}) {
   const ref = today || todayISO()
-  const sessions = ((db && db.planningSessions) || [])
+  const sessions = (asList(db && db.planningSessions))
     .filter((s) => s && SPRINT_SPORTS.includes(s.sport) && s.statut === 'realise' && s.date)
   const out = []
   for (let w = weeks - 1; w >= 0; w--) {
@@ -347,7 +355,7 @@ export function sprintAnalysis(db, { days = 730, today } = {}) {
   const endurance = speedEndurance(recs)
   const reaction = reactionAnalysis(perfs)
   const volume = volumeByWeek(db, { today: ref })
-  const sessions = ((db && db.planningSessions) || []).filter((s) => s && SPRINT_SPORTS.includes(s.sport) && s.statut === 'realise')
+  const sessions = (asList(db && db.planningSessions)).filter((s) => s && SPRINT_SPORTS.includes(s.sport) && s.statut === 'realise')
   const recoveries = sessions.map((s) => ({ date: s.date, ...(recoveryCheck(s) || {}) })).filter((r) => r.ratio != null)
   const shortRec = recoveries.filter((r) => !r.full)
 

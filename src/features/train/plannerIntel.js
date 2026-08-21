@@ -41,6 +41,14 @@ const shiftISO = (iso, delta) => {
 // l'indépendance du module.
 import { loadMultiplier, heatAcclimation } from './weatherIntel'
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -110,7 +118,7 @@ export function weekSessions(db, { weekOf, today } = {}) {
   const ref = weekOf || today || todayISO()
   const monday = mondayISO(ref)
   const sunday = shiftISO(monday, 6)
-  const all = ((db && db.planningSessions) || [])
+  const all = (asList(db && db.planningSessions))
     .filter((s) => s && s.date && s.date >= monday && s.date <= sunday)
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -152,7 +160,7 @@ export function acwrVerdict(ratio) {
 // Charge projetée à la fin de la semaine en cours de planification.
 export function projectedLoad(db, { weekOf, today } = {}) {
   const ref = today || todayISO()
-  const sessions = (db && db.planningSessions) || []
+  const sessions = asList(db && db.planningSessions)
   const week = weekSessions(db, { weekOf: weekOf || ref })
   // Fenêtre aiguë : les sept jours se terminant au dimanche de la semaine
   // planifiée. Fenêtre chronique : les 28 jours qui précèdent.
@@ -278,7 +286,7 @@ export function adherence(db, { weeks = 4, today } = {}) {
   const ref = today || todayISO()
   const from = shiftISO(mondayISO(ref), -7 * weeks)
   const to = shiftISO(ref, -1) // on ne juge pas le jour en cours
-  const past = ((db && db.planningSessions) || []).filter((s) => s && s.date && s.date >= from && s.date <= to)
+  const past = (asList(db && db.planningSessions)).filter((s) => s && s.date && s.date >= from && s.date <= to)
   if (!past.length) return null
   const done = past.filter((s) => s.statut === 'realise').length
   const missed = past.filter((s) => s.statut === 'planifie').length

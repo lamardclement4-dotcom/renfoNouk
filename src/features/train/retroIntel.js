@@ -43,6 +43,14 @@ const shiftISO = (iso, delta) => {
   return x.toISOString().slice(0, 10)
 }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function weekBounds(weekOf) {
   const monday = mondayISO(weekOf || todayISO())
   return { monday, sunday: shiftISO(monday, 6) }
@@ -51,9 +59,9 @@ export function weekBounds(weekOf) {
 // ─── La semaine, jour par jour ───────────────────────────────
 export function weekDays(db, { weekOf, today } = {}) {
   const { monday, sunday } = weekBounds(weekOf || today)
-  const sessions = ((db && db.planningSessions) || [])
+  const sessions = (asList(db && db.planningSessions))
     .filter((s) => s && s.date && s.date >= monday && s.date <= sunday)
-  const player = ((db && db.sessionLog) || [])
+  const player = (asList(db && db.sessionLog))
     .filter((e) => e && e.date && e.date >= monday && e.date <= sunday)
 
   const days = []

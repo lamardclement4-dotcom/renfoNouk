@@ -40,6 +40,14 @@ const shiftISO = (iso, delta) => {
 // Les durées « mm:ss » et « h:mm:ss » se comparent en secondes ; sans
 // cela, « 1:05 » passerait pour supérieur à « 58:00 » en comparaison de
 // chaînes.
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function toSeconds(t) {
   if (t == null || t === '') return null
   const parts = String(t).trim().split(':').map((x) => parseInt(x, 10))
@@ -95,7 +103,7 @@ export function shortLabel(field) {
 export function sessionsOfSport(db, sport, { days = 730, today } = {}) {
   const ref = today || todayISO()
   const from = shiftISO(ref, -(days - 1))
-  return ((db && db.planningSessions) || [])
+  return (asList(db && db.planningSessions))
     .filter((s) => s && s.sport === sport && s.statut === 'realise' && s.date && s.date >= from && s.date <= ref)
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -103,7 +111,7 @@ export function sessionsOfSport(db, sport, { days = 730, today } = {}) {
 
 export function practisedSports(db, opts) {
   const ids = new Set()
-  for (const s of (db && db.planningSessions) || []) {
+  for (const s of asList(db && db.planningSessions)) {
     if (s && s.statut === 'realise' && s.sport && SPORT_FIELDS[s.sport]) ids.add(s.sport)
   }
   return [...ids].filter((id) => sessionsOfSport(db, id, opts).length > 0)

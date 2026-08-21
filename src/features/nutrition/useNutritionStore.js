@@ -131,7 +131,48 @@ function getInstance(userId) {
 // Forme exacte du `db` exposé aux écrans. Sortie du hook pour qu'un test
 // puisse rendre un écran sur la même structure que l'application, sans en
 // redéclarer une approximation qui dériverait en silence.
-export const buildDb = (physSrc, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO) => ({
+// Les colonnes JSON reviennent telles qu'elles ont été écrites. Une écriture
+// partielle, une donnée laissée par une version antérieure, et une liste
+// revient sous forme d'objet — ou garde un `null` en son milieu. `x || []` ne
+// voit ni l'un ni l'autre : la garde passe, et le `.filter` juste après fait
+// tomber l'écran, loin de sa cause.
+//
+// La normalisation se fait ici parce que c'est le seul endroit qui construit
+// le `db` remis aux écrans et aux modules : quatorze écrans et une douzaine de
+// modules cessent d'avoir à s'en soucier chacun de leur côté.
+const LIST_KEYS = [
+  'planningSessions', 'physTests', 'weightLog', 'sessionLog', 'customGoals',
+  'mobilityHistory', 'peakGoals', 'smartGoals', 'breathLog', 'foodFav', 'diagHistory',
+]
+
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
+// `mobility` et `program` portent eux-mêmes une liste : le bilan de mobilité
+// range ses neuf zones dans `zones`, le programme ses séances dans `sessions`.
+function normalizeNested(src) {
+  const out = { ...src }
+  for (const k of LIST_KEYS) if (k in out) out[k] = asList(out[k])
+  if (out.mobility && typeof out.mobility === 'object') {
+    out.mobility = { ...out.mobility, zones: asList(out.mobility.zones) }
+  }
+  if (out.program && typeof out.program === 'object') {
+    // `weak` liste les zones ciblées ; deux écrans la joignent ou la
+    // parcourent directement.
+    out.program = {
+      ...out.program,
+      sessions: asList(out.program.sessions),
+      weak: asList(out.program.weak),
+      done: out.program.done && typeof out.program.done === 'object' ? out.program.done : {},
+    }
+  }
+  return out
+}
+
+export const buildDb = (rawPhys, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO) => {
+  const physSrc = normalizeNested(rawPhys || {})
+  return {
   ...physSrc,
   profilePhys: physSrc,
   cycle: cycleSrc,
@@ -140,13 +181,13 @@ export const buildDb = (physSrc, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO
   hydroSport: physSrc.nutrition?.hydroSport || {},
   hydroPrefs: physSrc.nutrition?.hydroPrefs || {},
   diagHistory: physSrc.nutrition?.diagHistory || [],
-  physTests: physSrc.physTests || [],
+  physTests: asList(physSrc.physTests),
   foodLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.food || []])),
   hydroLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.hydration || []])),
   week: physSrc.week || [0, 0, 0, 0, 0, 0, 0],
-  sessionLog: physSrc.sessionLog || [],
+  sessionLog: asList(physSrc.sessionLog),
   // Suivi du poids : historique des pesées ({date, kg}) et poids visé.
-  weightLog: physSrc.weightLog || [],
+  weightLog: asList(physSrc.weightLog),
   weightGoal: physSrc.weightGoal || null,
   // Conditions météo par jour, pour adapter la charge et relire
   // après coup dans quelles conditions une séance a été faite.
@@ -159,14 +200,15 @@ export const buildDb = (physSrc, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO
   record: physSrc.record || 0,
   goals: { dailyMin: 10, weeklySessions: 4, ...goalsSrc },
   completedToday: physSrc.lastSessionISO === todayISO,
-  customGoals: physSrc.customGoals || [],
+  customGoals: asList(physSrc.customGoals),
   mobility: physSrc.mobility || null,
-  mobilityHistory: physSrc.mobilityHistory || [],
+  mobilityHistory: asList(physSrc.mobilityHistory),
   program: physSrc.program || null,
-  peakGoals: physSrc.peakGoals || [],
+  peakGoals: asList(physSrc.peakGoals),
   recoveryLog: physSrc.recoveryLog || {},
-  sensitiveZones: zonesSrc,
-})
+  sensitiveZones: asList(zonesSrc),
+  }
+}
 
 export function useNutritionStore(userId) {
   const inst = userId ? getInstance(userId) : null

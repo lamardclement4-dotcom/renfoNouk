@@ -19,7 +19,10 @@ export function dayDiff(a, b) {
 // enregistrement et seraient perdues par une projection sur {date, kg}.
 export function weightSeries(log, days) {
   const byDay = {}
-  for (const e of log || []) {
+  // Une forme héritée peut arriver ici sous forme d'objet : `|| []` ne
+  // l'écarte pas, et la boucle échoue alors sur un journal de poids
+  // corrompu, emportant l'écran qui l'affiche.
+  for (const e of Array.isArray(log) ? log : []) {
     if (!e || !e.date || !(Number(e.kg) > 0)) continue
     byDay[e.date] = { ...e, date: e.date, kg: Number(e.kg) }
   }

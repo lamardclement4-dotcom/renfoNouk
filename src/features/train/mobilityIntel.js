@@ -42,6 +42,14 @@ function refDay(today) {
   return todayISO()
 }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -55,7 +63,7 @@ export const VAL_STIFF = 1
 export const VAL_OK = 3
 
 export function history(db) {
-  return ((db && db.mobilityHistory) || [])
+  return (asList(db && db.mobilityHistory))
     .filter((h) => h && /^\d{4}-\d{2}-\d{2}$/.test(h.date) && Array.isArray(h.zones))
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -209,8 +217,8 @@ export const ZONE_TO_PAIN = {
 export function corroboration(db) {
   const zones = allZones(db).filter((z) => z.weak)
   if (!zones.length) return []
-  const sensitive = new Set((db && db.sensitiveZones) || [])
-  const painRegions = new Set(((db && db.painEpisodes) || []).map((e) => e && e.region).filter(Boolean))
+  const sensitive = new Set(asList(db && db.sensitiveZones))
+  const painRegions = new Set((asList(db && db.painEpisodes)).map((e) => e && e.region).filter(Boolean))
   const out = []
   for (const z of zones) {
     const sources = ['test de mobilité']

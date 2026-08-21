@@ -40,6 +40,14 @@ function refDay(today) {
   return todayISO()
 }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -73,14 +81,14 @@ export function noiseFloor(testId) {
 
 // ─── Séries ──────────────────────────────────────────────────
 export function testHistory(db, testId) {
-  return ((db && db.physTests) || [])
+  return (asList(db && db.physTests))
     .filter((t) => t && t.testId === testId && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && num(t.value) != null)
     .map((t) => ({ ...t, value: num(t.value) }))
     .sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export function testedIds(db) {
-  const ids = new Set(((db && db.physTests) || []).map((t) => t && t.testId).filter(Boolean))
+  const ids = new Set((asList(db && db.physTests)).map((t) => t && t.testId).filter(Boolean))
   return TESTS_DEF.map((d) => d.id).filter((id) => ids.has(id))
 }
 

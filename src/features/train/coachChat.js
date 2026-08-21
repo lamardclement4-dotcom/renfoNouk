@@ -40,6 +40,14 @@ function isoOffset(days) {
 }
 function fmtMins(m) { const h = Math.floor(m / 60); return h ? `${h} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min` }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export const STARTER_CHIPS = ["Quelle séance aujourd'hui ?", 'Comment est ma charge ?', 'Je me sens fatigué', 'Résumé de mes stats']
 const DEFAULT_CHIPS = ["Quelle séance aujourd'hui ?", 'Mon sommeil', 'Ma charge', 'Mes records']
 
@@ -200,14 +208,14 @@ function sessionTodayReply(db, ctx) {
   if (ctx && ctx.sportId) {
     const sp = SPORTS.find((s) => s.id === ctx.sportId)
     const label = sp ? sp.label : ctx.sportId
-    const planned = (db.planningSessions || []).find((s) => s && s.date === iso && s.sport === ctx.sportId)
+    const planned = (asList(db && db.planningSessions)).find((s) => s && s.date === iso && s.sport === ctx.sportId)
     if (planned) {
       const mins = dureeToMins(planned.duree)
       return { text: `Oui, ${label} est prévu aujourd'hui${planned.heure ? ' à ' + planned.heure : ''}${mins ? ` (${mins} min)` : ''} — statut : ${planned.statut === 'realise' ? 'déjà réalisée' : 'à faire'}.`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Ma charge', 'Mon sommeil'] }
     }
     return { text: `Pas de séance de ${label} prévue aujourd'hui dans ton Calendrier.`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ["Quelle séance aujourd'hui ?", 'Planifier une séance'] }
   }
-  const planned = (db.planningSessions || []).filter((s) => s && s.date === iso && s.statut === 'planifie')
+  const planned = (asList(db && db.planningSessions)).filter((s) => s && s.date === iso && s.statut === 'planifie')
   if (db.program && db.program.sessions && db.program.sessions.length) {
     const undone = db.program.sessions.find((s) => !(db.program.done && db.program.done[s.id]))
     if (undone) {
@@ -237,7 +245,7 @@ function fatigueReply(db) {
   if (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
     parts.push(`Ta charge d'entraînement est en zone « ${acwr.level.toLowerCase()} » (ratio ${acwr.ratio}) — c'est cohérent avec de la fatigue accumulée.`)
   }
-  const done = (db.planningSessions || []).filter((s) => s && s.statut === 'realise' && typeof s.ressenti === 'number').slice(-3)
+  const done = (asList(db && db.planningSessions)).filter((s) => s && s.statut === 'realise' && typeof s.ressenti === 'number').slice(-3)
   if (done.length >= 2 && done.every((s) => s.ressenti <= 2)) {
     parts.push('Tes derniers ressentis de séance sont bas aussi.')
   }
@@ -363,7 +371,7 @@ function mobilityReply(db) {
 }
 
 function testsReply(db) {
-  const tests = db.physTests || []
+  const tests = asList(db && db.physTests)
   if (!tests.length) {
     return { text: 'Aucun test physique enregistré (Cooper, gainage, squats, souplesse, pompes). Ils me servent à repérer tes vrais points faibles pour cibler tes séances.', action: 'tests', actionLabel: 'Passer un test', chips: ['Ma mobilité', 'Mes records'] }
   }
@@ -414,14 +422,14 @@ function cycleReply(db) {
 }
 
 function suppReply(db) {
-  const plan = db.suppPlan || []
+  const plan = asList(db && db.suppPlan)
   if (!plan.length) return { text: "Tu n'as pas de plan de compléments défini. Si tu en prends, configure-les dans le module Compléments pour suivre ton observance.", action: 'complements', actionLabel: 'Ouvrir Compléments', chips: ['Ma nutrition'] }
   const taken = ((db.suppTaken || {})[todayISO()] || []).filter((id) => plan.includes(id))
   return { text: `Ton plan compte ${plan.length} complément(s), ${taken.length} pris aujourd'hui.${plan.includes('creatine') ? ' Rappel créatine : c\'est la régularité quotidienne qui compte, pas le moment de la prise.' : ''}`, action: 'complements', actionLabel: 'Ouvrir Compléments', chips: ['Ma nutrition', 'Résumé de mes stats'] }
 }
 
 function peakReply(db) {
-  const goals = db.peakGoals || []
+  const goals = asList(db && db.peakGoals)
   const iso = todayISO()
   const upcoming = goals.map((g) => ({ g, plan: computePeakPlan(g, iso) })).filter((x) => x.plan.phase !== 'past').sort((a, b) => a.g.eventDate.localeCompare(b.g.eventDate))
   if (!upcoming.length) {

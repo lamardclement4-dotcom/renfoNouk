@@ -63,6 +63,14 @@ function refDay(today) {
   return todayISO()
 }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function hydricTargetMl(db) {
   const sp = db.hydroSport || {}
   const rate = sp.intensite === 'leger' ? 400 : sp.intensite === 'intense' ? 800 : 600
@@ -133,11 +141,11 @@ export function rolling7Mins(db, today) {
   })()
   const inRange = (d) => d >= from && d <= ref
   let mins = 0
-  for (const s of (db && db.planningSessions) || []) {
+  for (const s of asList(db && db.planningSessions)) {
     if (!s || s.statut !== 'realise' || !s.date || !inRange(s.date)) continue
     mins += dureeToMins(s.duree)
   }
-  for (const e of (db && db.sessionLog) || []) {
+  for (const e of asList(db && db.sessionLog)) {
     if (!e || !e.date || !inRange(e.date)) continue
     mins += num(e.mins, 0)
   }
@@ -156,7 +164,7 @@ export function mondayOf(d) {
 // celle en cours) + séances planifiées restantes. `refDate` permet de
 // rejouer n'importe quelle semaine passée pour une rétrospective.
 export function plannerWeekData(db, refDate = new Date()) {
-  const sessions = db.planningSessions || []
+  const sessions = asList(db && db.planningSessions)
   const monday = mondayOf(refDate)
   const week = [0, 0, 0, 0, 0, 0, 0]
   let count = 0, planned = 0
@@ -185,7 +193,7 @@ export function plannerWeekData(db, refDate = new Date()) {
 // mêmes cases.
 export function trainingTotals(db) {
   const week = weekRetro(db).week
-  const sessions = db.planningSessions || []
+  const sessions = asList(db && db.planningSessions)
   let allCount = 0, allMins = 0
   for (const s of sessions) {
     if (!s || s.statut !== 'realise' || !s.date) continue
@@ -239,12 +247,12 @@ export function weekRetro(db, refDate = new Date()) {
     bySportMap[group].mins += mins
   }
 
-  for (const s of db.planningSessions || []) {
+  for (const s of asList(db && db.planningSessions)) {
     if (!s || s.statut !== 'realise' || !s.date) continue
     const meta = sportMeta(s.sport)
     addMins(meta.label, meta.label, meta.color, s.date, dureeToMins(s.duree), 'planner')
   }
-  for (const e of db.sessionLog || []) {
+  for (const e of asList(db && db.sessionLog)) {
     if (!e || !e.date) continue
     const meta = CAT_META[e.cat] || { label: 'Séance', color: '#999' }
     addMins(meta.label, e.title || meta.label, meta.color, e.date, num(e.mins, 0), 'player')
@@ -299,7 +307,7 @@ export function mondayRetro(db) {
 
   let kcalSum = 0, protSum = 0, nutriDays = 0
   let mlSum = 0, cafSum = 0, hydroDays = 0
-  const plan = db.suppPlan || []
+  const plan = asList(db && db.suppPlan)
   let suppPossible = 0, suppTakenCount = 0
   for (const iso of days) {
     const n = nutritionDay(db, iso)
@@ -544,7 +552,7 @@ export function inferUserLevel(db) {
 // au-delà de ~1.5. Indicateur statistique de population, pas un diagnostic
 // individuel (Impellizzeri et al.). Nécessite ≥14 jours d'historique réalisé.
 export function acwrRisk(db) {
-  const sessions = db.planningSessions || []
+  const sessions = asList(db && db.planningSessions)
   const now = new Date(); now.setHours(0, 0, 0, 0)
   const nowMs = now.getTime()
   // Charge pondérée par les conditions : une heure à 33 °C sollicite plus
@@ -641,7 +649,7 @@ export function projectedAcwr(db, extraMins) {
 // une séance "réalisée" — pour repérer un enchaînement sans repos au
 // moment même où on planifie une séance de plus sur la pile.
 export function consecutiveDaysBefore(db, dateISO) {
-  const sessions = db.planningSessions || []
+  const sessions = asList(db && db.planningSessions)
   const doneDates = new Set(sessions.filter((s) => s && s.statut === 'realise' && s.date).map((s) => s.date))
   let n = 0
   let d = new Date(dateISO + 'T00:00:00')
@@ -751,7 +759,7 @@ export function sportMeta(id) {
 
 export function trainingStats(db) {
   const empty = { hasData: false, weekSessions: 0, weekKm: 0, monthSessions: 0, monthKm: 0, sports: [], records: [], perche: 0, courseTrend: [], courseTrendMax: 0 }
-  const sessions = db.planningSessions || []
+  const sessions = asList(db && db.planningSessions)
   const exHist = db.exerciseHistory || {}
   if (!sessions.length) return empty
 
@@ -1061,7 +1069,10 @@ export function recommendations(db) {
   }
 
   // --- Tests physiques : points faibles précis (pas juste "fais un test") ---
-  const tests = db.physTests || []
+  // Filtré une fois ici plutôt que garde par garde : la même liste est
+  // relue à plusieurs endroits, et un seul `null` emportait tout le calcul
+  // des recommandations — donc l'écran Coach et l'écran Progrès.
+  const tests = asList(db && db.physTests).filter((t) => t && t.testId && t.date)
   if (tests.length === 0) {
     push('info', 'route', 'Tu n\'as encore fait aucun test physique — utile pour cibler tes séances de renfo et mobilité selon tes vrais points faibles.', 'tests')
   } else {
@@ -1099,7 +1110,7 @@ export function recommendations(db) {
         const last = series[series.length - 1]
         // Poids au moment de l'avant-dernier passage du test, pour comparer
         // ce qui a changé entre les deux mesures.
-        const prevTest = (db.physTests || []).filter((t) => t && t.date).sort((a, b) => a.date.localeCompare(b.date))
+        const prevTest = (asList(db && db.physTests)).filter((t) => t && t.date).sort((a, b) => a.date.localeCompare(b.date))
         if (prevTest.length < 2) return null
         const ref = prevTest[prevTest.length - 2].date
         const near = series.filter((e) => e.date <= ref)
@@ -1246,7 +1257,7 @@ export function recommendations(db) {
     }
   }
 
-  const sessions = db.planningSessions || []
+  const sessions = asList(db && db.planningSessions)
 
   // --- Tendance semaine vs semaine précédente (nouveau) : ne se déclenche
   // que quand l'ACWR n'est pas encore disponible (< 14 jours d'historique),
@@ -1352,7 +1363,7 @@ export function recommendations(db) {
   }
 
   // --- Compléments : plan défini mais aucune prise récente ; créatine ---
-  const suppPlan = db.suppPlan || []
+  const suppPlan = asList(db && db.suppPlan)
   if (suppPlan.length) {
     const suppTaken = db.suppTaken || {}
     let anyTakenLast3 = false
@@ -1378,7 +1389,7 @@ export function recommendations(db) {
   }
 
   // --- Pic de forme : croise le plan d'affûtage avec la charge réelle (ACWR) ---
-  const peakGoals = db.peakGoals || []
+  const peakGoals = asList(db && db.peakGoals)
   if (peakGoals.length) {
     let upcoming = null
     peakGoals.forEach((g) => {

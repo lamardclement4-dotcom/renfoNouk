@@ -41,6 +41,14 @@ function refDay(today) {
   return todayISO()
 }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -62,7 +70,7 @@ export function pillarValue(v) {
 }
 
 export function history(db) {
-  return ((db && db.diagHistory) || [])
+  return (asList(db && db.diagHistory))
     .filter((e) => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && num(e.score) != null)
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -202,7 +210,7 @@ export const GOAL_STALE_DAYS = 60
 
 export function goalsStatus(db, today) {
   const ref = refDay(today)
-  const list = (db && db.customGoals) || []
+  const list = asList(db && db.customGoals).filter((g) => g && g.id)
   if (!list.length) return null
   const items = list.map((g) => {
     const created = g && /^\d{4}-\d{2}-\d{2}$/.test(g.createdAt || '') ? g.createdAt : null

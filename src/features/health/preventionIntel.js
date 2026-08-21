@@ -37,6 +37,14 @@ function refDay(today) {
   return todayISO()
 }
 
+// `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
+// base peut revenir sous une autre forme — écriture partielle, donnée écrite
+// par une version antérieure — et l'objet passe alors la garde pour faire
+// échouer le `.filter` juste après. L'écran entier meurt, loin de sa cause.
+function asList(v) {
+  return Array.isArray(v) ? v.filter((x) => x != null) : []
+}
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -65,7 +73,7 @@ export const RECO = {
 
 // ─── Historique des bilans ───────────────────────────────────
 export function bilanHistory(db) {
-  const log = (db && db.preventionLog) || []
+  const log = asList(db && db.preventionLog)
   return log
     .filter((b) => b && /^\d{4}-\d{2}-\d{2}$/.test(b.date) && num(b.score) != null)
     .slice()
@@ -146,7 +154,7 @@ export function regionLabel(r) {
 }
 
 export function painEpisodes(db) {
-  const list = (db && db.painEpisodes) || []
+  const list = asList(db && db.painEpisodes)
   return list
     .filter((e) => e && /^\d{4}-\d{2}-\d{2}$/.test(e.start))
     .slice()
