@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
+import ActivityImport from './ActivityImport'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE, EQUIP, searchExercises, exercisesOfGroup } from './plannerData'
 import { plannerAnalysis } from './plannerIntel'
 import { SCALES, STYLES, ANGLES, LIEUX, PRISES, gradeIndex } from './climbIntel'
@@ -1068,7 +1069,20 @@ export default function PlannerSpace({ db, store, onClose }) {
     view === 'week' && React.createElement(WeekView, { date, sessions, onOpen: openEdit, onAdd: openAdd }),
     view === 'month' && React.createElement(MonthView, { date, sessions, onGoDay: goDay }),
 
-    form && React.createElement(SessionForm, {
+    // ─── Import d'une activité extérieure ───
+    // Placé sous les vues plutôt que dans le bouton « + » : on importe
+    // rarement, et l'ajout manuel reste le geste courant.
+    React.createElement('button', {
+      onClick: () => setForm('import'),
+      style: { width: '100%', marginTop: 14, padding: '12px 14px', borderRadius: C.radiusSm, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    }, React.createElement(Icon, { name: 'plus', size: 15, color: C.ink3 }), 'Importer une activité (Strava, Garmin, capture…)'),
+
+    form === 'import' && React.createElement(ActivityImport, {
+      onSave: saveSession,
+      onClose: () => setForm(null),
+    }),
+
+    form && form !== 'import' && React.createElement(SessionForm, {
       activeSports,
       initial: form === 'new' ? null : form,
       initialDate: newDate,
