@@ -792,7 +792,14 @@ export function trainingStats(db) {
 export function recommendations(db) {
   const iso = todayISO()
   const recos = []
-  const push = (level, ic, text, action) => recos.push({ level, icon: ic, text, action })
+  // `action` est la destination : le conseil ouvre l'écran correspondant.
+  // `domain` ne sert qu'au classement. Les deux étaient confondus, si bien
+  // que tout ce qui menait au planning — musculation, escalade, sprint,
+  // endurance et planification — formait un seul domaine de quarante-deux
+  // règles, plafonné à deux conseils affichés. Un plateau d'escalade et une
+  // hausse de volume en sprint ne pouvaient jamais sortir ensemble.
+  const push = (level, ic, text, action, domain) =>
+    recos.push({ level, icon: ic, text, action, domain: domain || action || 'general' })
 
   // --- Protéines ---
   const nut = pillarNutrition(db, iso)
@@ -1131,7 +1138,7 @@ export function recommendations(db) {
     if (!h.record || !h.last || !h.last.charge || !h.last.date) continue
     const daysSinceLast = Math.floor((new Date(iso + 'T00:00:00') - new Date(h.last.date + 'T00:00:00')) / 86400000)
     if (daysSinceLast <= 14 && h.last.charge < h.record.charge * 0.8) {
-      push('info', 'dumbbell', `${name} : dernière charge ${h.last.charge} kg, nettement sous ton record de ${h.record.charge} kg — normal après une pause, mais surveille si ça persiste sur plusieurs séances.`, 'planner')
+      push('info', 'dumbbell', `${name} : dernière charge ${h.last.charge} kg, nettement sous ton record de ${h.record.charge} kg — normal après une pause, mais surveille si ça persiste sur plusieurs séances.`, 'planner', 'muscu')
       break
     }
   }
@@ -1154,7 +1161,7 @@ export function recommendations(db) {
   })
   if (mus.sessions >= 3) {
     if (mus.balance && mus.balance.flags.length) {
-      push('warn', 'dumbbell', mus.balance.flags[0].text, 'planner')
+      push('warn', 'dumbbell', mus.balance.flags[0].text, 'planner', 'muscu')
     }
     if (mus.stalls.length) {
       const st = mus.stalls[0]
@@ -1168,10 +1175,10 @@ export function recommendations(db) {
     }
     const over = mus.volumes.filter((v) => groupVerdict(v.seriesPerWeek).level === 'high')
     if (over.length) {
-      push('info', 'dumbbell', `${over[0].group} : ${String(over[0].seriesPerWeek).replace('.', ',')} séries par semaine, au-dessus du repère habituel de ${SERIES_HIGH}. Au-delà, le rendement supplémentaire devient discutable et la récupération plus difficile.`, 'planner')
+      push('info', 'dumbbell', `${over[0].group} : ${String(over[0].seriesPerWeek).replace('.', ',')} séries par semaine, au-dessus du repère habituel de ${SERIES_HIGH}. Au-delà, le rendement supplémentaire devient discutable et la récupération plus difficile.`, 'planner', 'muscu')
     }
     if (mus.idle.length) {
-      push('info', 'dumbbell', `${mus.idle[0].name} n'a pas été travaillé depuis ${mus.idle[0].daysSinceLast} jours alors que tu le suivais régulièrement.`, 'planner')
+      push('info', 'dumbbell', `${mus.idle[0].name} n'a pas été travaillé depuis ${mus.idle[0].daysSinceLast} jours alors que tu le suivais régulièrement.`, 'planner', 'muscu')
     }
   }
 
@@ -1397,21 +1404,21 @@ export function recommendations(db) {
   // tirés.
   const endur = enduranceAnalysis(db, { days: 365, today: iso, weightKg: weightKg(db) })
   if (endur.run.volume.jump) {
-    push('warn', 'route', endur.run.volume.jump.text, 'planner')
+    push('warn', 'route', endur.run.volume.jump.text, 'planner', 'endurance')
   }
   if (endur.run.cadence && endur.run.cadence.level !== 'ok') {
-    push('info', 'route', endur.run.cadence.text, 'planner')
+    push('info', 'route', endur.run.cadence.text, 'planner', 'endurance')
   }
   if (endur.run.predictions.length && endur.run.records.length) {
     const raced = new Set(endur.run.records.map((r) => r.id))
     const unraced = endur.run.predictions.filter((p) => !raced.has(p.id))
     if (unraced.length) {
       const pick = unraced.reduce((m, p) => (p.km > m.km ? p : m), unraced[0])
-      push('info', 'route', `D'après ton ${pick.from.label} en ${pick.from.time}, tu vaudrais environ ${pick.time} sur ${pick.label.toLowerCase()} — une projection, pas une promesse.`, 'planner')
+      push('info', 'route', `D'après ton ${pick.from.label} en ${pick.from.time}, tu vaudrais environ ${pick.time} sur ${pick.label.toLowerCase()} — une projection, pas une promesse.`, 'planner', 'endurance')
     }
   }
   if (endur.swim.strokes && endur.swim.strokes.only) {
-    push('info', 'wave', endur.swim.strokes.text, 'planner')
+    push('info', 'wave', endur.swim.strokes.text, 'planner', 'endurance')
   }
 
   // --- Tous les autres sports, par leurs propres champs ---
@@ -1422,7 +1429,7 @@ export function recommendations(db) {
   const gen = genericAnalysis(db, { days: 730, today: iso })
   for (const sp of gen.bySport) {
     if (!sp.tips.length) continue
-    push('info', 'chart', sp.tips[0], 'planner')
+    push('info', 'chart', sp.tips[0], 'planner', 'sport')
   }
 
   // --- Sprint ---
@@ -1430,21 +1437,21 @@ export function recommendations(db) {
   // pour un record et faisait croire à une progression qui n'a pas eu lieu.
   const spr = sprintAnalysis(db, { days: 730, today: iso })
   if (spr.volume.jump) {
-    push('warn', 'bolt', spr.volume.jump.text, 'planner')
+    push('warn', 'bolt', spr.volume.jump.text, 'planner', 'sprint')
   }
   const assisted = spr.records.filter((r) => r.windAssisted)
   if (assisted.length) {
     const r = assisted[0]
-    push('info', 'bolt', `Ton meilleur ${r.label} est ${fmtSprintTime(r.any.sec)} avec ${windLabel(r.any.wind)} de vent, au-delà de la limite homologable. Ta référence reste ${fmtSprintTime(r.legal.sec)}.`, 'planner')
+    push('info', 'bolt', `Ton meilleur ${r.label} est ${fmtSprintTime(r.any.sec)} avec ${windLabel(r.any.wind)} de vent, au-delà de la limite homologable. Ta référence reste ${fmtSprintTime(r.legal.sec)}.`, 'planner', 'sprint')
   }
   for (const e of spr.endurance) {
-    if (e.level !== 'ok') push('info', 'bolt', e.text, 'planner')
+    if (e.level !== 'ok') push('info', 'bolt', e.text, 'planner', 'sprint')
   }
   if (spr.shortRec && spr.shortRec.length >= 2) {
-    push('info', 'bolt', spr.shortRec[0].text, 'planner')
+    push('info', 'bolt', spr.shortRec[0].text, 'planner', 'sprint')
   }
   if (spr.reaction && spr.reaction.level !== 'ok') {
-    push('info', 'bolt', spr.reaction.text, 'planner')
+    push('info', 'bolt', spr.reaction.text, 'planner', 'sprint')
   }
 
   // --- Escalade ---
@@ -1454,33 +1461,33 @@ export function recommendations(db) {
   const climb = climbAnalysis(db, { days: 180, today: iso })
   if (climb.ascents.length >= 5) {
     if (climb.fingers) {
-      for (const f of climb.fingers.flags) push('warn', 'dumbbell', f.text, 'planner')
+      for (const f of climb.fingers.flags) push('warn', 'dumbbell', f.text, 'planner', 'escalade')
     }
     for (const p of [climb.pyrVoie, climb.pyrBloc]) {
-      if (p && !p.solid && p.total >= 5) push('info', 'chart', p.text, 'planner')
+      if (p && !p.solid && p.total >= 5) push('info', 'chart', p.text, 'planner', 'escalade')
     }
     for (const g of [climb.gapVoie, climb.gapBloc]) {
-      if (g && g.level === 'warn') push('info', 'chart', g.text, 'planner')
+      if (g && g.level === 'warn') push('info', 'chart', g.text, 'planner', 'escalade')
     }
-    if (climb.angles && climb.angles.lopsided && !(climb.angleVoie && climb.angleVoie.lopsided)) push('info', 'chart', climb.angles.text, 'planner')
+    if (climb.angles && climb.angles.lopsided && !(climb.angleVoie && climb.angleVoie.lopsided)) push('info', 'chart', climb.angles.text, 'planner', 'escalade')
     // Attaquer directement au maximum est la première cause de blessure
     // aux doigts : ce signal passe avant les questions de progression.
-    if (climb.warmups && climb.warmups.length) push('warn', 'shield', climb.warmups[0].text, 'planner')
+    if (climb.warmups && climb.warmups.length) push('warn', 'shield', climb.warmups[0].text, 'planner', 'escalade')
     // Le niveau atteint par profil désigne la qualité en retard, là où le
     // simple volume ne montrait qu'un oubli.
     for (const g of [climb.angleVoie, climb.angleBloc]) {
-      if (g && g.lopsided) push('info', 'chart', g.text, 'planner')
+      if (g && g.lopsided) push('info', 'chart', g.text, 'planner', 'escalade')
     }
-    if (climb.prises && climb.prises.lopsided) push('info', 'chart', climb.prises.text, 'planner')
+    if (climb.prises && climb.prises.lopsided) push('info', 'chart', climb.prises.text, 'planner', 'escalade')
     const staleProj = (climb.openProjects || []).filter((p) => p.stale)
     if (staleProj.length) {
       const pj = staleProj[0]
-      push('info', 'target', `« ${pj.name} » (${pj.grade}) est ouvert depuis ${pj.ageDays} jours, ${pj.tries} essais, et tu n'y es pas retourné depuis ${pj.idleDays} jours. Le reprendre sérieusement ou le laisser vaut mieux que le garder en suspens.`, 'planner')
+      push('info', 'target', `« ${pj.name} » (${pj.grade}) est ouvert depuis ${pj.ageDays} jours, ${pj.tries} essais, et tu n'y es pas retourné depuis ${pj.idleDays} jours. Le reprendre sérieusement ou le laisser vaut mieux que le garder en suspens.`, 'planner', 'escalade')
     }
     for (const pl of [climb.plateauVoie, climb.plateauBloc]) {
-      if (pl) push('info', 'chart', pl.text, 'planner')
+      if (pl) push('info', 'chart', pl.text, 'planner', 'escalade')
     }
-    if (climb.lieux && climb.lieux.gap != null && climb.lieux.gap >= 2) push('info', 'chart', climb.lieux.text, 'planner')
+    if (climb.lieux && climb.lieux.gap != null && climb.lieux.gap >= 2) push('info', 'chart', climb.lieux.text, 'planner', 'escalade')
   }
 
   // --- Semaine planifiée : ce qu'elle va coûter ---
@@ -1552,7 +1559,7 @@ function fingerprint(reco) {
     .replace(/[0-9]+([.,][0-9]+)?/g, '#')
     .replace(/[^a-z# ]/g, ' ')
     .split(/\s+/).filter(Boolean).slice(0, FINGERPRINT_WORDS).join(' ')
-  return (reco.action || 'general') + '|' + words
+  return (reco.domain || reco.action || 'general') + '|' + words
 }
 
 export function rankRecommendations(recos, { max = TOP_COUNT, perDomain = MAX_PER_DOMAIN } = {}) {
@@ -1574,25 +1581,44 @@ export function rankRecommendations(recos, { max = TOP_COUNT, perDomain = MAX_PE
   // conseil de chaque domaine, le second le suivant, et ainsi de suite.
   const byDomain = new Map()
   for (const r of sorted) {
-    const k = r.action || 'general'
+    const k = r.domain || r.action || 'general'
     if (!byDomain.has(k)) byDomain.set(k, [])
     byDomain.get(k).push(r)
   }
+  // Deux exigences qui semblaient s'opposer : ne jamais afficher un simple
+  // constat au-dessus d'une alerte, et ne pas laisser un seul domaine
+  // occuper l'écran. Le tour par domaine servait d'abord le meilleur conseil
+  // de chaque domaine, tous niveaux confondus : avec neuf domaines actifs
+  // pour huit places, un « info » passait devant des « warn » jamais
+  // affichés. À l'inverse, trier par gravité seule ne laissait plus que
+  // quatre domaines à l'écran.
+  //
+  // On fait donc le tour par domaine à l'intérieur de chaque niveau : toutes
+  // les alertes d'abord, réparties entre domaines, puis les avertissements,
+  // puis les constats. La gravité n'est jamais inversée, et la variété tient
+  // tant qu'il reste des domaines à servir.
   const top = []
-  const overflow = []
-  for (let round = 0; round < perDomain; round++) {
-    for (const items of byDomain.values()) {
-      if (items[round] && top.length < max) top.push(items[round])
+  const chosen = new Set()
+  const taken = new Map()
+  const domainOf = (r) => r.domain || r.action || 'general'
+  for (const tier of [0, 1, 2]) {
+    const pool = sorted.filter((r) => (LEVEL_RANK[r.level] ?? 2) === tier)
+    for (let round = 0; round < perDomain && top.length < max; round++) {
+      for (const r of pool) {
+        if (top.length >= max) break
+        if (chosen.has(r)) continue
+        const k = domainOf(r)
+        if ((taken.get(k) || 0) !== round) continue
+        top.push(r); chosen.add(r); taken.set(k, round + 1)
+      }
     }
   }
-  for (const items of byDomain.values()) {
-    for (let k = 0; k < items.length; k++) {
-      if (!top.includes(items[k])) overflow.push(items[k])
-    }
-  }
-  // L'ordre de gravité doit tenir aussi à l'intérieur de la sélection.
-  top.sort((a, b) => (LEVEL_RANK[a.level] ?? 2) - (LEVEL_RANK[b.level] ?? 2) || sorted.indexOf(a) - sorted.indexOf(b))
-  overflow.sort((a, b) => (LEVEL_RANK[a.level] ?? 2) - (LEVEL_RANK[b.level] ?? 2) || sorted.indexOf(a) - sorted.indexOf(b))
+  const overflow = sorted.filter((r) => !chosen.has(r))
+
+  // Pas de tri final : `top` est construit niveau par niveau, et `overflow`
+  // dérive de `sorted`, déjà ordonné. Un tri par index remis ici annulait
+  // justement l'alternance entre domaines — deux conseils d'un même domaine
+  // se retrouvaient collés en tête de liste.
   return {
     top, rest: overflow,
     total: list.length,
