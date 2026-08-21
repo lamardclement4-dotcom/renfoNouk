@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card, isoToday } from '../health/kit'
 import { WEATHER_FIELDS, parseWeatherText } from './weatherOcr'
+import { searchCity, loadConditions, placeLabel } from './weatherApi'
 import { weatherAdvice, adjustPace, fmtPace, ENVIRONMENTS, DEFAULT_ENV, envInfo, SUN_OPTIONS, PRECIP_OPTIONS, AIRFLOW_OPTIONS, heatAcclimation, acclimationLabel, effectiveTemp, loadMultiplier } from './weatherIntel'
 
 const h = React.createElement
@@ -51,6 +52,15 @@ export default function WeatherSpace({ db, store, onClose }) {
   // salle, la température de l'eau n'en a qu'en piscine.
   const visibleFields = WEATHER_FIELDS.filter((f) =>
     f.envs === 'all' || (f.envs === 'outdoor' && env.outdoor) || (f.envs === 'water' && env.water))
+  // ─── Météo par ville ───
+  // La saisie manuelle reste là — elle sert en salle, où aucun service ne
+  // sait ce qu'il fait dans la pièce — mais dehors, le nom de la ville
+  // suffit. La dernière ville est retenue pour que le cas courant tienne
+  // en un appui.
+  const lastPlace = db.weatherPlace || null
+  const [city, setCity] = useState(() => (lastPlace ? lastPlace.name : ''))
+  const [places, setPlaces] = useState([])
+  const [net, setNet] = useState('idle') // idle | searching | loading
   const [phase, setPhase] = useState('idle') // idle | reading
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState(null)
@@ -104,6 +114,38 @@ export default function WeatherSpace({ db, store, onClose }) {
   const adjusted = advice && advice.effort > 0 ? adjustPace(refPace, advice.effort) : null
   const riskCol = advice ? (RISK_COLOR[advice.risk.level] || C.ink3) : C.ink3
 
+  async function runSearch() {
+    const q = city.trim()
+    if (q.length < 2) { setError('Entre au moins deux lettres.'); return }
+    setError(null); setPlaces([]); setNet('searching')
+    try {
+      const found = await searchCity(q)
+      if (!found.length) setError(`Aucune ville trouvée pour « ${q} ».`)
+      setPlaces(found)
+    } catch (e) {
+      setError("Météo indisponible : " + (e && e.message ? e.message : 'connexion impossible') + ' Tu peux saisir les valeurs à la main.')
+    } finally { setNet('idle') }
+  }
+
+  async function pickPlace(place) {
+    setError(null); setPlaces([]); setNet('loading')
+    try {
+      const { fields: got, choices: ch } = await loadConditions(place)
+      // La saisie déjà faite n'est pas écrasée en silence : les valeurs
+      // relevées remplacent les champs qu'elles couvrent, et rien d'autre.
+      setFields((prev) => {
+        const next = { ...prev }
+        for (const [k, v] of Object.entries(got)) next[k] = String(v)
+        return next
+      })
+      setChoices((prev) => ({ ...prev, ...ch }))
+      setCity(place.name)
+      store.set({ weatherPlace: place })
+    } catch (e) {
+      setError("Relevé impossible : " + (e && e.message ? e.message : 'connexion impossible') + ' Tu peux saisir les valeurs à la main.')
+    } finally { setNet('idle') }
+  }
+
   return h(FlowSpace, {
     title: 'Conditions',
     subtitle: 'Renseigne la météo du jour pour ajuster la séance.',
@@ -142,6 +184,36 @@ export default function WeatherSpace({ db, store, onClose }) {
             style: { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: on ? '#fff' : C.ink2, background: on ? C.primary : C.surface, border: `1px solid ${on ? C.primary : C.line}` },
           }, h(Icon, { name: e.icon, size: 15, color: on ? '#fff' : C.ink3 }), e.label)
         }))),
+
+    // ─── Relevé par ville ────────────────────────────────
+    env.outdoor && h(Card, { style: { marginBottom: 12 } },
+      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 4 } }, 'Relever la météo'),
+      h('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 10, lineHeight: 1.45 } },
+        'Entre ta ville : température, ressenti, humidité, vent, rafales, UV, qualité de l’air et altitude sont remplis pour toi.'),
+      h('div', { style: { display: 'flex', gap: 8 } },
+        h('input', {
+          type: 'text', value: city, placeholder: 'Lyon',
+          onChange: (e) => setCity(e.target.value),
+          onKeyDown: (e) => { if (e.key === 'Enter') runSearch() },
+          style: { flex: 1, minWidth: 0, padding: '11px 13px', borderRadius: C.radiusXs, border: `1.5px solid ${C.line}`, background: C.surface2, color: C.ink, fontSize: 14, outline: 'none', boxSizing: 'border-box' },
+        }),
+        h('button', {
+          onClick: runSearch, disabled: net !== 'idle',
+          style: { padding: '11px 16px', borderRadius: C.radiusXs, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: net === 'idle' ? 'pointer' : 'default', opacity: net === 'idle' ? 1 : 0.6, flex: '0 0 auto' },
+        }, net === 'searching' ? 'Recherche…' : net === 'loading' ? 'Relevé…' : 'Chercher')),
+
+      // Plusieurs villes portent le même nom : on laisse choisir.
+      places.length > 0 && h('div', { style: { marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 } },
+        places.map((p) => h('button', {
+          key: p.id, onClick: () => pickPlace(p),
+          style: { textAlign: 'left', padding: '10px 12px', borderRadius: C.radiusXs, border: `1px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' },
+        }, placeLabel(p), p.elevation != null ? h('span', { style: { color: C.ink3, fontWeight: 600 } }, ' · ', p.elevation, ' m') : null))),
+
+      // Le cas courant : la même ville qu'hier, en un appui.
+      lastPlace && places.length === 0 && h('button', {
+        onClick: () => pickPlace(lastPlace), disabled: net !== 'idle',
+        style: { marginTop: 10, width: '100%', padding: '10px 12px', borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 13, fontWeight: 600, cursor: net === 'idle' ? 'pointer' : 'default' },
+      }, 'Relever à ', placeLabel(lastPlace))),
 
     // ─── Import ─────────────────────────────────────────────────
     h(Card, { style: { marginBottom: 12 } },
