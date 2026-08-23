@@ -209,8 +209,17 @@ function CaloriesTab({ body, setBody, onMacros }) {
 // ============================================================
 // Onglet Macros (protéines/glucides ISSN)
 // ============================================================
-function MacrosTab({ body, setBody }) {
+// Exporté pour que le test puisse rendre cet onglet directement : l'écran
+// n'ouvre que son onglet par défaut.
+export function MacrosTab({ body, setBody, db, store }) {
   body = body || {}
+  // L'éditeur d'objectifs vivait derrière un petit bouton de l'onglet
+  // Journal, alors que cet onglet-ci s'appelle « Macros » : on le cherchait
+  // ici, et on n'y trouvait que des fourchettes indicatives. Les deux ont
+  // leur place — le repère renseigne, l'objectif engage — mais c'est ici
+  // qu'on vient pour fixer le sien.
+  const [sheet, setSheet] = useState(false)
+  const saved = (db && db.foodTargets) || null
   const [poids, _setPoids] = useState(body.poids || 70)
   const [obj, _setObj] = useState(body.obj || 'maintien')
   const [vol, _setVol] = useState(body.vol || 'modere')
@@ -227,6 +236,30 @@ function MacrosTab({ body, setBody }) {
   const carbLo = Math.round(poids * (obj === 'perte' ? cr[0] : obj === 'maintien' ? (cr[0] + cr[1]) / 2 - 0.5 : cr[1] - 1))
   const carbHi = Math.round(poids * (obj === 'perte' ? (cr[0] + cr[1]) / 2 : obj === 'maintien' ? (cr[0] + cr[1]) / 2 + 0.5 : cr[1]))
   return React.createElement('div', null,
+    React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
+      React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: saved ? 10 : 6 } },
+        React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16 } }, 'Mes objectifs'),
+        saved ? React.createElement('button', { onClick: () => setSheet(true), style: { fontSize: 12.5, fontWeight: 700, color: NUTRI, background: 'transparent', border: 'none', cursor: 'pointer' } }, 'Modifier') : null),
+      saved
+        ? React.createElement('div', null,
+          React.createElement('div', { style: { fontSize: 13.5, color: INK2, lineHeight: 1.6 } },
+            React.createElement('strong', null, saved.kcal, ' kcal'), ' · ', saved.prot, ' g de protéines · ', saved.gluc, ' g de glucides · ', saved.lip, ' g de lipides'),
+          body.poids ? React.createElement('div', { style: { fontSize: 12, color: INK3, marginTop: 5, lineHeight: 1.5 } },
+            'Soit ', String(Math.round(saved.prot / body.poids * 100) / 100).replace('.', ','), ' g/kg de protéines et ',
+            String(Math.round(saved.gluc / body.poids * 100) / 100).replace('.', ','), ' g/kg de glucides.') : null,
+          saved.days ? React.createElement('div', { style: { fontSize: 12, color: INK3, marginTop: 5, lineHeight: 1.5 } },
+            'Glucides modulés selon le jour : ', saved.days.repos.gluc, ' g au repos, ', saved.days.gros.gluc, ' g sur grosse séance.') : null)
+        : React.createElement('div', null,
+          React.createElement('div', { style: { fontSize: 13, color: INK2, lineHeight: 1.5, marginBottom: 12 } },
+            'Aucun objectif fixé. Les fourchettes ci-dessous sont des repères ; un objectif, lui, se suit jour après jour.'),
+          React.createElement('button', { onClick: () => setSheet(true), style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}` } }, 'Définir mes objectifs'))),
+
+    sheet && store ? React.createElement(TargetSheet, {
+      targets: saved, body,
+      onSave: (t) => store.set({ foodTargets: t }),
+      onClose: () => setSheet(false),
+    }) : null,
+
     React.createElement(SpaceBanner, { ic: 'apple', tint: NUTRI, title: 'Protéines & glucides', text: "L'objectif pilote les protéines et le cadre énergétique ; les glucides se calent sur le volume du jour." }),
     React.createElement(SecLab, null, 'Poids'),
     React.createElement('div', { style: { display: 'flex', gap: 10 } }, React.createElement(NumField, { label: 'Poids du corps', unit: 'kg', value: poids, set: setPoids, min: 30, max: 200 })),
@@ -1068,7 +1101,7 @@ export default function NutritionSpace({ userId, onClose }) {
         })),
       tab === 'aliments' && React.createElement(FoodTab, { db, store }),
       tab === 'calories' && React.createElement(CaloriesTab, { body, setBody, onMacros: () => setTab('macros') }),
-      tab === 'macros' && React.createElement(MacrosTab, { body, setBody }),
+      tab === 'macros' && React.createElement(MacrosTab, { body, setBody, db, store }),
       tab === 'course' && React.createElement(CourseTab, { body, setBody }),
       tab === 'timing' && React.createElement(TimingTab, { body }),
       tab === 'diag' && React.createElement(DiagTab, { db, store, onGoToJournal: () => setTab('aliments') })))

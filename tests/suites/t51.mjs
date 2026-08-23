@@ -113,4 +113,31 @@ a(/Sommeil, s[ée]ances, pas/.test(it), 'et ce qu il apporte est dit')
 a(/Exporter toutes les donn[ée]es/.test(it), 'avec le chemin exact dans l application Sante')
 a(/export\.xml/.test(it), "et le fichier a choisir apres decompression")
 
+// L ecran Nutrition : l editeur d objectifs doit etre dans l onglet « Macros »,
+// la ou on le cherche. Il vivait derriere un petit bouton de l onglet Journal,
+// et on ne le trouvait pas.
+const { MacrosTab } = await import('../../src/features/nutrition/Nutrition.jsx')
+for (const [lab, db, attendu] of [
+  ['sans objectif', {}, /D[ée]finir mes objectifs/],
+  // `foodTargets` vit sous `phys.nutrition`, pas a la racine : c est le store
+  // qui l y range.
+  ['avec objectif', { nutrition: { foodTargets: { kcal: 2400, prot: 150, gluc: 260, lip: 80, fib: 30 } } }, /Modifier/],
+]) {
+  __reset(); __setDb(db)
+  const props = { ...mkProps(db), body: { poids: 75, taille: 180, age: 30 }, setBody: () => {} }
+  const s = text(__render('macrostab-' + lab, MacrosTab, props))
+  a(/Mes objectifs/.test(s), `${lab} : le bloc « Mes objectifs » est en tete de l onglet Macros`)
+  a(attendu.test(s), `${lab} : et son bouton`)
+}
+// L objectif enregistre est relu, avec sa lecture par kilo.
+__reset()
+const avecJours = { nutrition: { foodTargets: { kcal: 2400, prot: 150, gluc: 260, lip: 80, fib: 30, days: { repos: { gluc: 195 }, normal: { gluc: 260 }, gros: { gluc: 351 } } } } }
+__setDb(avecJours)
+const st = text(__render('macrostab-jours', MacrosTab, { ...mkProps(avecJours), body: { poids: 75 }, setBody: () => {} }))
+// L extracteur ajoute une espace apres chaque noeud : « 2400 » et « kcal »
+// arrivent separes.
+a(/2400\s+kcal/.test(st), 'les calories visees sont rappelees')
+a(/2\s+g\/kg de prot[ée]ines/.test(st), '150 g pour 75 kg, soit 2 g/kg')
+a(/195\s+g au repos/.test(st) && /351\s+g sur grosse s[ée]ance/.test(st), 'et la modulation des glucides selon le jour')
+
 console.log('\nALL PASS')
