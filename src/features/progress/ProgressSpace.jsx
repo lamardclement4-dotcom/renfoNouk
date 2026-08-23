@@ -553,6 +553,50 @@ export default function ProgressSpace({ userId, onClose }) {
           },
         }, line))) : null,
 
+      // Ce qu'il faut retenir, en une phrase : une rétrospective qui
+      // n'aboutit à rien se lit une fois.
+      story.takeaway && story.takeaway.text ? (() => {
+        const col = story.takeaway.level === 'warn' ? C.warn : story.takeaway.level === 'ok' ? C.success : C.primary
+        return h('div', { style: { padding: '12px 14px', borderRadius: C.radiusSm, marginBottom: 14, background: `color-mix(in srgb, ${col} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${col} 28%, ${C.line})` } },
+          h('div', { style: { fontSize: 11.5, fontWeight: 700, color: col, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 5 } }, 'À retenir'),
+          h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5 } }, story.takeaway.text))
+      })() : null,
+
+      // La semaine jour par jour : on veut la retrouver telle qu'elle s'est
+      // passée, pas seulement son total.
+      story.detail && story.detail.some((d) => d.active || d.sleep || d.kcal) ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 14 } },
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', padding: '12px 14px 8px' } }, 'Jour par jour'),
+        story.detail.map((d, i) => {
+          const jour = new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
+          const bits = []
+          if (d.sleep != null) bits.push(String(d.sleep).replace('.', ',') + ' h')
+          if (d.kcal) bits.push(d.kcal + ' kcal')
+          if (d.feels != null) bits.push(Math.round(d.feels) + ' °C')
+          if (d.steps) bits.push(Math.round(d.steps / 100) / 10 + ' k pas')
+          return h('div', { key: d.date, style: { padding: '9px 14px', borderTop: i ? `1px solid ${C.line}` : 'none', display: 'flex', gap: 10, alignItems: 'flex-start' } },
+            h('div', { style: { width: 54, flex: '0 0 auto', fontSize: 12, fontWeight: 700, color: d.active ? C.ink : C.ink3, textTransform: 'capitalize' } }, jour),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              d.sessions.length
+                ? d.sessions.map((sx) => h('div', { key: sx.id, style: { fontSize: 12.5, color: C.ink, lineHeight: 1.45 } },
+                  sx.label, ' · ', sx.mins, ' min', sx.rpe ? ` · RPE ${sx.rpe}` : ''))
+                : h('div', { style: { fontSize: 12.5, color: C.ink3 } }, d.missed ? `${d.missed} prévue${d.missed > 1 ? 's' : ''}, non faite${d.missed > 1 ? 's' : ''}` : 'Repos'),
+              bits.length ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2 } }, bits.join(' · ')) : null))
+        })) : null,
+
+      // Chaque dimension comparée à l'habitude : la charge seule ne dit pas
+      // qu'on a moins dormi et moins mangé pour le même travail.
+      story.dimensions && story.dimensions.some((d) => d.pct != null) ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '12px 14px', marginBottom: 14 } },
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } },
+          'Contre tes ', 4, ' dernières semaines'),
+        story.dimensions.filter((d) => d.pct != null).map((d, i) => {
+          const good = d.dir === 'up' ? d.pct > 0 : null
+          const col = d.level === 'ok' ? C.ink3 : good === null ? C.ink : good ? C.success : C.warn
+          return h('div', { key: d.key, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
+            h('span', { style: { flex: 1, fontSize: 12.5, fontWeight: 600 } }, d.label),
+            h('span', { style: { fontSize: 12.5, color: C.ink2 } }, String(d.value).replace('.', ','), d.unit ? ' ' + d.unit : ''),
+            h('span', { style: { width: 54, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: col } }, (d.pct > 0 ? '+' : '') + d.pct, ' %'))
+        })) : null,
+
       // Charge et écart à l'habitude, que le total de minutes ne dit pas.
       story.compare.meanBase ? h('div', { style: { display: 'flex', gap: 8, marginBottom: 14 } },
         [

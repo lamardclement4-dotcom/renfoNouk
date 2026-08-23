@@ -165,4 +165,21 @@ a(/Petit-d[ée]jeuner/.test(deepTxt) && /D[îi]ner/.test(deepTxt), 'prise par pr
 a(/Glucides et charge/.test(deepTxt), 'et la modulation des glucides selon la charge')
 a(!/undefined|NaN/.test(deepTxt), 'aucune valeur malformee a l ecran')
 
+
+// La retrospective detaillee doit s afficher, pas seulement se calculer.
+const prog = (await import('../../src/features/progress/ProgressSpace.jsx')).default
+const lundi = (() => { const d = new Date(); const j = (d.getDay() + 6) % 7; d.setDate(d.getDate() - j); return d })()
+const jourISO = (i) => { const d = new Date(lundi); d.setDate(d.getDate() + i); return d.toISOString().slice(0, 10) }
+const retroDb = { planningSessions: [], sleepLog: {}, dayRows: {}, weatherLog: {}, profilePhys: { poids: 75 } }
+for (let i = 0; i < 5; i++) {
+  retroDb.planningSessions.push({ id: 'r' + i, date: jourISO(i), sport: 'course', statut: 'realise', duree: i === 2 ? '2 h' : '1 h', data: { rpe: 6 } })
+  retroDb.sleepLog[jourISO(i)] = { hours: 6.5 }
+  retroDb.dayRows[jourISO(i)] = { food: [{ n: 'r', meal: 'midi', k: 2000, p: 100, g: 220, l: 60, fib: 20 }] }
+}
+__reset(); __setDb(retroDb)
+const rt = text(__render('progres-retro', prog, mkProps(retroDb)))
+a(/Jour par jour/.test(rt), 'la semaine est detaillee jour par jour')
+a(/[ÀA] retenir/.test(rt), 'et se termine par ce qu il faut retenir')
+a(!/undefined|NaN/.test(rt), 'aucune valeur malformee dans la retrospective')
+
 console.log('\nALL PASS')

@@ -21,7 +21,10 @@
 import { sessionLoad, sessionRpe, isHard, dureeToMins, mondayISO, dowOf } from './plannerIntel'
 import { sportAnalysis, practisedSports, fmtValue } from './genericIntel'
 import { sleepAnalysis } from '../health/sleepIntel'
-import { nutriAnalysis } from '../nutrition/nutriIntel'
+import { nutriAnalysis, dayEntries, dayTotals } from '../nutrition/nutriIntel'
+import { monotony } from './plannerIntel'
+import { effectiveTemp, loadMultiplier } from './weatherIntel'
+import { plausibleHours } from '../health/sleepIntel'
 import { weightSeries } from '../profil/weightIntel'
 
 const num = (v) => {
@@ -224,6 +227,221 @@ export function context(db, { weekOf, today } = {}) {
   }
 }
 
+// ─── Le détail, jour par jour ─────────────────────────────
+//
+// Une rétrospective qui ne donne que des totaux ne se relit pas : on veut
+// retrouver la semaine telle qu'elle s'est passée. Chaque jour rassemble
+// donc ce qui a été fait, ce qui a été dormi, ce qui a été mangé et dans
+// quelles conditions — les quatre choses qui s'expliquent l'une l'autre.
+
+const fr = (v) => String(v).replace('.', ',')
+
+export function dayDetail(db, week, sportMeta) {
+  const sleepLog = (db && db.sleepLog) || {}
+  const weather = (db && db.weatherLog) || {}
+  const vitals = (db && db.vitalsLog) || {}
+  return week.days.map((d) => {
+    const t = dayTotals(dayEntries(db, d.date))
+    const wx = weather[d.date] || null
+    const night = plausibleHours(sleepLog[d.date] && sleepLog[d.date].hours)
+    return {
+      ...d,
+      sessions: d.done.map((sx) => {
+        const meta = sportMeta ? sportMeta(sx.sport) : { label: sx.sport || 'Séance', color: null }
+        return {
+          id: sx.id, label: meta.label, color: meta.color,
+          mins: dureeToMins(sx.duree), rpe: sessionRpe(sx),
+          load: Math.round(sessionLoad(sx)), notes: sx.notes || null,
+        }
+      }),
+      sleep: night,
+      kcal: t.k || null, prot: t.p || null, alc: t.alc || null,
+      steps: (vitals[d.date] && num(vitals[d.date].steps)) || null,
+      feels: wx ? effectiveTemp(wx) : null,
+      weather: wx,
+    }
+  })
+}
+
+// ─── Chaque dimension, comparée à l'habitude ──────────────
+//
+// La charge était la seule chose comparée à la référence. Or une semaine
+// se juge aussi sur ce qui l'entoure : moins dormi, moins mangé, autant
+// couru — ce n'est pas la même semaine que la précédente, et le total de
+// charge ne le dit pas.
+
+function weekAggregate(db, monday) {
+  const sunday = shiftISO(monday, 6)
+  const w = weekDays(db, { weekOf: monday })
+  const load = w.days.reduce((a, d) => a + d.load, 0)
+  const mins = w.days.reduce((a, d) => a + d.mins, 0)
+  const sessions = w.days.reduce((a, d) => a + d.done.length, 0)
+  let nights = 0
+  let sleepSum = 0
+  let fed = 0
+  let kcalSum = 0
+  let protSum = 0
+  let alcSum = 0
+  for (let i = 0; i < 7; i++) {
+    const date = shiftISO(monday, i)
+    const h = plausibleHours((db && db.sleepLog && db.sleepLog[date] || {}).hours)
+    if (h != null) { nights++; sleepSum += h }
+    const t = dayTotals(dayEntries(db, date))
+    if (t.k > 0) { fed++; kcalSum += t.k; protSum += t.p; alcSum += t.alc }
+  }
+  return {
+    monday, sunday, load, mins, sessions,
+    sleep: nights ? Math.round(sleepSum / nights * 10) / 10 : null,
+    kcal: fed ? Math.round(kcalSum / fed) : null,
+    prot: fed ? Math.round(protSum / fed) : null,
+    alc: fed ? Math.round(alcSum * 10) / 10 : null,
+    nights, fed,
+  }
+}
+
+export const DIMENSIONS = [
+  { key: 'load', label: 'Charge', unit: '', dir: 'neutral' },
+  { key: 'mins', label: 'Minutes', unit: 'min', dir: 'neutral' },
+  { key: 'sessions', label: 'Séances', unit: '', dir: 'neutral' },
+  { key: 'sleep', label: 'Sommeil', unit: 'h', dir: 'up' },
+  { key: 'kcal', label: 'Apport', unit: 'kcal', dir: 'neutral' },
+  { key: 'prot', label: 'Protéines', unit: 'g', dir: 'up' },
+]
+
+export const MEANINGFUL_PCT = 10
+
+export function dimensions(db, { weekOf, today } = {}) {
+  const { monday } = weekBounds(weekOf || today)
+  const cur = weekAggregate(db, monday)
+  const past = []
+  for (let k = 1; k <= BASELINE_WEEKS; k++) past.push(weekAggregate(db, shiftISO(monday, -7 * k)))
+  return DIMENSIONS.map((dim) => {
+    const vals = past.map((w) => w[dim.key]).filter((v) => v != null && v > 0)
+    const base = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10 : null
+    const value = cur[dim.key]
+    const pct = base && value != null && base > 0 ? Math.round((value - base) / base * 100) : null
+    return {
+      ...dim, value, base, pct, weeks: vals.length,
+      level: pct == null || Math.abs(pct) < MEANINGFUL_PCT ? 'ok' : pct > 0 ? 'up' : 'down',
+    }
+  })
+}
+
+// ─── Régularité de la charge dans la semaine ──────────────
+//
+// Trois cents points de charge répartis sur cinq jours ne sollicitent pas
+// comme les mêmes trois cents concentrés sur deux. La monotonie de Foster
+// mesure cet aplatissement, et la contrainte le combine à la charge.
+
+export function weekShape(week) {
+  // `monotony` attend les journées, pas leurs charges : lui passer des
+  // nombres donnait `undefined.load`, donc une moyenne NaN, qui traversait
+  // tout le calcul sans lever et faisait annoncer « charge rigoureusement
+  // identique » sur une semaine comptant trois jours de repos.
+  const m = monotony(week.days)
+  const peak = week.days.reduce((mx, d) => (d.load > mx.load ? d : mx), week.days[0])
+  const rest = week.days.filter((d) => d.load === 0).length
+  const high = !!m && (m.level === 'warn' || m.level === 'alert')
+  return {
+    value: m ? m.value : null,
+    mean: m ? m.mean : null,
+    sd: m ? m.sd : null,
+    weekly: m ? m.weekly : null,
+    strain: m ? m.strain : null,
+    level: m ? m.level : null,
+    high,
+    restDays: rest,
+    peakDate: peak.load > 0 ? peak.date : null,
+    peakLoad: peak.load,
+    text: high
+      ? m.text
+      : rest === 0
+        ? 'Aucun jour de repos complet cette semaine.'
+        : null,
+  }
+}
+
+// ─── Les conditions traversées ────────────────────────────
+
+export function conditions(db, week) {
+  const weather = (db && db.weatherLog) || {}
+  const items = []
+  for (const d of week.days) {
+    const wx = weather[d.date]
+    if (!wx || !d.active) continue
+    const feels = effectiveTemp(wx)
+    if (feels == null) continue
+    items.push({ date: d.date, feels, mult: loadMultiplier(wx, {}), env: wx.environment || null })
+  }
+  if (!items.length) return null
+  const hottest = items.reduce((mx, x) => (x.feels > mx.feels ? x : mx), items[0])
+  const heavy = items.filter((x) => x.mult > 1.1)
+  return {
+    days: items.length, items, hottest,
+    text: heavy.length
+      ? `${heavy.length} séance${heavy.length > 1 ? 's' : ''} dans des conditions qui alourdissent l'effort, jusqu'à ${Math.round(hottest.feels)} °C ressentis : à effort ressenti égal, le travail fourni est supérieur.`
+      : null,
+  }
+}
+
+// ─── Le carburant de la semaine ───────────────────────────
+//
+// Comparer l'apport des jours d'entraînement à celui des jours creux, sur
+// la semaine seule. C'est ce qui distingue une semaine bien conduite d'une
+// semaine où l'on a couru à vide.
+
+export const WEEK_UNDERFUEL_PCT = -8
+
+export function fueling(db, week, weightKg) {
+  const on = []
+  const off = []
+  for (const d of week.days) {
+    const t = dayTotals(dayEntries(db, d.date))
+    if (t.k <= 0) continue
+    ;(d.active ? on : off).push(t)
+  }
+  if (!on.length) return null
+  const mean = (list, k) => (list.length ? Math.round(list.reduce((a, x) => a + x[k], 0) / list.length) : null)
+  const onK = mean(on, 'k')
+  const offK = mean(off, 'k')
+  const prot = mean(on.concat(off), 'p')
+  const w = num(weightKg)
+  const perKg = w && w > 0 && prot != null ? Math.round(prot / w * 100) / 100 : null
+  const pct = offK && offK > 0 ? Math.round((onK - offK) / offK * 100) : null
+  const under = pct != null && pct <= WEEK_UNDERFUEL_PCT
+  return {
+    trainingDays: on.length, restDays: off.length,
+    onKcal: onK, offKcal: offK, pct, prot, perKg, under,
+    text: under
+      ? `Tu as mangé ${Math.abs(onK - offK)} kcal de moins les jours de séance que les jours sans. Sur une semaine chargée, c'est ce qui explique une fatigue qu'on attribue d'ordinaire au sommeil.`
+      : perKg != null && perKg < 1.4
+        ? `${fr(perKg)} g/kg de protéines en moyenne : sous le repère utile pour qui s'entraîne.`
+        : null,
+  }
+}
+
+// ─── Ce qu'il faut retenir ────────────────────────────────
+//
+// Une rétrospective qui n'aboutit à rien se lit une fois. On termine donc
+// par la chose la plus conséquente de la semaine, et une seule.
+
+export function takeaway({ fuel, shape, ctx, cmp, fit, cond }) {
+  if (fuel && fuel.under) return { level: 'warn', text: fuel.text }
+  if (ctx && ctx.sleep && ctx.sleep.debt != null && ctx.sleep.debt >= 7) {
+    return { level: 'warn', text: `${fr(ctx.sleep.debt)} h de dette de sommeil sur la semaine : c'est le poste à traiter avant d'ajouter de la charge.` }
+  }
+  if (cmp && cmp.basePct != null && cmp.basePct >= 40) {
+    return { level: 'warn', text: `Charge en hausse de ${cmp.basePct} % sur tes semaines habituelles : la progression se paie plus tard si elle est trop rapide.` }
+  }
+  if (shape && shape.high) return { level: 'info', text: shape.text }
+  if (fit && fit.missed >= 3) {
+    return { level: 'info', text: `${fit.missed} séances prévues non faites : un planning qu'on ne tient pas cesse d'informer. Mieux vaut en prévoir moins et les faire.` }
+  }
+  if (cond && cond.text) return { level: 'info', text: cond.text }
+  if (fuel && fuel.text) return { level: 'info', text: fuel.text }
+  return { level: 'ok', text: 'Semaine cohérente : charge, sommeil et apports se tiennent.' }
+}
+
 // ─── Synthèse narrative ──────────────────────────────────────
 export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
   const ref = today || todayISO()
@@ -235,6 +453,11 @@ export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
   const ctx = context(db, { weekOf: weekOf || ref, today: ref })
   const hi = highlights(db, { weekOf: weekOf || ref, today: ref })
   const top = toughest(week, sportMeta)
+  const detail = dayDetail(db, week, sportMeta)
+  const dims = dimensions(db, { weekOf: weekOf || ref, today: ref })
+  const shape = weekShape(week)
+  const cond = conditions(db, week)
+  const fuel = fueling(db, week, (db && db.profilePhys && db.profilePhys.poids) || null)
 
   const story = []
   if (!fit.done && !fit.missed) {
@@ -266,12 +489,29 @@ export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
       story.push(`${fit.missed} séance${fit.missed > 1 ? 's' : ''} prévue${fit.missed > 1 ? 's' : ''} n'${fit.missed > 1 ? 'ont' : 'a'} pas eu lieu.`)
     }
     if (ctx.sleep && ctx.sleep.mean != null && ctx.sleep.mean < 7) {
-      story.push(`À replacer dans son contexte : ${ctx.sleep.mean} h de sommeil par nuit en moyenne sur la semaine.`)
+      story.push(`À replacer dans son contexte : ${fr(ctx.sleep.mean)} h de sommeil par nuit en moyenne sur la semaine.`)
     }
     if (ctx.weight && Math.abs(ctx.weight.delta) >= 0.5) {
-      story.push(`Poids : ${ctx.weight.delta > 0 ? '+' : '−'}${Math.abs(ctx.weight.delta)} kg sur la semaine.`)
+      story.push(`Poids : ${ctx.weight.delta > 0 ? '+' : '−'}${fr(Math.abs(ctx.weight.delta))} kg sur la semaine.`)
+    }
+    // La forme de la semaine, les conditions traversées et le carburant :
+    // trois choses qui expliquent la charge autant qu'elles la subissent.
+    if (shape && shape.text) story.push(shape.text)
+    if (cond && cond.text) story.push(cond.text)
+    if (fuel && fuel.text) story.push(fuel.text)
+    // Les dimensions qui ont franchement bougé, sommeil et apports compris.
+    const moved = dims.filter((d) => d.level !== 'ok' && d.key !== 'load' && d.key !== 'mins' && d.base != null)
+    if (moved.length) {
+      story.push(moved.map((d) => `${d.label.toLowerCase()} ${d.pct > 0 ? '+' : ''}${d.pct} %`).join(', ')
+        + ` par rapport à tes ${BASELINE_WEEKS} dernières semaines.`)
     }
   }
 
-  return { week, compare: cmp, sports, consistency: cons, planFit: fit, context: ctx, highlights: hi, toughest: top, story }
+  const keep = takeaway({ fuel, shape, ctx, cmp, fit, cond })
+
+  return {
+    week, compare: cmp, sports, consistency: cons, planFit: fit, context: ctx,
+    highlights: hi, toughest: top, story,
+    detail, dimensions: dims, shape, conditions: cond, fueling: fuel, takeaway: keep,
+  }
 }
