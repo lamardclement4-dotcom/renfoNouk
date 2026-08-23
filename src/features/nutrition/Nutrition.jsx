@@ -4,6 +4,7 @@ import { buildConseils } from './diagEngine'
 import { nutriAnalysis } from './nutriIntel'
 import { useNutritionStore } from './useNutritionStore'
 import { Icon, C, GRADIENTS } from '../health/kit'
+import { coherence, views, outOfRange, forDay, buildPlan, suggest, kcalFromMacros, targetForDate, ACTIVITY, GOALS, DAY_TYPES } from './macroTargets'
 
 // ============================================================
 // Jetons de style : ils pointent vers ceux du kit partagé plutôt que
@@ -378,43 +379,112 @@ function dateLabel(iso) {
 // ============================================================
 // Journal alimentaire
 // ============================================================
-function TargetSheet({ targets, body, onSave, onClose, onMacros }) {
+function TargetSheet({ targets, body, onSave, onClose }) {
   body = body || {}
-  const [kcal, setKcal] = useState((targets && targets.kcal) || 2000)
-  const [prot, setProt] = useState((targets && targets.prot) || 110)
-  const [gluc, setGluc] = useState((targets && targets.gluc) || 250)
-  const [lip, setLip] = useState((targets && targets.lip) || 65)
-  const [fib, setFib] = useState((targets && targets.fib) || 30)
-  const canAuto = body.poids && body.taille && body.age
-  const fromProfile = () => {
-    if (!canAuto) return
-    const bmr = Math.round(10 * body.poids + 6.25 * body.taille - 5 * body.age + ((body.sexe || 'h') === 'h' ? 5 : -161))
-    const tdee = Math.round(bmr * (body.act || 1.55))
-    const ADJ = { maintien: 1, endurance: 1.02, muscle: 1.1, perte: 0.85 }
-    const kc = Math.round(tdee * (ADJ[body.obj || 'maintien'] || 1))
-    const PROT = { maintien: 1.4, endurance: 1.5, muscle: 1.8, perte: 2.2 }
-    const pr = Math.round(body.poids * (PROT[body.obj || 'maintien'] || 1.4))
-    const lp = Math.round(kc * 0.25 / 9)
-    const gl = Math.max(20, Math.round((kc - pr * 4 - lp * 9) / 4))
-    setKcal(kc); setProt(pr); setGluc(gl); setLip(lp); setFib(Math.round(kc / 1000 * 14))
+  const weightKg = Number(body.poids) || 0
+  const [mode, setMode] = useState('g')
+  const [day, setDay] = useState('normal')
+  const [t, setT] = useState(() => ({
+    kcal: (targets && targets.kcal) || 2000,
+    prot: (targets && targets.prot) || 110,
+    gluc: (targets && targets.gluc) || 250,
+    lip: (targets && targets.lip) || 65,
+    fib: (targets && targets.fib) || 30,
+  }))
+  const [activity, setActivity] = useState((targets && targets.activity) || 'modere')
+  const [goal, setGoal] = useState((targets && targets.goal) || body.obj || 'maintien')
+
+  const set = (k) => (v) => setT((prev) => ({ ...prev, [k]: v }))
+  const coh = coherence(t)
+  const vw = views(t, weightKg)
+  const warn = outOfRange(t, weightKg)
+  const shown = forDay(t, day)
+  const canAuto = weightKg && body.taille && body.age
+
+  // Saisir dans une unité et vérifier dans une autre : c'est ce qui rend un
+  // objectif précis plutôt que plausible.
+  const setPerKg = (k) => (v) => {
+    if (!weightKg) return
+    setT((prev) => ({ ...prev, [k]: Math.round((Number(v) || 0) * weightKg) }))
   }
+  const setPct = (k) => (v) => {
+    const per = k === 'lip' ? 9 : 4
+    setT((prev) => ({ ...prev, [k]: Math.round((prev.kcal || 0) * (Number(v) || 0) / 100 / per) }))
+  }
+  const rebalance = () => setT((prev) => ({ ...prev, kcal: Math.round(kcalFromMacros(prev)) }))
+  const auto = () => {
+    const sug = suggest({ weightKg, heightCm: Number(body.taille), age: Number(body.age), sexe: body.sexe }, { activity, goal })
+    if (sug) setT({ kcal: sug.kcal, prot: sug.prot, gluc: sug.gluc, lip: sug.lip, fib: sug.fib })
+  }
+
+  const chip = (on) => ({
+    padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+    border: `1px solid ${on ? NUTRI : LINE}`, background: on ? NUTRI : 'transparent', color: on ? '#fff' : INK2,
+  })
+  const cohColor = !coh ? INK3 : coh.level === 'ok' ? C.success : coh.level === 'warn' ? C.warn : C.danger
+
   return React.createElement('div', { style: xst.sheetWrap, onClick: onClose },
-    React.createElement('div', { style: xst.sheet, onClick: (e) => e.stopPropagation() },
+    React.createElement('div', { style: { ...xst.sheet, maxHeight: '92vh', overflowY: 'auto' }, onClick: (e) => e.stopPropagation() },
       React.createElement('div', { style: { width: 38, height: 4, borderRadius: 999, background: LINE, margin: '0 auto 18px' } }),
-      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 19, textAlign: 'center', marginBottom: 4 } }, 'Mes objectifs du jour'),
-      React.createElement('p', { style: { fontSize: 12.5, color: INK3, textAlign: 'center', marginBottom: 16, lineHeight: 1.4 } }, 'Calcule-les depuis ton profil, ou ajuste-les à la main.'),
-      canAuto && React.createElement('button', { onClick: fromProfile, style: { ...xst.ghostBtn, width: '100%', marginBottom: 14, padding: 12, fontSize: 14, fontWeight: 700, color: NUTRI, borderColor: `color-mix(in srgb, ${NUTRI} 40%, ${LINE})` } },
-        'Calculer depuis mon profil (', body.poids, ' kg · ', { maintien: 'maintien', endurance: 'endurance', muscle: 'muscle', perte: 'perte de gras' }[body.obj || 'maintien'], ')'),
+      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 19, textAlign: 'center', marginBottom: 4 } }, 'Mes objectifs'),
+      React.createElement('p', { style: { fontSize: 12.5, color: INK3, textAlign: 'center', marginBottom: 14, lineHeight: 1.45 } },
+        'Saisis dans l’unité qui te parle : les trois se répondent.'),
+
+      canAuto ? React.createElement('div', { style: { marginBottom: 14 } },
+        React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 } },
+          ACTIVITY.map((x) => React.createElement('button', { key: x.id, onClick: () => setActivity(x.id), style: chip(x.id === activity) }, x.label))),
+        React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 } },
+          GOALS.map((x) => React.createElement('button', { key: x.id, onClick: () => setGoal(x.id), style: chip(x.id === goal) }, x.label))),
+        React.createElement('button', { onClick: auto, style: { ...xst.ghostBtn, width: '100%', padding: 11, fontSize: 13.5, fontWeight: 700 } },
+          'Calculer depuis mon profil (', weightKg, ' kg)')) : null,
+
+      React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 12 } },
+        [['g', 'Grammes'], ['perkg', 'g / kg'], ['pct', '% des kcal']].map((o) =>
+          React.createElement('button', { key: o[0], onClick: () => setMode(o[0]), disabled: o[0] === 'perkg' && !weightKg, style: { ...chip(o[0] === mode), flex: 1, opacity: o[0] === 'perkg' && !weightKg ? 0.4 : 1 } }, o[1]))),
+
       React.createElement('div', { style: { display: 'flex', gap: 8 } },
-        React.createElement(NumField, { label: 'Calories', unit: 'kcal', value: kcal, set: setKcal, min: 800, max: 6000 }),
-        React.createElement(NumField, { label: 'Protéines', unit: 'g', value: prot, set: setProt, min: 20, max: 400 })),
-      React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 10 } },
-        React.createElement(NumField, { label: 'Glucides', unit: 'g', value: gluc, set: setGluc, min: 20, max: 800 }),
-        React.createElement(NumField, { label: 'Lipides', unit: 'g', value: lip, set: setLip, min: 10, max: 300 })),
-      React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 10 } },
-        React.createElement(NumField, { label: 'Fibres', unit: 'g', value: fib, set: setFib, min: 0, max: 120 }),
-        React.createElement('div', { style: { flex: 1 } })),
-      React.createElement('button', { onClick: () => { onSave({ kcal, prot, gluc, lip, fib }); onClose() }, style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}`, marginTop: 18 } }, 'Enregistrer')))
+        React.createElement(NumField, { label: 'Calories', unit: 'kcal', value: t.kcal, set: set('kcal'), min: 800, max: 6000 }),
+        React.createElement(NumField, { label: 'Fibres', unit: 'g', value: t.fib, set: set('fib'), min: 0, max: 120 })),
+
+      mode === 'g' ? React.createElement('div', null,
+        React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 10 } },
+          React.createElement(NumField, { label: 'Protéines', unit: 'g', value: t.prot, set: set('prot'), min: 0, max: 400 }),
+          React.createElement(NumField, { label: 'Glucides', unit: 'g', value: t.gluc, set: set('gluc'), min: 0, max: 800 })),
+        React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 10 } },
+          React.createElement(NumField, { label: 'Lipides', unit: 'g', value: t.lip, set: set('lip'), min: 0, max: 300 }),
+          React.createElement('div', { style: { flex: 1 } }))) : null,
+
+      mode === 'perkg' ? React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 10 } },
+        React.createElement(NumField, { label: 'Protéines', unit: 'g/kg', value: vw.prot.perKg || 0, set: setPerKg('prot'), min: 0, max: 5 }),
+        React.createElement(NumField, { label: 'Lipides', unit: 'g/kg', value: vw.lip.perKg || 0, set: setPerKg('lip'), min: 0, max: 3 }),
+        React.createElement(NumField, { label: 'Glucides', unit: 'g/kg', value: vw.gluc.perKg || 0, set: setPerKg('gluc'), min: 0, max: 15 })) : null,
+
+      mode === 'pct' ? React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 10 } },
+        React.createElement(NumField, { label: 'Protéines', unit: '%', value: vw.prot.pct || 0, set: setPct('prot'), min: 0, max: 60 }),
+        React.createElement(NumField, { label: 'Glucides', unit: '%', value: vw.gluc.pct || 0, set: setPct('gluc'), min: 0, max: 80 }),
+        React.createElement(NumField, { label: 'Lipides', unit: '%', value: vw.lip.pct || 0, set: setPct('lip'), min: 0, max: 70 })) : null,
+
+      coh ? React.createElement('div', { style: { marginTop: 14, padding: '11px 13px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${cohColor} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${cohColor} 28%, ${LINE})` } },
+        React.createElement('div', { style: { fontSize: 12.5, color: INK2, lineHeight: 1.45 } }, coh.text),
+        coh.level !== 'ok' ? React.createElement('button', { onClick: rebalance, style: { marginTop: 8, padding: '7px 12px', borderRadius: 999, border: 'none', background: cohColor, color: '#fff', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } },
+          'Aligner les calories sur ', coh.derived, ' kcal') : null) : null,
+
+      warn.length ? React.createElement('div', { style: { marginTop: 10, fontSize: 11.5, color: INK3, lineHeight: 1.5 } },
+        warn.map((w) => `${w.label} à ${String(w.perKg).replace('.', ',')} g/kg, ${w.side === 'low' ? 'sous' : 'au-dessus'} du repère usuel (${String(w.min).replace('.', ',')}–${String(w.max).replace('.', ',')}).`).join(' ')) : null,
+
+      React.createElement('div', { style: { marginTop: 16 } },
+        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, marginBottom: 7 } }, 'Selon le jour'),
+        React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } },
+          DAY_TYPES.map((d) => React.createElement('button', { key: d.id, onClick: () => setDay(d.id), style: { ...chip(d.id === day), flex: 1 } }, d.label))),
+        React.createElement('div', { style: { fontSize: 12.5, color: INK2, lineHeight: 1.5 } },
+          shown.kcal, ' kcal · ', shown.prot, ' g de protéines · ', shown.gluc, ' g de glucides · ', shown.lip, ' g de lipides'),
+        React.createElement('div', { style: { fontSize: 11.5, color: INK3, marginTop: 5, lineHeight: 1.45 } },
+          'Seuls les glucides suivent la charge : les protéines et les lipides ne bougent pas d’un jour à l’autre.')),
+
+      React.createElement('button', {
+        onClick: () => { onSave({ ...t, activity, goal, days: buildPlan(t, weightKg).days }); onClose() },
+        style: { ...xst.primaryBtn, background: NUTRI, marginTop: 18 },
+      }, 'Enregistrer mes objectifs')))
 }
 
 function FoodTab({ db, store }) {
@@ -432,7 +502,10 @@ function FoodTab({ db, store }) {
   const [tgtSheet, setTgtSheet] = useState(false)
   useEffect(() => { if (store.ensureDay) store.ensureDay(date) }, [date])
   const log = (db.foodLog && db.foodLog[date]) || []
-  const targets = db.foodTargets || null
+  // L'objectif suit la journée : une grosse séance déplace l'apport
+  // glucidique, un jour sans séance le réduit. Sans variantes enregistrées,
+  // l'objectif général sert tel quel.
+  const targets = targetForDate(db, date) || db.foodTargets || null
   const favs = db.foodFav || []
   const tot = log.reduce((a, e) => ({ k: a.k + e.k, p: a.p + e.p, g: a.g + e.g, l: a.l + e.l, fib: a.fib + (e.fib || 0) }), { k: 0, p: 0, g: 0, l: 0, fib: 0 })
   const MEALS = [{ id: 'matin', label: 'Petit-déjeuner' }, { id: 'midi', label: 'Déjeuner' }, { id: 'soir', label: 'Dîner' }, { id: 'collation', label: 'Collation' }]
