@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { Icon, C, GRADIENTS } from '../health/kit'
+import { DRINK_CATEGORIES, scaleDrink, searchDrinks } from '../nutrition/drinksData'
 import { hydroAnalysis, CAF_HALF_LIFE_H } from './hydroIntel'
 
 // ============================================================
@@ -43,95 +44,11 @@ function isoShift(iso, n) {
 }
 function hhMM(ts) { return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }
 
-const DRINKS = [
-  { cat: 'Eau', ic: 'drop', items: [
-    { n: 'Eau plate', ml: 250, mg: 0, sugar: 0 },
-    { n: 'Eau gazeuse', ml: 250, mg: 0, sugar: 0 },
-    { n: 'Eau minérale', ml: 500, mg: 0, sugar: 0 },
-    { n: 'Eau aromatisée', ml: 330, mg: 0, sugar: 4 },
-    { n: 'Eau de coco', ml: 330, mg: 0, sugar: 9 },
-    { n: 'Eau tonique', ml: 250, mg: 0, sugar: 21 },
-  ] },
-  { cat: 'Café', ic: 'cup', items: [
-    { n: 'Expresso', ml: 30, mg: 75, sugar: 0 },
-    { n: 'Double expresso', ml: 60, mg: 150, sugar: 0 },
-    { n: 'Ristretto', ml: 20, mg: 65, sugar: 0 },
-    { n: 'Café filtre', ml: 200, mg: 95, sugar: 0 },
-    { n: 'Café allongé', ml: 200, mg: 65, sugar: 0 },
-    { n: 'Café décaféiné', ml: 200, mg: 3, sugar: 0 },
-    { n: 'Cappuccino', ml: 180, mg: 75, sugar: 8 },
-    { n: 'Latte', ml: 250, mg: 75, sugar: 12 },
-    { n: 'Café soluble', ml: 200, mg: 60, sugar: 0 },
-  ] },
-  { cat: 'Thé', ic: 'leaf', items: [
-    { n: 'Thé vert', ml: 200, mg: 25, sugar: 0 },
-    { n: 'Thé noir', ml: 200, mg: 45, sugar: 0 },
-    { n: 'Thé blanc', ml: 200, mg: 15, sugar: 0 },
-    { n: 'Thé matcha', ml: 200, mg: 60, sugar: 0 },
-    { n: 'Chai latte', ml: 250, mg: 40, sugar: 18 },
-    { n: 'Yerba maté', ml: 200, mg: 65, sugar: 0 },
-    { n: 'Infusion (sans caféine)', ml: 200, mg: 0, sugar: 0 },
-    { n: 'Thé glacé', ml: 330, mg: 25, sugar: 23 },
-  ] },
-  { cat: 'Énergétiques', ic: 'spark', items: [
-    { n: 'Red Bull (250 ml)', ml: 250, mg: 80, sugar: 27 },
-    { n: 'Monster (500 ml)', ml: 500, mg: 160, sugar: 54 },
-    { n: 'Celsius (355 ml)', ml: 355, mg: 200, sugar: 0 },
-    { n: 'Burn (250 ml)', ml: 250, mg: 80, sugar: 28 },
-    { n: 'Rockstar (500 ml)', ml: 500, mg: 160, sugar: 58 },
-    { n: 'Prime Energy (355 ml)', ml: 355, mg: 200, sugar: 0 },
-  ] },
-  { cat: 'Sodas', ic: 'glass', items: [
-    { n: 'Coca-Cola (330 ml)', ml: 330, mg: 32, sugar: 35 },
-    { n: 'Coca Zero (330 ml)', ml: 330, mg: 32, sugar: 0 },
-    { n: 'Pepsi (330 ml)', ml: 330, mg: 30, sugar: 35 },
-    { n: 'Ice Tea (330 ml)', ml: 330, mg: 15, sugar: 23 },
-    { n: 'Sprite (330 ml)', ml: 330, mg: 0, sugar: 33 },
-    { n: 'Fanta Orange (330 ml)', ml: 330, mg: 0, sugar: 36 },
-    { n: '7up (330 ml)', ml: 330, mg: 0, sugar: 31 },
-    { n: 'Schweppes agrumes (330 ml)', ml: 330, mg: 0, sugar: 30 },
-    { n: 'Orangina (330 ml)', ml: 330, mg: 0, sugar: 34 },
-    { n: 'Perrier aromatisé (330 ml)', ml: 330, mg: 0, sugar: 3 },
-  ] },
-  { cat: 'Boissons sport', ic: 'bolt', items: [
-    { n: 'Isostar (500 ml)', ml: 500, mg: 0, sugar: 26 },
-    { n: 'Powerade (500 ml)', ml: 500, mg: 0, sugar: 30 },
-    { n: 'Gatorade (500 ml)', ml: 500, mg: 0, sugar: 30 },
-    { n: 'Boisson électrolytes', ml: 500, mg: 0, sugar: 8 },
-    { n: 'BCAA / acides aminés', ml: 500, mg: 0, sugar: 2 },
-  ] },
-  { cat: 'Jus', ic: 'apple', items: [
-    { n: "Jus d'orange (250 ml)", ml: 250, mg: 0, sugar: 22 },
-    { n: 'Jus de pomme (250 ml)', ml: 250, mg: 0, sugar: 25 },
-    { n: 'Jus multifruits (250 ml)', ml: 250, mg: 0, sugar: 24 },
-    { n: 'Jus de raisin (250 ml)', ml: 250, mg: 0, sugar: 30 },
-    { n: 'Jus de pamplemousse (250 ml)', ml: 250, mg: 0, sugar: 20 },
-    { n: 'Jus de tomate (250 ml)', ml: 250, mg: 0, sugar: 8 },
-    { n: 'Jus de citron pressé', ml: 200, mg: 0, sugar: 2 },
-    { n: 'Smoothie fruits (250 ml)', ml: 250, mg: 0, sugar: 28 },
-  ] },
-  { cat: 'Alcool', ic: 'wine', items: [
-    { n: 'Bière blonde (25 cl)', ml: 250, mg: 0, sugar: 0 },
-    { n: 'Bière blonde (50 cl)', ml: 500, mg: 0, sugar: 0 },
-    { n: 'Bière sans alcool (33 cl)', ml: 330, mg: 0, sugar: 5 },
-    { n: 'Cidre brut (25 cl)', ml: 250, mg: 0, sugar: 8 },
-    { n: 'Cidre doux (25 cl)', ml: 250, mg: 0, sugar: 20 },
-    { n: 'Vin rouge (12 cl)', ml: 120, mg: 0, sugar: 0.5 },
-    { n: 'Vin blanc (12 cl)', ml: 120, mg: 0, sugar: 1 },
-    { n: 'Vin rosé (12 cl)', ml: 120, mg: 0, sugar: 1 },
-    { n: 'Champagne (10 cl)', ml: 100, mg: 0, sugar: 1.5 },
-    { n: 'Whisky (4 cl)', ml: 40, mg: 0, sugar: 0 },
-    { n: 'Vodka (4 cl)', ml: 40, mg: 0, sugar: 0 },
-    { n: 'Rhum (4 cl)', ml: 40, mg: 0, sugar: 0 },
-    { n: 'Gin (4 cl)', ml: 40, mg: 0, sugar: 0 },
-    { n: 'Mojito (20 cl)', ml: 200, mg: 0, sugar: 18 },
-    { n: 'Spritz Aperol (15 cl)', ml: 150, mg: 0, sugar: 10 },
-    { n: 'Piña colada (20 cl)', ml: 200, mg: 0, sugar: 25 },
-  ] },
-  { cat: 'Personnalisé', ic: 'layers', items: [
-    { n: 'Boisson personnalisée', custom: true, ml: 250, mg: 0, sugar: 0 },
-  ] },
-]
+// Le catalogue vit dans `drinksData` : deux cent trente boissons avec leurs
+// macros, partagées avec l'écran Nutrition. Celui qui vivait ici ne portait
+// que le volume, la caféine et le sucre.
+const DRINKS = DRINK_CATEGORIES
+
 
 const QUICK = [
   { n: 'Verre', ml: 200, ic: 'glass' },
@@ -219,9 +136,17 @@ function TodayTab({ db, store }) {
   const entries = (hlog(db)[today] || []).slice().reverse()
   const totals = entries.reduce((a, e) => { a.ml += entryWaterMl(e); a.mg += entryCaf(e); a.sugar += e.sugar || 0; return a }, { ml: 0, mg: 0, sugar: 0 })
 
-  function addEntry(name, cat, ml, mg, sugar) {
+  // L'entrée porte désormais ses macros : une bière ou un latte comptent
+  // dans les calories du jour, ce qui n'était pas le cas — le journal
+  // d'hydratation ne retenait que le volume, la caféine et le sucre.
+  function addEntry(name, cat, ml, mg, sugar, macros) {
     if ((ml || 0) <= 0 && (mg || 0) <= 0 && (sugar || 0) <= 0) return
-    const entry = { id: 'd' + Date.now(), ts: Date.now(), n: name, cat, factor: 1, ml: Math.round(ml || 0), caf: Math.round(mg || 0), sugar: Math.round(sugar || 0) }
+    const m = macros || {}
+    const entry = { id: 'd' + Date.now(), ts: Date.now(), n: name, cat,
+      factor: m.hyd != null ? m.hyd : 1,
+      kcal: Math.round(m.kcal || 0), prot: m.prot || 0, carb: m.carb || 0, fat: m.fat || 0,
+      alc: m.alc || 0, abv: m.abv || 0,
+      ml: Math.round(ml || 0), caf: Math.round(mg || 0), sugar: Math.round(sugar || 0) }
     store.set((st) => {
       const h = { ...(st.hydroLog || {}) }
       h[today] = [...(h[today] || []), entry]
@@ -230,8 +155,8 @@ function TodayTab({ db, store }) {
     setSelSrc(null); setQty(1)
   }
   function addDrink(src) {
-    const q = qty || 1
-    addEntry(src.n, DRINKS[selCat].cat, src.ml * q, src.mg * q, src.sugar * q)
+    const d = scaleDrink(src, qty || 1)
+    addEntry(d.n, DRINKS[selCat].id, d.ml, d.caf, d.sugar, d)
   }
   function removeEntry(id) {
     store.set((st) => {
@@ -253,7 +178,7 @@ function TodayTab({ db, store }) {
 
     React.createElement('div', { style: ST.secLab }, 'Ajout rapide — eau'),
     React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 6 } },
-      QUICK.map((q, i) => React.createElement('button', { key: i, onClick: () => addEntry(q.n, 'Eau', q.ml, 0, 0),
+      QUICK.map((q, i) => React.createElement('button', { key: i, onClick: () => addEntry(q.n, 'eaux', q.ml, 0, 0),
         style: { flex: 1, padding: '11px 4px', borderRadius: 12, border: `1.5px solid color-mix(in srgb, ${COL_EAU} 30%, ${LINE})`, background: `color-mix(in srgb, ${COL_EAU} 6%, ${SURFACE})`, fontWeight: 700, fontSize: 12, color: COL_EAU, textAlign: 'center', cursor: 'pointer' } },
         React.createElement(Icon, { name: q.ic, size: 18, color: COL_EAU }),
         React.createElement('div', { style: { fontSize: 11, color: INK3, marginTop: 3 } }, q.ml + ' ml')))),
@@ -262,10 +187,10 @@ function TodayTab({ db, store }) {
     React.createElement('div', { style: ST.card },
       React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 } },
         DRINKS.map((c, ci) => React.createElement('button', { key: ci, onClick: () => { setSelCat(ci); setSelSrc(null) }, style: chipBtn(ci === selCat, COL_EAU) },
-          React.createElement(Icon, { name: c.ic, size: 13, color: ci === selCat ? COL_EAU : INK3, style: { marginRight: 5, verticalAlign: '-2px' } }), c.cat))),
+          React.createElement(Icon, { name: c.icon, size: 13, color: ci === selCat ? COL_EAU : INK3, style: { marginRight: 5, verticalAlign: '-2px' } }), c.label))),
 
       selSrc && selSrc.custom
-        ? React.createElement(CustomDrinkForm, { onSave: (nm, ml, mg, sug) => addEntry(nm, 'Personnalisé', ml, mg, sug), onCancel: () => setSelSrc(null) })
+        ? React.createElement(CustomDrinkForm, { onSave: (nm, ml, mg, sug) => addEntry(nm, 'perso', ml, mg, sug), onCancel: () => setSelSrc(null) })
         : selSrc
         ? React.createElement('div', null,
             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } },
@@ -277,24 +202,33 @@ function TodayTab({ db, store }) {
                 React.createElement('input', { type: 'number', defaultValue: qty, min: 0.5, max: 20, step: 0.5, onChange: (e) => setQty(parseFloat(e.target.value) || 1), style: ST.fieldInput })),
               React.createElement('div', { style: { flex: 1.4, fontSize: 12, color: INK2, lineHeight: 1.5, paddingBottom: 4 } },
                 React.createElement('div', null, React.createElement('strong', { style: { color: COL_EAU } }, Math.round(selSrc.ml * (qty || 1)) + ' ml')),
-                selSrc.mg > 0 && React.createElement('div', null, React.createElement('strong', { style: { color: COL_CAF } }, Math.round(selSrc.mg * (qty || 1)) + ' mg caféine')),
+                selSrc.caf > 0 && React.createElement('div', null, React.createElement('strong', { style: { color: COL_CAF } }, Math.round(selSrc.caf * (qty || 1)) + ' mg caféine')),
+                selSrc.kcal > 0 && React.createElement('div', null, React.createElement('strong', { style: { color: C.calorie } }, Math.round(selSrc.kcal * (qty || 1)) + ' kcal'),
+                  (selSrc.prot || selSrc.carb || selSrc.fat)
+                    ? React.createElement('span', { style: { color: INK3 } }, ' · ',
+                      [selSrc.prot ? Math.round(selSrc.prot * (qty || 1) * 10) / 10 + ' g P' : null,
+                        selSrc.carb ? Math.round(selSrc.carb * (qty || 1) * 10) / 10 + ' g G' : null,
+                        selSrc.fat ? Math.round(selSrc.fat * (qty || 1) * 10) / 10 + ' g L' : null].filter(Boolean).join(' · '))
+                    : null),
+                selSrc.alc > 0 && React.createElement('div', null, React.createElement('strong', { style: { color: C.danger } }, String(Math.round(selSrc.alc * (qty || 1) * 10) / 10).replace('.', ',') + ' g d’alcool'),
+                  React.createElement('span', { style: { color: INK3 } }, ' · ', selSrc.abv, '°')),
                 selSrc.sugar > 0 && React.createElement('div', null, React.createElement('strong', { style: { color: COL_SUC } }, Math.round(selSrc.sugar * (qty || 1)) + ' g sucre')))),
             React.createElement('button', { onClick: () => addDrink(selSrc), style: ST.primaryBtn(COL_EAU) }, 'Enregistrer'))
         : React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
             cat.items.map((src, si) => React.createElement('button', { key: si, onClick: () => { setSelSrc(src); setQty(1) }, style: chipBtn(false, COL_EAU) },
               src.n,
-              !src.custom && React.createElement('span', { style: { color: INK3, fontSize: 11, marginLeft: 5 } }, src.ml + ' ml' + (src.mg ? ' · ' + src.mg + 'mg' : '') + (src.sugar ? ' · ' + src.sugar + 'g' : '')))))),
+              !src.custom && React.createElement('span', { style: { color: INK3, fontSize: 11, marginLeft: 5 } },
+                src.ml + ' ml' + (src.kcal ? ' · ' + src.kcal + ' kcal' : '') + (src.caf ? ' · ' + src.caf + ' mg' : '') + (src.abv ? ' · ' + src.abv + '°' : '')))))),
 
     entries.length > 0
       ? React.createElement('div', null,
           React.createElement('div', { style: ST.secLab }, 'Journal du jour · ' + entries.length + ' prise' + (entries.length > 1 ? 's' : '')),
           entries.map((e) => {
-            const icon = e.cat === 'Café' || e.cat === 'Thé' ? 'cup'
-              : e.cat === 'Eau' ? 'drop'
-              : e.cat === 'Énergétiques' ? 'spark'
-              : e.cat === 'Sodas' ? 'glass'
-              : e.cat === 'Boissons sport' ? 'bolt'
-              : e.cat === 'Jus' ? 'apple' : 'layers'
+            // Les catégories sont désormais identifiées par un code stable
+            // plutôt que par leur libellé : renommer « Jus » en « Jus &
+            // smoothies » ne doit pas faire disparaître l'icône des entrées
+            // déjà enregistrées.
+            const icon = (DRINK_CATEGORIES.find((c) => c.id === e.cat) || {}).icon || 'layers'
             const parts = []
             if (e.ml) parts.push(e.ml + ' ml')
             if (entryCaf(e)) parts.push(entryCaf(e) + ' mg')

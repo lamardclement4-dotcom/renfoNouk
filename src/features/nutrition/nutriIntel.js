@@ -53,8 +53,40 @@ export function loggedThreshold(targetKcal) {
   return MIN_LOGGED_KCAL
 }
 
+// L'alcool est un macronutriment à part entière : sept kilocalories par
+// gramme, que le corps traite en priorité sur le reste. Il n'entrait nulle
+// part dans le compte, et les boissons non plus — une pinte pèse pourtant
+// deux cents kilocalories, autant qu'une part de gâteau.
+export const KCAL_PER_G_ALC = 7
+
+// Une boisson enregistrée dans le journal d'hydratation porte désormais ses
+// macros. Elle est lue comme un apport ordinaire, sans être ressaisie côté
+// alimentation : une seule écriture, donc aucun double compte possible.
+export function drinkAsEntry(d) {
+  if (!d) return null
+  const k = num(d.kcal) || 0
+  const alc = num(d.alc) || 0
+  // Une eau n'apporte rien : l'inscrire encombrerait le journal alimentaire
+  // d'entrées à zéro, et gonflerait le compte d'aliments notés — dont dépend
+  // le seuil qui distingue une journée complète d'une journée oubliée.
+  if (!k && !alc) return null
+  return {
+    n: d.n, k: k || 0, p: num(d.prot) || 0, g: num(d.carb) || 0,
+    l: num(d.fat) || 0, fib: 0, sugar: num(d.sugar) || 0, alc,
+    fromDrink: true,
+  }
+}
+
+export function dayEntries(db, iso) {
+  const food = (db && db.foodLog && db.foodLog[iso]) || []
+  const drinks = (db && db.hydroLog && db.hydroLog[iso]) || []
+  const out = Array.isArray(food) ? food.filter(Boolean) : []
+  if (!Array.isArray(drinks)) return out
+  return out.concat(drinks.map(drinkAsEntry).filter(Boolean))
+}
+
 export function dayTotals(entries) {
-  const out = { k: 0, p: 0, g: 0, l: 0, fib: 0, items: 0 }
+  const out = { k: 0, p: 0, g: 0, l: 0, fib: 0, sugar: 0, alc: 0, items: 0 }
   for (const e of entries || []) {
     if (!e) continue
     out.k += num(e.k) || 0
@@ -62,11 +94,15 @@ export function dayTotals(entries) {
     out.g += num(e.g) || 0
     out.l += num(e.l) || 0
     out.fib += num(e.fib) || 0
+    out.sugar += num(e.sugar) || 0
+    out.alc += num(e.alc) || 0
     out.items++
   }
+  const r1 = (v) => Math.round(v * 10) / 10
   return {
     k: Math.round(out.k), p: Math.round(out.p), g: Math.round(out.g),
-    l: Math.round(out.l), fib: Math.round(out.fib * 10) / 10, items: out.items,
+    l: Math.round(out.l), fib: r1(out.fib), sugar: r1(out.sugar), alc: r1(out.alc),
+    items: out.items,
   }
 }
 
@@ -75,13 +111,12 @@ export function dayTotals(entries) {
 // serait perdre l'information qu'il y a eu un oubli.
 export function daySeries(db, { days = 28, today, targetKcal } = {}) {
   const ref = today || todayISO()
-  const log = (db && db.foodLog) || {}
   const thr = loggedThreshold(targetKcal != null ? targetKcal : (db && db.foodTargets && db.foodTargets.kcal))
   const out = []
   for (let i = days - 1; i >= 0; i--) {
     const date = shiftISO(ref, -i)
-    const entries = log[date]
-    if (!Array.isArray(entries) || !entries.length) continue
+    const entries = dayEntries(db, date)
+    if (!entries.length) continue
     const t = dayTotals(entries)
     if (t.k <= 0) continue
     out.push({ date, ...t, complete: t.k >= thr })
@@ -100,6 +135,7 @@ export function averages(series) {
     days: full.length, partialDays: (series || []).length - full.length,
     kcal: Math.round(full.reduce((a, d) => a + d.k, 0) / full.length),
     prot: mean('p'), gluc: mean('g'), lip: mean('l'), fib: mean('fib'),
+    sugar: mean('sugar'), alc: mean('alc'),
   }
 }
 
@@ -153,10 +189,16 @@ export function macroSplit(avg) {
   const kp = avg.prot * KCAL_PER_G.p
   const kg = avg.gluc * KCAL_PER_G.g
   const kl = avg.lip * KCAL_PER_G.l
-  const total = kp + kg + kl
+  // L'alcool compte dans le total sans figurer parmi les trois macros
+  // classiques : il apporte des calories mais rien d'autre. L'ignorer
+  // gonflait mécaniquement la part des glucides et des lipides les jours
+  // où l'on a bu, et faisait passer l'écart calorique pour une saisie
+  // incomplète alors que la cause était là.
+  const ka = (avg.alc || 0) * KCAL_PER_G_ALC
+  const total = kp + kg + kl + ka
   if (total <= 0) return null
   const pct = (v) => Math.round(v / total * 1000) / 10
-  const out = { p: pct(kp), g: pct(kg), l: pct(kl), fromMacros: Math.round(total) }
+  const out = { p: pct(kp), g: pct(kg), l: pct(kl), a: pct(ka), alcKcal: Math.round(ka), fromMacros: Math.round(total) }
   out.items = ['p', 'g', 'l'].map((k) => {
     const [lo, hi] = MACRO_RANGES[k]
     const v = out[k]

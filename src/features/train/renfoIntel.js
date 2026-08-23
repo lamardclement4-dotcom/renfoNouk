@@ -33,7 +33,7 @@ import { enduranceAnalysis } from './enduranceIntel'
 import { sprintAnalysis, fmtSprintTime, windLabel } from './sprintIntel'
 import { genericAnalysis } from './genericIntel'
 import { diagAnalysis } from '../nutrition/diagIntel'
-import { nutriAnalysis } from '../nutrition/nutriIntel'
+import { nutriAnalysis, dayEntries } from '../nutrition/nutriIntel'
 import { weightSeries, weeklyRate } from '../profil/weightIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
@@ -92,10 +92,15 @@ export function hydroDay(db, iso) {
   return { ml: round(ml), caf: round(caf), entries: log.length }
 }
 
+// Les boissons portent désormais leurs macros : elles comptent dans la
+// journée comme n'importe quel apport, sans double saisie.
 export function nutritionDay(db, iso) {
-  const log = (db.foodLog || {})[iso] || []
-  const t = { k: 0, p: 0, g: 0, l: 0, entries: log.length }
-  for (const e of log) { t.k += num(e.k, 0); t.p += num(e.p, 0); t.g += num(e.g, 0); t.l += num(e.l, 0) }
+  const log = dayEntries(db, iso)
+  const t = { k: 0, p: 0, g: 0, l: 0, alc: 0, entries: log.length }
+  for (const e of log) {
+    t.k += num(e.k, 0); t.p += num(e.p, 0); t.g += num(e.g, 0); t.l += num(e.l, 0)
+    t.alc += num(e.alc, 0)
+  }
   return t
 }
 
