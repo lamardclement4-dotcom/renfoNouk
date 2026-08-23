@@ -34,6 +34,7 @@ import { sprintAnalysis, fmtSprintTime, windLabel } from './sprintIntel'
 import { genericAnalysis } from './genericIntel'
 import { diagAnalysis } from '../nutrition/diagIntel'
 import { nutriAnalysis, dayEntries } from '../nutrition/nutriIntel'
+import { macroDeepAnalysis } from '../nutrition/macroIntel'
 import { weightSeries, weeklyRate } from '../profil/weightIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
@@ -1183,6 +1184,14 @@ export function recommendations(db) {
   // concluait « varie les répétitions » alors que la cause est souvent
   // ailleurs. On lui passe le contexte des autres modules.
   const nutAna = nutriAnalysis(db, { days: 28, today: iso })
+
+  // Lectures approfondies des macros : répartition des protéines dans la
+  // journée, modulation des glucides selon la charge, sous-apport les jours
+  // de séance, dérive sur le mois. Elles ne demandent aucune saisie de plus.
+  const deep = macroDeepAnalysis(db, { days: 28, today: iso, weightKg: weightKg(db), series: nutAna.series })
+  for (const tip of deep.tips.slice(0, 2)) {
+    push(deep.fuel && tip === deep.fuel.text ? 'warn' : 'info', 'apple', tip, 'nutrition')
+  }
   const weightRate = (() => {
     const series = weightSeries(db.weightLog, 0)
     return series.length >= 2 ? weeklyRate(series, 28) : null

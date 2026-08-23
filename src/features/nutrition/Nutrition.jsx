@@ -5,6 +5,8 @@ import { nutriAnalysis } from './nutriIntel'
 import { useNutritionStore } from './useNutritionStore'
 import { Icon, C, GRADIENTS } from '../health/kit'
 import { coherence, views, outOfRange, forDay, buildPlan, suggest, kcalFromMacros, targetForDate, ACTIVITY, GOALS, DAY_TYPES } from './macroTargets'
+import { macroDeepAnalysis } from './macroIntel'
+import { daySeries } from './nutriIntel'
 
 // ============================================================
 // Jetons de style : ils pointent vers ceux du kit partagé plutôt que
@@ -220,6 +222,13 @@ export function MacrosTab({ body, setBody, db, store }) {
   // qu'on vient pour fixer le sien.
   const [sheet, setSheet] = useState(false)
   const saved = (db && db.foodTargets) || null
+  // Quatre lectures que la moyenne ne donne pas : quand les protéines sont
+  // prises, si les glucides suivent la charge, si l'apport monte les jours
+  // de séance, et comment chaque macro dérive sur le mois.
+  const deep = macroDeepAnalysis(db || {}, {
+    days: 28, weightKg: Number(body.poids) || null,
+    series: daySeries(db || {}, { days: 28 }),
+  })
   const [poids, _setPoids] = useState(body.poids || 70)
   const [obj, _setObj] = useState(body.obj || 'maintien')
   const [vol, _setVol] = useState(body.vol || 'modere')
@@ -259,6 +268,28 @@ export function MacrosTab({ body, setBody, db, store }) {
       onSave: (t) => store.set({ foodTargets: t }),
       onClose: () => setSheet(false),
     }) : null,
+
+    deep.pacing ? React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
+      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16, marginBottom: 3 } }, 'Répartition de tes protéines'),
+      React.createElement('div', { style: { fontSize: 12, color: INK3, marginBottom: 12, lineHeight: 1.45 } },
+        'Sur ', deep.pacing.days, ' journée', deep.pacing.days > 1 ? 's' : '', ' notée', deep.pacing.days > 1 ? 's' : '',
+        deep.pacing.threshold ? `. Le seuil qui déclenche la synthèse est d’environ ${String(deep.pacing.threshold).replace('.', ',')} g par prise.` : '.'),
+      deep.pacing.items.map((m, i2) => React.createElement('div', { key: m.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: i2 ? `1px solid ${LINE}` : 'none' } },
+        React.createElement('span', { style: { width: 108, fontSize: 13, fontWeight: 600, flex: '0 0 auto' } }, m.label),
+        React.createElement('div', { style: { flex: 1, height: 7, borderRadius: 999, background: SURFACE2, overflow: 'hidden' } },
+          React.createElement('div', { style: { height: '100%', width: Math.min(100, m.pct) + '%', borderRadius: 999, background: deep.pacing.threshold && m.mean >= deep.pacing.threshold ? C.success : NUTRI } })),
+        React.createElement('span', { style: { width: 76, textAlign: 'right', fontSize: 12.5, fontWeight: 700, flex: '0 0 auto' } },
+          String(m.mean).replace('.', ','), ' g'))),
+      deep.pacing.text ? React.createElement('div', { style: { fontSize: 12, color: INK2, marginTop: 10, lineHeight: 1.5 } }, deep.pacing.text) : null) : null,
+
+    deep.carbs && deep.carbs.available ? React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
+      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16, marginBottom: 8 } }, 'Glucides et charge'),
+      React.createElement('div', { style: { fontSize: 12.5, color: INK2, lineHeight: 1.55 } }, deep.carbs.text),
+      deep.fuel && deep.fuel.text ? React.createElement('div', { style: { fontSize: 12.5, color: INK2, marginTop: 10, lineHeight: 1.55, paddingTop: 10, borderTop: `1px solid ${LINE}` } }, deep.fuel.text) : null) : null,
+
+    deep.drifts.length ? React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
+      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16, marginBottom: 8 } }, 'Ce qui a bougé ce mois-ci'),
+      deep.drifts.map((d, i3) => React.createElement('div', { key: d.key, style: { fontSize: 12.5, color: INK2, lineHeight: 1.55, marginTop: i3 ? 8 : 0 } }, d.text))) : null,
 
     React.createElement(SpaceBanner, { ic: 'apple', tint: NUTRI, title: 'Protéines & glucides', text: "L'objectif pilote les protéines et le cadre énergétique ; les glucides se calent sur le volume du jour." }),
     React.createElement(SecLab, null, 'Poids'),

@@ -140,4 +140,29 @@ a(/2400\s+kcal/.test(st), 'les calories visees sont rappelees')
 a(/2\s+g\/kg de prot[ée]ines/.test(st), '150 g pour 75 kg, soit 2 g/kg')
 a(/195\s+g au repos/.test(st) && /351\s+g sur grosse s[ée]ance/.test(st), 'et la modulation des glucides selon le jour')
 
+
+// Les lectures approfondies doivent apparaitre dans l onglet Macros, pas
+// seulement exister dans un module.
+const jours = {}
+const sess = []
+for (let i = 1; i <= 20; i++) {
+  const gros = i % 3 === 0
+  const d = new Date(Date.UTC(2026, 7, 21)); d.setUTCDate(d.getUTCDate() - i)
+  const iso = d.toISOString().slice(0, 10)
+  jours[iso] = [
+    { n: 'a', meal: 'matin', k: 300, p: 8, g: 40, l: 8, fib: 3 },
+    { n: 'b', meal: 'midi', k: 700, p: 25, g: 90, l: 20, fib: 5 },
+    { n: 'c', meal: 'soir', k: gros ? 900 : 1100, p: 100, g: gros ? 90 : 140, l: 30, fib: 6 },
+  ]
+  if (gros) sess.push({ id: 's' + i, date: iso, sport: 'course', statut: 'realise', duree: '2 h', data: { rpe: 7 } })
+}
+const dbDeep = { dayRows: {}, planningSessions: sess, nutrition: { foodTargets: { kcal: 2200, prot: 140, gluc: 250, lip: 60, fib: 30 } } }
+for (const [d, items] of Object.entries(jours)) dbDeep.dayRows[d] = { food: items }
+__reset(); __setDb(dbDeep)
+const deepTxt = text(__render('macrostab-deep', MacrosTab, { ...mkProps(dbDeep), body: { poids: 75, taille: 180, age: 30 }, setBody: () => {} }))
+a(/R[ée]partition de tes prot[ée]ines/.test(deepTxt), 'la repartition des proteines est affichee')
+a(/Petit-d[ée]jeuner/.test(deepTxt) && /D[îi]ner/.test(deepTxt), 'prise par prise')
+a(/Glucides et charge/.test(deepTxt), 'et la modulation des glucides selon la charge')
+a(!/undefined|NaN/.test(deepTxt), 'aucune valeur malformee a l ecran')
+
 console.log('\nALL PASS')
