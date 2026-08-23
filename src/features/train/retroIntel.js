@@ -22,9 +22,10 @@ import { sessionLoad, sessionRpe, isHard, dureeToMins, mondayISO, dowOf } from '
 import { sportAnalysis, practisedSports, fmtValue } from './genericIntel'
 import { sleepAnalysis } from '../health/sleepIntel'
 import { nutriAnalysis, dayEntries, dayTotals } from '../nutrition/nutriIntel'
-import { monotony } from './plannerIntel'
+import { monotony, ACWR_SWEET_LOW, ACWR_SWEET_HIGH } from './plannerIntel'
 import { effectiveTemp, loadMultiplier } from './weatherIntel'
-import { plausibleHours } from '../health/sleepIntel'
+import { plausibleHours, neededHours, BASE_NEED } from '../health/sleepIntel'
+import { targetForDate } from '../nutrition/macroTargets'
 import { weightSeries } from '../profil/weightIntel'
 
 const num = (v) => {
@@ -442,6 +443,203 @@ export function takeaway({ fuel, shape, ctx, cmp, fit, cond }) {
   return { level: 'ok', text: 'Semaine cohérente : charge, sommeil et apports se tiennent.' }
 }
 
+// ─── La semaine qui vient ─────────────────────────────────
+//
+// Une rétrospective qui s'arrête au constat laisse le travail à faire. Ce
+// qui suit en tire des consignes chiffrées : combien de charge, combien de
+// séances, combien de grammes, combien d'heures. Chacune est bornée par ce
+// que la semaine écoulée a montré, et dit d'où elle sort — un conseil dont
+// on ne voit pas la provenance ne se suit pas.
+
+export const REST_DAYS_MIN = 1
+export const HARD_DAYS_MIN = 1
+export const SLEEP_CATCHUP_MAX = 1
+
+// La charge cible d'une semaine se déduit du rapport aiguë sur chronique :
+// rester dans la zone habituelle, sans y entrer par le bas ni la dépasser.
+// Deux garde-fous s'ajoutent : une semaine déjà très au-dessus se
+// rattrape par le bas, et un déficit de sommeil ou de carburant interdit
+// d'augmenter — la charge se supporte avec ce qu'on récupère, pas avec ce
+// qu'on décide.
+export function loadTarget({ meanBase, lastLoad, underfuelled, sleepDebt }) {
+  const base = num(meanBase)
+  if (!base || base <= 0) return null
+  const ratio = lastLoad > 0 ? lastLoad / base : null
+  let lo = Math.round(base * 0.95)
+  let hi = Math.round(base * ACWR_SWEET_HIGH)
+  let reason = `Ta charge habituelle est de ${base} points par semaine.`
+  if (ratio != null && ratio > ACWR_SWEET_HIGH) {
+    lo = Math.round(base * ACWR_SWEET_LOW)
+    hi = base
+    reason = `La semaine écoulée pesait ${Math.round(ratio * 100)} % de ton habitude : celle-ci se joue en dessous, le temps d'absorber.`
+  } else if (ratio != null && ratio < ACWR_SWEET_LOW) {
+    lo = Math.round(base * ACWR_SWEET_LOW)
+    hi = Math.round(base * 1.1)
+    reason = `La semaine écoulée était légère (${Math.round(ratio * 100)} % de ton habitude) : remonter progressivement plutôt que d'un coup.`
+  }
+  let capped = false
+  if (underfuelled || (sleepDebt != null && sleepDebt >= 7)) {
+    hi = Math.min(hi, base)
+    capped = true
+  }
+  return {
+    lo, hi, base, ratio: ratio != null ? Math.round(ratio * 100) / 100 : null, capped, reason,
+    text: `Vise ${lo} à ${hi} points de charge. ${reason}${capped ? ' Plafonné à ton habitude tant que le sommeil ou l’apport ne suivent pas : la charge se supporte avec ce qu’on récupère.' : ''}`,
+  }
+}
+
+// Ce que la charge cible représente en minutes, à l'intensité réellement
+// pratiquée la semaine écoulée. Sans cette conversion, un nombre de points
+// ne se planifie pas.
+export function minutesFor(loadTargetRange, week) {
+  if (!loadTargetRange) return null
+  const mins = week.days.reduce((a, d) => a + d.mins, 0)
+  const load = week.days.reduce((a, d) => a + d.load, 0)
+  if (!mins || !load) return null
+  const perMin = load / mins
+  if (perMin <= 0) return null
+  return {
+    lo: Math.round(loadTargetRange.lo / perMin / 5) * 5,
+    hi: Math.round(loadTargetRange.hi / perMin / 5) * 5,
+    intensity: Math.round(perMin * 100) / 100,
+  }
+}
+
+export function weekPrescription(db, ana, { today, weightKg } = {}) {
+  const out = []
+  const week = ana.week
+  const ctx = ana.context
+  const fuel = ana.fueling
+  const shape = ana.shape
+  const cmp = ana.compare
+  const debt = ctx && ctx.sleep ? ctx.sleep.debt : null
+
+  // ─── Charge ───
+  const lt = loadTarget({
+    meanBase: cmp.meanBase, lastLoad: cmp.load,
+    underfuelled: !!(fuel && fuel.under), sleepDebt: debt,
+  })
+  if (lt) {
+    const mn = minutesFor(lt, week)
+    out.push({
+      id: 'charge', label: 'Charge de la semaine',
+      value: `${lt.lo} – ${lt.hi}`, unit: 'points',
+      detail: mn ? `soit environ ${mn.lo} à ${mn.hi} min à l’intensité de la semaine écoulée` : null,
+      why: lt.text, level: lt.capped ? 'warn' : 'info',
+    })
+  }
+
+  // ─── Répartition dans la semaine ───
+  if (shape) {
+    const rest = shape.restDays
+    if (rest < REST_DAYS_MIN || shape.high) {
+      out.push({
+        id: 'repartition', label: 'Jours de repos',
+        value: String(Math.max(REST_DAYS_MIN, 2)), unit: 'jours complets',
+        detail: rest === 0 ? 'aucun la semaine écoulée' : `${rest} la semaine écoulée`,
+        why: shape.high
+          ? 'Sans journée franchement plus légère, la récupération ne se place nulle part : c’est l’alternance qui produit l’adaptation, pas le cumul.'
+          : 'Un jour sans charge n’est pas une semaine perdue : c’est là que le travail se transforme.',
+        level: 'warn',
+      })
+    }
+    const hardDays = week.days.filter((d) => d.hard).length
+    if (hardDays < HARD_DAYS_MIN && cmp.load > 0) {
+      out.push({
+        id: 'intensite', label: 'Séance franchement dure',
+        value: '1', unit: 'au moins',
+        detail: 'aucune la semaine écoulée',
+        why: 'Une semaine sans pic ne fait pas progresser : elle entretient. Un seul jour dur suffit à changer le signal.',
+        level: 'info',
+      })
+    }
+  }
+
+  // ─── Sommeil ───
+  if (debt != null && debt >= 3 && ctx.sleep.nights >= 3) {
+    const perNight = Math.min(SLEEP_CATCHUP_MAX, Math.round(debt / 7 * 10) / 10)
+    const need = neededHours(week.days.reduce((a, d) => a + d.mins, 0))
+    out.push({
+      id: 'sommeil', label: 'Sommeil',
+      value: `+${fr(perNight)}`, unit: 'h par nuit',
+      detail: `pour viser ${fr(need)} h, contre ${fr(ctx.sleep.mean)} h la semaine écoulée`,
+      why: `${fr(debt)} h de dette accumulée. Elle se résorbe par un coucher avancé, pas par une grasse matinée : le crédit d’une nuit longue est plafonné.`,
+      level: debt >= 7 ? 'warn' : 'info',
+    })
+  }
+
+  // ─── Carburant ───
+  if (fuel && fuel.under) {
+    const gap = Math.abs(fuel.onKcal - fuel.offKcal)
+    out.push({
+      id: 'apport', label: 'Les jours de séance',
+      value: `+${gap}`, unit: 'kcal',
+      detail: `${fuel.onKcal} kcal les jours actifs contre ${fuel.offKcal} les jours creux`,
+      why: 'L’apport doit monter avec la charge, pas descendre. C’est le même total sur la semaine, simplement déplacé vers les jours où il sert.',
+      level: 'warn',
+    })
+  }
+  // Glucides du jour chargé, en grammes, tirés de l'objectif enregistré.
+  const tgt = targetForDate(db, week.sunday)
+  if (tgt && tgt.days && tgt.days.gros && fuel) {
+    const cible = tgt.days.gros.gluc
+    const actuel = ana.detail
+      ? (() => {
+        const gros = ana.detail.filter((d) => d.active && d.sessions.some((sx) => sx.mins >= 90))
+        if (!gros.length) return null
+        const vals = gros.map((d) => d.kcal).filter(Boolean)
+        return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null
+      })()
+      : null
+    if (cible && actuel == null) {
+      out.push({
+        id: 'glucides', label: 'Glucides les jours chargés',
+        value: String(cible), unit: 'g',
+        detail: 'objectif enregistré pour une grosse séance',
+        why: 'Les glucides sont le seul macronutriment dont le besoin suit la charge : c’est celui qu’on déplace des jours creux vers les jours durs.',
+        level: 'info',
+      })
+    }
+  }
+
+  // ─── Protéines ───
+  if (fuel && fuel.perKg != null && weightKg) {
+    const cible = 1.6
+    if (fuel.perKg < cible) {
+      const manque = Math.round((cible - fuel.perKg) * weightKg)
+      out.push({
+        id: 'proteines', label: 'Protéines',
+        value: `+${manque}`, unit: 'g par jour',
+        detail: `${fr(fuel.perKg)} g/kg la semaine écoulée, pour ${fr(cible)} visé`,
+        why: `Répartis sur les prises plutôt qu’ajoutés au dîner : la synthèse répond à la dose par repas, pas au total.`,
+        level: 'info',
+      })
+    }
+  }
+
+  // ─── Ce qui a marché ───
+  if (ana.highlights && ana.highlights.length) {
+    const h = ana.highlights[0]
+    out.push({
+      id: 'refaire', label: 'À refaire',
+      value: h.sportLabel, unit: '',
+      detail: `${h.label.toLowerCase()} à ${h.display}`,
+      why: 'Un record tombé cette semaine dit quelles conditions te réussissent : les mêmes méritent d’être reproduites avant d’être changées.',
+      level: 'ok',
+    })
+  }
+  if (ana.planFit && ana.planFit.missed >= 3) {
+    out.push({
+      id: 'planning', label: 'Séances à prévoir',
+      value: String(Math.max(1, ana.planFit.done)), unit: 'plutôt que ' + (ana.planFit.done + ana.planFit.missed),
+      detail: `${ana.planFit.missed} prévues non faites la semaine écoulée`,
+      why: 'Un planning qu’on ne tient pas cesse d’informer. Mieux vaut en prévoir moins et les faire toutes.',
+      level: 'info',
+    })
+  }
+  return out
+}
+
 // ─── Synthèse narrative ──────────────────────────────────────
 export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
   const ref = today || todayISO()
@@ -509,9 +707,11 @@ export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
 
   const keep = takeaway({ fuel, shape, ctx, cmp, fit, cond })
 
-  return {
+  const result = {
     week, compare: cmp, sports, consistency: cons, planFit: fit, context: ctx,
     highlights: hi, toughest: top, story,
     detail, dimensions: dims, shape, conditions: cond, fueling: fuel, takeaway: keep,
   }
+  result.prescription = weekPrescription(db, result, { today: ref, weightKg: (db && db.profilePhys && db.profilePhys.poids) || null })
+  return result
 }

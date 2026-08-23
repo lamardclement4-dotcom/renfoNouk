@@ -553,6 +553,23 @@ export default function ProgressSpace({ userId, onClose }) {
           },
         }, line))) : null,
 
+      // Les consignes chiffrées de la semaine qui vient. Une rétrospective
+      // qui s'arrête au constat laisse le travail à faire.
+      story.prescription && story.prescription.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 14 } },
+        h('div', { style: { padding: '12px 14px 8px' } },
+          h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Pour la semaine qui vient'),
+          h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.45 } }, 'Chaque consigne est tirée de la semaine écoulée, et dit d’où elle sort.')),
+        story.prescription.map((p, i) => {
+          const col = p.level === 'warn' ? C.warn : p.level === 'ok' ? C.success : C.primary
+          return h('div', { key: p.id, style: { padding: '11px 14px', borderTop: `1px solid ${C.line}` } },
+            h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 } },
+              h('span', { style: { flex: 1, fontSize: 13, fontWeight: 700 } }, p.label),
+              h('span', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 800, color: col } }, p.value),
+              p.unit ? h('span', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, p.unit) : null),
+            p.detail ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 4 } }, p.detail) : null,
+            h('div', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.5 } }, p.why))
+        })) : null,
+
       // Ce qu'il faut retenir, en une phrase : une rétrospective qui
       // n'aboutit à rien se lit une fois.
       story.takeaway && story.takeaway.text ? (() => {

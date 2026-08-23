@@ -1,6 +1,7 @@
 // Retrospective detaillee.
 import { retroAnalysis, dayDetail, dimensions, weekShape, conditions, fueling,
-  takeaway, weekDays, weekBounds, DIMENSIONS, MEANINGFUL_PCT, WEEK_UNDERFUEL_PCT, BASELINE_WEEKS }
+  takeaway, weekDays, weekBounds, loadTarget, minutesFor, weekPrescription,
+  DIMENSIONS, MEANINGFUL_PCT, WEEK_UNDERFUEL_PCT, BASELINE_WEEKS, REST_DAYS_MIN, SLEEP_CATCHUP_MAX }
   from '../../src/features/train/retroIntel.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
 // Lundi 2026-08-10 au dimanche 2026-08-16.
@@ -107,4 +108,46 @@ a(ana.story.some((t) => /ressentis/.test(t)), 'les conditions aussi')
 a(ana.story.every((t) => !/undefined|NaN/.test(t)), 'aucune ligne malformee')
 a(!ana.story.join(' ').match(/\d+\.\d/), 'ecriture francaise dans tout le recit')
 a(retroAnalysis({}, { weekOf: MON, today: D(6) }).story.length > 0, 'base vide -> recit sans crash')
+
+// ─── conseils chiffres pour la semaine qui vient ───
+// Un conseil sans nombre ne se suit pas, et un nombre sans provenance ne se
+// croit pas : chaque consigne porte les deux.
+a(loadTarget({ meanBase: 0 }) === null, 'sans charge habituelle, aucune cible')
+const stable = loadTarget({ meanBase: 300, lastLoad: 300 })
+a(stable.lo <= 300 && stable.hi > 300, `semaine conforme : viser ${stable.lo} a ${stable.hi}`)
+a(!stable.capped, 'et rien ne plafonne')
+const grosse = loadTarget({ meanBase: 300, lastLoad: 450 })
+a(grosse.hi <= 300, `semaine a 150 % : la suivante se joue sous l habitude (${grosse.lo}-${grosse.hi})`)
+a(/le temps d'absorber/.test(grosse.reason), 'et la raison est dite')
+const legere = loadTarget({ meanBase: 300, lastLoad: 150 })
+a(legere.lo >= 240 && legere.hi <= 330, `semaine legere : remonter progressivement (${legere.lo}-${legere.hi})`)
+a(/plut[ôo]t que d'un coup/.test(legere.reason), 'sans repartir trop fort')
+// La recuperation commande : on n augmente pas sur une dette.
+const bride = loadTarget({ meanBase: 300, lastLoad: 300, sleepDebt: 9 })
+a(bride.capped && bride.hi === 300, 'dette de sommeil -> plafonne a l habitude')
+a(loadTarget({ meanBase: 300, lastLoad: 300, underfuelled: true }).capped, 'sous-apport -> plafonne aussi')
+a(/se supporte avec ce qu.on r[ée]cup[èe]re/.test(bride.text), 'et le principe est enonce')
+
+const mn = minutesFor({ lo: 230, hi: 290 }, week)
+a(mn && mn.lo > 0 && mn.hi > mn.lo, `converti en minutes : ${mn.lo} a ${mn.hi} min`)
+a(mn.lo % 5 === 0 && mn.hi % 5 === 0, 'arrondi a cinq minutes : un planning ne se fait pas a la minute')
+a(minutesFor({ lo: 200, hi: 300 }, weekDays({}, { weekOf: MON, today: D(6) })) === null, 'sans minutes de reference, pas de conversion')
+
+// avec un historique complet, la prescription se remplit
+const p = retroAnalysis(hist, { weekOf: MON, today: D(6), sportMeta: meta }).prescription
+a(p.length >= 3, `${p.length} consignes`)
+a(p.every((x) => x.value && x.why), 'chaque consigne porte un nombre et sa raison')
+a(p.every((x) => !/undefined|NaN/.test(`${x.value} ${x.detail || ''} ${x.why}`)), 'aucune consigne malformee')
+a(p.some((x) => x.id === 'charge'), 'la charge cible en fait partie')
+const psom = p.find((x) => x.id === 'sommeil')
+a(psom && /^\+/.test(psom.value), `sommeil : ${psom.value} ${psom.unit}`)
+a(parseFloat(psom.value.replace(',', '.').slice(1)) <= SLEEP_CATCHUP_MAX, `le rattrapage ne depasse pas ${SLEEP_CATCHUP_MAX} h par nuit`)
+a(/coucher avanc[ée], pas par une grasse matin[ée]e/.test(psom.why), 'et la facon de le faire est dite')
+const ap = p.find((x) => x.id === 'apport')
+a(ap && /^\+\d+$/.test(ap.value), `apport : ${ap.value} kcal les jours de seance`)
+a(/m[êe]me total sur la semaine, simplement d[ée]plac[ée]/.test(ap.why), 'sans demander de manger plus au total')
+
+// une base vide ne fabrique aucune consigne
+a(retroAnalysis({}, { weekOf: MON, today: D(6) }).prescription.length === 0, 'aucune donnee -> aucune consigne inventee')
+
 console.log('\nALL PASS')

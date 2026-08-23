@@ -181,5 +181,11 @@ const rt = text(__render('progres-retro', prog, mkProps(retroDb)))
 a(/Jour par jour/.test(rt), 'la semaine est detaillee jour par jour')
 a(/[ÀA] retenir/.test(rt), 'et se termine par ce qu il faut retenir')
 a(!/undefined|NaN/.test(rt), 'aucune valeur malformee dans la retrospective')
+// La retrospective existante reste entiere : les consignes s ajoutent, elles
+// ne remplacent rien.
+a(/s[ée]ances? sur/.test(rt) || /points de charge/.test(rt), 'le recit de la semaine est toujours la')
+a(/Jour par jour/.test(rt), 'le detail jour par jour aussi')
+a(/Pour la semaine qui vient/.test(rt), 'la retrospective debouche sur des consignes')
+a(/Chaque consigne est tir[ée]e de la semaine [ée]coul[ée]e/.test(rt), 'et dit d ou elle sort')
 
 console.log('\nALL PASS')
