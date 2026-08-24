@@ -22,10 +22,10 @@ import { sessionLoad, sessionRpe, isHard, dureeToMins, mondayISO, dowOf } from '
 import { sportAnalysis, practisedSports, fmtValue } from './genericIntel'
 import { sleepAnalysis } from '../health/sleepIntel'
 import { nutriAnalysis, dayEntries, dayTotals } from '../nutrition/nutriIntel'
-import { monotony, ACWR_SWEET_LOW, ACWR_SWEET_HIGH } from './plannerIntel'
+import { monotony, ACWR_SWEET_LOW, ACWR_SWEET_HIGH, NEUTRAL_RPE, HARD_RPE } from './plannerIntel'
 import { effectiveTemp, loadMultiplier } from './weatherIntel'
 import { plausibleHours, neededHours, BASE_NEED } from '../health/sleepIntel'
-import { targetForDate } from '../nutrition/macroTargets'
+import { targetForDate, forDay } from '../nutrition/macroTargets'
 import { weightSeries } from '../profil/weightIntel'
 
 const num = (v) => {
@@ -640,6 +640,190 @@ export function weekPrescription(db, ana, { today, weightKg } = {}) {
   return out
 }
 
+// ─── La semaine proposée, jour par jour ───────────────────
+//
+// Une fourchette de charge ne se planifie pas. Ce qui suit propose la
+// semaine elle-même : quel jour, quel sport, combien de minutes, à quelle
+// intensité, et ce qu'il faut manger et dormir chaque jour.
+//
+// Rien n'est inventé. Les sports, les durées, les intensités et les jours
+// viennent de ce qui a été fait ces dernières semaines : une proposition
+// qui ne ressemble pas à ce qu'on fait déjà ne sera pas suivie. Seule la
+// quantité totale change, pour atteindre la cible.
+
+export const HABITS_WEEKS = 8
+export const DOW_LABELS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+export const EASY_RPE = 4
+export const MIN_SESSION_MINS = 20
+export const MAX_SESSION_MINS = 240
+
+// Ce que la personne fait d'ordinaire : ses sports, leurs durées, ses
+// jours, son intensité.
+export function habits(db, { weekOf, today, weeks = HABITS_WEEKS } = {}) {
+  const { monday } = weekBounds(weekOf || today)
+  const from = shiftISO(monday, -7 * weeks)
+  const to = shiftISO(monday, -1)
+  const done = asList(db && db.planningSessions)
+    .filter((sx) => sx && sx.statut === 'realise' && sx.date && sx.date >= from && sx.date <= to)
+  if (!done.length) return null
+  const bySportMap = {}
+  const dow = [0, 0, 0, 0, 0, 0, 0]
+  let mins = 0
+  let rpeSum = 0
+  let rpeN = 0
+  for (const sx of done) {
+    const m = dureeToMins(sx.duree)
+    if (!m) continue
+    mins += m
+    const k = sx.sport || 'seance'
+    if (!bySportMap[k]) bySportMap[k] = { sport: k, sessions: 0, mins: 0, longest: 0 }
+    bySportMap[k].sessions++
+    bySportMap[k].mins += m
+    bySportMap[k].longest = Math.max(bySportMap[k].longest, m)
+    dow[dowOf(sx.date)]++
+    const r = sessionRpe(sx)
+    if (r) { rpeSum += r; rpeN++ }
+  }
+  const sports = Object.values(bySportMap)
+    .map((x) => ({ ...x, meanMins: Math.round(x.mins / x.sessions), share: mins ? x.mins / mins : 0 }))
+    .sort((a, b) => b.mins - a.mins)
+  if (!sports.length) return null
+  const activeWeeks = Math.max(1, weeks)
+  return {
+    weeks: activeWeeks,
+    sessionsPerWeek: Math.round(done.length / activeWeeks * 10) / 10,
+    minsPerWeek: Math.round(mins / activeWeeks),
+    meanRpe: rpeN ? Math.round(rpeSum / rpeN * 10) / 10 : null,
+    sports,
+    // Les jours où l'on s'entraîne le plus souvent, du plus fréquent au moins.
+    dowRank: dow.map((n, i) => ({ dow: i, n })).sort((a, b) => b.n - a.n || a.dow - b.dow),
+    dow,
+  }
+}
+
+// Répartit une charge cible sur des séances plausibles.
+//
+// On part des durées habituelles de chaque sport plutôt que d'un nombre
+// arbitraire : une proposition qui ne ressemble pas à ce qu'on fait déjà ne
+// sera pas suivie. Puis on ajuste par un facteur commun jusqu'à atteindre la
+// cible, en respectant un plafond par séance — personne ne double la durée
+// de sa plus longue sortie parce qu'un calcul le demande. Ce que le plafond
+// empêche est redistribué sur les séances qui peuvent encore s'allonger.
+// On s'autorise à dépasser de dix pour cent la plus longue séance déjà
+// faite dans ce sport, pas davantage : c'est ainsi qu'une durée progresse,
+// et personne ne double sa sortie la plus longue parce qu'un calcul le
+// demande.
+export const PROGRESSION_MAX = 1.1
+
+export function allocate(target, sportsForSlots) {
+  const n = sportsForSlots.length
+  if (!n || !(target > 0)) return []
+  const slots = sportsForSlots.map((sp, i) => {
+    const typical = Math.max(MIN_SESSION_MINS, Math.round(sp.meanMins || MIN_SESSION_MINS))
+    const cap = Math.min(MAX_SESSION_MINS, Math.max(typical, Math.round((sp.longest || typical) * PROGRESSION_MAX)))
+    return { sport: sp.sport, rpe: i === 0 ? HARD_RPE : EASY_RPE, mins: typical, cap, typical }
+  })
+  const loadOf = (list) => list.reduce((a, x) => a + x.mins * (x.rpe / NEUTRAL_RPE), 0)
+  for (let pass = 0; pass < 6; pass++) {
+    const cur = loadOf(slots)
+    if (cur <= 0) break
+    const gap = target - cur
+    if (Math.abs(gap) < 1) break
+    const open = slots.filter((x) => (gap > 0 ? x.mins < x.cap : x.mins > MIN_SESSION_MINS))
+    if (!open.length) break
+    const weight = open.reduce((a, x) => a + x.rpe / NEUTRAL_RPE, 0)
+    if (weight <= 0) break
+    const addMins = gap / weight
+    for (const x of open) {
+      x.mins = Math.max(MIN_SESSION_MINS, Math.min(x.cap, x.mins + addMins))
+    }
+  }
+  for (const x of slots) x.mins = Math.max(MIN_SESSION_MINS, Math.round(x.mins / 5) * 5)
+  return slots
+}
+
+export function proposeWeek(db, ana, { today, weekOf } = {}) {
+  const h = habits(db, { weekOf: weekOf || today, today })
+  const presc = (ana.prescription || []).find((x) => x.id === 'charge')
+  if (!h || !presc) return null
+  const lt = loadTarget({
+    meanBase: ana.compare.meanBase, lastLoad: ana.compare.load,
+    underfuelled: !!(ana.fueling && ana.fueling.under),
+    sleepDebt: ana.context && ana.context.sleep ? ana.context.sleep.debt : null,
+  })
+  if (!lt) return null
+  const target = Math.round((lt.lo + lt.hi) / 2)
+  const count = Math.max(1, Math.min(7, Math.round(h.sessionsPerWeek)))
+  // La séance dure prend le sport le plus pratiqué ; les suivantes suivent
+  // la répartition observée.
+  const sportsForSlots = []
+  for (let i = 0; i < count; i++) sportsForSlots.push(h.sports[i % h.sports.length])
+  const slots = allocate(target, sportsForSlots)
+
+  // Les jours : les plus fréquents d'abord, mais jamais deux durs collés.
+  const chosen = []
+  for (const d of h.dowRank) {
+    if (chosen.length >= count) break
+    if (d.n === 0 && chosen.length) continue
+    chosen.push(d.dow)
+  }
+  while (chosen.length < count) {
+    const free = [0, 1, 2, 3, 4, 5, 6].find((d) => !chosen.includes(d))
+    if (free === undefined) break
+    chosen.push(free)
+  }
+  chosen.sort((a, b) => a - b)
+
+  // La séance dure va sur le jour le plus fréquent, et les sports suivent
+  // la répartition observée.
+  const hardDow = h.dowRank[0] ? h.dowRank[0].dow : chosen[0]
+  const ordered = [hardDow, ...chosen.filter((d) => d !== hardDow)]
+
+  const nextMonday = shiftISO(weekBounds(weekOf || today).monday, 7)
+  const tgt = (db && db.foodTargets) || null
+  const days = []
+  for (let i = 0; i < 7; i++) {
+    const date = shiftISO(nextMonday, i)
+    const idx = ordered.indexOf(i)
+    const slot = idx >= 0 && idx < slots.length ? slots[idx] : null
+    const session = slot
+      ? { sport: slot.sport, mins: slot.mins, rpe: slot.rpe, hard: slot.rpe >= HARD_RPE }
+      : null
+    const load = session ? Math.round(session.mins * (session.rpe / NEUTRAL_RPE)) : 0
+    const dayType = !session ? 'repos' : session.mins >= 90 || session.hard ? 'gros' : 'normal'
+    const fuel = tgt ? forDay(tgt, dayType) : null
+    days.push({
+      date, dow: i, label: DOW_LABELS[i],
+      session, load, dayType,
+      kcal: fuel ? fuel.kcal : null,
+      gluc: fuel ? fuel.gluc : null,
+      prot: fuel ? fuel.prot : null,
+    })
+  }
+  const total = days.reduce((a, d) => a + d.load, 0)
+  const restDays = days.filter((d) => !d.session).length
+  // Quand les durées habituelles ne suffisent pas à atteindre la cible, on
+  // le dit plutôt que d'inventer une sortie deux fois plus longue que tout
+  // ce qui a été fait : c'est une séance de plus qu'il faut, pas une séance
+  // démesurée.
+  const short = total < lt.lo
+  const sleep = ana.context && ana.context.sleep && ana.context.sleep.mean != null
+    ? {
+      mean: ana.context.sleep.mean,
+      target: neededHours(days.reduce((a, d) => a + (d.session ? d.session.mins : 0), 0)),
+    }
+    : null
+  return {
+    monday: nextMonday, days, total, target, range: { lo: lt.lo, hi: lt.hi },
+    sessions: count, restDays, hardDow, sleep, short,
+    inRange: total >= lt.lo && total <= lt.hi,
+    shortText: short
+      ? `Cette semaine atteint ${total} points, sous la cible de ${lt.lo}. Tes durées habituelles ne permettent pas d'aller plus loin sans allonger démesurément une séance : c'est une séance de plus qu'il faudrait, pas une séance plus longue.`
+      : null,
+    basedOn: `${h.sports.length} sport${h.sports.length > 1 ? 's' : ''} pratiqué${h.sports.length > 1 ? 's' : ''} sur ${h.weeks} semaines, ${fr(h.sessionsPerWeek)} séance${h.sessionsPerWeek > 1 ? 's' : ''} par semaine en moyenne`,
+  }
+}
+
 // ─── Synthèse narrative ──────────────────────────────────────
 export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
   const ref = today || todayISO()
@@ -713,5 +897,6 @@ export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
     detail, dimensions: dims, shape, conditions: cond, fueling: fuel, takeaway: keep,
   }
   result.prescription = weekPrescription(db, result, { today: ref, weightKg: (db && db.profilePhys && db.profilePhys.poids) || null })
+  result.proposal = proposeWeek(db, result, { today: ref, weekOf: weekOf || ref })
   return result
 }

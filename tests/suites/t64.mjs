@@ -1,6 +1,7 @@
 // Retrospective detaillee.
 import { retroAnalysis, dayDetail, dimensions, weekShape, conditions, fueling,
   takeaway, weekDays, weekBounds, loadTarget, minutesFor, weekPrescription,
+  habits, allocate, proposeWeek, DOW_LABELS, EASY_RPE, MIN_SESSION_MINS, PROGRESSION_MAX,
   DIMENSIONS, MEANINGFUL_PCT, WEEK_UNDERFUEL_PCT, BASELINE_WEEKS, REST_DAYS_MIN, SLEEP_CATCHUP_MAX }
   from '../../src/features/train/retroIntel.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
@@ -149,5 +150,72 @@ a(/m[êe]me total sur la semaine, simplement d[ée]plac[ée]/.test(ap.why), 'san
 
 // une base vide ne fabrique aucune consigne
 a(retroAnalysis({}, { weekOf: MON, today: D(6) }).prescription.length === 0, 'aucune donnee -> aucune consigne inventee')
+
+
+// ─── la semaine proposee, jour par jour ───
+// Une fourchette de charge ne se planifie pas : il faut le jour, le sport, les
+// minutes et l intensite.
+const long = JSON.parse(JSON.stringify(db))
+long.foodTargets = { kcal: 2600, prot: 140, gluc: 300, lip: 80, fib: 30 }
+for (let k = 1; k <= 8; k++) {
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(Date.UTC(2026, 7, 10)); d.setUTCDate(d.getUTCDate() - 7 * k + i)
+    const iso = d.toISOString().slice(0, 10)
+    long.sleepLog[iso] = { hours: 7.5 }
+    long.foodLog[iso] = [{ n: 'r', meal: 'midi', k: 2400, p: 130, g: 260, l: 70, fib: 20 }]
+    if ([0, 2, 4].includes(i)) long.planningSessions.push({ id: 'h' + k + i, date: iso, sport: i === 2 ? 'velo' : 'course', statut: 'realise', duree: '1 h', data: { rpe: 6 } })
+    if (i === 5) long.planningSessions.push({ id: 'm' + k + i, date: iso, sport: 'muscu', statut: 'realise', duree: '45 min', data: { rpe: 7 } })
+  }
+}
+
+// ─── habitudes ───
+const hb = habits(long, { weekOf: MON, today: D(6) })
+a(hb.sports.length === 3, `${hb.sports.length} sports pratiques`)
+a(hb.sports[0].sport === 'course', 'le plus pratique en tete')
+a(hb.sports[0].meanMins === 60, 'duree habituelle par sport')
+a(Math.round(hb.sessionsPerWeek) === 4, `${hb.sessionsPerWeek} seances par semaine`)
+a(hb.dowRank[0].n > 0, 'les jours les plus frequents sont classes')
+a(habits({}, { weekOf: MON, today: D(6) }) === null, 'aucun historique -> aucune habitude')
+
+// ─── allocation ───
+const sp = [{ sport: 'course', meanMins: 60, longest: 60 }, { sport: 'velo', meanMins: 60, longest: 60 }]
+const al = allocate(300, sp)
+a(al.length === 2 && al[0].rpe > al[1].rpe, 'une seance dure, le reste en facile')
+// Deux seances plafonnees a 66 min ne peuvent pas peser 300 points : on
+// verifie qu elle fait au mieux, sans inventer une sortie demesuree.
+const charge = al.reduce((x, y) => x + y.mins * (y.rpe / 5), 0)
+a(charge < 300 && al.every((x) => x.mins >= 65), `cible inatteignable : ${Math.round(charge)} points, chaque seance poussee a son plafond`)
+// Une cible atteignable, elle, est atteinte.
+const al2 = allocate(150, sp)
+const charge2 = al2.reduce((x, y) => x + y.mins * (y.rpe / 5), 0)
+a(Math.abs(charge2 - 150) <= 10, `cible atteignable : ${Math.round(charge2)} points pour 150 vises`)
+const al3 = allocate(80, sp)
+const charge3 = al3.reduce((x, y) => x + y.mins * (y.rpe / 5), 0)
+a(Math.abs(charge3 - 80) <= 10, `cible basse : ${Math.round(charge3)} points pour 80`)
+a(al.every((x) => x.mins >= MIN_SESSION_MINS), 'aucune seance sous le minimum')
+a(al.every((x) => x.mins <= Math.round(60 * PROGRESSION_MAX) + 4), `aucune seance au-dela de ${Math.round((PROGRESSION_MAX - 1) * 100)} % de la plus longue deja faite`)
+a(al.every((x) => x.mins % 5 === 0), 'durees arrondies a cinq minutes')
+a(allocate(0, sp).length === 0 && allocate(300, []).length === 0, 'sans cible ou sans sport -> rien')
+
+// ─── la proposition ───
+const pr = proposeWeek(long, retroAnalysis(long, { weekOf: MON, today: D(6), sportMeta: meta }), { today: D(6), weekOf: MON })
+a(pr.days.length === 7, 'sept jours proposes')
+a(pr.days.every((d) => d.label && DOW_LABELS.includes(d.label)), 'chaque jour est nomme')
+a(pr.sessions === 4, `${pr.sessions} seances, comme d habitude`)
+a(pr.restDays === 3, `${pr.restDays} jours de repos`)
+a(pr.inRange, `charge totale ${pr.total} dans la fourchette ${pr.range.lo}-${pr.range.hi}`)
+const withS = pr.days.filter((d) => d.session)
+a(withS.length === 4, 'quatre journees portent une seance')
+a(withS.filter((d) => d.session.hard).length === 1, 'une seule seance dure')
+a(withS.every((d) => d.session.mins >= MIN_SESSION_MINS && d.session.mins % 5 === 0), 'durees plausibles et rondes')
+a(withS.every((d) => ['course', 'velo', 'muscu'].includes(d.session.sport)), 'uniquement des sports deja pratiques')
+// le carburant suit la journee proposee
+const gros = pr.days.find((d) => d.dayType === 'gros')
+const repos = pr.days.find((d) => d.dayType === 'repos')
+a(gros && repos && gros.gluc > repos.gluc, `${gros.gluc} g de glucides le jour charge contre ${repos.gluc} au repos`)
+a(pr.days.every((d) => d.kcal > 0), 'chaque jour porte son apport')
+a(pr.sleep && pr.sleep.target >= pr.sleep.mean, 'et la cible de sommeil')
+a(/sport/.test(pr.basedOn) && /semaine/.test(pr.basedOn), 'la proposition dit sur quoi elle se fonde : ' + pr.basedOn)
+a(proposeWeek({}, retroAnalysis({}, { weekOf: MON, today: D(6) }), { today: D(6) }) === null, 'sans historique -> aucune proposition inventee')
 
 console.log('\nALL PASS')

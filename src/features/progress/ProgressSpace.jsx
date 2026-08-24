@@ -553,6 +553,31 @@ export default function ProgressSpace({ userId, onClose }) {
           },
         }, line))) : null,
 
+      // La semaine proposée, jour par jour. Une fourchette de charge ne se
+      // planifie pas : il faut le jour, le sport, les minutes et l'intensité.
+      story.proposal ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 14 } },
+        h('div', { style: { padding: '12px 14px 8px' } },
+          h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Ta semaine proposée'),
+          h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.45 } },
+            story.proposal.total, ' points visés · ', story.proposal.basedOn, '.')),
+        story.proposal.days.map((d, i) => h('div', {
+          key: d.date,
+          style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '9px 14px', borderTop: `1px solid ${C.line}`, background: d.session && d.session.hard ? `color-mix(in srgb, ${C.primary} 5%, transparent)` : 'transparent' },
+        },
+          h('div', { style: { width: 62, flex: '0 0 auto', fontSize: 12, fontWeight: 700, color: d.session ? C.ink : C.ink3 } }, d.label),
+          h('div', { style: { flex: 1, minWidth: 0 } },
+            d.session
+              ? h('div', { style: { fontSize: 12.5, color: C.ink, lineHeight: 1.45, fontWeight: d.session.hard ? 700 : 400 } },
+                sportMeta(d.session.sport).label, ' · ', d.session.mins, ' min · RPE ', d.session.rpe,
+                d.session.hard ? h('span', { style: { color: C.primary, fontWeight: 700 } }, ' · la dure') : null)
+              : h('div', { style: { fontSize: 12.5, color: C.ink3 } }, 'Repos'),
+            d.kcal ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2 } },
+              d.kcal, ' kcal · ', d.gluc, ' g de glucides') : null))),
+        story.proposal.shortText ? h('div', { style: { padding: '10px 14px', borderTop: `1px solid ${C.line}`, fontSize: 11.5, color: C.ink3, lineHeight: 1.5 } }, story.proposal.shortText) : null,
+        story.proposal.sleep ? h('div', { style: { padding: '10px 14px', borderTop: `1px solid ${C.line}`, fontSize: 11.5, color: C.ink3, lineHeight: 1.5 } },
+          'Sommeil à viser : ', String(story.proposal.sleep.target).replace('.', ','), ' h par nuit, contre ',
+          String(story.proposal.sleep.mean).replace('.', ','), ' h la semaine écoulée.') : null) : null,
+
       // Les consignes chiffrées de la semaine qui vient. Une rétrospective
       // qui s'arrête au constat laisse le travail à faire.
       story.prescription && story.prescription.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 14 } },

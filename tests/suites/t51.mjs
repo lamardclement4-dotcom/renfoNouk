@@ -187,5 +187,21 @@ a(/s[ée]ances? sur/.test(rt) || /points de charge/.test(rt), 'le recit de la se
 a(/Jour par jour/.test(rt), 'le detail jour par jour aussi')
 a(/Pour la semaine qui vient/.test(rt), 'la retrospective debouche sur des consignes')
 a(/Chaque consigne est tir[ée]e de la semaine [ée]coul[ée]e/.test(rt), 'et dit d ou elle sort')
+// Avec assez d historique, la semaine proposee s affiche jour par jour.
+for (let k = 1; k <= 8; k++) {
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(lundi); d.setDate(d.getDate() - 7 * k + i)
+    const iso = d.toISOString().slice(0, 10)
+    retroDb.sleepLog[iso] = { hours: 7 }
+    retroDb.dayRows[iso] = { food: [{ n: 'r', meal: 'midi', k: 2300, p: 120, g: 250, l: 65, fib: 20 }] }
+    if ([0, 2, 4].includes(i)) retroDb.planningSessions.push({ id: 'p' + k + i, date: iso, sport: 'course', statut: 'realise', duree: '1 h', data: { rpe: 6 } })
+  }
+}
+__reset(); __setDb(retroDb)
+const rt2 = text(__render('progres-proposal', prog, mkProps(retroDb)))
+a(/Ta semaine propos[ée]e/.test(rt2), 'la semaine proposee s affiche')
+a(/Lundi/.test(rt2) && /Dimanche/.test(rt2), 'jour par jour, du lundi au dimanche')
+a(/RPE/.test(rt2), 'avec l intensite de chaque seance')
+a(!/undefined|NaN/.test(rt2), 'aucune valeur malformee')
 
 console.log('\nALL PASS')
