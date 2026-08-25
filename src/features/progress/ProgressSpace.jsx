@@ -559,7 +559,8 @@ export default function ProgressSpace({ userId, onClose }) {
         h('div', { style: { padding: '12px 14px 8px' } },
           h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Ta semaine proposée'),
           h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.45 } },
-            story.proposal.total, ' points visés · ', story.proposal.basedOn, '.')),
+            story.proposal.total, ' points visés · ', story.proposal.basedOn, '.'),
+          story.proposal.taper ? h('div', { style: { fontSize: 11.5, color: C.warn, marginTop: 5, lineHeight: 1.45, fontWeight: 600 } }, story.proposal.taper.text) : null),
         story.proposal.days.map((d, i) => h('div', {
           key: d.date,
           style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '9px 14px', borderTop: `1px solid ${C.line}`, background: d.session && d.session.hard ? `color-mix(in srgb, ${C.primary} 5%, transparent)` : 'transparent' },

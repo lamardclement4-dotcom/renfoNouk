@@ -1,7 +1,7 @@
 // Retrospective detaillee.
 import { retroAnalysis, dayDetail, dimensions, weekShape, conditions, fueling,
   takeaway, weekDays, weekBounds, loadTarget, minutesFor, weekPrescription,
-  habits, allocate, proposeWeek, proposalToSessions, proposalStatus, dureeLabel,
+  habits, allocate, proposeWeek, proposalToSessions, proposalStatus, dureeLabel, taperFactor,
   DOW_LABELS, EASY_RPE, MIN_SESSION_MINS, PROGRESSION_MAX,
   DIMENSIONS, MEANINGFUL_PCT, WEEK_UNDERFUEL_PCT, BASELINE_WEEKS, REST_DAYS_MIN, SLEEP_CATCHUP_MAX }
   from '../../src/features/train/retroIntel.js'
@@ -247,5 +247,30 @@ const st2 = proposalStatus(occupe, pr)
 a(!st2.can && st2.existing === 1, 'une seance deja inscrite -> on ne propose plus')
 a(/rien n.est [ée]cras[ée]/.test(st2.reason), 'et on le dit')
 a(proposalStatus({}, null).can === false, 'aucune proposition -> rien a inscrire')
+
+
+// ─── une echeance change tout ───
+// Proposer une semaine ordinaire a trois jours d une course contredirait
+// l affutage que l application recommande dans un autre ecran.
+const NEXT_MON = (() => { const d = new Date(Date.UTC(2026, 7, 10)); d.setUTCDate(d.getUTCDate() + 7); return d.toISOString().slice(0, 10) })()
+a(taperFactor({}, NEXT_MON) === null, 'aucune echeance -> aucun affutage')
+a(taperFactor({ peakGoals: [{ label: 'Course A', eventDate: '2027-01-01', effortType: 'endurance' }] }, NEXT_MON) === null,
+  'echeance lointaine -> aucun affutage')
+const proche = { peakGoals: [{ label: 'Semi de la ville', eventDate: (() => { const d = new Date(Date.UTC(2026, 7, 10)); d.setUTCDate(d.getUTCDate() + 12); return d.toISOString().slice(0, 10) })(), effortType: 'endurance' }] }
+const tf = taperFactor(proche, NEXT_MON)
+a(tf && tf.factor < 1, `affutage detecte : volume a ${tf.pct} % de l ordinaire`)
+a(tf.factor >= 0.3, 'jamais en dessous de trente pour cent : un affutage reduit, il ne supprime pas')
+a(/Semi de la ville/.test(tf.text), 'l echeance est nommee')
+a(/la r[ée]duction qui fait la fra[îi]cheur/.test(tf.text), 'et le principe rappele')
+
+// la proposition suit
+const avecCourse = JSON.parse(JSON.stringify(long))
+avecCourse.peakGoals = proche.peakGoals
+const prTaper = proposeWeek(avecCourse, retroAnalysis(avecCourse, { weekOf: MON, today: D(6), sportMeta: meta }), { today: D(6), weekOf: MON })
+a(prTaper.taper && prTaper.taper.pct < 100, 'la proposition connait l affutage')
+a(prTaper.target < pr.target, `cible ramenee de ${pr.target} a ${prTaper.target} points`)
+a(prTaper.range.lo < pr.range.lo, 'et la fourchette avec')
+// Sans cela, une semaine volontairement reduite serait annoncee « sous la cible ».
+a(prTaper.total <= prTaper.range.hi, 'la semaine proposee reste dans sa propre fourchette')
 
 console.log('\nALL PASS')

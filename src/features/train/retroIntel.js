@@ -26,6 +26,7 @@ import { monotony, ACWR_SWEET_LOW, ACWR_SWEET_HIGH, NEUTRAL_RPE, HARD_RPE } from
 import { effectiveTemp, loadMultiplier } from './weatherIntel'
 import { plausibleHours, neededHours, BASE_NEED } from '../health/sleepIntel'
 import { targetForDate, forDay } from '../nutrition/macroTargets'
+import { computePeakPlan } from './peakIntel'
 import { weightSeries } from '../profil/weightIntel'
 
 const num = (v) => {
@@ -742,6 +743,34 @@ export function allocate(target, sportsForSlots) {
   return slots
 }
 
+// Une échéance change tout. Pendant l'affûtage, le volume se réduit de
+// quarante à soixante pour cent selon le profil d'effort — proposer une
+// semaine ordinaire à trois jours d'une course contredirait ce que
+// l'application recommande par ailleurs, dans un autre écran.
+export function taperFactor(db, mondayISO) {
+  const goals = asList(db && db.peakGoals).filter((g) => g && g.eventDate)
+  if (!goals.length) return null
+  let best = null
+  for (let i = 0; i < 7; i++) {
+    const date = shiftISO(mondayISO, i)
+    for (const g of goals) {
+      const plan = computePeakPlan(g, date)
+      if (!plan || plan.phase === 'past' || plan.targetVolumePct == null) continue
+      if (!best || plan.targetVolumePct < best.pct) {
+        best = { pct: plan.targetVolumePct, goal: g, phase: plan.phase, date, days: plan.daysRemaining }
+      }
+    }
+  }
+  if (!best) return null
+  return {
+    factor: Math.max(0.3, best.pct / 100),
+    pct: best.pct,
+    label: best.goal.label || 'ton échéance',
+    days: best.days,
+    text: `Affûtage en cours pour « ${best.goal.label || 'ton échéance'} » : volume ramené à ${best.pct} % de l'ordinaire. C'est la réduction qui fait la fraîcheur, pas le travail ajouté à la fin.`,
+  }
+}
+
 export function proposeWeek(db, ana, { today, weekOf } = {}) {
   const h = habits(db, { weekOf: weekOf || today, today })
   const presc = (ana.prescription || []).find((x) => x.id === 'charge')
@@ -752,7 +781,9 @@ export function proposeWeek(db, ana, { today, weekOf } = {}) {
     sleepDebt: ana.context && ana.context.sleep ? ana.context.sleep.debt : null,
   })
   if (!lt) return null
-  const target = Math.round((lt.lo + lt.hi) / 2)
+  const nextMondayISO = shiftISO(weekBounds(weekOf || today).monday, 7)
+  const taper = taperFactor(db, nextMondayISO)
+  const target = Math.round((lt.lo + lt.hi) / 2 * (taper ? taper.factor : 1))
   const count = Math.max(1, Math.min(7, Math.round(h.sessionsPerWeek)))
   // La séance dure prend le sport le plus pratiqué ; les suivantes suivent
   // la répartition observée.
@@ -779,7 +810,7 @@ export function proposeWeek(db, ana, { today, weekOf } = {}) {
   const hardDow = h.dowRank[0] ? h.dowRank[0].dow : chosen[0]
   const ordered = [hardDow, ...chosen.filter((d) => d !== hardDow)]
 
-  const nextMonday = shiftISO(weekBounds(weekOf || today).monday, 7)
+  const nextMonday = nextMondayISO
   const tgt = (db && db.foodTargets) || null
   const days = []
   for (let i = 0; i < 7; i++) {
@@ -806,7 +837,11 @@ export function proposeWeek(db, ana, { today, weekOf } = {}) {
   // le dit plutôt que d'inventer une sortie deux fois plus longue que tout
   // ce qui a été fait : c'est une séance de plus qu'il faut, pas une séance
   // démesurée.
-  const short = total < lt.lo
+  // La fourchette suit l'affûtage : sans cela, une semaine volontairement
+  // réduite serait annoncée « sous la cible » alors qu'elle la respecte.
+  const lo = Math.round(lt.lo * (taper ? taper.factor : 1))
+  const hi = Math.round(lt.hi * (taper ? taper.factor : 1))
+  const short = total < lo
   const sleep = ana.context && ana.context.sleep && ana.context.sleep.mean != null
     ? {
       mean: ana.context.sleep.mean,
@@ -814,11 +849,11 @@ export function proposeWeek(db, ana, { today, weekOf } = {}) {
     }
     : null
   return {
-    monday: nextMonday, days, total, target, range: { lo: lt.lo, hi: lt.hi },
-    sessions: count, restDays, hardDow, sleep, short,
-    inRange: total >= lt.lo && total <= lt.hi,
+    monday: nextMonday, days, total, target, range: { lo, hi },
+    sessions: count, restDays, hardDow, sleep, short, taper,
+    inRange: total >= lo && total <= hi,
     shortText: short
-      ? `Cette semaine atteint ${total} points, sous la cible de ${lt.lo}. Tes durées habituelles ne permettent pas d'aller plus loin sans allonger démesurément une séance : c'est une séance de plus qu'il faudrait, pas une séance plus longue.`
+      ? `Cette semaine atteint ${total} points, sous la cible de ${lo}. Tes durées habituelles ne permettent pas d'aller plus loin sans allonger démesurément une séance : c'est une séance de plus qu'il faudrait, pas une séance plus longue.`
       : null,
     basedOn: `${h.sports.length} sport${h.sports.length > 1 ? 's' : ''} pratiqué${h.sports.length > 1 ? 's' : ''} sur ${h.weeks} semaines, ${fr(h.sessionsPerWeek)} séance${h.sessionsPerWeek > 1 ? 's' : ''} par semaine en moyenne`,
   }
