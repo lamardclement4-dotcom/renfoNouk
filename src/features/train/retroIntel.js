@@ -824,6 +824,62 @@ export function proposeWeek(db, ana, { today, weekOf } = {}) {
   }
 }
 
+// ─── De la proposition au planning ────────────────────────
+//
+// Une semaine proposée qu'il faut retaper ne sert pas à grand-chose. Ces
+// deux fonctions la transforment en séances planifiées, sans écraser ce
+// qui existe : si la semaine porte déjà des séances, on ne touche à rien
+// et on le dit.
+
+const DUREE_LABELS = { 15: '15 min', 30: '30 min', 45: '45 min', 60: '1 h', 90: '1 h 30', 120: '2 h', 150: '2 h 30', 180: '3 h' }
+
+export function dureeLabel(mins) {
+  const m = Math.max(1, Math.round(num(mins) || 0))
+  return DUREE_LABELS[m] || `${m} min`
+}
+
+export function proposalToSessions(proposal, { stamp } = {}) {
+  if (!proposal || !proposal.days) return []
+  const t = stamp || Date.now()
+  const out = []
+  proposal.days.forEach((d, i) => {
+    if (!d.session) return
+    out.push({
+      id: `prop_${t}_${i}`,
+      date: d.date,
+      heure: '',
+      sport: d.session.sport,
+      duree: dureeLabel(d.session.mins),
+      statut: 'planifie',
+      ressenti: null,
+      notes: null,
+      // Le RPE visé est enregistré comme la donnée de la séance : c'est lui
+      // qui portera la charge projetée, et il se corrige après coup par le
+      // ressenti réel.
+      data: { rpe: d.session.rpe },
+      exercises: [],
+      source: 'proposition',
+    })
+  })
+  return out
+}
+
+// Ce que l'écran doit savoir avant de proposer le bouton.
+export function proposalStatus(db, proposal) {
+  if (!proposal) return { can: false, reason: 'aucune proposition' }
+  const dates = new Set(proposal.days.filter((d) => d.session).map((d) => d.date))
+  if (!dates.size) return { can: false, reason: 'aucune séance à inscrire' }
+  const existing = asList(db && db.planningSessions)
+    .filter((sx) => sx && sx.date && dates.has(sx.date))
+  if (existing.length) {
+    return {
+      can: false, existing: existing.length,
+      reason: `${existing.length} séance${existing.length > 1 ? 's' : ''} déjà inscrite${existing.length > 1 ? 's' : ''} sur ces jours — rien n'est écrasé.`,
+    }
+  }
+  return { can: true, count: dates.size, reason: null }
+}
+
 // ─── Synthèse narrative ──────────────────────────────────────
 export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
   const ref = today || todayISO()

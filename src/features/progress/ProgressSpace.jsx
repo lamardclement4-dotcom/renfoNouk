@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { C, Icon, Ring, FlowSpace, isoToday, SegPills } from '../health/kit'
 import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
 import { testsAnalysis } from '../physical-tests/testsIntel'
-import { retroAnalysis } from '../train/retroIntel'
+import { retroAnalysis, proposalToSessions, proposalStatus } from '../train/retroIntel'
 import RecordsSpace from './RecordsSpace'
 import { sportMeta } from '../train/renfoIntel'
 import { mobilityAnalysis } from '../train/mobilityIntel'
@@ -576,7 +576,27 @@ export default function ProgressSpace({ userId, onClose }) {
         story.proposal.shortText ? h('div', { style: { padding: '10px 14px', borderTop: `1px solid ${C.line}`, fontSize: 11.5, color: C.ink3, lineHeight: 1.5 } }, story.proposal.shortText) : null,
         story.proposal.sleep ? h('div', { style: { padding: '10px 14px', borderTop: `1px solid ${C.line}`, fontSize: 11.5, color: C.ink3, lineHeight: 1.5 } },
           'Sommeil à viser : ', String(story.proposal.sleep.target).replace('.', ','), ' h par nuit, contre ',
-          String(story.proposal.sleep.mean).replace('.', ','), ' h la semaine écoulée.') : null) : null,
+          String(story.proposal.sleep.mean).replace('.', ','), ' h la semaine écoulée.') : null,
+
+        // Une semaine proposée qu'il faut retaper ne sert pas à grand-chose.
+        (() => {
+          const st = proposalStatus(db, story.proposal)
+          if (st.can) {
+            return h('div', { style: { padding: '12px 14px', borderTop: `1px solid ${C.line}` } },
+              h('button', {
+                onClick: () => {
+                  const add = proposalToSessions(story.proposal)
+                  if (!add.length) return
+                  store.set((prev) => ({ planningSessions: [...(prev.planningSessions || []), ...add] }))
+                  setFlow('planner')
+                },
+                style: { width: '100%', padding: '12px', borderRadius: C.radiusSm, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+              }, 'Inscrire ces ', st.count, ' séances au planning'))
+          }
+          return st.reason && st.existing
+            ? h('div', { style: { padding: '10px 14px', borderTop: `1px solid ${C.line}`, fontSize: 11.5, color: C.ink3, lineHeight: 1.5 } }, st.reason)
+            : null
+        })()) : null,
 
       // Les consignes chiffrées de la semaine qui vient. Une rétrospective
       // qui s'arrête au constat laisse le travail à faire.

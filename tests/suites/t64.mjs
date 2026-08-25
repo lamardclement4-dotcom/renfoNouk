@@ -1,7 +1,8 @@
 // Retrospective detaillee.
 import { retroAnalysis, dayDetail, dimensions, weekShape, conditions, fueling,
   takeaway, weekDays, weekBounds, loadTarget, minutesFor, weekPrescription,
-  habits, allocate, proposeWeek, DOW_LABELS, EASY_RPE, MIN_SESSION_MINS, PROGRESSION_MAX,
+  habits, allocate, proposeWeek, proposalToSessions, proposalStatus, dureeLabel,
+  DOW_LABELS, EASY_RPE, MIN_SESSION_MINS, PROGRESSION_MAX,
   DIMENSIONS, MEANINGFUL_PCT, WEEK_UNDERFUEL_PCT, BASELINE_WEEKS, REST_DAYS_MIN, SLEEP_CATCHUP_MAX }
   from '../../src/features/train/retroIntel.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
@@ -217,5 +218,34 @@ a(pr.days.every((d) => d.kcal > 0), 'chaque jour porte son apport')
 a(pr.sleep && pr.sleep.target >= pr.sleep.mean, 'et la cible de sommeil')
 a(/sport/.test(pr.basedOn) && /semaine/.test(pr.basedOn), 'la proposition dit sur quoi elle se fonde : ' + pr.basedOn)
 a(proposeWeek({}, retroAnalysis({}, { weekOf: MON, today: D(6) }), { today: D(6) }) === null, 'sans historique -> aucune proposition inventee')
+
+
+// ─── de la proposition au planning ───
+// Une semaine proposee qu il faut retaper ne sert pas a grand-chose.
+a(dureeLabel(60) === '1 h' && dureeLabel(90) === '1 h 30' && dureeLabel(45) === '45 min', 'les durees usuelles gardent leur libelle')
+a(dureeLabel(65) === '65 min', 'une duree hors table reste lisible par le planning')
+a(dureeLabel(0) === '1 min' && dureeLabel(null) === '1 min', 'jamais de duree nulle')
+
+const sess = proposalToSessions(pr, { stamp: 42 })
+a(sess.length === 4, `${sess.length} seances inscrites, comme proposees`)
+a(sess.every((x) => x.statut === 'planifie'), 'inscrites comme prevues, pas comme faites')
+a(sess.every((x) => x.data && x.data.rpe > 0), 'le RPE vise est enregistre : c est lui qui portera la charge projetee')
+a(sess.every((x) => x.source === 'proposition'), 'leur provenance est conservee')
+a(new Set(sess.map((x) => x.id)).size === 4, 'identifiants distincts')
+a(sess.every((x) => x.date > MON), 'toutes datees de la semaine suivante')
+// La duree inscrite doit se relire : sinon la charge tombe a zero.
+const { dureeToMins } = await import('../../src/features/train/plannerIntel.js')
+a(sess.every((x) => dureeToMins(x.duree) > 0), 'chaque duree est relue par le planning')
+a(sess.every((x, i) => dureeToMins(x.duree) === pr.days.filter((d) => d.session)[i].session.mins), 'et vaut exactement ce qui etait propose')
+a(proposalToSessions(null).length === 0, 'aucune proposition -> aucune seance')
+
+// ─── on n ecrase rien ───
+const st = proposalStatus(long, pr)
+a(st.can && st.count === 4, 'semaine suivante vide -> on peut inscrire')
+const occupe = { planningSessions: [{ id: 'x', date: pr.days.find((d) => d.session).date, sport: 'course', statut: 'planifie', duree: '1 h' }] }
+const st2 = proposalStatus(occupe, pr)
+a(!st2.can && st2.existing === 1, 'une seance deja inscrite -> on ne propose plus')
+a(/rien n.est [ée]cras[ée]/.test(st2.reason), 'et on le dit')
+a(proposalStatus({}, null).can === false, 'aucune proposition -> rien a inscrire')
 
 console.log('\nALL PASS')

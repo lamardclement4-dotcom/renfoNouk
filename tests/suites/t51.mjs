@@ -203,5 +203,6 @@ a(/Ta semaine propos[ée]e/.test(rt2), 'la semaine proposee s affiche')
 a(/Lundi/.test(rt2) && /Dimanche/.test(rt2), 'jour par jour, du lundi au dimanche')
 a(/RPE/.test(rt2), 'avec l intensite de chaque seance')
 a(!/undefined|NaN/.test(rt2), 'aucune valeur malformee')
+a(/Inscrire ces/.test(rt2), 'la proposition est actionnable : un bouton l inscrit au planning')
 
 console.log('\nALL PASS')
