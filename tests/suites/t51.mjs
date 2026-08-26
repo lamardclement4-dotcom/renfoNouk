@@ -240,9 +240,15 @@ a(/Mobilit[ée]/.test(rs) && /Pliom[ée]trie/.test(rs), 'les deux familles ont l
 a(rs.indexOf('Hanches') !== -1 && rs.indexOf('Bondissements') !== -1, 'et chacune sa routine')
 a(rs.indexOf('Mobilit') < rs.indexOf('Hanches'), 'la routine de mobilite est rangee sous son en-tete')
 a(rs.indexOf('Pliom') < rs.indexOf('Bondissements'), 'celle de pliometrie sous le sien')
+a(/Niveau\s+1\s*\//.test(rs), 'les echelles toutes faites sont proposees a cote')
+a(/Copier/.test(rs) && /Lancer/.test(rs), 'chacune se lance ou se copie')
 // Une famille vide le dit, plutot que de disparaitre.
 __reset(); __setDb({ routines: [deux[0]] })
 const rs2 = text(__render('routines-une', routinesEcran, { ...mkProps({ routines: [deux[0]] }), onPlay: () => {} }))
-a(/Aucune routine de pliom[ée]trie/.test(rs2), 'la famille vide reste visible et invite')
+// Une famille sans routine composee ne montre plus un message d absence : elle
+// propose son echelle toute faite, ce qui vaut mieux qu un vide.
+a(/Appuis et ressort/.test(rs2), 'la famille vide propose son echelle')
+a(/Niveau\s+1\s*\/\s*5/.test(rs2), 'au premier niveau')
+a(/Appuis courts/.test(rs2), 'avec le nom du niveau')
 
 console.log('\nALL PASS')

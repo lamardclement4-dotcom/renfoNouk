@@ -15,6 +15,7 @@ import PeakSpace from './PeakSpace'
 import PlannerSpace from './PlannerSpace'
 import WeatherSpace from './WeatherSpace'
 import RoutinesSpace from './RoutinesSpace'
+import { allTemplateRoutines } from './routineTemplates'
 import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
 import HealthHome from '../health/HealthHome'
 
@@ -40,6 +41,10 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   // les cartes du Coach et son chat pour ouvrir directement le bon module.
   // 'session:<id>' ouvre l'écran Detail d'une séance précise (le check
   // openId passe avant les tiles, donc ça marche depuis le Coach aussi).
+  // Les modèles sont jouables au même titre que les routines composées :
+  // le lecteur les cherche au même endroit.
+  const playableRoutines = (d) => [...(Array.isArray(d.routines) ? d.routines : []), ...allTemplateRoutines()]
+
   const ENTRAINER_ACTIONS = new Set(['mobility', 'program', 'planner', 'recovery', 'peak', 'tests', 'weather', 'routines'])
   function handleCoachAction(action) {
     if (!action) return
@@ -52,7 +57,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   }
 
   function finishSession() {
-    const s = getSession(playId, db.program, db.routines)
+    const s = getSession(playId, db.program, playableRoutines(db))
     const isRecovery = playId && String(playId).startsWith('rec-')
     store.completeSession(s ? (s.mins || sessionDuration(s)) : 8, { title: s ? s.title : null, cat: isRecovery ? 'recup' : (s ? s.cat : null) })
     if (playId && db.program && db.program.sessions && db.program.sessions.some((x) => x.id === playId)) {
@@ -65,11 +70,11 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   }
 
   if (playId) {
-    return React.createElement(Player, { id: playId, program: db.program, routines: db.routines, onClose: () => setPlayId(null), onFinish: finishSession })
+    return React.createElement(Player, { id: playId, program: db.program, routines: playableRoutines(db), onClose: () => setPlayId(null), onFinish: finishSession })
   }
   if (openId) {
     return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 58, overflowY: 'auto' } },
-      React.createElement(Detail, { id: openId, program: db.program, routines: db.routines, sensitiveZones: db.sensitiveZones, onBack: () => setOpenId(null), onStart: () => setPlayId(openId) }))
+      React.createElement(Detail, { id: openId, program: db.program, routines: playableRoutines(db), sensitiveZones: db.sensitiveZones, onBack: () => setOpenId(null), onStart: () => setPlayId(openId) }))
   }
   // Ouvert en deep-link (embedded, depuis Accueil/Progrès/Profil) : fermer un
   // sous-espace doit revenir directement à l'appelant, pas exposer le hub

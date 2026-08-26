@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card } from '../health/kit'
+import { suggestions, SESSIONS_TO_UNLOCK } from './routineTemplates'
 import { ROUTINE_KINDS, DOW_SHORT, DOW_LABELS, kindOf, movementsFor, makeRoutine,
   routineValid, routineMins, routineList, routineStreak, lastDone, daysSince } from './routines'
 
@@ -176,6 +177,7 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
         // sienne au lieu de la voir.
         ROUTINE_KINDS.map((k) => {
           const ofKind = list.filter((r) => r.kind === k.id)
+          const sugg = suggestions(db, { kind: k.id })
           return h('div', { key: k.id, style: { marginBottom: 18 } },
             h('div', { style: { display: 'flex', alignItems: 'center', gap: 7, margin: '0 2px 9px' } },
               h(Icon, { name: k.icon, size: 15, color: C.primary }),
@@ -183,12 +185,33 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
                 k.label, ofKind.length ? ` · ${ofKind.length}` : ''),
               h('div', { style: { flex: 1 } }),
               h('button', { onClick: () => setEdit({ newKind: k.id }), style: { fontSize: 12.5, fontWeight: 700, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Ajouter')),
-            ofKind.length
-              ? ofKind.map((r) => routineCard(r))
-              : h('div', { style: { fontSize: 12.5, color: C.ink3, padding: '2px 2px 0', lineHeight: 1.5 } },
-                k.id === 'mobilite'
-                  ? 'Aucune routine de mobilité. C’est l’enchaînement court qu’on refait souvent, pas une séance.'
-                  : 'Aucune routine de pliométrie. Sauts et bondissements, en petites doses et bien reposé.'))
+            ofKind.length ? ofKind.map((r) => routineCard(r)) : null,
+
+            // Toutes faites, et qui se durcissent à mesure. Composer suppose
+            // de savoir quoi mettre dedans ; une échelle donne un point de
+            // départ et surtout une suite.
+            sugg.map((sg) => h(Card, { key: sg.family.id, style: { marginBottom: 10, borderStyle: 'dashed' } },
+              h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+                h('div', { style: { flex: 1, fontSize: 14, fontWeight: 700 } }, sg.family.label, ' — ', sg.levelLabel),
+                h('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 700 } }, 'Niveau ', sg.levelNumber, '/', sg.levelCount)),
+              sg.justUnlocked
+                ? h('div', { style: { fontSize: 11.5, color: C.success, fontWeight: 700, marginTop: 4 } }, sg.note)
+                : null,
+              h('div', { style: { fontSize: 12, color: C.ink2, marginTop: 5, lineHeight: 1.5 } }, sg.routine.why),
+              h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5 } },
+                sg.routine.keys.length, ' mouvements · ', sg.routine.sets, ' tour', sg.routine.sets > 1 ? 's' : '', ' · ~', routineMins(sg.routine), ' min',
+                sg.progress.levels[sg.progress.current].done
+                  ? ` · faite ${sg.progress.levels[sg.progress.current].done} fois sur ${SESSIONS_TO_UNLOCK}`
+                  : ''),
+              !sg.justUnlocked && sg.note
+                ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4, lineHeight: 1.45 } }, sg.note)
+                : null,
+              h('div', { style: { display: 'flex', gap: 7, marginTop: 10 } },
+                h('button', { onClick: () => onPlay && onPlay(sg.routine.id), style: { flex: 2, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
+                h('button', {
+                  onClick: () => save({ ...sg.routine, id: 'rt_' + Date.now().toString(36), custom: true, template: false, name: sg.routine.name, dows: [] }),
+                  style: { flex: 1, padding: 10, borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13, fontWeight: 700, cursor: 'pointer' },
+                }, 'Copier')))))
         }),
 
         !list.length ? h(Card, { style: { marginBottom: 12, textAlign: 'center', padding: '22px 16px' } },
