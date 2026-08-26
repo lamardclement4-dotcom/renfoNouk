@@ -34,6 +34,7 @@ const SCREENS = [
   ['Catalogue renfo', '../../src/features/train/RenfoCatalog.jsx'],
   ['Programme', '../../src/features/train/ProgramView.jsx'],
   ['Import d activite', '../../src/features/train/ActivityImport.jsx'],
+  ['Routines', '../../src/features/train/RoutinesSpace.jsx'],
 ]
 
 // Certains ecrans recoivent db et store en props, d autres passent par le hook :
@@ -204,5 +205,23 @@ a(/Lundi/.test(rt2) && /Dimanche/.test(rt2), 'jour par jour, du lundi au dimanch
 a(/RPE/.test(rt2), 'avec l intensite de chaque seance')
 a(!/undefined|NaN/.test(rt2), 'aucune valeur malformee')
 a(/Inscrire ces/.test(rt2), 'la proposition est actionnable : un bouton l inscrit au planning')
+
+
+// Les routines doivent se voir a l accueil, comme une seance planifiee :
+// une routine qu on oublie ne sert a rien.
+const { makeRoutine, movementsFor } = await import('../../src/features/train/routines.js')
+const accueil = (await import('../../src/features/home/AccueilSpace.jsx')).default
+const mobKeys = movementsFor('mobilite').slice(0, 3).map((m) => m.key)
+const todayDow = (new Date().getDay() + 6) % 7
+const routineDuJour = makeRoutine({ kind: 'mobilite', name: 'Réveil hanches', keys: mobKeys, dows: [todayDow] })
+__reset(); __setDb({ routines: [routineDuJour] })
+const at = text(__render('accueil-routines', accueil, mkProps({ routines: [routineDuJour] })))
+a(/R[ée]veil hanches/.test(at), "la routine du jour apparait a l accueil")
+a(/Mobilit[ée]/.test(at), 'avec son type')
+a(!/undefined|NaN/.test(at), 'aucune valeur malformee')
+// Un autre jour, elle ne se rappelle pas.
+const autre = makeRoutine({ kind: 'mobilite', name: 'Ailleurs', keys: mobKeys, dows: [(todayDow + 3) % 7] })
+__reset(); __setDb({ routines: [autre] })
+a(!/Ailleurs/.test(text(__render('accueil-autre', accueil, mkProps({ routines: [autre] })))), "une routine d un autre jour ne s affiche pas")
 
 console.log('\nALL PASS')

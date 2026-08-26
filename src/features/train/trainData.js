@@ -690,13 +690,20 @@ export function sessionDuration(s) {
   const secs = blocks.reduce((a, b) => a + (b.type === "hold" ? b.secs : b.reps * 3) + 6, 0)
   return Math.round(secs / 60)
 }
-export function getSession(id, program) {
+// Les routines composées par l'utilisateur ont la forme d'une séance : le
+// lecteur les joue sans rien savoir de plus. Elles sont donc cherchées ici
+// comme les autres, sinon une routine ne serait qu'une liste inerte.
+export function getSession(id, program, routines) {
   let s = SESSIONS.find((x) => x.id === id)
   if (s) return s
   s = RECOVERY.find((x) => x.id === id)
   if (s) return s
   if (program && program.sessions) {
     s = program.sessions.find((x) => x.id === id)
+    if (s) return s
+  }
+  if (Array.isArray(routines)) {
+    s = routines.find((x) => x && x.id === id)
     if (s) return s
   }
   return null

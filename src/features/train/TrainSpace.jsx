@@ -14,6 +14,7 @@ import CoachSpace from './CoachSpace'
 import PeakSpace from './PeakSpace'
 import PlannerSpace from './PlannerSpace'
 import WeatherSpace from './WeatherSpace'
+import RoutinesSpace from './RoutinesSpace'
 import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
 import HealthHome from '../health/HealthHome'
 
@@ -39,7 +40,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   // les cartes du Coach et son chat pour ouvrir directement le bon module.
   // 'session:<id>' ouvre l'écran Detail d'une séance précise (le check
   // openId passe avant les tiles, donc ça marche depuis le Coach aussi).
-  const ENTRAINER_ACTIONS = new Set(['mobility', 'program', 'planner', 'recovery', 'peak', 'tests', 'weather'])
+  const ENTRAINER_ACTIONS = new Set(['mobility', 'program', 'planner', 'recovery', 'peak', 'tests', 'weather', 'routines'])
   function handleCoachAction(action) {
     if (!action) return
     if (action.startsWith('session:')) { setOpenId(action.slice(8)); return }
@@ -51,7 +52,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   }
 
   function finishSession() {
-    const s = getSession(playId, db.program)
+    const s = getSession(playId, db.program, db.routines)
     const isRecovery = playId && String(playId).startsWith('rec-')
     store.completeSession(s ? (s.mins || sessionDuration(s)) : 8, { title: s ? s.title : null, cat: isRecovery ? 'recup' : (s ? s.cat : null) })
     if (playId && db.program && db.program.sessions && db.program.sessions.some((x) => x.id === playId)) {
@@ -64,11 +65,11 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   }
 
   if (playId) {
-    return React.createElement(Player, { id: playId, program: db.program, onClose: () => setPlayId(null), onFinish: finishSession })
+    return React.createElement(Player, { id: playId, program: db.program, routines: db.routines, onClose: () => setPlayId(null), onFinish: finishSession })
   }
   if (openId) {
     return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 58, overflowY: 'auto' } },
-      React.createElement(Detail, { id: openId, program: db.program, sensitiveZones: db.sensitiveZones, onBack: () => setOpenId(null), onStart: () => setPlayId(openId) }))
+      React.createElement(Detail, { id: openId, program: db.program, routines: db.routines, sensitiveZones: db.sensitiveZones, onBack: () => setOpenId(null), onStart: () => setPlayId(openId) }))
   }
   // Ouvert en deep-link (embedded, depuis Accueil/Progrès/Profil) : fermer un
   // sous-espace doit revenir directement à l'appelant, pas exposer le hub
@@ -87,6 +88,14 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   if (tile === 'tests') return React.createElement(PhysicalTestsSpace, { userId, onClose: backToHub })
   if (tile === 'planner') return React.createElement(PlannerSpace, { db, store, onClose: backToHub })
   if (tile === 'weather') return React.createElement(WeatherSpace, { db, store, onClose: backToHub })
+  // Une routine est jouable comme une séance : le lecteur la reçoit par le
+  // même chemin, il n'a rien à savoir de plus.
+  if (tile === 'routines') {
+    return React.createElement(RoutinesSpace, {
+      db, store, onClose: backToHub,
+      onPlay: (id) => { setTile(null); setPlayId(id) },
+    })
+  }
 
   const tiles = [
     { ic: 'target', tint: MODULE_TINTS.mobilite, lab: 'Test de mobilité', sub: db.mobility ? `Score : ${db.mobility.score}/100` : '9 questions', on: 'mobility' },
@@ -101,6 +110,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
     { ic: 'target', tint: '#5b6fa5', lab: 'Tests physiques', sub: null, on: 'tests' },
     { ic: 'spark', tint: '#534ab7', lab: 'Coach', sub: 'Recommandations', on: 'coach' },
     { ic: 'wave', tint: MODULE_TINTS.hydratation, lab: 'Conditions', sub: 'Météo · adaptation de la charge', on: 'weather' },
+    { ic: 'target', tint: '#7d9471', lab: 'Mes routines', sub: 'Mobilité et pliométrie, à ta main', on: 'routines' },
     { ic: 'target', tint: '#a3526b', lab: 'Pic de forme', sub: db.peakGoals && db.peakGoals.length ? `${db.peakGoals.length} objectif${db.peakGoals.length > 1 ? 's' : ''} programmé${db.peakGoals.length > 1 ? 's' : ''}` : 'Programme tes échéances', on: 'peak' },
   ]
 

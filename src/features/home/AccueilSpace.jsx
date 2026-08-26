@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { C, Icon, Pill, MODULE_TINTS, isoToday } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
+import { routinesToday, kindOf } from '../train/routines'
 import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro } from '../train/renfoIntel'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
 import TrainSpace from '../train/TrainSpace'
@@ -150,7 +151,7 @@ function OverloadAlert({ db, onPrevention }) {
 
 // 3 rappels : prochaine séance planifiée, résumé nutrition/hydratation du
 // jour, charge ACWR (si assez d'historique et pas déjà signalée par OverloadAlert).
-function TodayInsights({ db, onPlanner, onNutrition }) {
+function TodayInsights({ db, onPlanner, onNutrition, onRoutines }) {
   const iso = isoToday()
   const pillarList = intelPillars(db, iso)
   const nutPillar = pillarList.find((p) => p.id === 'nutrition')
@@ -160,7 +161,8 @@ function TodayInsights({ db, onPlanner, onNutrition }) {
   const nextSport = next ? getSportInfo(next.sport) : null
   const nextMins = next ? dureeToMins(next.duree) : 0
 
-  const Row = (ic, color, title, detail, onClick) => h(onClick ? 'button' : 'div', {
+  const Row = (ic, color, title, detail, onClick, key) => h(onClick ? 'button' : 'div', {
+    key,
     onClick, style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: 14, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, background: C.surface, marginBottom: 10, cursor: onClick ? 'pointer' : 'default' },
   },
     h('div', { style: { width: 38, height: 38, borderRadius: 11, flex: '0 0 auto', background: `color-mix(in srgb, ${color} 14%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
@@ -170,6 +172,11 @@ function TodayInsights({ db, onPlanner, onNutrition }) {
       h('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 1 } }, detail)),
     onClick && h(Icon, { name: 'arrow', size: 17, color: C.ink3, style: { flex: '0 0 auto' } }))
 
+  // Les routines du jour se rappellent au même endroit que les séances
+  // planifiées : c'est le seul moyen qu'elles ne soient pas oubliées, et
+  // une routine oubliée ne sert à rien.
+  const routines = routinesToday(db, { today: iso })
+  const routinesLeft = routines.filter((r) => !r.done)
   const nextDetail = next ? `${next.date === iso ? "Aujourd'hui" : next.date}${next.heure ? ' · ' + next.heure : ''}${nextMins ? ' · ' + nextMins + ' min' : ''}` : 'Aucune séance planifiée'
   const nextTitle = next ? (nextSport ? nextSport.label : 'Séance planifiée') : 'Planifier une séance'
 
@@ -177,6 +184,14 @@ function TodayInsights({ db, onPlanner, onNutrition }) {
     h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 10px' } }, "Aujourd'hui"),
     !(next && next.date === iso) && Row('calendar', C.primary, nextTitle, nextDetail, onPlanner),
     (nutPillar || hydPillar) && Row('apple', C.carb, 'Nutrition & hydratation', [nutPillar && nutPillar.status === 'ok' ? nutPillar.detail : null, hydPillar && hydPillar.status === 'ok' ? hydPillar.detail : null].filter(Boolean).join(' · ') || "Rien enregistré aujourd'hui", onNutrition),
+    routinesLeft.map((r) => Row(
+      kindOf(r.kind).icon, '#7d9471', r.name,
+      `${kindOf(r.kind).label} · ${r.keys.length} mouvement${r.keys.length > 1 ? 's' : ''} · ~${r.mins} min`,
+      onRoutines, r.id,
+    )),
+    routines.length && !routinesLeft.length
+      ? Row('check', C.success, 'Routines du jour faites', `${routines.length} routine${routines.length > 1 ? 's' : ''} · ${routines.map((r) => r.name).join(', ')}`, onRoutines)
+      : null,
     acwr.available && acwr.level !== 'Vigilance renforcée' && Row('chart', acwr.color, 'Charge : ' + acwr.level, `Ratio ${acwr.ratio} · ${acwr.acuteMin} min (7j) vs ${acwr.chronicAvgWeek} min/sem moy.`, onPlanner))
 }
 
@@ -270,7 +285,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     h(MondayRetroCard, { db, onOpen: () => setTile('planner') }),
     h(OverloadAlert, { db, onPrevention: () => setHealthTile('prevention') }),
     h(HealthScoreCard, { db, onAction: handleAction }),
-    h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition') }),
+    h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition'), onRoutines: () => setTile('routines') }),
     h(PeakHomeCard, { db, onPeak: () => setTile('peak') }),
     mobilityCta)
 

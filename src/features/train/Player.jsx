@@ -24,8 +24,8 @@ function ExerciseDetailSheet({ ex, onClose }) {
       ex.benefit && React.createElement('div', { style: { marginTop: 4, padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface2, fontSize: 13, color: C.ink2, lineHeight: 1.5, fontStyle: 'italic' } }, ex.benefit)))
 }
 
-export default function Player({ id, blocks: customBlocks, title: customTitle, program, onClose, onFinish, pulse = true }) {
-  const s = customBlocks ? null : getSession(id, program)
+export default function Player({ id, blocks: customBlocks, title: customTitle, program, routines, onClose, onFinish, pulse = true }) {
+  const s = customBlocks ? null : getSession(id, program, routines)
   const blocks = useRef(customBlocks || sessionExercises(s)).current
   const playerTitle = customTitle || (s && s.title) || 'Séance'
   const [i, setI] = useState(0)

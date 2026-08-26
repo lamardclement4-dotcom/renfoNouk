@@ -21,8 +21,8 @@ export function SessionCard({ s, onOpen }) {
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', paddingRight: 14 } }, React.createElement(Icon, { name: 'arrow', size: 18, color: C.ink3 })))
 }
 
-export default function Detail({ id, program, sensitiveZones, onBack, onStart }) {
-  const s = getSession(id, program)
+export default function Detail({ id, program, routines, sensitiveZones, onBack, onStart }) {
+  const s = getSession(id, program, routines)
   if (!s) {
     return React.createElement('div', { style: { minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 14, padding: 24 } },
       React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 18 } }, 'Séance introuvable'),
