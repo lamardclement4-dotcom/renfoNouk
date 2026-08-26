@@ -242,6 +242,9 @@ a(rs.indexOf('Mobilit') < rs.indexOf('Hanches'), 'la routine de mobilite est ran
 a(rs.indexOf('Pliom') < rs.indexOf('Bondissements'), 'celle de pliometrie sous le sien')
 a(/Niveau\s+1\s*\//.test(rs), 'les echelles toutes faites sont proposees a cote')
 a(/Copier/.test(rs) && /Lancer/.test(rs), 'chacune se lance ou se copie')
+a(/Combien de temps as-tu/.test(rs), 'la duree se choisit avant de lancer')
+a(/10\s+min/.test(rs) && /15\s+min/.test(rs) && /20\s+min/.test(rs), 'les durees proposees sont la')
+a(/Compl[èe]te/.test(rs), 'et l option « telle qu elle est composee »')
 // Une famille vide le dit, plutot que de disparaitre.
 __reset(); __setDb({ routines: [deux[0]] })
 const rs2 = text(__render('routines-une', routinesEcran, { ...mkProps({ routines: [deux[0]] }), onPlay: () => {} }))

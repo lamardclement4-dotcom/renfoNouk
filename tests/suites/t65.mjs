@@ -1,7 +1,8 @@
 // Routines de mobilite et de pliometrie, composees a la main.
 import { ROUTINE_KINDS, kindOf, movementsFor, makeRoutine, routineValid, routineMins,
   routineList, routinesToday, routinesDue, markDone, unmarkDone, lastDone, daysSince,
-  routineStreak, dowOf, DOW_LABELS, MAX_MOVES }
+  routineStreak, dowOf, DOW_LABELS, MAX_MOVES,
+  fitToDuration, durationOptions, DURATION_CHOICES, MIN_MOVES_KEPT }
   from '../../src/features/train/routines.js'
 import { getSession, EX } from '../../src/features/train/trainData.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
@@ -75,4 +76,33 @@ a(routineStreak({}, 'nawak', { today: '2026-08-21' }).count === 0, 'aucun journa
 a(routineList({ routines: {} }).length === 0, 'un journal mal forme ne leve pas')
 a(routineList({ routines: [null, r] }).length === 1, 'les entrees nulles sont ecartees')
 a(routinesToday({}, { today: '2026-08-10' }).length === 0, 'base vide -> aucune routine')
+
+// ─── ajuster une routine a une duree ───
+// « J ai dix minutes » est la question qu on se pose avant celle des mouvements.
+const { templateRoutine } = await import('../../src/features/train/routineTemplates.js')
+const modele = templateRoutine('mob-hanches', 1)
+a(modele.keys.length === 5, `modele de ${modele.keys.length} mouvements, ~${routineMins(modele)} min`)
+
+for (const t of DURATION_CHOICES) {
+  const f = fitToDuration(modele, t)
+  a(f.fitted && f.keys.length >= MIN_MOVES_KEPT, `${t} min : au moins ${MIN_MOVES_KEPT} mouvements gardes`)
+  a(f.sets >= 1, `${t} min : au moins un tour`)
+  a(Math.abs(routineMins(f) - t) <= 6, `${t} min visees -> ${routineMins(f)} min`)
+  a(f.keys.every((k) => modele.keys.includes(k)), `${t} min : aucun mouvement invente`)
+  // Les modeles listent du plus important au moins : ce qui tombe est la fin.
+  a(f.keys.join() === modele.keys.slice(0, f.keys.length).join(), `${t} min : les mouvements retires sont ceux de la fin`)
+}
+// Une duree plus longue ne donne jamais une routine plus courte.
+const courte = fitToDuration(modele, 10)
+const longue = fitToDuration(modele, 30)
+a(routineMins(longue) > routineMins(courte), `10 min -> ${routineMins(courte)} min, 30 min -> ${routineMins(longue)} min`)
+a(fitToDuration(modele, 0).fitted === false, 'aucune duree demandee -> routine inchangee')
+a(fitToDuration({ keys: [] }, 10) === null, 'routine invalide -> null')
+
+const opts = durationOptions(modele)
+a(opts.length === DURATION_CHOICES.length, `${opts.length} durees proposees`)
+a(opts.every((o) => o.moves >= MIN_MOVES_KEPT && o.sets >= 1), 'chaque proposition reste une routine')
+a(opts.filter((o) => o.exact).length >= 3, `${opts.filter((o) => o.exact).length} durees atteintes a la minute pres`)
+a(durationOptions({ keys: [] }).length === 0, 'routine invalide -> aucune proposition')
+
 console.log('\nALL PASS')

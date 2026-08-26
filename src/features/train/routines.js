@@ -174,3 +174,75 @@ export function routineStreak(db, id, { today, days = 28 } = {}) {
   }
   return { count, days, perWeek: Math.round(count / days * 7 * 10) / 10 }
 }
+
+// ─── Ajuster une routine à une durée ────────────────────────
+//
+// « J'ai dix minutes » est la question qu'on se pose vraiment, avant celle
+// de savoir quels mouvements faire. Une routine qui ne tient pas dans le
+// temps qu'on a ne se fait pas.
+//
+// Deux leviers, dans cet ordre. Le nombre de tours d'abord : c'est un tout,
+// on l'ajoute ou on l'enlève sans casser l'enchaînement. Puis les
+// mouvements, retirés par la fin — les modèles les listent du plus
+// important au moins, si bien que ce qui tombe est ce qui manque le moins.
+//
+// On ne descend pas sous trois mouvements ni sous un tour : en dessous,
+// ce n'est plus une routine, c'est un exercice isolé.
+
+export const DURATION_CHOICES = [5, 10, 15, 20, 30]
+export const MIN_MOVES_KEPT = 3
+export const MAX_SETS_FIT = 6
+
+export function fitToDuration(routine, targetMins) {
+  if (!routineValid(routine)) return null
+  const target = num(targetMins)
+  if (!target || target <= 0) return { ...routine, fitted: false, targetMins: null }
+
+  // Retirer un mouvement coûte un peu : à écart de durée voisin, une
+  // routine plus complète vaut mieux qu'un tour de plus sur moins d'exercices,
+  // la variété étant précisément ce qu'on cherche en mobilité.
+  const DROP_PENALTY = 0.8
+  let best = null
+  const consider = (keys, sets) => {
+    const cand = { ...routine, keys, sets }
+    const mins = routineMins(cand)
+    if (!mins) return
+    const gap = Math.abs(mins - target)
+    const score = gap + (routine.keys.length - keys.length) * DROP_PENALTY
+    if (!best || score < best.score - 0.01 || (Math.abs(score - best.score) < 0.01 && keys.length > best.keys.length)) {
+      best = { keys, sets, mins, gap, score }
+    }
+  }
+
+  const full = routine.keys.slice()
+  for (let n = full.length; n >= Math.min(MIN_MOVES_KEPT, full.length); n--) {
+    for (let sets = 1; sets <= MAX_SETS_FIT; sets++) consider(full.slice(0, n), sets)
+  }
+  if (!best) return { ...routine, fitted: false, targetMins: target }
+  return {
+    ...routine,
+    keys: best.keys,
+    sets: best.sets,
+    fitted: true,
+    targetMins: target,
+    mins: best.mins,
+    dropped: full.length - best.keys.length,
+  }
+}
+
+// Ce que chaque durée proposée donnerait, pour choisir en connaissance de
+// cause plutôt qu'au hasard.
+export function durationOptions(routine, choices = DURATION_CHOICES) {
+  if (!routineValid(routine)) return []
+  return choices.map((t) => {
+    const f = fitToDuration(routine, t)
+    return {
+      target: t,
+      mins: f ? f.mins : null,
+      moves: f ? f.keys.length : 0,
+      sets: f ? f.sets : 0,
+      dropped: f ? f.dropped : 0,
+      exact: f && Math.abs(f.mins - t) <= 1,
+    }
+  })
+}

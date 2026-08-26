@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card } from '../health/kit'
 import { suggestions, SESSIONS_TO_UNLOCK } from './routineTemplates'
 import { ROUTINE_KINDS, DOW_SHORT, DOW_LABELS, kindOf, movementsFor, makeRoutine,
-  routineValid, routineMins, routineList, routineStreak, lastDone, daysSince } from './routines'
+  routineValid, routineMins, routineList, routineStreak, lastDone, daysSince,
+  fitToDuration, durationOptions, DURATION_CHOICES } from './routines'
 
 const h = React.createElement
 
@@ -125,6 +126,10 @@ function Editor({ initial, startKind, onSave, onCancel }) {
 }
 
 export default function RoutinesSpace({ db, store, onClose, onPlay }) {
+  // « J'ai dix minutes » est la question qu'on se pose avant celle des
+  // mouvements. Une routine qui ne tient pas dans le temps disponible ne se
+  // fait pas — la durée choisie ici s'applique à ce qu'on lance.
+  const [mins, setMins] = useState(null)
   const [edit, setEdit] = useState(null) // null | 'new' | routine
   const list = routineList(db)
 
@@ -137,6 +142,10 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
   function remove(id) {
     store.set({ routines: routineList(db).filter((x) => x.id !== id) })
   }
+
+  // La durée demandée ajuste tours et mouvements ; sans durée choisie, la
+  // routine part telle qu'elle a été composée.
+  const play = (r) => onPlay && onPlay(mins ? fitToDuration(r, mins) : r)
 
   function routineCard(r) {
             const k = kindOf(r.kind)
@@ -159,7 +168,7 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
                     ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3 } }, st.count, ' fois sur 28 jours', since != null ? ` · la dernière il y a ${since} j` : '')
                     : null)),
               h('div', { style: { display: 'flex', gap: 7, marginTop: 11 } },
-                h('button', { onClick: () => onPlay && onPlay(r.id), style: { flex: 2, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
+                h('button', { onClick: () => play(r), style: { flex: 2, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
                 h('button', { onClick: () => setEdit(r), style: { flex: 1, padding: 10, borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Modifier'),
                 h('button', { onClick: () => remove(r.id), 'aria-label': 'Supprimer', style: { padding: '10px 13px', borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 13, cursor: 'pointer' } }, '×')))
   }
@@ -168,8 +177,24 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
     edit
       ? h(Editor, { initial: edit && edit.id ? edit : null, startKind: edit && edit.newKind ? edit.newKind : 'mobilite', onSave: save, onCancel: () => setEdit(null) })
       : h('div', null,
-        h('p', { style: { fontSize: 12.5, color: C.ink3, lineHeight: 1.55, padding: '0 4px 12px' } },
+        h('p', { style: { fontSize: 12.5, color: C.ink3, lineHeight: 1.55, padding: '0 4px 10px' } },
           'Compose tes propres enchaînements de mobilité ou de pliométrie. Ceux dont tu retiens des jours apparaîtront à l’accueil, comme tes séances planifiées.'),
+
+        h(Card, { style: { marginBottom: 16 } },
+          h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 3 } }, 'Combien de temps as-tu ?'),
+          h('div', { style: { fontSize: 11.5, color: C.ink3, lineHeight: 1.45 } },
+            mins
+              ? `Ce que tu lances sera ajusté à ${mins} minutes : moins de tours, ou moins de mouvements — les derniers de la liste tombent en premier.`
+              : 'Les routines partent telles qu’elles sont composées. Choisis une durée pour les ajuster.'),
+          h('div', { style: { display: 'flex', gap: 5, marginTop: 9, flexWrap: 'wrap' } },
+            h('button', {
+              onClick: () => setMins(null),
+              style: { padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${mins == null ? C.primary : C.line}`, background: mins == null ? C.primary : 'transparent', color: mins == null ? '#fff' : C.ink2 },
+            }, 'Complète'),
+            DURATION_CHOICES.map((t) => h('button', {
+              key: t, onClick: () => setMins(t),
+              style: { padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${mins === t ? C.primary : C.line}`, background: mins === t ? C.primary : 'transparent', color: mins === t ? '#fff' : C.ink2 },
+            }, t, ' min')))),
 
         // Mobilité et pliométrie ne se rangent pas ensemble : l'une prépare et
         // entretient, l'autre sollicite, et elles ne se placent pas aux mêmes
@@ -207,7 +232,7 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
                 ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4, lineHeight: 1.45 } }, sg.note)
                 : null,
               h('div', { style: { display: 'flex', gap: 7, marginTop: 10 } },
-                h('button', { onClick: () => onPlay && onPlay(sg.routine.id), style: { flex: 2, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
+                h('button', { onClick: () => play(sg.routine), style: { flex: 2, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
                 h('button', {
                   onClick: () => save({ ...sg.routine, id: 'rt_' + Date.now().toString(36), custom: true, template: false, name: sg.routine.name, dows: [] }),
                   style: { flex: 1, padding: 10, borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13, fontWeight: 700, cursor: 'pointer' },

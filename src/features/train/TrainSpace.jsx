@@ -16,6 +16,9 @@ import PlannerSpace from './PlannerSpace'
 import WeatherSpace from './WeatherSpace'
 import RoutinesSpace from './RoutinesSpace'
 import { allTemplateRoutines } from './routineTemplates'
+import { sessionExercises as routineBlocks } from './trainData'
+import { routineMins as routineMinsOf } from './routines'
+import { isoToday } from '../health/kit'
 import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
 import HealthHome from '../health/HealthHome'
 
@@ -44,6 +47,9 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   // Les modèles sont jouables au même titre que les routines composées :
   // le lecteur les cherche au même endroit.
   const playableRoutines = (d) => [...(Array.isArray(d.routines) ? d.routines : []), ...allTemplateRoutines()]
+  // Une routine ajustée à une durée n'existe dans aucun catalogue : elle est
+  // jouée telle quelle, par ses blocs, plutôt que retrouvée par identifiant.
+  const [playRoutine, setPlayRoutine] = useState(null)
 
   const ENTRAINER_ACTIONS = new Set(['mobility', 'program', 'planner', 'recovery', 'peak', 'tests', 'weather', 'routines'])
   function handleCoachAction(action) {
@@ -69,6 +75,25 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
     setTile(null)
   }
 
+  if (playRoutine) {
+    return React.createElement(Player, {
+      blocks: routineBlocks(playRoutine),
+      title: playRoutine.name,
+      onClose: () => setPlayRoutine(null),
+      onFinish: () => {
+        // Une routine faite se note dans son journal : c'est ce qui fait
+        // monter les niveaux et alimente l'observance.
+        store.set((prev) => {
+          const log = { ...((prev && prev.routineLog) || {}) }
+          const day = Array.isArray(log[isoToday()]) ? log[isoToday()] : []
+          if (!day.includes(playRoutine.id)) log[isoToday()] = [...day, playRoutine.id]
+          return { routineLog: log }
+        })
+        store.completeSession(routineMinsOf(playRoutine), { title: playRoutine.name, cat: playRoutine.cat })
+        setPlayRoutine(null)
+      },
+    })
+  }
   if (playId) {
     return React.createElement(Player, { id: playId, program: db.program, routines: playableRoutines(db), onClose: () => setPlayId(null), onFinish: finishSession })
   }
@@ -98,7 +123,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   if (tile === 'routines') {
     return React.createElement(RoutinesSpace, {
       db, store, onClose: backToHub,
-      onPlay: (id) => { setTile(null); setPlayId(id) },
+      onPlay: (r) => { setTile(null); setPlayRoutine(r) },
     })
   }
 
