@@ -1,6 +1,7 @@
 // Routines toutes faites, et progression de niveau.
 import { TEMPLATE_FAMILIES, familyById, familiesFor, templateId, parseTemplateId,
-  templateRoutine, familyProgress, suggestions, allTemplateRoutines, SESSIONS_TO_UNLOCK }
+  templateRoutine, familyProgress, suggestions, allTemplateRoutines, SESSIONS_TO_UNLOCK,
+  recommendedRoutines, SENSITIVE_TO_ZONE, LOWER_LIMB_PAIN, STIFF_MAX, SCORE }
   from '../../src/features/train/routineTemplates.js'
 import { EX, getSession } from '../../src/features/train/trainData.js'
 import { routineMins } from '../../src/features/train/routines.js'
@@ -89,4 +90,55 @@ a(sg[0].justUnlocked, 'le passage de niveau est signale')
 a(/Niveau d[ée]bloqu[ée]/.test(sg[0].note), 'et annonce comme tel : ' + sg[0].note)
 a(suggestions({}).length === TEMPLATE_FAMILIES.length, 'sans type : toutes les familles')
 a(suggestions({})[0].levelNumber === 1, 'base vide -> premier niveau')
+
+// ─── ce qu il te faut aujourd hui ───
+// Choisir sa routine suppose de savoir ce qui coince. L application le sait
+// deja : test de mobilite, zones sensibles, douleur en cours, seance du jour.
+const T = '2026-08-21'
+const profil = {
+  mobility: { zones: [
+    { id: 'chevilles', val: 1 }, { id: 'hanches', val: 2 }, { id: 'epaules', val: 3 },
+    { id: 'post', val: 3 }, { id: 'nuque', val: 0 },
+  ] },
+  sensitiveZones: ['dos'],
+  planningSessions: [{ id: 's', date: T, sport: 'course', statut: 'planifie', duree: '1 h' }],
+}
+const reco = recommendedRoutines(profil, { today: T, limit: 5 })
+a(reco.length > 0, `${reco.length} familles proposees`)
+a(reco.every((x) => x.why && x.routine), 'chacune porte sa raison et sa routine')
+a(reco[0].score >= reco[reco.length - 1].score, 'classees par utilite')
+a(reco.some((x) => /zone raide au dernier test/.test(x.why)), 'les zones raides comptent')
+a(reco.some((x) => /zone d[ée]clar[ée]e sensible/.test(x.why)), 'les zones declarees aussi')
+a(reco.some((x) => /pr[ée]pare ta s[ée]ance du jour/.test(x.why)), 'et la seance du jour')
+// Une valeur a zero signifie « question sautee » : la compter ferait
+// apparaitre un faux point faible.
+a(!reco.some((x) => x.family.zones.includes('nuque') && /raide/.test(x.why)), 'une question sautee ne cree pas une zone raide')
+a(recommendedRoutines({}, { today: T }).length === 0, 'aucune donnee -> aucune recommandation inventee')
+
+// ─── LE point : on ne saute pas sur une douleur ───
+const blesse = { ...profil, painEpisodes: [{ start: '2026-08-15', region: 'cheville' }] }
+const r2 = recommendedRoutines(blesse, { today: T, limit: 5 })
+a(r2.every((x) => x.family.kind !== 'pliometrie'), 'aucune pliometrie proposee avec une douleur a la cheville')
+a(r2.blocked.length >= 2, `${r2.blocked.length} familles ecartees explicitement`)
+a(r2.blocked.every((x) => x.family.kind === 'pliometrie'), 'et ce sont bien les familles de pliometrie')
+a(/forces les plus [ée]lev[ée]es/.test(r2.blocked[0].why), 'la raison est donnee : ' + r2.blocked[0].why)
+// Ecartee, pas seulement mal classee : une recommandation mal classee finit
+// par etre suivie.
+a(!r2.some((x) => x.family.id === 'plyo-appuis'), 'la pliometrie ne remonte pas plus bas dans la liste : elle en sort')
+a(r2[0].family.id === 'mob-chevilles', 'et la famille qui traite la zone douloureuse passe en tete')
+a(/douleur en cours/.test(r2[0].why), 'en le disant')
+// Une douleur au dos ne bloque pas la pliometrie : seule la chaine porteuse
+// est concernee.
+const dos = { ...profil, painEpisodes: [{ start: '2026-08-15', region: 'dos' }] }
+a(!LOWER_LIMB_PAIN.includes('dos'), 'le dos ne figure pas parmi les regions porteuses')
+a(recommendedRoutines(dos, { today: T, limit: 6 }).blocked.length === 0, 'et n ecarte donc pas la pliometrie')
+
+// ─── correspondance des vocabulaires ───
+// Le profil declare ses zones avec son vocabulaire, le test avec le sien.
+a(SENSITIVE_TO_ZONE.dos.includes('post'), 'le dos declare renvoie a la chaine posterieure')
+a(SENSITIVE_TO_ZONE.genoux.includes('hanches'), 'les genoux renvoient aux hanches, d ou vient souvent la contrainte')
+a(Object.values(SENSITIVE_TO_ZONE).every((v) => Array.isArray(v) && v.length), 'chaque zone declaree a sa correspondance')
+a(SCORE.pain > SCORE.stiff && SCORE.stiff > SCORE.sensitive, 'une douleur pese plus qu une raideur, qui pese plus qu une zone declaree')
+a(STIFF_MAX === 2, 'est raide ce qui est note 1 ou 2 sur 3')
+
 console.log('\nALL PASS')

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card } from '../health/kit'
-import { suggestions, SESSIONS_TO_UNLOCK } from './routineTemplates'
+import { suggestions, recommendedRoutines, SESSIONS_TO_UNLOCK } from './routineTemplates'
 import { ROUTINE_KINDS, DOW_SHORT, DOW_LABELS, kindOf, movementsFor, makeRoutine,
   routineValid, routineMins, routineList, routineStreak, lastDone, daysSince,
   fitToDuration, durationOptions, DURATION_CHOICES } from './routines'
@@ -179,6 +179,26 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
       : h('div', null,
         h('p', { style: { fontSize: 12.5, color: C.ink3, lineHeight: 1.55, padding: '0 4px 10px' } },
           'Compose tes propres enchaînements de mobilité ou de pliométrie. Ceux dont tu retiens des jours apparaîtront à l’accueil, comme tes séances planifiées.'),
+
+        // Choisir sa routine suppose de savoir ce qui coince. L'application
+        // le sait déjà : dernier test de mobilité, zones déclarées sensibles,
+        // douleur en cours, séance du jour.
+        (() => {
+          const reco = recommendedRoutines(db || {}, { limit: 3 })
+          if (!reco.length && !(reco.blocked && reco.blocked.length)) return null
+          return h('div', { style: { marginBottom: 16 } },
+            h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 9px' } }, 'Pour toi aujourd’hui'),
+            reco.map((x) => h(Card, { key: x.family.id, style: { marginBottom: 9, border: `1px solid color-mix(in srgb, ${C.primary} 35%, ${C.line})` } },
+              h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+                h('div', { style: { flex: 1, fontSize: 14, fontWeight: 700 } }, x.routine.name),
+                h('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 700 } }, 'Niveau ', x.levelNumber, '/', x.levelCount)),
+              h('div', { style: { fontSize: 12, color: C.ink2, marginTop: 5, lineHeight: 1.5 } }, x.why),
+              h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5 } },
+                x.routine.keys.length, ' mouvements · ~', routineMins(x.routine), ' min'),
+              h('button', { onClick: () => play(x.routine), style: { width: '100%', marginTop: 10, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'))),
+            (reco.blocked || []).map((x) => h('div', { key: x.family.id, style: { fontSize: 11.5, color: C.ink3, lineHeight: 1.5, padding: '2px 4px 6px' } },
+              x.family.label, ' — ', x.why)))
+        })(),
 
         h(Card, { style: { marginBottom: 16 } },
           h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 3 } }, 'Combien de temps as-tu ?'),

@@ -245,6 +245,21 @@ a(/Copier/.test(rs) && /Lancer/.test(rs), 'chacune se lance ou se copie')
 a(/Combien de temps as-tu/.test(rs), 'la duree se choisit avant de lancer')
 a(/10\s+min/.test(rs) && /15\s+min/.test(rs) && /20\s+min/.test(rs), 'les durees proposees sont la')
 a(/Compl[èe]te/.test(rs), 'et l option « telle qu elle est composee »')
+
+// Les recommandations personnalisees doivent s afficher, avec leur raison.
+const profilDb = {
+  routines: deux,
+  mobility: { zones: [{ id: 'chevilles', val: 1 }, { id: 'hanches', val: 2 }] },
+  sensitiveZones: ['dos'],
+  painEpisodes: [{ start: '2026-08-15', region: 'cheville' }],
+}
+__reset(); __setDb(profilDb)
+const rp = text(__render('routines-reco', routinesEcran, { ...mkProps(profilDb), onPlay: () => {} }))
+a(/Pour toi aujourd.hui/.test(rp), 'le bloc personnalise est la')
+a(/Propos[ée]e parce que/.test(rp), 'chaque proposition dit pourquoi')
+a(/Chevilles et pieds/.test(rp), 'la famille qui traite la douleur est proposee')
+a(/[ÉE]cart[ée]e tant que cette douleur dure/.test(rp), 'et la pliometrie est ecartee, en le disant')
+a(!/undefined|NaN/.test(rp), 'aucune valeur malformee')
 // Une famille vide le dit, plutot que de disparaitre.
 __reset(); __setDb({ routines: [deux[0]] })
 const rs2 = text(__render('routines-une', routinesEcran, { ...mkProps({ routines: [deux[0]] }), onPlay: () => {} }))
