@@ -219,9 +219,30 @@ const at = text(__render('accueil-routines', accueil, mkProps({ routines: [routi
 a(/R[ée]veil hanches/.test(at), "la routine du jour apparait a l accueil")
 a(/Mobilit[ée]/.test(at), 'avec son type')
 a(!/undefined|NaN/.test(at), 'aucune valeur malformee')
+// Une routine n est pas une seance planifiee : elle a son propre bloc.
+a(/Tes routines du jour/.test(at), 'les routines ont leur propre titre a l accueil')
+a(/1 [àa] faire/.test(at), 'avec le compte de ce qui reste')
 // Un autre jour, elle ne se rappelle pas.
 const autre = makeRoutine({ kind: 'mobilite', name: 'Ailleurs', keys: mobKeys, dows: [(todayDow + 3) % 7] })
 __reset(); __setDb({ routines: [autre] })
 a(!/Ailleurs/.test(text(__render('accueil-autre', accueil, mkProps({ routines: [autre] })))), "une routine d un autre jour ne s affiche pas")
+
+
+// Mobilite et pliometrie ne se rangent pas ensemble.
+const routinesEcran = (await import('../../src/features/train/RoutinesSpace.jsx')).default
+const deux = [
+  makeRoutine({ kind: 'mobilite', name: 'Hanches', keys: mobKeys, dows: [0] }),
+  makeRoutine({ kind: 'pliometrie', name: 'Bondissements', keys: movementsFor('pliometrie').slice(0, 2).map((m) => m.key), dows: [2] }),
+]
+__reset(); __setDb({ routines: deux })
+const rs = text(__render('routines-ecran', routinesEcran, { ...mkProps({ routines: deux }), onPlay: () => {} }))
+a(/Mobilit[ée]/.test(rs) && /Pliom[ée]trie/.test(rs), 'les deux familles ont leur en-tete')
+a(rs.indexOf('Hanches') !== -1 && rs.indexOf('Bondissements') !== -1, 'et chacune sa routine')
+a(rs.indexOf('Mobilit') < rs.indexOf('Hanches'), 'la routine de mobilite est rangee sous son en-tete')
+a(rs.indexOf('Pliom') < rs.indexOf('Bondissements'), 'celle de pliometrie sous le sien')
+// Une famille vide le dit, plutot que de disparaitre.
+__reset(); __setDb({ routines: [deux[0]] })
+const rs2 = text(__render('routines-une', routinesEcran, { ...mkProps({ routines: [deux[0]] }), onPlay: () => {} }))
+a(/Aucune routine de pliom[ée]trie/.test(rs2), 'la famille vide reste visible et invite')
 
 console.log('\nALL PASS')

@@ -184,14 +184,21 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines }) {
     h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 10px' } }, "Aujourd'hui"),
     !(next && next.date === iso) && Row('calendar', C.primary, nextTitle, nextDetail, onPlanner),
     (nutPillar || hydPillar) && Row('apple', C.carb, 'Nutrition & hydratation', [nutPillar && nutPillar.status === 'ok' ? nutPillar.detail : null, hydPillar && hydPillar.status === 'ok' ? hydPillar.detail : null].filter(Boolean).join(' · ') || "Rien enregistré aujourd'hui", onNutrition),
-    routinesLeft.map((r) => Row(
-      kindOf(r.kind).icon, '#7d9471', r.name,
-      `${kindOf(r.kind).label} · ${r.keys.length} mouvement${r.keys.length > 1 ? 's' : ''} · ~${r.mins} min`,
-      onRoutines, r.id,
-    )),
-    routines.length && !routinesLeft.length
-      ? Row('check', C.success, 'Routines du jour faites', `${routines.length} routine${routines.length > 1 ? 's' : ''} · ${routines.map((r) => r.name).join(', ')}`, onRoutines)
-      : null,
+    // Les routines ne sont pas des séances planifiées : elles se répètent,
+    // se cochent, et ne coûtent que quelques minutes. Les mêler aux rappels
+    // du jour les faisait passer pour des séances, et une routine annoncée
+    // comme une séance décourage autant qu'elle rappelle. Elles ont donc leur
+    // propre bloc, sous leur propre titre.
+    routines.length ? h('div', { key: 'routines', style: { marginTop: 18 } },
+      h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 10px' } },
+        'Tes routines du jour', routinesLeft.length ? ` · ${routinesLeft.length} à faire` : ' · terminées'),
+      routines.map((r) => Row(
+        r.done ? 'check' : kindOf(r.kind).icon,
+        r.done ? C.success : '#7d9471',
+        r.name,
+        `${kindOf(r.kind).label} · ${r.keys.length} mouvement${r.keys.length > 1 ? 's' : ''} · ~${r.mins} min${r.done ? ' · faite' : ''}`,
+        onRoutines, r.id,
+      ))) : null,
     acwr.available && acwr.level !== 'Vigilance renforcée' && Row('chart', acwr.color, 'Charge : ' + acwr.level, `Ratio ${acwr.ratio} · ${acwr.acuteMin} min (7j) vs ${acwr.chronicAvgWeek} min/sem moy.`, onPlanner))
 }
 

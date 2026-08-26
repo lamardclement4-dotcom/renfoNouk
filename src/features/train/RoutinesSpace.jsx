@@ -45,12 +45,12 @@ function MovePicker({ kind, selected, onToggle, onClose }) {
       h('button', { onClick: onClose, style: { width: '100%', marginTop: 8, padding: 13, borderRadius: C.radiusSm, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Terminé')))
 }
 
-function Editor({ initial, onSave, onCancel }) {
-  const [kind, setKind] = useState(initial ? initial.kind : 'mobilite')
+function Editor({ initial, startKind, onSave, onCancel }) {
+  const [kind, setKind] = useState(initial ? initial.kind : (startKind || 'mobilite'))
   const [name, setName] = useState(initial ? initial.name : '')
   const [keys, setKeys] = useState(initial ? initial.keys.slice() : [])
-  const [sets, setSets] = useState(initial ? initial.sets : kindOf('mobilite').defaultSets)
-  const [rest, setRest] = useState(initial ? initial.restSecs : kindOf('mobilite').defaultRest)
+  const [sets, setSets] = useState(initial ? initial.sets : kindOf(startKind || 'mobilite').defaultSets)
+  const [rest, setRest] = useState(initial ? initial.restSecs : kindOf(startKind || 'mobilite').defaultRest)
   const [dows, setDows] = useState(initial ? initial.dows.slice() : [])
   const [picker, setPicker] = useState(false)
 
@@ -137,15 +137,7 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
     store.set({ routines: routineList(db).filter((x) => x.id !== id) })
   }
 
-  return h(FlowSpace, { title: 'Mes routines', onClose, fixed: false, bg: 'entrainer' },
-    edit
-      ? h(Editor, { initial: edit === 'new' ? null : edit, onSave: save, onCancel: () => setEdit(null) })
-      : h('div', null,
-        h('p', { style: { fontSize: 12.5, color: C.ink3, lineHeight: 1.55, padding: '0 4px 12px' } },
-          'Compose tes propres enchaînements de mobilité ou de pliométrie. Ceux dont tu retiens des jours apparaîtront à l’accueil, comme tes séances planifiées.'),
-
-        list.length
-          ? list.map((r) => {
+  function routineCard(r) {
             const k = kindOf(r.kind)
             const st = routineStreak(db, r.id)
             const last = lastDone(db, r.id)
@@ -169,10 +161,39 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
                 h('button', { onClick: () => onPlay && onPlay(r.id), style: { flex: 2, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
                 h('button', { onClick: () => setEdit(r), style: { flex: 1, padding: 10, borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Modifier'),
                 h('button', { onClick: () => remove(r.id), 'aria-label': 'Supprimer', style: { padding: '10px 13px', borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 13, cursor: 'pointer' } }, '×')))
-          })
-          : h(Card, { style: { marginBottom: 12, textAlign: 'center', padding: '22px 16px' } },
-            h('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } }, 'Aucune routine pour l’instant.'),
-            h('div', { style: { fontSize: 12, color: C.ink3, marginTop: 6, lineHeight: 1.5 } }, 'Une routine, c’est l’enchaînement de dix minutes que tu refais trois fois par semaine.')),
+  }
 
-        h('button', { onClick: () => setEdit('new'), style: { width: '100%', marginTop: 4, padding: 13, borderRadius: C.radiusSm, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Créer une routine')))
+  return h(FlowSpace, { title: 'Mes routines', onClose, fixed: false, bg: 'entrainer' },
+    edit
+      ? h(Editor, { initial: edit && edit.id ? edit : null, startKind: edit && edit.newKind ? edit.newKind : 'mobilite', onSave: save, onCancel: () => setEdit(null) })
+      : h('div', null,
+        h('p', { style: { fontSize: 12.5, color: C.ink3, lineHeight: 1.55, padding: '0 4px 12px' } },
+          'Compose tes propres enchaînements de mobilité ou de pliométrie. Ceux dont tu retiens des jours apparaîtront à l’accueil, comme tes séances planifiées.'),
+
+        // Mobilité et pliométrie ne se rangent pas ensemble : l'une prépare et
+        // entretient, l'autre sollicite, et elles ne se placent pas aux mêmes
+        // moments de la semaine. Mêlées dans une seule liste, on cherchait la
+        // sienne au lieu de la voir.
+        ROUTINE_KINDS.map((k) => {
+          const ofKind = list.filter((r) => r.kind === k.id)
+          return h('div', { key: k.id, style: { marginBottom: 18 } },
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: 7, margin: '0 2px 9px' } },
+              h(Icon, { name: k.icon, size: 15, color: C.primary }),
+              h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } },
+                k.label, ofKind.length ? ` · ${ofKind.length}` : ''),
+              h('div', { style: { flex: 1 } }),
+              h('button', { onClick: () => setEdit({ newKind: k.id }), style: { fontSize: 12.5, fontWeight: 700, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Ajouter')),
+            ofKind.length
+              ? ofKind.map((r) => routineCard(r))
+              : h('div', { style: { fontSize: 12.5, color: C.ink3, padding: '2px 2px 0', lineHeight: 1.5 } },
+                k.id === 'mobilite'
+                  ? 'Aucune routine de mobilité. C’est l’enchaînement court qu’on refait souvent, pas une séance.'
+                  : 'Aucune routine de pliométrie. Sauts et bondissements, en petites doses et bien reposé.'))
+        }),
+
+        !list.length ? h(Card, { style: { marginBottom: 12, textAlign: 'center', padding: '22px 16px' } },
+            h('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } }, 'Aucune routine pour l’instant.'),
+            h('div', { style: { fontSize: 12, color: C.ink3, marginTop: 6, lineHeight: 1.5 } }, 'Une routine, c’est l’enchaînement de dix minutes que tu refais trois fois par semaine.')) : null,
+
+        h('button', { onClick: () => setEdit({ newKind: 'mobilite' }), style: { width: '100%', marginTop: 4, padding: 13, borderRadius: C.radiusSm, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Créer une routine')))
 }
