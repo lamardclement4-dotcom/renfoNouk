@@ -48,6 +48,9 @@ function asList(v) {
   return Array.isArray(v) ? v.filter((x) => x != null) : []
 }
 
+// Les nombres s'écrivent avec une virgule : « 4.7 % » n'est pas du français.
+const fr = (v) => String(v).replace('.', ',')
+
 export function daysBetween(a, b) {
   const [ay, am, ad] = a.split('-').map(Number)
   const [by, bm, bd] = b.split('-').map(Number)
@@ -262,7 +265,7 @@ export function testsAnalysis(db, { sexe = 'h', age = 30, today, trainingMins = 
     if (regs.length) {
       const r = regs[0]
       const ctx = changeContext(r.testId, ctxOpts)
-      const base = `${r.label} en recul de ${Math.abs(r.change.pct)} % depuis le passage précédent (${r.change.prev.value} → ${r.last.value} ${r.unit}).`
+      const base = `${r.label} en recul de ${fr(Math.abs(r.change.pct))} % depuis le passage précédent (${r.change.prev.value} → ${r.last.value} ${r.unit}).`
       // Le contexte passe avant le rappel sur le bruit : il change le sens
       // de la baisse, pas seulement sa fiabilité.
       tips.push(ctx.length

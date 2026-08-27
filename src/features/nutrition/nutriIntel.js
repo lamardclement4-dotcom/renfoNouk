@@ -268,7 +268,7 @@ export function nutriAnalysis(db, { days = 28, today } = {}) {
       const off = split.items.filter((m) => m.level !== 'ok')
       if (off.length) {
         const m = off[0]
-        tips.push(`${m.label} : ${m.pct} % de tes calories, ${m.level === 'low' ? 'sous' : 'au-dessus de'} la fourchette de référence (${m.lo}–${m.hi} %).`)
+        tips.push(`${m.label} : ${fr(m.pct)} % de tes calories, ${m.level === 'low' ? 'sous' : 'au-dessus de'} la fourchette de référence (${m.lo}–${m.hi} %).`)
       }
       if (split.gap != null && split.gap <= -12) {
         tips.push(`Les macronutriments enregistrés ne couvrent que ${Math.round(100 + split.gap)} % des calories du journal : certains aliments ont des valeurs incomplètes.`)
@@ -278,7 +278,7 @@ export function nutriAnalysis(db, { days = 28, today } = {}) {
       const bad = gaps.filter((g) => g.level !== 'ok')
       if (bad.length) {
         const g = bad[0]
-        tips.push(`${g.label} : ${g.value} ${g.unit} en moyenne contre ${g.target} visés (${g.pct > 0 ? '+' : ''}${g.pct} %).`)
+        tips.push(`${g.label} : ${g.value} ${g.unit} en moyenne contre ${g.target} visés (${g.pct > 0 ? '+' : ''}${fr(g.pct)} %).`)
       }
     } else if (!targets) {
       tips.push('Aucun objectif défini : les moyennes existent mais rien ne permet de dire si elles conviennent.')

@@ -72,6 +72,9 @@ function asList(v) {
   return Array.isArray(v) ? v.filter((x) => x != null) : []
 }
 
+// Les nombres s'écrivent avec une virgule.
+const fr = (v) => String(v).replace('.', ',')
+
 export function hydricTargetMl(db) {
   const sp = db.hydroSport || {}
   const rate = sp.intensite === 'leger' ? 400 : sp.intensite === 'intense' ? 800 : 600
@@ -1126,7 +1129,7 @@ export function recommendations(db) {
     })
     if (tAna.regressions.length) {
       const r = tAna.regressions[0]
-      push('warn', 'chart', `${r.label} en recul de ${Math.abs(r.change.pct)} % depuis ton passage précédent (${r.change.prev.value} → ${r.last.value} ${r.unit}) — au-delà de ${r.change.floor} %, ce n'est plus du bruit de mesure.`, 'tests')
+      push('warn', 'chart', `${r.label} en recul de ${fr(Math.abs(r.change.pct))} % depuis ton passage précédent (${r.change.prev.value} → ${r.last.value} ${r.unit}) — au-delà de ${r.change.floor} %, ce n'est plus du bruit de mesure.`, 'tests')
     }
     if (tAna.improved.length) {
       const i = tAna.improved[0]

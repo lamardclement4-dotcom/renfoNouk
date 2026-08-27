@@ -30,6 +30,10 @@ const BASES = {
   enormes: { planningSessions: [{ id: 'a', date: back(3), sport: 'course', statut: 'realise', duree: '99999 h', data: { distance: 1e12, rpe: 1e9 } }] },
   mobiliteHeritee: { mobility: { score: 50, zones: { hanches: 2 } }, mobilityHistory: [{ date: back(3), score: 50, zones: { hanches: 2 } }] },
   programmeCasse: { program: { sessions: [{ id: 'a' }, null], done: null, weak: 'hanches' } },
+  routinesCassees: { routines: [{ id: 'r', keys: 'nawak', sets: 'trois', dows: 'lundi' }, null], routineLog: { '2026-08-20': 'r' } },
+  routinesObjet: { routines: {}, routineLog: [] },
+  mobiliteObjet: { mobility: { zones: { chevilles: 1 } }, sensitiveZones: 'dos', painEpisodes: [{ start: 'hier', region: null }] },
+  echauffementCasse: { planningSessions: [{ id: 'a', date: '2026-08-20', sport: 'course', statut: 'realise', duree: '1 h', data: { rpe: 8, echauffement: 'oui', educatifs: 'askip' } }] },
 }
 
 // ─── ce que buildDb doit garantir ───
@@ -62,6 +66,11 @@ const MODULES = [
   ['enduranceIntel', 'train/enduranceIntel.js', 'enduranceAnalysis'], ['sprintIntel', 'train/sprintIntel.js', 'sprintAnalysis'],
   ['genericIntel', 'train/genericIntel.js', 'genericAnalysis'], ['retroIntel', 'train/retroIntel.js', 'retroAnalysis'],
   ['renfoIntel', 'train/renfoIntel.js', 'recommendations'],
+  ['macroIntel', 'nutrition/macroIntel.js', 'macroDeepAnalysis'],
+  ['routines', 'train/routines.js', 'routinesToday'],
+  ['routineTemplates', 'train/routineTemplates.js', 'recommendedRoutines'],
+  ['plannerWarmup', 'train/plannerIntel.js', 'warmupHabit'],
+  ['plannerDrills', 'train/plannerIntel.js', 'drillHabit'],
 ]
 // Un NaN ne leve pas : il traverse les calculs et s affiche tel quel.
 const anomalies = []
@@ -96,6 +105,7 @@ const SCREENS = [
   ['Meteo', 'train/WeatherSpace.jsx'], ['Pliometrie', 'train/PliometrieSpace.jsx'], ['TestMobilite', 'train/MobilityTest.jsx'],
   ['CatMobilite', 'train/MobilityCatalog.jsx'], ['CatRenfo', 'train/RenfoCatalog.jsx'], ['Programme', 'train/ProgramView.jsx'],
   ['Import', 'train/ActivityImport.jsx'],
+  ['Routines', 'train/RoutinesSpace.jsx'],
 ]
 const noop = () => {}
 const mkProps = (raw) => {
