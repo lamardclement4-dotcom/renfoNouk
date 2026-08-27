@@ -40,6 +40,7 @@ const shiftISO = (iso, delta) => {
 // `weatherIntel` ne dépend de rien : l'importer ici ne rompt pas
 // l'indépendance du module.
 import { loadMultiplier, heatAcclimation } from './weatherIntel'
+import { warmupSummary, drillsFor, drillsSummary } from './drillsData'
 
 // `x || []` ne protège que de `null` et `undefined`. Une liste stockée en
 // base peut revenir sous une autre forme — écriture partielle, donnée écrite
@@ -342,4 +343,79 @@ export function plannerAnalysis(db, { weekOf, today } = {}) {
   if (!tips.length) tips.push('Semaine cohérente : charge maîtrisée, alternance correcte et jours de repos présents.')
 
   return { structure, load, monotony: mono, adherence: adh, goal, tips }
+}
+
+// ─── Échauffement et éducatifs ──────────────────────────────
+//
+// Ils occupent le premier quart d'une séance et décident de la qualité du
+// reste. Enregistrés sans être relus, ils ne servaient à rien : ce qui
+// suit les relit.
+
+export const WARMUP_MIN_MINS = 10
+
+export function warmupHabit(db, { days = 28, today } = {}) {
+  const ref = today || todayISO()
+  const from = shiftISO(ref, -(days - 1))
+  const done = asList(db && db.planningSessions)
+    .filter((s) => s && s.statut === 'realise' && s.date >= from && s.date <= ref)
+  if (!done.length) return null
+  let withWarmup = 0
+  const hardWithout = []
+  for (const s of done) {
+    const w = warmupSummary(s.data && s.data.echauffement)
+    if (w && w.mins >= WARMUP_MIN_MINS) withWarmup++
+    // Une séance dure sans échauffement est le cas qui compte : c'est là
+    // que le manque se paie, pas sur une sortie facile.
+    else if (isHard(s)) hardWithout.push(s)
+  }
+  const pct = Math.round(withWarmup / done.length * 100)
+  return {
+    sessions: done.length, withWarmup, pct,
+    hardWithout: hardWithout.length,
+    level: hardWithout.length >= 2 ? 'warn' : pct < 50 ? 'info' : 'ok',
+    text: hardWithout.length >= 2
+      ? `${hardWithout.length} séances dures sans échauffement noté sur ${days} jours. C'est là que le manque se paie : sur une sortie facile, le corps a le temps de monter en température tout seul.`
+      : pct < 50
+        ? `Échauffement noté sur ${pct} % de tes séances. Dix minutes changent la qualité du reste, et ce qui n'est pas noté finit par ne plus être fait.`
+        : null,
+  }
+}
+
+export function drillHabit(db, { days = 56, today } = {}) {
+  const ref = today || todayISO()
+  const from = shiftISO(ref, -(days - 1))
+  const done = asList(db && db.planningSessions)
+    .filter((s) => s && s.statut === 'realise' && s.date >= from && s.date <= ref && s.sport)
+  if (!done.length) return null
+  const bySport = {}
+  for (const s of done) {
+    if (!drillsFor(s.sport).length) continue
+    if (!bySport[s.sport]) bySport[s.sport] = { sport: s.sport, sessions: 0, withDrills: 0, used: new Set() }
+    const b = bySport[s.sport]
+    b.sessions++
+    const d = drillsSummary(s.sport, s.data && s.data.educatifs)
+    if (d) { b.withDrills++; for (const l of d.labels) b.used.add(l) }
+  }
+  const items = Object.values(bySport)
+    .filter((b) => b.sessions >= 3)
+    .map((b) => {
+      const all = drillsFor(b.sport)
+      const never = all.filter((d) => !b.used.has(d.label))
+      return {
+        sport: b.sport, sessions: b.sessions, withDrills: b.withDrills,
+        pct: Math.round(b.withDrills / b.sessions * 100),
+        used: [...b.used], never: never.map((d) => d.label),
+      }
+    })
+    .sort((a, b) => a.pct - b.pct)
+  if (!items.length) return null
+  const worst = items[0]
+  return {
+    items, worst,
+    text: worst.pct === 0
+      ? `Aucun éducatif noté en ${worst.sport} sur ${worst.sessions} séances. Ce sont les seuls exercices qui changent le geste plutôt que la condition.`
+      : worst.never.length
+        ? `En ${worst.sport}, ${worst.never.length} éducatifs ne sont jamais faits : ${worst.never.slice(0, 3).join(', ')}. Varier ce qu'on travaille vaut mieux que répéter ce qu'on sait déjà faire.`
+        : null,
+  }
 }

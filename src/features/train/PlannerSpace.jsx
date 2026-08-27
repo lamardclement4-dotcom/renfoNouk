@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
 import ActivityImport from './ActivityImport'
+import { WARMUP_KINDS, WARMUP_MINUTES, drillsFor } from './drillsData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE, EQUIP, searchExercises, exercisesOfGroup } from './plannerData'
 import { plannerAnalysis } from './plannerIntel'
 import { SCALES, STYLES, ANGLES, LIEUX, PRISES, gradeIndex } from './climbIntel'
@@ -686,6 +687,68 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
     exercises.length === 0 && React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, textAlign: 'center', padding: '10px 0' } }, 'Cherche et ajoute un exercice ci-dessus.'))
 }
 
+// Une séance ne commence pas à la première répétition. L'échauffement et
+// les éducatifs occupent souvent le premier quart du temps et décident de
+// la qualité du reste — sans être notés nulle part, si bien qu'une séance
+// bâclée à l'échauffement et une séance préparée s'enregistraient pareil.
+function WarmupFields({ data, setData }) {
+  const w = data.echauffement || {}
+  const kinds = Array.isArray(w.kinds) ? w.kinds : []
+  const set = (patch) => setData({ ...data, echauffement: { ...w, ...patch } })
+  const chip = (on) => ({
+    padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+    border: `1.5px solid ${on ? C.primary : C.line}`,
+    background: on ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface,
+    color: on ? C.primary : C.ink2,
+  })
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('div', { style: fieldLabel() }, '🔥 Échauffement'),
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 9 } },
+      WARMUP_MINUTES.map((m) => React.createElement('button', {
+        key: m, onClick: () => set({ mins: m }),
+        style: chip((w.mins || 0) === m),
+      }, m === 0 ? 'Aucun' : `${m} min`))),
+    (w.mins || 0) > 0 ? React.createElement('div', null,
+      React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
+        WARMUP_KINDS.map((k) => React.createElement('button', {
+          key: k.id, title: k.hint,
+          onClick: () => set({ kinds: kinds.includes(k.id) ? kinds.filter((x) => x !== k.id) : [...kinds, k.id] }),
+          style: chip(kinds.includes(k.id)),
+        }, k.label))),
+      React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 7, lineHeight: 1.45 } },
+        kinds.length
+          ? WARMUP_KINDS.filter((k) => kinds.includes(k.id)).map((k) => k.hint).join(' ')
+          : 'Général pour monter en température, mobilité sur ce que la séance va solliciter, spécifique pour le geste lui-même.')) : null)
+}
+
+function DrillFields({ sport, data, setData }) {
+  const list = drillsFor(sport)
+  if (!list.length) return null
+  const sel = Array.isArray(data.educatifs) ? data.educatifs : []
+  const toggle = (id) => setData({ ...data, educatifs: sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id] })
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('div', { style: fieldLabel() }, '🎯 Éducatifs'),
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
+      list.map((d) => {
+        const on = sel.includes(d.id)
+        return React.createElement('button', {
+          key: d.id, onClick: () => toggle(d.id), title: d.aim,
+          style: {
+            padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+            border: `1.5px solid ${on ? C.primary : C.line}`,
+            background: on ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface,
+            color: on ? C.primary : C.ink2,
+          },
+        }, d.label)
+      })),
+    // Un éducatif dont on ignore l'intention se fait sans intention.
+    sel.length
+      ? React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 8, lineHeight: 1.5 } },
+        list.filter((d) => sel.includes(d.id)).map((d) => `${d.label} — ${d.aim}`).join(' '))
+      : React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 8, lineHeight: 1.45 } },
+        'Ce que travaille chaque éducatif s’affiche une fois choisi.'))
+}
+
 function SessionForm({ activeSports, initial, initialDate, exerciseHistory, pastSessions, db, onSave, onDelete, onClose }) {
   const [sport, setSport] = useState(initial?.sport || null)
   const [date, setDate] = useState(initial?.date || initialDate || isoDate(new Date()))
@@ -867,6 +930,9 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
         React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Ressenti'),
         React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 16 } },
           RESSENTI.map((r) => React.createElement('button', { key: r.val, onClick: () => setRessenti(r.val), title: r.l, style: { flex: 1, padding: '10px 0', borderRadius: C.radiusSm, fontSize: 22, cursor: 'pointer', border: '1.5px solid ' + (ressenti === r.val ? C.primary : C.line), background: ressenti === r.val ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface } }, r.e)))),
+
+      sport && React.createElement(WarmupFields, { data, setData }),
+      sport && React.createElement(DrillFields, { sport, data, setData }),
 
       (sport === 'course' || sport === 'sprint' || sport === 'trail') && React.createElement(CourseFields, { sport, data, setData }),
       sport === 'sprint' && React.createElement(SprintPerfFields, { data, setData }),

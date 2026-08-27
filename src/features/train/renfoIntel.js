@@ -27,7 +27,7 @@ import { mindAnalysis, breathSessions } from '../health/mindIntel'
 import { muscuAnalysis, groupVerdict, SERIES_HIGH } from './muscuIntel'
 import { hydroAnalysis } from '../hydration/hydroIntel'
 import { mobilityAnalysis } from './mobilityIntel'
-import { plannerAnalysis } from './plannerIntel'
+import { plannerAnalysis, warmupHabit, drillHabit } from './plannerIntel'
 import { climbAnalysis } from './climbIntel'
 import { enduranceAnalysis } from './enduranceIntel'
 import { sprintAnalysis, fmtSprintTime, windLabel } from './sprintIntel'
@@ -1189,6 +1189,13 @@ export function recommendations(db) {
   // journée, modulation des glucides selon la charge, sous-apport les jours
   // de séance, dérive sur le mois. Elles ne demandent aucune saisie de plus.
   const deep = macroDeepAnalysis(db, { days: 28, today: iso, weightKg: weightKg(db), series: nutAna.series })
+
+  // Échauffement et éducatifs : notés depuis peu, ils ne servaient qu'à
+  // être stockés. Une séance dure sans échauffement est le cas qui compte.
+  const wu = warmupHabit(db, { days: 28, today: iso })
+  if (wu && wu.text) push(wu.level === 'warn' ? 'warn' : 'info', 'spark', wu.text, 'planner')
+  const dr = drillHabit(db, { days: 56, today: iso })
+  if (dr && dr.text) push('info', 'target', dr.text, 'planner', 'sport')
   for (const tip of deep.tips.slice(0, 2)) {
     push(deep.fuel && tip === deep.fuel.text ? 'warn' : 'info', 'apple', tip, 'nutrition')
   }
