@@ -22,7 +22,7 @@ import { sessionLoad, sessionRpe, isHard, dureeToMins, mondayISO, dowOf } from '
 import { sportAnalysis, practisedSports, fmtValue } from './genericIntel'
 import { sleepAnalysis } from '../health/sleepIntel'
 import { nutriAnalysis, dayEntries, dayTotals } from '../nutrition/nutriIntel'
-import { monotony, ACWR_SWEET_LOW, ACWR_SWEET_HIGH, NEUTRAL_RPE, HARD_RPE } from './plannerIntel'
+import { monotony, ACWR_SWEET_LOW, ACWR_SWEET_HIGH, NEUTRAL_RPE, HARD_RPE, sessionIntensity } from './plannerIntel'
 import { effectiveTemp, loadMultiplier } from './weatherIntel'
 import { plausibleHours, neededHours, BASE_NEED } from '../health/sleepIntel'
 import { targetForDate, forDay } from '../nutrition/macroTargets'
@@ -63,6 +63,9 @@ export function weekBounds(weekOf) {
 
 // ─── La semaine, jour par jour ───────────────────────────────
 export function weekDays(db, { weekOf, today } = {}) {
+  // Le profil sert à déduire l'intensité d'une séance dont le ressenti
+  // manque : sans lui, la fréquence cardiaque ne dit rien.
+  const opts = { profile: (db && db.profilePhys) || null }
   const { monday, sunday } = weekBounds(weekOf || today)
   const sessions = (asList(db && db.planningSessions))
     .filter((s) => s && s.date && s.date >= monday && s.date <= sunday)
@@ -77,7 +80,7 @@ export function weekDays(db, { weekOf, today } = {}) {
     const played = player.filter((e) => e.date === date)
     // Le lecteur intégré ne porte pas d'intensité : ses minutes comptent à
     // charge neutre plutôt que d'être ignorées.
-    const load = done.reduce((a, s) => a + sessionLoad(s), 0) + played.reduce((a, e) => a + (num(e.mins) || 0), 0)
+    const load = done.reduce((a, s) => a + sessionLoad(s, null, null, opts), 0) + played.reduce((a, e) => a + (num(e.mins) || 0), 0)
     const mins = done.reduce((a, s) => a + dureeToMins(s.duree), 0) + played.reduce((a, e) => a + (num(e.mins) || 0), 0)
     days.push({
       date, dow: i, done, planned, played,
@@ -91,7 +94,7 @@ export function weekDays(db, { weekOf, today } = {}) {
 }
 
 // ─── Répartition par sport ───────────────────────────────────
-export function bySport(week, sportMeta) {
+export function bySport(week, sportMeta, opts) {
   const by = {}
   for (const d of week.days) {
     for (const s of d.done) {
@@ -99,7 +102,7 @@ export function bySport(week, sportMeta) {
       const k = meta.label
       if (!by[k]) by[k] = { label: k, color: meta.color, mins: 0, load: 0, sessions: 0 }
       by[k].mins += dureeToMins(s.duree)
-      by[k].load += sessionLoad(s)
+      by[k].load += sessionLoad(s, null, null, opts)
       by[k].sessions++
     }
   }
@@ -164,11 +167,11 @@ export function highlights(db, { weekOf, today } = {}) {
 }
 
 // La séance la plus lourde de la semaine : celle dont on se souvient.
-export function toughest(week, sportMeta) {
+export function toughest(week, sportMeta, opts) {
   let best = null
   for (const d of week.days) {
     for (const s of d.done) {
-      const load = sessionLoad(s)
+      const load = sessionLoad(s, null, null, opts)
       if (!best || load > best.load) {
         const meta = sportMeta ? sportMeta(s.sport) : { label: s.sport || 'Séance' }
         best = { date: d.date, label: meta.label, load, mins: dureeToMins(s.duree), rpe: sessionRpe(s) }
@@ -239,6 +242,7 @@ export function context(db, { weekOf, today } = {}) {
 const fr = (v) => String(v).replace('.', ',')
 
 export function dayDetail(db, week, sportMeta) {
+  const opts = { profile: (db && db.profilePhys) || null }
   const sleepLog = (db && db.sleepLog) || {}
   const weather = (db && db.weatherLog) || {}
   const vitals = (db && db.vitalsLog) || {}
@@ -253,7 +257,9 @@ export function dayDetail(db, week, sportMeta) {
         return {
           id: sx.id, label: meta.label, color: meta.color,
           mins: dureeToMins(sx.duree), rpe: sessionRpe(sx),
-          load: Math.round(sessionLoad(sx)), notes: sx.notes || null,
+          load: Math.round(sessionLoad(sx, null, null, opts)),
+          intensity: sessionIntensity(sx, opts),
+          notes: sx.notes || null,
         }
       }),
       sleep: night,
@@ -920,12 +926,12 @@ export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
   const ref = today || todayISO()
   const week = weekDays(db, { weekOf: weekOf || ref, today: ref })
   const cmp = compare(db, { weekOf: weekOf || ref, today: ref })
-  const sports = bySport(week, sportMeta)
+  const sports = bySport(week, sportMeta, { profile: (db && db.profilePhys) || null })
   const cons = consistency(week)
   const fit = planFit(week, { today: ref })
   const ctx = context(db, { weekOf: weekOf || ref, today: ref })
   const hi = highlights(db, { weekOf: weekOf || ref, today: ref })
-  const top = toughest(week, sportMeta)
+  const top = toughest(week, sportMeta, { profile: (db && db.profilePhys) || null })
   const detail = dayDetail(db, week, sportMeta)
   const dims = dimensions(db, { weekOf: weekOf || ref, today: ref })
   const shape = weekShape(week)

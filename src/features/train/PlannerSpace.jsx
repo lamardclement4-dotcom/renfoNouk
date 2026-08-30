@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
 import { SPORTS } from './trainData'
 import ActivityImport from './ActivityImport'
-import { WARMUP_KINDS, WARMUP_MINUTES, drillsFor } from './drillsData'
+import { WARMUP_KINDS, WARMUP_MINUTES, drillsFor, buildWarmup } from './drillsData'
 import { SPORT_FIELDS, EXERCISES_DB, TECH_PERCHE, EQUIP, searchExercises, exercisesOfGroup } from './plannerData'
 import { plannerAnalysis } from './plannerIntel'
 import { SCALES, STYLES, ANGLES, LIEUX, PRISES, gradeIndex } from './climbIntel'
@@ -691,7 +691,7 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
 // les éducatifs occupent souvent le premier quart du temps et décident de
 // la qualité du reste — sans être notés nulle part, si bien qu'une séance
 // bâclée à l'échauffement et une séance préparée s'enregistraient pareil.
-function WarmupFields({ data, setData }) {
+function WarmupFields({ sport, data, setData, stiffZones }) {
   const w = data.echauffement || {}
   const kinds = Array.isArray(w.kinds) ? w.kinds : []
   const set = (patch) => setData({ ...data, echauffement: { ...w, ...patch } })
@@ -708,6 +708,26 @@ function WarmupFields({ data, setData }) {
         key: m, onClick: () => set({ mins: m }),
         style: chip((w.mins || 0) === m),
       }, m === 0 ? 'Aucun' : `${m} min`))),
+    // Cocher « mobilité » ne dit pas quoi faire. Composer produit le
+    // contenu : montée en température, ce que la séance va solliciter, puis
+    // le geste en plus léger — adapté au sport, aux zones raides du dernier
+    // test et à l'intensité prévue.
+    React.createElement('button', {
+      onClick: () => {
+        const hard = Number(data.rpe) >= 7
+        const plan = buildWarmup(sport, { mins: w.mins || 15, stiffZones: stiffZones || [], hard })
+        setData({ ...data, echauffement: { ...w, ...plan } })
+      },
+      style: { width: '100%', padding: '9px 12px', borderRadius: 999, marginBottom: 9, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' },
+    }, w.phases ? 'Recomposer l’échauffement' : 'Composer mon échauffement'),
+
+    w.phases ? React.createElement('div', { style: { marginBottom: 10 } },
+      w.phases.map((ph) => React.createElement('div', { key: ph.id, style: { display: 'flex', gap: 9, alignItems: 'flex-start', padding: '6px 0' } },
+        React.createElement('div', { style: { width: 62, flex: '0 0 auto', fontSize: 11.5, fontWeight: 700, color: C.ink3 } }, ph.label),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+          React.createElement('div', { style: { fontSize: 12.5, color: C.ink, lineHeight: 1.4 } }, ph.items.join(' · ')),
+          React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 1 } }, ph.mins, ' min'))))) : null,
+
     (w.mins || 0) > 0 ? React.createElement('div', null,
       React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
         WARMUP_KINDS.map((k) => React.createElement('button', {
@@ -750,6 +770,10 @@ function DrillFields({ sport, data, setData }) {
 }
 
 function SessionForm({ activeSports, initial, initialDate, exerciseHistory, pastSessions, db, onSave, onDelete, onClose }) {
+  // Zones raides du dernier test : elles orientent la partie mobilité de
+  // l'échauffement vers ce qui en a besoin.
+  const stiffZones = ((db && db.mobility && Array.isArray(db.mobility.zones)) ? db.mobility.zones : [])
+    .filter((z) => z && Number(z.val) > 0 && Number(z.val) <= 2).map((z) => z.id)
   const [sport, setSport] = useState(initial?.sport || null)
   const [date, setDate] = useState(initial?.date || initialDate || isoDate(new Date()))
   const [heure, setHeure] = useState(initial?.heure || '')
@@ -931,7 +955,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
         React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 16 } },
           RESSENTI.map((r) => React.createElement('button', { key: r.val, onClick: () => setRessenti(r.val), title: r.l, style: { flex: 1, padding: '10px 0', borderRadius: C.radiusSm, fontSize: 22, cursor: 'pointer', border: '1.5px solid ' + (ressenti === r.val ? C.primary : C.line), background: ressenti === r.val ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface } }, r.e)))),
 
-      sport && React.createElement(WarmupFields, { data, setData }),
+      sport && React.createElement(WarmupFields, { sport, data, setData, stiffZones }),
       sport && React.createElement(DrillFields, { sport, data, setData }),
 
       (sport === 'course' || sport === 'sprint' || sport === 'trail') && React.createElement(CourseFields, { sport, data, setData }),

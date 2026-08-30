@@ -92,14 +92,110 @@ export function sessionRpe(s) {
 // au niveau des minutes brutes : le ratio paraissait plus bas qu'il n'était, et
 // l'avertissement se taisait au moment où la chaleur rend la blessure plus
 // probable. Les deux côtés de la comparaison sont désormais pondérés pareil.
-export function sessionLoad(s, conditions, acclimation) {
+// ─── L'intensité réelle d'une séance ────────────────────────
+//
+// La charge se calculait sur les minutes seules dès que le ressenti
+// manquait : deux heures de marche pesaient autant que deux heures de
+// seuil. C'est le défaut le plus coûteux du modèle, parce qu'il touche
+// tout ce qui en découle — rapport aiguë sur chronique, rétrospective,
+// semaine proposée.
+//
+// L'effort se déduit pourtant de ce qui est déjà saisi. Quatre sources,
+// de la plus directe à la plus indirecte, et l'application dit laquelle
+// elle a utilisée : une charge dont on ignore la provenance ne se
+// discute pas.
+//
+// Le champ `ressenti` de la séance n'en fait pas partie. Il note comment
+// la séance s'est passée — de « très mauvais » à « excellent » — et non
+// l'effort fourni. Une séance excellente peut être facile.
+
+// Type de séance déclaré, converti en effort ressenti équivalent.
+export const TYPE_RPE = {
+  'Récupération': 3,
+  'Endurance': 4,
+  'Sortie longue': 5,
+  'Tempo': 7,
+  'Côtes': 7,
+  'Seuil': 8,
+  'Fractionné': 8,
+  'VMA': 9,
+  'Compétition': 9,
+}
+
+// Pourcentage de la fréquence cardiaque maximale, converti de même. Les
+// bornes sont les zones d'entraînement usuelles.
+export function rpeFromHr(pct) {
+  const p = num(pct)
+  if (p == null || p <= 0) return null
+  if (p < 60) return 2
+  if (p < 70) return 4
+  if (p < 80) return 5.5
+  if (p < 87) return 7
+  if (p < 92) return 8
+  return 9
+}
+
+// Sports dont l'intensité est basse par nature. Y appliquer un effort
+// neutre revient à compter une heure de yoga comme une heure de vélo.
+export const LOW_INTENSITY_SPORTS = {
+  yoga: 3, marche: 3, petanque: 2, golf: 3, plongee: 3, equitation: 4, danse: 5,
+}
+
+export const HR_MAX_FALLBACK_AGE = 220
+
+export function maxHeartRate(s, profile) {
+  const declared = num(s && s.data && s.data.fc_max)
+  if (declared && declared > 120) return { value: declared, source: 'séance' }
+  const fromProfile = num(profile && (profile.fcMax || profile.fc_max))
+  if (fromProfile && fromProfile > 120) return { value: fromProfile, source: 'profil' }
+  const age = num(profile && profile.age)
+  // 220 moins l'âge est une formule grossière — ±10 battements selon les
+  // individus. Elle sert de dernier recours, et c'est dit.
+  if (age && age > 0) return { value: HR_MAX_FALLBACK_AGE - age, source: 'estimée depuis l’âge' }
+  return null
+}
+
+export function sessionIntensity(s, { profile } = {}) {
+  const rpe = sessionRpe(s)
+  if (rpe) return { rpe, factor: rpe / NEUTRAL_RPE, source: 'rpe', why: `ressenti d’effort noté à ${rpe}` }
+
+  const fc = num(s && s.data && s.data.fc)
+  const hrMax = maxHeartRate(s, profile)
+  if (fc && hrMax && hrMax.value > 0) {
+    const pct = Math.round(fc / hrMax.value * 100)
+    const est = rpeFromHr(pct)
+    if (est) {
+      return {
+        rpe: est, factor: est / NEUTRAL_RPE, source: 'fc',
+        why: `${fc} bpm, soit ${pct} % de ta fréquence maximale (${hrMax.source})`,
+      }
+    }
+  }
+
+  const type = s && s.data && s.data.seance_type
+  if (type && TYPE_RPE[type]) {
+    const est = TYPE_RPE[type]
+    return { rpe: est, factor: est / NEUTRAL_RPE, source: 'type', why: `séance de type « ${type} »` }
+  }
+
+  const bySport = LOW_INTENSITY_SPORTS[s && s.sport]
+  if (bySport) {
+    return { rpe: bySport, factor: bySport / NEUTRAL_RPE, source: 'sport', why: 'intensité basse par nature de la discipline' }
+  }
+
+  // Rien pour trancher : on ne majore ni ne minore. Mieux vaut une charge
+  // inchangée qu'une charge inventée.
+  return { rpe: null, factor: 1, source: 'aucun', why: 'aucune intensité renseignée — comptée à effort neutre' }
+}
+
+export function sessionLoad(s, conditions, acclimation, opts) {
   const mins = dureeToMins(s && s.duree)
   if (!mins) return 0
-  const rpe = sessionRpe(s)
+  const intensity = sessionIntensity(s, opts || {})
   // Sans conditions relevées, le multiplicateur vaut un : mieux vaut une
   // charge inchangée qu'une charge inventée.
   const wx = conditions ? loadMultiplier(conditions, { acclimation: acclimation || null }) : 1
-  return Math.round(mins * (rpe ? rpe / NEUTRAL_RPE : 1) * wx)
+  return Math.round(mins * intensity.factor * wx)
 }
 
 // Une séance est dite exigeante au-delà de RPE 7, seuil usuel de
@@ -139,13 +235,13 @@ export const ACWR_SWEET_LOW = 0.8
 export const ACWR_SWEET_HIGH = 1.3
 export const ACWR_DANGER = 1.5
 
-export function loadInWindow(sessions, { from, to, includePlanned = false, weather = null, acclimation = null }) {
+export function loadInWindow(sessions, { from, to, includePlanned = false, weather = null, acclimation = null, profile = null }) {
   let sum = 0
   for (const s of sessions || []) {
     if (!s || !s.date || s.date < from || s.date > to) continue
     const counts = s.statut === 'realise' || (includePlanned && s.statut === 'planifie')
     if (!counts) continue
-    sum += sessionLoad(s, weather ? weather[s.date] : null, acclimation)
+    sum += sessionLoad(s, weather ? weather[s.date] : null, acclimation, { profile })
   }
   return Math.round(sum)
 }
@@ -174,7 +270,7 @@ export function projectedLoad(db, { weekOf, today } = {}) {
   // `loadMultiplier` lit `.factor` sur cet objet : lui passer le seul nombre
   // de jours ferait taire l'atténuation sans rien signaler.
   const acclimation = heatAcclimation(weather, new Date(ref + 'T12:00:00'))
-  const win = { weather, acclimation }
+  const win = { weather, acclimation, profile: (db && db.profilePhys) || null }
   const acute = loadInWindow(sessions, { from: acuteFrom, to: end, includePlanned: true, ...win })
   const chronicTotal = loadInWindow(sessions, { from: chronicFrom, to: end, includePlanned: true, ...win })
   const chronicWeek = chronicTotal / 4

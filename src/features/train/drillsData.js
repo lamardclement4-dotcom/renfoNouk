@@ -1,3 +1,5 @@
+import { EX } from './trainData'
+import { TEMPLATE_FAMILIES } from './routineTemplates'
 // ============================================================
 // Échauffement et éducatifs.
 //
@@ -129,4 +131,81 @@ export function drillsSummary(sport, ids) {
   const list = asList(ids).map((id) => drillById(sport, id)).filter(Boolean)
   if (!list.length) return null
   return { count: list.length, labels: list.map((d) => d.label), text: list.map((d) => d.label).join(', ') }
+}
+
+// ─── Composer un échauffement ───────────────────────────────
+//
+// Cocher « mobilité » ne dit pas quoi faire. Un échauffement se compose :
+// on monte en température, on ouvre ce que la séance va solliciter, puis
+// on répète le geste en plus léger. Ce qui suit produit ce contenu à
+// partir du sport, des zones raides relevées au dernier test, et de
+// l'intensité prévue — une séance dure demande une préparation plus
+// longue et plus spécifique qu'une sortie facile.
+
+// Comment on monte en température, selon la discipline. Une seule ligne
+// par sport suffit : c'est le geste de la séance, en très facile.
+export const GENERAL_WARMUP = {
+  course: 'Footing très lent, respiration nasale',
+  velo: 'Pédalage souple, petit braquet',
+  natation: 'Longueurs souples, nage alternée',
+  muscu: 'Cardio léger : rameur, vélo ou corde',
+  escalade: 'Traversée facile, prises généreuses',
+  collectif: 'Course lente avec ballon, appuis progressifs',
+  raquette: 'Déplacements légers, échange à mi-court',
+  sprint: 'Footing lent puis marche active',
+}
+
+export function generalFor(sport) {
+  const key = DRILL_ALIASES[sport] || sport
+  return GENERAL_WARMUP[key] || GENERAL_WARMUP[sport] || 'Montée en température progressive : marche rapide ou footing lent'
+}
+
+// La famille de mobilité la mieux adaptée : celle qui prépare ce sport,
+// et qui touche une zone raide si l'une d'elles est connue.
+export function mobilityMovesFor(sport, { stiffZones = [], count = 4 } = {}) {
+  const fams = TEMPLATE_FAMILIES.filter((f) => f.kind === 'mobilite')
+  const scored = fams.map((f) => {
+    let score = 0
+    if (asList(f.prep).includes(sport)) score += 2
+    score += asList(f.zones).filter((z) => stiffZones.includes(z)).length * 3
+    return { f, score }
+  }).sort((a, b) => b.score - a.score)
+  const best = scored[0] && scored[0].score > 0 ? scored[0].f : fams[0]
+  if (!best) return []
+  // Le premier niveau : un échauffement n'est pas une séance de mobilité.
+  // On y cherche des amplitudes libres, pas du gain d'amplitude.
+  const keys = best.levels[0].keys.slice(0, count)
+  return keys.map((k) => ({ key: k, name: (EX[k] || {}).name || k, family: best.label }))
+}
+
+// Répartition du temps. Une séance dure mérite plus de spécifique : c'est
+// la partie qui prépare le geste lui-même, et celle qu'on saute en premier.
+export function splitMinutes(total, hard) {
+  const t = Math.max(0, Math.round(Number(total) || 0))
+  if (!t) return { general: 0, mobilite: 0, specifique: 0 }
+  const specPct = hard ? 0.4 : 0.25
+  const mobPct = hard ? 0.25 : 0.3
+  const spec = Math.max(1, Math.round(t * specPct))
+  const mob = Math.max(1, Math.round(t * mobPct))
+  return { general: Math.max(1, t - spec - mob), mobilite: mob, specifique: spec }
+}
+
+export function buildWarmup(sport, { mins = 15, stiffZones = [], hard = false } = {}) {
+  const split = splitMinutes(mins, hard)
+  const moves = mobilityMovesFor(sport, { stiffZones, count: hard ? 4 : 3 })
+  const drills = drillsFor(sport).slice(0, hard ? 3 : 2)
+  return {
+    mins, hard, split,
+    kinds: ['general', 'mobilite', 'specifique'],
+    phases: [
+      { id: 'general', label: 'Général', mins: split.general, items: [generalFor(sport)] },
+      { id: 'mobilite', label: 'Mobilité', mins: split.mobilite, items: moves.map((m) => m.name), keys: moves.map((m) => m.key) },
+      {
+        id: 'specifique', label: 'Spécifique', mins: split.specifique,
+        items: drills.length ? drills.map((d) => d.label) : ['Le geste de la séance, à intensité réduite'],
+        drills: drills.map((d) => d.id),
+      },
+    ],
+    text: `${mins} min : ${split.general} de montée en température, ${split.mobilite} de mobilité, ${split.specifique} de spécifique.`,
+  }
 }
