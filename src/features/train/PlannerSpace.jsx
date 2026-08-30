@@ -610,9 +610,23 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
   const [group, setGroup] = useState(null)
   // Sans parcours par groupe, il fallait connaître le nom exact pour
   // trouver un exercice — ce qui suppose de savoir ce qu'on cherche.
+  const [justAdded, setJustAdded] = useState(null)
   const results = query.trim() ? searchExercises(query, { equip }) : (group ? exercisesOfGroup(group, equip) : [])
 
   function addEx(name, grp) {
+    // Le même exercice pouvait être ajouté deux fois à une séance : deux
+    // entrées séparées, deux listes de séries. Outre l'encombrement, la
+    // seconde écrasait la première dans l'historique des charges, si bien
+    // qu'un bloc de décharge après une série lourde faisait proposer moins
+    // la fois suivante. Un exercice déjà présent reçoit donc une série de
+    // plus, ce qui est ce qu'on voulait faire.
+    const already = exercises.findIndex((e) => e && e.name === name)
+    if (already !== -1) {
+      addSet(already)
+      setQuery('')
+      setJustAdded(name)
+      return
+    }
     // L'ancien code ajoutait 2,5 kg à l'aveugle : le même incrément sur une
     // presse à cuisses que sur des élévations latérales, et sans regarder
     // le RPE de la dernière fois — pourtant saisi série par série.
@@ -623,6 +637,7 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
     setQuery('')
   }
   function removeEx(idx) { setExercises(exercises.filter((_, i) => i !== idx)) }
+
   function addSet(idx) {
     const next = [...exercises]
     const last = next[idx].sets[next[idx].sets.length - 1] || {}
@@ -666,7 +681,7 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
 
   return React.createElement('div', { style: { marginBottom: 16 } },
     React.createElement('div', { style: fieldLabel() }, sportLabels[sport] || '💪 Musculation'),
-    React.createElement('input', { type: 'text', placeholder: 'Rechercher un exercice…', value: query, onChange: (e) => setQuery(e.target.value), style: fieldInputStyle }),
+    React.createElement('input', { type: 'text', placeholder: 'Rechercher un exercice…', value: query, onChange: (e) => { setQuery(e.target.value); setJustAdded(null) }, style: fieldInputStyle }),
 
     React.createElement('div', { style: { display: 'flex', gap: 6, overflowX: 'auto', padding: '9px 0 2px', WebkitOverflowScrolling: 'touch' } },
       EQUIP_FILTERS.map((f) => chip(equip === f.id, f.lab, () => setEquip(f.id), f.lab))),
@@ -676,6 +691,11 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
 
     results.length > 0 ? React.createElement('div', { style: { marginTop: 10, marginBottom: 12, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', maxHeight: 320, overflowY: 'auto' } },
       results.map((r, i) => row(r, i, i === results.length - 1))) : null,
+
+    // Ajouter deux fois le même exercice donne une série de plus, pas une
+    // seconde entrée. Le dire, sinon l'appui paraît sans effet.
+    justAdded ? React.createElement('div', { style: { fontSize: 12, color: C.ink2, background: `color-mix(in srgb, ${C.primary} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.primary} 25%, ${C.line})`, borderRadius: C.radiusXs, padding: '9px 11px', marginTop: 10, lineHeight: 1.45 } },
+      '« ', justAdded, ' » était déjà dans la séance : une série lui a été ajoutée.') : null,
 
     query.trim() && results.length === 0 ? React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, padding: '10px 2px', marginBottom: 6 } },
       equip ? `Aucun exercice « ${query} » avec ce matériel — essaie « Tout ».` : `Aucun exercice ne correspond à « ${query} ».`) : null,
@@ -1081,7 +1101,17 @@ export default function PlannerSpace({ db, store, onClose }) {
     const patch = { planningSessions: next }
     if (MUSCU_SPORTS.includes(sess.sport) && sess.statut === 'realise' && sess.exercises && sess.exercises.length) {
       const hist = { ...exerciseHistory }
-      sess.exercises.forEach((ex) => {
+      // Les entrées de même nom sont fusionnées avant tout calcul : une
+      // séance importée ou saisie avant cette correction peut en porter
+      // plusieurs, et la dernière écrasait alors les précédentes.
+      const merged = []
+      for (const ex of sess.exercises) {
+        if (!ex || !ex.name) continue
+        const found = merged.find((m) => m.name === ex.name)
+        if (found) found.sets = [...(found.sets || []), ...(ex.sets || [])]
+        else merged.push({ ...ex, sets: [...(ex.sets || [])] })
+      }
+      merged.forEach((ex) => {
         // `last` prenait `ex.sets[0]`, c'est-à-dire la PREMIÈRE série de la
         // séance — souvent un échauffement — tout en s'appelant « dernière
         // charge » et en servant à proposer la charge suivante. On retient
