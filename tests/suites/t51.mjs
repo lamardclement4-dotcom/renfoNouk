@@ -146,9 +146,16 @@ a(/195\s+g au repos/.test(st) && /351\s+g sur grosse s[ée]ance/.test(st), 'et l
 // seulement exister dans un module.
 const jours = {}
 const sess = []
+// Les dates sont relatives a aujourd hui, jamais figees. MacrosTab appelle
+// macroDeepAnalysis sans lui passer de date : l analyse travaille donc sur la
+// fenetre des quatorze derniers jours reels. Un jeu d essai fige au 21 aout
+// 2026 passait le jour ou il a ete ecrit, puis a echoue tout seul quelques
+// semaines plus tard, quand la fenetre avait glisse au-dela — sans qu aucune
+// ligne de l application n ait change.
+const base = Date.now()
 for (let i = 1; i <= 20; i++) {
   const gros = i % 3 === 0
-  const d = new Date(Date.UTC(2026, 7, 21)); d.setUTCDate(d.getUTCDate() - i)
+  const d = new Date(base); d.setUTCDate(d.getUTCDate() - i)
   const iso = d.toISOString().slice(0, 10)
   jours[iso] = [
     { n: 'a', meal: 'matin', k: 300, p: 8, g: 40, l: 8, fib: 3 },
