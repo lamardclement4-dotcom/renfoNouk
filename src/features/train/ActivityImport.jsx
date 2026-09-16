@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card } from '../health/kit'
+import { imageTooLarge, traceTooLarge } from '../health/fileGuard'
 import { SPORTS } from './trainData'
 import { parseActivityFile, parseActivityText, toSession } from './activityParse'
 import { createHealthReader, createLineSplitter, toPatch } from './healthImport'
@@ -90,13 +91,18 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
     onClose()
   }
 
+  // Contrairement à l'export Santé, une trace et une capture sont lues d'un
+  // bloc : `file.text()` et l'OCR chargent tout en mémoire. On refuse avant
+  // de lire, avec la taille en clair, plutôt que de planter pendant.
   async function handleFile(file) {
     if (!file) return
     setError(null)
     setPhase('reading')
     setProgress(0)
     try {
-      if (/^image\//.test(file.type)) {
+      if (file.type.startsWith('image/')) {
+        const tooBig = imageTooLarge(file)
+        if (tooBig) { setError(tooBig); setPhase('idle'); return }
         // Tesseract pèse plusieurs mégaoctets : il n'est chargé qu'ici, au
         // moment où on s'en sert. L'image ne quitte pas l'appareil.
         const { default: Tesseract } = await import('tesseract.js')
@@ -107,6 +113,8 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
         URL.revokeObjectURL(url)
         accept(parseActivityText(res.data.text), 'cette capture')
       } else {
+        const tooBig = traceTooLarge(file)
+        if (tooBig) { setError(tooBig); setPhase('idle'); return }
         const text = await file.text()
         accept(parseActivityFile(text), 'ce fichier')
       }

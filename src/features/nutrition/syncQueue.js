@@ -25,6 +25,32 @@ export const BASE_DELAY_MS = 1000
 export const MAX_DELAY_MS = 30_000
 export const MAX_ATTEMPTS = 8
 
+// Efface les files laissées sur cet appareil par n'importe quel compte, pas
+// seulement celle de l'utilisateur courant. Une file retient la dernière
+// charge utile de chaque cible : profil complet, journée complète. Sur un
+// téléphone partagé ou prêté, une session oubliée laissait donc un profil
+// entier lisible dans localStorage longtemps après la déconnexion.
+//
+// Les clés sont relevées avant d'être supprimées : retirer une entrée
+// pendant qu'on parcourt l'index décale les suivantes, et une clé sur deux
+// serait sautée.
+export function clearAllStoredQueues(storage) {
+  const store = storage !== undefined ? storage : (typeof localStorage !== 'undefined' ? localStorage : null)
+  if (!store) return 0
+  const doomed = []
+  try {
+    for (let i = 0; i < store.length; i += 1) {
+      const k = store.key(i)
+      if (typeof k === 'string' && k.startsWith(STORAGE_PREFIX)) doomed.push(k)
+    }
+  } catch { return 0 }
+  let removed = 0
+  for (const k of doomed) {
+    try { store.removeItem(k); removed += 1 } catch { /* stockage indisponible */ }
+  }
+  return removed
+}
+
 export function backoffDelay(attempt, { base = BASE_DELAY_MS, max = MAX_DELAY_MS } = {}) {
   if (!(attempt > 0)) return base
   return Math.min(max, base * Math.pow(2, attempt - 1))

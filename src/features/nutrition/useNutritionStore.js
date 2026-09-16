@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib'
-import { createSyncQueue } from './syncQueue'
+import { createSyncQueue, clearAllStoredQueues } from './syncQueue'
 
 // Fenêtre de journal chargée au montage. Elle valait 10 jours, ce qui
 // suffisait aux graphes de sept jours mais tronquait silencieusement toutes
@@ -126,6 +126,24 @@ function getInstance(userId) {
     instances.set(userId, inst)
   }
   return inst
+}
+
+// À la déconnexion, tout ce qui reste ici appartient au compte qui vient de
+// partir : profil, journées, zones sensibles, cycle. `instances` est un
+// cache au niveau du module — il survit au démontage de l'arbre React, donc
+// à la déconnexion. Sans ce nettoyage, se reconnecter avec un autre compte
+// sur le même appareil laissait l'état du précédent en mémoire, et sa file
+// d'attente sur le disque.
+//
+// Rendue séparément du hook pour qu'App.jsx puisse l'appeler sans être
+// monté sur un utilisateur.
+export function resetStore() {
+  for (const inst of instances.values()) {
+    try { inst.queue.clear() } catch { /* file déjà inutilisable */ }
+    inst.listeners.clear()
+  }
+  instances.clear()
+  return clearAllStoredQueues()
 }
 
 // Forme exacte du `db` exposé aux écrans. Sortie du hook pour qu'un test

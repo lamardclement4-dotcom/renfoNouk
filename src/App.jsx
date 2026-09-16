@@ -6,7 +6,7 @@ import ProgressSpace from './features/progress/ProgressSpace'
 import ProfilSpace from './features/profil/ProfilSpace'
 import AccueilSpace from './features/home/AccueilSpace'
 import { Icon, C, SyncBanner } from './features/health/kit'
-import { useNutritionStore } from './features/nutrition/useNutritionStore'
+import { useNutritionStore, resetStore } from './features/nutrition/useNutritionStore'
 
 // ============================================================
 // Hook d'authentification
@@ -49,7 +49,15 @@ function useAuth() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
   }, [])
-  const signOut = useCallback(async () => { await supabase.auth.signOut() }, [])
+  // Se déconnecter doit vider l'appareil, pas seulement révoquer le jeton.
+  // Le cache mémoire du store et la file d'attente dans localStorage
+  // contiennent le profil et les journées : sur un téléphone partagé, les
+  // laisser revient à ne pas s'être déconnecté. Le nettoyage passe par
+  // `finally` pour avoir lieu même si la révocation échoue — hors ligne,
+  // c'est justement le cas où les données locales restent.
+  const signOut = useCallback(async () => {
+    try { await supabase.auth.signOut() } finally { resetStore() }
+  }, [])
 
   return {
     loading, session, profile, refreshProfile,

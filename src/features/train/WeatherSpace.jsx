@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { C, Icon, FlowSpace, Card, isoToday } from '../health/kit'
+import { imageTooLarge } from '../health/fileGuard'
 import { WEATHER_FIELDS, parseWeatherText } from './weatherOcr'
 import { searchCity, loadConditionsFor, placeLabel, FORECAST_AHEAD_DAYS } from './weatherApi'
 import { weatherAdvice, adjustPace, fmtPace, ENVIRONMENTS, DEFAULT_ENV, envInfo, SUN_OPTIONS, PRECIP_OPTIONS, AIRFLOW_OPTIONS, heatAcclimation, acclimationLabel, effectiveTemp, loadMultiplier } from './weatherIntel'
@@ -95,6 +96,10 @@ export default function WeatherSpace({ db, store, onClose }) {
   async function handleFile(file) {
     if (!file) return
     if (!file.type.startsWith('image/')) { setError("Ce fichier n'est pas une image."); return }
+    // L'OCR charge l'image entière en mémoire : au-delà du plafond, l'onglet
+    // tombe pendant la lecture sans rien expliquer.
+    const tooBig = imageTooLarge(file)
+    if (tooBig) { setError(tooBig); return }
     setPhase('reading'); setProgress(0); setError(null)
     let url
     try {

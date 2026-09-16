@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { C, Icon, isoToday } from '../health/kit'
+import { imageTooLarge } from '../health/fileGuard'
 import { METRICS, parseScaleText, checkCoherence } from './scaleOcr'
 
 const h = React.createElement
@@ -33,6 +34,10 @@ export default function ScaleImport({ onSave, onClose, defaultDate }) {
   async function handleFile(file) {
     if (!file) return
     if (!file.type.startsWith('image/')) { setError("Ce fichier n'est pas une image."); setPhase('error'); return }
+    // L'OCR charge l'image entière en mémoire : au-delà du plafond, l'onglet
+    // tombe pendant la lecture sans rien expliquer.
+    const tooBig = imageTooLarge(file)
+    if (tooBig) { setError(tooBig); setPhase('error'); return }
     setPhase('reading'); setProgress(0); setError(null)
     let url
     try {

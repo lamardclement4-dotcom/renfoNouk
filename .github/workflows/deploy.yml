@@ -17,13 +17,25 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Construire ne demande que de lire le dépôt. Les droits d'écriture sur
+    # Pages et le jeton d'identité ne servent qu'au job `deploy`, qui les
+    # redemande : c'est là que du code de dépendance s'exécute (npm ci,
+    # build), donc là qu'il faut le moins de pouvoir possible.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - run: npm install
+      # `npm ci` et non `npm install` : install peut résoudre une version
+      # plus récente que celle du package-lock et la déployer sans que rien
+      # ne le signale. ci installe exactement le lockfile, et échoue s'il
+      # ne correspond pas au package.json.
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -34,6 +46,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
