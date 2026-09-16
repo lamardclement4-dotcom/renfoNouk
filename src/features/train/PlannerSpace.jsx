@@ -9,7 +9,7 @@ import { SCALES, STYLES, ANGLES, LIEUX, PRISES, gradeIndex } from './climbIntel'
 import { EVENTS as SPRINT_EVENTS, STARTS as SPRINT_STARTS, parseSprintTime, windLegal, windLabel, WIND_LEGAL_MAX } from './sprintIntel'
 import { estimate1RM, suggestLoad } from './muscuIntel'
 import { dureeToMins, projectedAcwr, consecutiveDaysBefore, taperSuggestedMins } from './renfoIntel'
-import { computePeakPlan } from './PeakSpace'
+import { computePeakPlan } from './peakIntel'
 
 const MUSCU_SPORTS = ['muscu', 'crossfit', 'callisthenie', 'gym', 'halterophilie']
 

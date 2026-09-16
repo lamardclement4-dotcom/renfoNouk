@@ -1,19 +1,23 @@
-import React, { useState } from 'react'
+import React, { useState, lazy } from 'react'
 import { C, Icon, Ring, FlowSpace, isoToday, SegPills } from '../health/kit'
 import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
 import { testsAnalysis } from '../physical-tests/testsIntel'
 import { retroAnalysis, proposalToSessions, proposalStatus } from '../train/retroIntel'
-import RecordsSpace from './RecordsSpace'
 import { sportMeta } from '../train/renfoIntel'
 import { mobilityAnalysis } from '../train/mobilityIntel'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { trainingStats, trainingTotals, weekRetro, weeksTrend, mondayOf, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
-import TrainSpace from '../train/TrainSpace'
-import PhysicalTestsSpace from '../physical-tests/PhysicalTests'
-import SleepSpace from '../health/Sleep'
-import HealthHome from '../health/HealthHome'
 import { HealthScoreCard, PeakHomeCard } from './cards'
-import WeightSpace from '../profil/WeightSpace'
+
+// Six écrans que Progrès ouvre en plein écran, chacun sur un geste précis.
+// Aucun n'est visible au premier affichage : les charger d'avance revenait
+// à faire attendre tout le monde pour ce que peu ouvriront.
+const RecordsSpace = lazy(() => import('./RecordsSpace'))
+const TrainSpace = lazy(() => import('../train/TrainSpace'))
+const PhysicalTestsSpace = lazy(() => import('../physical-tests/PhysicalTests'))
+const SleepSpace = lazy(() => import('../health/Sleep'))
+const HealthHome = lazy(() => import('../health/HealthHome'))
+const WeightSpace = lazy(() => import('../profil/WeightSpace'))
 import { weightAnalysis } from '../profil/weightIntel'
 
 // Pilliers/recos renvoient soit un id pilier générique (hydration, load…)

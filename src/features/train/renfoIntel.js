@@ -17,11 +17,10 @@
 // (db.exerciseHistory) et déséquilibre entre sports pratiqués.
 // ============================================================
 import { SPORTS } from './trainData'
-import { TESTS_DEF } from '../physical-tests/PhysicalTests'
+import { TESTS_DEF } from '../physical-tests/testsData'
 import { testsAnalysis } from '../physical-tests/testsIntel'
-import { computePeakPlan } from './PeakSpace'
-import { cycleInfo } from '../health/Cycle'
-import { cycleAnalysis, PMS_WINDOW_DAYS } from '../health/cycleIntel'
+import { computePeakPlan } from './peakIntel'
+import { cycleAnalysis, cycleInfo, PMS_WINDOW_DAYS } from '../health/cycleIntel'
 import { painDuration, bilanFreshness, preventionAnalysis, RECO as PREVENTION_RECO, PAIN_SUBACUTE_DAYS, PAIN_CHRONIC_DAYS } from '../health/preventionIntel'
 import { mindAnalysis, breathSessions } from '../health/mindIntel'
 import { muscuAnalysis, groupVerdict, SERIES_HIGH } from './muscuIntel'

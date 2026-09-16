@@ -2,41 +2,12 @@ import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, SecLab, NoteBox } from './kit'
 import { PHASES, PHASE_ORDER, INTENSITE } from './cycleData'
-import { cycleAnalysis, cycleStats, periodStarts, PMS_WINDOW_DAYS } from './cycleIntel'
+import { cycleAnalysis, cycleInfo, periodStarts, PMS_WINDOW_DAYS } from './cycleIntel'
 
 const CYC = MODULE_TINTS.cycle
 
 function isoDate(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
-}
-
-// Position dans le cycle + phase courante + prédictions.
-//
-// La longueur et le point de départ viennent désormais des règles
-// réellement enregistrées quand il y en a assez : projeter depuis une date
-// unique saisie il y a six mois accumule un décalage qui finit par ranger
-// chaque jour dans la mauvaise phase.
-export function cycleInfo(cycle, today = new Date()) {
-  const stats = cycleStats(cycle)
-  const starts = periodStarts(cycle)
-  const len = stats && stats.count >= 2 ? Math.round(stats.mean) : (cycle.cycleLen || 28)
-  const pl = cycle.periodLen || 5
-  const anchor = starts.length ? starts[starts.length - 1] : cycle.startDate
-  const start = new Date(anchor + 'T00:00:00')
-  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  const diff = Math.floor((t - start) / 864e5)
-  const day = ((diff % len) + len) % len + 1
-  let phase
-  if (day <= pl) phase = 'menstruation'
-  else if (day <= Math.round(len * 0.46)) phase = 'folliculaire'
-  else if (day <= Math.round(len * 0.57)) phase = 'ovulation'
-  else phase = 'luteale'
-  const daysToNext = len - day + 1
-  const nextDate = new Date(t); nextDate.setDate(t.getDate() + daysToNext)
-  const ovDay = Math.round(len * 0.46) + 1
-  const daysToOv = ovDay - day
-  const ovDate = new Date(t); ovDate.setDate(t.getDate() + (daysToOv >= 0 ? daysToOv : daysToOv + len))
-  return { day, len, phase, pl, daysToNext, nextDate, ovDate }
 }
 
 function Ring({ size = 80, stroke = 8, progress, color, track, children }) {

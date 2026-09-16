@@ -134,6 +134,40 @@ export function lengthDrift(cycle) {
   return { declared, observed, diff, text: `Tu as réglé ${declared} jours, mais tes ${stats.count} derniers cycles font ${observed} jours en moyenne.` }
 }
 
+// Position dans le cycle + phase courante + prédictions.
+//
+// La longueur et le point de départ viennent des règles réellement
+// enregistrées quand il y en a assez : projeter depuis une date unique
+// saisie il y a six mois accumule un décalage qui finit par ranger chaque
+// jour dans la mauvaise phase.
+//
+// Cette fonction vivait dans Cycle.jsx, l'écran. renfoIntel et coachChat
+// l'importaient de là, et tiraient l'écran entier — React, le store, le kit
+// — dans le chargement initial. Elle n'a jamais eu besoin que de
+// `cycleStats` et `periodStarts`, tous deux ici.
+export function cycleInfo(cycle, today = new Date()) {
+  const stats = cycleStats(cycle)
+  const starts = periodStarts(cycle)
+  const len = stats && stats.count >= 2 ? Math.round(stats.mean) : (cycle.cycleLen || 28)
+  const pl = cycle.periodLen || 5
+  const anchor = starts.length ? starts[starts.length - 1] : cycle.startDate
+  const start = new Date(anchor + 'T00:00:00')
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const diff = Math.floor((t - start) / 864e5)
+  const day = ((diff % len) + len) % len + 1
+  let phase
+  if (day <= pl) phase = 'menstruation'
+  else if (day <= Math.round(len * 0.46)) phase = 'folliculaire'
+  else if (day <= Math.round(len * 0.57)) phase = 'ovulation'
+  else phase = 'luteale'
+  const daysToNext = len - day + 1
+  const nextDate = new Date(t); nextDate.setDate(t.getDate() + daysToNext)
+  const ovDay = Math.round(len * 0.46) + 1
+  const daysToOv = ovDay - day
+  const ovDate = new Date(t); ovDate.setDate(t.getDate() + (daysToOv >= 0 ? daysToOv : daysToOv + len))
+  return { day, len, phase, pl, daysToNext, nextDate, ovDate }
+}
+
 // ─── Ressenti croisé avec la phase ───────────────────────────
 export const PHASE_IDS = ['menstruation', 'folliculaire', 'ovulation', 'luteale']
 

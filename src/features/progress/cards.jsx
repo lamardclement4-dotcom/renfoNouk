@@ -1,7 +1,7 @@
 import React from 'react'
 import { C, Icon } from '../health/kit'
 import { globalScore, recommendations } from '../train/renfoIntel'
-import { computePeakPlan } from '../train/PeakSpace'
+import { computePeakPlan } from '../train/peakIntel'
 
 const h = React.createElement
 

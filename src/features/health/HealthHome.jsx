@@ -1,14 +1,19 @@
-import React, { useState } from 'react'
+import React, { useState, lazy } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, isoToday, GRADIENTS } from './kit'
-import NutritionSpace from '../nutrition/Nutrition'
-import HydrationSpace from '../hydration/Hydration'
-import SleepSpace from './Sleep'
-import PreventionSpace from './Prevention'
-import CycleSpace from './Cycle'
-import BreathingSpace from './Breathing'
-import ComplementsSpace from './Complements'
 import { PHASES } from './cycleData'
+
+// Les sept sous-espaces ne s'ouvrent que sur une tuile pressée. Chargés
+// d'avance, ils pesaient tous sur l'ouverture de « Santé » : la table
+// CIQUAL et le catalogue des boissons dépassent à eux seuls 200 ko, que
+// personne ne lit tant qu'il n'a pas ouvert Nutrition ou Hydratation.
+const NutritionSpace = lazy(() => import('../nutrition/Nutrition'))
+const HydrationSpace = lazy(() => import('../hydration/Hydration'))
+const SleepSpace = lazy(() => import('./Sleep'))
+const PreventionSpace = lazy(() => import('./Prevention'))
+const CycleSpace = lazy(() => import('./Cycle'))
+const BreathingSpace = lazy(() => import('./Breathing'))
+const ComplementsSpace = lazy(() => import('./Complements'))
 
 // ============================================================
 // Écran "Santé & bien-être" — porte de sortie de l'ancienne app

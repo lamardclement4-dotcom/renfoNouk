@@ -871,4 +871,5 @@ function PeakSpace({ db, store, onClose, onNutrition, onRecovery, onMobility, on
 
 export default PeakSpace
 
-export { computePeakPlan }
+// computePeakPlan vit dans peakIntel.js : ne pas le re-exporter ici, sinon
+// un module d'analyse retire tout l'ecran PeakSpace dans son sillage.

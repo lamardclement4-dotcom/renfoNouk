@@ -1,12 +1,16 @@
-import React, { useState } from 'react'
+import React, { useState, lazy } from 'react'
 import { C, Icon, Pill, MODULE_TINTS, isoToday } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
 import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro } from '../train/renfoIntel'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
-import TrainSpace from '../train/TrainSpace'
-import HealthHome from '../health/HealthHome'
 import { HealthScoreCard, PeakHomeCard } from '../progress/cards'
+
+// Ouverts uniquement sur une action (une tuile, une recommandation) : rien
+// de tout cela n'est nécessaire au premier affichage de l'accueil. La
+// frontière Suspense qui les attend est dans App.jsx.
+const TrainSpace = lazy(() => import('../train/TrainSpace'))
+const HealthHome = lazy(() => import('../health/HealthHome'))
 
 const h = React.createElement
 

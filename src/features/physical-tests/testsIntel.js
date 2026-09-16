@@ -15,7 +15,7 @@
 // Repères de population, pas des mesures de laboratoire.
 // ============================================================
 
-import { TESTS_DEF } from './PhysicalTests'
+import { TESTS_DEF } from './testsData'
 
 const num = (v) => {
   if (v === null || v === undefined || v === '') return null

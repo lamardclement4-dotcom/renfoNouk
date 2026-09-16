@@ -37,4 +37,17 @@ export function createElement(type, props, ...children) {
   return { type, props: props || {}, children: flat }
 }
 export const Fragment = 'Fragment'
-export default { useState, useEffect, useCallback, useMemo, useRef, createElement, Fragment }
+// React.lazy : le rendu de ce harnais est synchrone, il ne peut pas attendre
+// un import dynamique. Le composant paresseux devient donc un noeud marqueur
+// — l arbre reste inspectable et rien ne leve. Ce que ces suites cherchent
+// (un ecran mort, une variable non declaree) reste vu par ailleurs : la
+// liste SCREENS rend chaque ecran directement, sans passer par le parent.
+export const lazy = (factory) => {
+  const Lazy = (props) => ({ type: 'lazy', props: props || {}, children: [] })
+  Lazy.__factory = factory
+  Lazy.displayName = 'Lazy'
+  return Lazy
+}
+// Suspense ne fait que laisser passer ses enfants.
+export const Suspense = (props) => (props && props.children) || null
+export default { useState, useEffect, useCallback, useMemo, useRef, createElement, Fragment, lazy, Suspense }

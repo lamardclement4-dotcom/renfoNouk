@@ -1,12 +1,21 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
 import { supabase } from './lib'
-import HealthHome from './features/health/HealthHome'
-import TrainSpace from './features/train/TrainSpace'
-import ProgressSpace from './features/progress/ProgressSpace'
-import ProfilSpace from './features/profil/ProfilSpace'
 import AccueilSpace from './features/home/AccueilSpace'
 import { Icon, C, SyncBanner } from './features/health/kit'
 import { useNutritionStore, resetStore } from './features/nutrition/useNutritionStore'
+
+// Accueil est le seul espace chargé d'emblée : c'est celui qu'on voit en
+// ouvrant l'application. Les trois autres onglets ne sont téléchargés qu'au
+// moment où l'on s'y rend.
+//
+// Tout partait jusqu'ici dans un seul fichier : catalogues d'exercices,
+// table CIQUAL, analyses, écrans — il fallait tout télécharger et tout lire
+// avant d'afficher la moindre chose, même pour un coup d'œil à l'accueil.
+// Sur un téléphone en 4G, c'est cette attente-là qu'on sent.
+const HealthHome = lazy(() => import('./features/health/HealthHome'))
+const TrainSpace = lazy(() => import('./features/train/TrainSpace'))
+const ProgressSpace = lazy(() => import('./features/progress/ProgressSpace'))
+const ProfilSpace = lazy(() => import('./features/profil/ProfilSpace'))
 
 // ============================================================
 // Hook d'authentification
@@ -663,11 +672,18 @@ function Home({ profile, signOut, refreshProfile }) {
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <SyncBanner sync={sync} onRetry={retrySync} />
-      {space === 'accueil' && <AccueilSpace userId={userId} profile={profile} onProfil={() => setSpace('profil')} />}
-      {space === 'entrainer' && <TrainSpace userId={userId} onClose={() => setSpace('accueil')} />}
-      {space === 'sante' && <HealthHome userId={userId} onClose={() => setSpace('accueil')} />}
-      {space === 'progres' && <ProgressSpace userId={userId} onClose={() => setSpace('accueil')} />}
-      {space === 'profil' && <ProfilSpace userId={userId} profile={profile} refreshProfile={refreshProfile} signOut={signOut} onClose={() => setSpace('accueil')} />}
+      {/* Une seule frontière d'attente, posée ici : elle couvre aussi les
+          écrans que ces espaces ouvrent à leur tour (Entraîner depuis
+          l'accueil, Poids ou Records depuis Progrès…). La barre de
+          navigation reste en dehors, pour qu'elle ne disparaisse pas
+          pendant qu'un onglet se charge. */}
+      <Suspense fallback={<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font }}>Chargement...</div>}>
+        {space === 'accueil' && <AccueilSpace userId={userId} profile={profile} onProfil={() => setSpace('profil')} />}
+        {space === 'entrainer' && <TrainSpace userId={userId} onClose={() => setSpace('accueil')} />}
+        {space === 'sante' && <HealthHome userId={userId} onClose={() => setSpace('accueil')} />}
+        {space === 'progres' && <ProgressSpace userId={userId} onClose={() => setSpace('accueil')} />}
+        {space === 'profil' && <ProfilSpace userId={userId} profile={profile} refreshProfile={refreshProfile} signOut={signOut} onClose={() => setSpace('accueil')} />}
+      </Suspense>
       {/* Barre de navigation : l'onglet actif est marqué par une pastille
           teintée derrière l'icône plutôt que par la seule couleur du texte,
           plus lisible d'un coup d'œil sur fond clair. */}

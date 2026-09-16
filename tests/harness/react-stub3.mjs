@@ -25,4 +25,8 @@ export const useCallback = (f) => f
 export const useMemo = (f) => f()
 export const useRef = (init) => { const c = cur, i = 'r' + c.si++; if (!(i in c)) c[i] = { current: init }; return c[i] }
 export const createElement = () => null
-export default { useState, useEffect, useCallback, useMemo, useRef, createElement }
+// Meme raison que dans react-stub4 : les ecrans sont charges paresseusement,
+// et un stub sans `lazy` fait echouer l import avant tout rendu.
+export const lazy = (f) => { const L = () => null; L.__factory = f; return L }
+export const Suspense = (props) => (props && props.children) || null
+export default { useState, useEffect, useCallback, useMemo, useRef, createElement, lazy, Suspense }

@@ -18,8 +18,8 @@
 // ============================================================
 import { pillarSleep, pillarLoad, acwrRisk, trainingStats, trainingTotals, peakReadiness, projectedAcwr, consecutiveDaysBefore, mondayRetro, hydroDay, hydricTargetMl, nutritionDay, globalScore, dureeToMins } from './renfoIntel'
 import { SESSIONS, SPORTS } from './trainData'
-import { computePeakPlan } from './PeakSpace'
-import { cycleInfo } from '../health/Cycle'
+import { computePeakPlan } from './peakIntel'
+import { cycleInfo } from '../health/cycleIntel'
 import { PHASES } from '../health/cycleData'
 
 function norm(s) {
