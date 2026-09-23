@@ -12,7 +12,7 @@
 //
 // Ces tests sont des garde-fous : ils échouent si quelqu'un desserre la
 // politique plus tard sans s'en rendre compte.
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { clearAllStoredQueues, createSyncQueue, STORAGE_PREFIX } from '../../src/features/nutrition/syncQueue.js'
 import { resetStore } from '../../src/features/nutrition/useNutritionStore.js'
 import { tooLarge, imageTooLarge, traceTooLarge, MAX_IMAGE_BYTES, MAX_TRACE_BYTES, mo } from '../../src/features/health/fileGuard.js'
@@ -118,19 +118,38 @@ const csp = cfg.slice(cfg.indexOf('const CSP'), cfg.indexOf('cspMeta'))
 for (const d of ["default-src 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "worker-src 'self' blob:"]) {
   a(csp.includes(d), `la politique pose ${d}`)
 }
-for (const host of ['https://*.supabase.co', 'wss://*.supabase.co', 'https://*.open-meteo.com', 'https://cdn.jsdelivr.net']) {
+for (const host of ['https://*.open-meteo.com', 'https://cdn.jsdelivr.net']) {
   a(csp.includes(host), `${host} est joignable`)
+}
+
+// L origine Supabase est epinglee sur le projet reel, lue au build. Un joker
+// *.supabase.co paraissait equivalent : il ne l est pas, n importe qui peut
+// creer un projet Supabase et obtenir un sous-domaine en .supabase.co. Le
+// poids, le sommeil et les blessures pouvaient donc partir chez un tiers.
+a(/\$\{supabase\}/.test(csp), 'connect-src prend l origine Supabase d une variable, pas d un joker')
+a(cfg.includes('function supabaseSources'), 'cette origine est derivee de VITE_SUPABASE_URL')
+a(cfg.includes('loadEnv'), 'lue au build par loadEnv')
+const repli = cfg.slice(cfg.indexOf('function supabaseSources'))
+a(/catch[\s\S]{0,500}\*\.supabase\.co/.test(repli), 'le joker ne subsiste que comme repli, quand la variable manque')
+
+// Verification sur le HTML reellement produit, si un build est present.
+if (existsSync('../../dist/index.html')) {
+  const bati = readFileSync('../../dist/index.html', 'utf8')
+  a(!bati.includes('*.supabase.co'), 'le HTML produit ne porte aucun joker supabase')
+  a(/connect-src[^"]*https:\/\/[a-z0-9]+\.supabase\.co/.test(bati), 'mais une origine Supabase precise')
 }
 
 // Le coeur de la protection : aucune autre adresse. Si connect-src gagne un
 // joker general, une donnee de sante peut repartir n importe ou.
-const connect = (csp.match(/"connect-src[^"]*"/) || [''])[0]
+// connect-src est un gabarit (backticks) depuis que l origine Supabase y est
+// injectee : chercher seulement des guillemets doubles ne trouvait plus rien.
+const connect = (csp.match(/[`"]connect-src[^`"]*[`"]/) || [''])[0]
 a(connect.length > 0, 'connect-src est defini')
 a(!/\s\*[\s"]/.test(connect), 'connect-src ne contient aucun joker general')
 
 // Une politique qui autorise le script en ligne ne protege plus de rien :
 // c est exactement ce qu injecterait une faille XSS.
-const script = (csp.match(/"script-src[^"]*"/) || [''])[0]
+const script = (csp.match(/[`"]script-src[^`"]*[`"]/) || [''])[0]
 a(!script.includes("'unsafe-inline'"), 'script-src n autorise pas le script en ligne')
 a(!script.includes("'unsafe-eval'"), "script-src n autorise pas eval() — seul 'wasm-unsafe-eval' est la, pour l OCR")
 a(script.includes("'wasm-unsafe-eval'"), 'mais WebAssembly reste compilable, sinon la lecture des captures tombe')

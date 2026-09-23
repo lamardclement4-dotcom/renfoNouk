@@ -8,6 +8,10 @@
     {
       "files": ["tests/**/*.mjs"],
       "env": { "browser": true, "node": true, "es2024": true }
+    },
+    {
+      "files": ["vite.config.js"],
+      "env": { "node": true, "es2024": true }
     }
   ]
 }
