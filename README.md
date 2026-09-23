@@ -67,13 +67,26 @@ fausse table `profiles` placé devant `public` lui ferait répondre « admin »
 **Rien ne sort vers une adresse non prévue.** Une politique de sécurité du
 contenu est posée sur le HTML produit par le plugin `csp-meta` de
 `vite.config.js`. Sa directive importante est `connect-src` : même si du
-code étranger s'exécutait dans la page, seuls Supabase, Open-Meteo et le CDN
-de l'OCR seraient joignables. Elle n'est appliquée qu'au build — en
-développement, elle bloquerait le rechargement à chaud.
+code étranger s'exécutait dans la page, seuls le projet Supabase,
+Open-Meteo et le CDN de l'OCR seraient joignables. Elle n'est appliquée
+qu'au build — en développement, elle bloquerait le rechargement à chaud.
 
-`frame-ancestors` est absent : la directive est ignorée dans une balise
-meta et GitHub Pages ne permet pas de poser d'en-tête HTTP. La page reste
-donc encadrable par un site tiers.
+L'origine Supabase y est **épinglée sur le projet réel**, lue au build
+depuis `VITE_SUPABASE_URL`. Un joker `*.supabase.co` paraît équivalent et ne
+l'est pas : n'importe qui peut créer un projet Supabase gratuit et obtenir
+un sous-domaine, donc recevoir le poids, le sommeil et les blessures.
+
+Deux limites connues, assumées faute de mieux :
+
+- `cdn.jsdelivr.net` est autorisé dans `script-src`, et ce CDN sert
+  n'importe quel paquet npm : un point d'injection pourrait y charger du
+  code. Le resserrer par chemin casserait l'OCR au premier changement de
+  version, sans moyen de s'en apercevoir. Le vrai remède serait d'embarquer
+  le moteur — six variantes WebAssembly de 2,8 à 4,6 Mo, plus les données de
+  langue.
+- `frame-ancestors` est absent : la directive est ignorée dans une balise
+  meta et GitHub Pages ne permet pas de poser d'en-tête HTTP. La page reste
+  donc encadrable par un site tiers.
 
 **Se déconnecter vide l'appareil.** `resetStore()` efface le cache mémoire du
 store et toutes les files d'attente du stockage local, y compris celles
@@ -95,5 +108,15 @@ respecté à l'octet près, une dépendance ne peut pas changer de version en
 silence entre deux déploiements.
 
 Ces garanties sont testées dans `tests/suites/t71.mjs` — la suite échoue si
-la politique est desserrée, si un plafond disparaît ou si le déploiement
-repasse à `npm install`.
+la politique est desserrée, si l'origine Supabase repasse en joker, si un
+plafond disparaît ou si le déploiement repasse à `npm install`.
+
+### À vérifier à la main
+
+Deux points hors de portée du dépôt, à contrôler sur le dashboard Supabase :
+
+- **Exécuter `0004_pin_function_search_path.sql`** s'il ne l'a pas encore
+  été. Sans lui, `is_admin()` reste détournable.
+- **Authentication → URL Configuration** : les *Redirect URLs* ne doivent
+  pas contenir de joker. Une entrée trop large permet de faire rediriger le
+  jeton d'authentification vers un site tiers après connexion.
