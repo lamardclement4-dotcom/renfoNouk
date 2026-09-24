@@ -1,0 +1,38 @@
+# Surveillance automatique des dépendances.
+#
+# Les deux vulnérabilités corrigées à la main (nanoid, postcss) auraient été
+# signalées ici sans rien demander à personne. Un projet qu'on ne touche pas
+# pendant deux mois accumule des failles connues en silence : c'est
+# exactement le cas d'usage.
+#
+# Les mises à jour arrivent en pull request, jamais directement sur main —
+# rien ne part en production sans être vu.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    # Regroupées : cinq pull requests séparées pour cinq paquets de
+    # développement se referment sans être lues. Une seule se relit.
+    groups:
+      developpement:
+        dependency-type: "development"
+      production:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps"
+
+  # Les actions du workflow sont épinglées sur des étiquettes mobiles
+  # (actions/checkout@v4). Dependabot les suit et propose les montées de
+  # version — il agit au nom de GitHub, donc il a le droit de modifier un
+  # fichier de workflow, contrairement au jeton de cette machine.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "actions"
