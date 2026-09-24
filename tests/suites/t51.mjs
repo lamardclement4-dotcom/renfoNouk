@@ -3,7 +3,7 @@
 // echoue ici. L ecran Progres l a ete pendant cinq commits sans que rien ne le
 // signale : ni la compilation, ni les tests d unite.
 import '../harness/browser-env.mjs'
-import { __render, __reset } from '../harness/react-stub4.mjs'
+import { __render, __reset, __setState } from '../harness/react-stub4.mjs'
 import { __setDb } from '../harness/store-hook-stub.mjs'
 import { RICH } from './t50fixture.mjs'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
@@ -275,5 +275,23 @@ const rs2 = text(__render('routines-une', routinesEcran, { ...mkProps({ routines
 a(/Appuis et ressort/.test(rs2), 'la famille vide propose son echelle')
 a(/Niveau\s+1\s*\/\s*5/.test(rs2), 'au premier niveau')
 a(/Appuis courts/.test(rs2), 'avec le nom du niveau')
+
+// L import d une capture de plat doit se VOIR, pas seulement exister. Le
+// bouton « + Aliment personnalise » voisin, lui, est cache derriere
+// « aucun resultat » : on ne le trouve qu en cherchant un aliment absent.
+// Deux fonctionnalites livrees ont deja ete invisibles faute de ce controle.
+const { FoodTab } = await import('../../src/features/nutrition/Nutrition.jsx')
+__reset(); __setDb({})
+const foodProps = { ...mkProps({}), db: buildDb({}, {}, {}, [], {}, '2026-06-15') }
+__render('foodtab', FoodTab, foodProps)
+// index 1 = le hook `mode` de FoodTab (date, mode, q, ...)
+__setState('foodtab', 1, 'search')
+const ft = text(__render('foodtab', FoodTab, foodProps))
+a(/Importer une capture/.test(ft), 'l import d une capture est visible des l ouverture de la recherche')
+a(/envoy[ée]e nulle part/.test(ft), 'et il est dit que l image ne quitte pas l appareil')
+a(/[EÉ]tiquette/.test(ft), 'le type de capture attendu est annonce')
+// La recherche vide renvoie des resultats : si le bouton apparait quand meme,
+// c est qu il n est pas enferme dans la branche « aucun resultat ».
+a(/Tous les aliments/.test(ft), 'la liste est bien peuplee dans ce rendu')
 
 console.log('\nALL PASS')
