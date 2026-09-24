@@ -302,4 +302,26 @@ a(/[EÉ]tiquette/.test(ft), 'le type de capture attendu est annonce')
 // c est qu il n est pas enferme dans la branche « aucun resultat ».
 a(/Tous les aliments/.test(ft), 'la liste est bien peuplee dans ce rendu')
 
+// Les calories bues comptent dans la journee. Elles l etaient deja partout
+// ailleurs — retrospective, macros, familles passent par dayEntries — mais
+// le total affiche dans le Journal lisait foodLog seul. L ecran contredisait
+// ses propres analyses.
+const auj = new Date().toISOString().slice(0, 10)
+const dbBoisson = { dayRows: { [auj]: {
+  food: [{ id: 'f1', n: 'Riz blanc cuit', grams: 200, meal: 'midi',
+    per: { k: 130, p: 2.5, g: 28, l: 0.3, fib: 0.4 }, k: 260, p: 5, g: 56, l: 0.6, fib: 0.8 }],
+  hydration: [
+    { id: 'd1', n: 'Biere blonde, demi', ml: 250, kcal: 101, prot: 0, carb: 8, fat: 0, alc: 9.9, sugar: 8 },
+    { id: 'd2', n: 'Eau plate', ml: 500, kcal: 0, prot: 0, carb: 0, fat: 0, alc: 0, sugar: 0 },
+  ] } } }
+__reset(); __setDb(dbBoisson)
+const jt = text(__render('foodtab-boisson', FoodTab, { ...mkProps(dbBoisson), db: mkProps(dbBoisson).db }))
+a(/361\s+kcal/.test(jt), 'le total du jour vaut 361 kcal : 260 manges + 101 bus')
+a(/Boissons/.test(jt), 'une carte « Boissons » rend le total verifiable')
+a(/Biere blonde/.test(jt), 'la boisson calorique y figure')
+a(/101\s+kcal/.test(jt), 'avec ses calories')
+a(/9,9 g/.test(jt), 'et ses grammes d alcool, a la francaise')
+a(/Hydratation/.test(jt), 'en disant d ou elles viennent')
+a(!/Eau plate/.test(jt), 'l eau n encombre pas le journal alimentaire : zero calorie, zero ligne')
+
 console.log('\nALL PASS')

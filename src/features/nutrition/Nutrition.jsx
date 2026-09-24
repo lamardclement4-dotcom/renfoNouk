@@ -7,7 +7,7 @@ import { Icon, C, GRADIENTS } from '../health/kit'
 import { coherence, views, outOfRange, forDay, buildPlan, suggest, kcalFromMacros, targetForDate, ACTIVITY, GOALS, DAY_TYPES } from './macroTargets'
 import { macroDeepAnalysis } from './macroIntel'
 import { familyBreakdown, familyAdvice } from './foodFamilies'
-import { daySeries } from './nutriIntel'
+import { daySeries, dayEntries, drinkAsEntry } from './nutriIntel'
 import { parseFoodText, toFoodEntry, readingIssue } from './foodOcr'
 import { imageTooLarge } from '../health/fileGuard'
 
@@ -610,7 +610,20 @@ export function FoodTab({ db, store }) {
   // l'objectif général sert tel quel.
   const targets = targetForDate(db, date) || db.foodTargets || null
   const favs = db.foodFav || []
-  const tot = log.reduce((a, e) => ({ k: a.k + e.k, p: a.p + e.p, g: a.g + e.g, l: a.l + e.l, fib: a.fib + (e.fib || 0) }), { k: 0, p: 0, g: 0, l: 0, fib: 0 })
+  // Les boissons caloriques comptent dans la journée : une bière ou un soda
+  // pèsent autant qu'un aliment. Toutes les analyses les comptaient déjà —
+  // rétrospective, macros, familles passent par `dayEntries` — mais le total
+  // affiché ici lisait `foodLog` seul. L'écran contredisait ses propres
+  // lectures : une journée à 500 kcal de sodas paraissait sous l'objectif.
+  //
+  // L'eau et les boissons sans calories restent écartées par `drinkAsEntry` :
+  // les inscrire gonflerait le compte d'aliments notés, dont dépend le seuil
+  // qui distingue une journée complète d'une journée oubliée.
+  const drinks = ((db.hydroLog && db.hydroLog[date]) || [])
+    .map((d) => ({ raw: d, e: drinkAsEntry(d) }))
+    .filter((x) => x.e)
+  const totDrinks = drinks.reduce((a, x) => ({ k: a.k + x.e.k, p: a.p + x.e.p, g: a.g + x.e.g, l: a.l + x.e.l }), { k: 0, p: 0, g: 0, l: 0 })
+  const tot = dayEntries(db, date).reduce((a, e) => ({ k: a.k + (e.k || 0), p: a.p + (e.p || 0), g: a.g + (e.g || 0), l: a.l + (e.l || 0), fib: a.fib + (e.fib || 0) }), { k: 0, p: 0, g: 0, l: 0, fib: 0 })
   const MEALS = [{ id: 'matin', label: 'Petit-déjeuner' }, { id: 'midi', label: 'Déjeuner' }, { id: 'soir', label: 'Dîner' }, { id: 'collation', label: 'Collation' }]
   const mealOf = (e) => (MEALS.some((m) => m.id === e.meal) ? e.meal : 'collation')
   const per100 = (e) => e.per || { k: e.grams ? e.k / e.grams * 100 : 0, p: e.grams ? e.p / e.grams * 100 : 0, g: e.grams ? e.g / e.grams * 100 : 0, l: e.grams ? e.l / e.grams * 100 : 0, fib: e.grams ? (e.fib || 0) / e.grams * 100 : 0 }
@@ -795,7 +808,7 @@ export function FoodTab({ db, store }) {
 
   const days = []
   for (let i = 6; i >= 0; i--) days.push(shiftISO(date, -i))
-  const dayKcal = (iso) => ((db.foodLog && db.foodLog[iso]) || []).reduce((a, e) => a + e.k, 0)
+  const dayKcal = (iso) => dayEntries(db, iso).reduce((a, e) => a + (e.k || 0), 0)
   const maxK = Math.max(targets ? (targets.kcal || 0) : 0, ...days.map(dayKcal), 1)
   return React.createElement('div', null,
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 } },
@@ -838,6 +851,18 @@ export function FoodTab({ db, store }) {
           React.createElement(Icon, { name: 'arrow', size: 16, color: INK3 }))),
         React.createElement('button', { onClick: () => openAdd(m.id), style: { width: '100%', padding: '11px 14px', border: 'none', borderTop: `1px solid ${LINE}`, color: NUTRI, fontWeight: 700, fontSize: 13.5, textAlign: 'left', background: 'transparent', cursor: 'pointer' } }, '+ Ajouter'))
     }),
+    drinks.length > 0 && React.createElement('div', { style: { marginBottom: 12, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, overflow: 'hidden' } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px' } },
+        React.createElement('span', { style: { fontWeight: 700, fontSize: 14.5 } }, 'Boissons'),
+        React.createElement('span', { style: { fontSize: 12.5, color: INK3, fontWeight: 600 } }, Math.round(totDrinks.k), ' kcal')),
+      drinks.map((x) => React.createElement('div', { key: x.raw.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: `1px solid ${LINE}` } },
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+          React.createElement('div', { style: { fontWeight: 600, fontSize: 14 } }, x.e.n),
+          React.createElement('div', { style: { fontSize: 12, color: INK3, marginTop: 1 } },
+            Math.round(x.raw.ml || 0), ' ml · ', Math.round(x.e.k), ' kcal',
+            x.e.alc ? ' · ' + String(Math.round(x.e.alc * 10) / 10).replace('.', ',') + ' g d’alcool' : '')))),
+      React.createElement('div', { style: { padding: '10px 14px', borderTop: `1px solid ${LINE}`, fontSize: 12, color: INK3, lineHeight: 1.45 } },
+        'Notées dans Hydratation, comptées ici. L’eau et les boissons sans calories n’y figurent pas.')),
     React.createElement(SecLab, null, '7 derniers jours'),
     React.createElement('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 6, height: 90, padding: '0 2px' } },
       days.map((iso) => {
