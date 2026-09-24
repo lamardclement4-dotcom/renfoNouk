@@ -173,6 +173,14 @@ a(/Petit-d[ée]jeuner/.test(deepTxt) && /D[îi]ner/.test(deepTxt), 'prise par pr
 a(/Glucides et charge/.test(deepTxt), 'et la modulation des glucides selon la charge')
 a(!/undefined|NaN/.test(deepTxt), 'aucune valeur malformee a l ecran')
 
+// La repartition par famille : la strate sous les macros. Elle doit
+// APPARAITRE, pas seulement se calculer — c est tout l interet d une
+// proportion ideale qu on peut comparer a la sienne.
+a(/D.o[uù] viennent tes calories/.test(deepTxt), 'la repartition par famille est affichee')
+a(/F[ée]culents/.test(deepTxt), 'avec les feculents nommes')
+a(/journ[ée]e/.test(deepTxt), 'et la fenetre sur laquelle elle porte')
+a(/%/.test(deepTxt), 'les parts sont en pourcentage, comme pour les lipides')
+
 
 // La retrospective detaillee doit s afficher, pas seulement se calculer.
 const prog = (await import('../../src/features/progress/ProgressSpace.jsx')).default

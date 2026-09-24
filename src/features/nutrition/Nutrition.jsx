@@ -6,6 +6,7 @@ import { useNutritionStore } from './useNutritionStore'
 import { Icon, C, GRADIENTS } from '../health/kit'
 import { coherence, views, outOfRange, forDay, buildPlan, suggest, kcalFromMacros, targetForDate, ACTIVITY, GOALS, DAY_TYPES } from './macroTargets'
 import { macroDeepAnalysis } from './macroIntel'
+import { familyBreakdown, familyAdvice } from './foodFamilies'
 import { daySeries } from './nutriIntel'
 import { parseFoodText, toFoodEntry, readingIssue } from './foodOcr'
 import { imageTooLarge } from '../health/fileGuard'
@@ -224,6 +225,11 @@ export function MacrosTab({ body, setBody, db, store }) {
   // qu'on vient pour fixer le sien.
   const [sheet, setSheet] = useState(false)
   const saved = (db && db.foodTargets) || null
+  // D'où viennent les calories : la strate sous les macros. 200 g de glucides
+  // pris sur des flocons d'avoine ou sur des sodas donnent le même chiffre et
+  // pas la même alimentation.
+  const fam = familyBreakdown(db || {}, { days: 14 })
+  const famTips = familyAdvice(fam)
   // Quatre lectures que la moyenne ne donne pas : quand les protéines sont
   // prises, si les glucides suivent la charge, si l'apport monte les jours
   // de séance, et comment chaque macro dérive sur le mois.
@@ -292,6 +298,29 @@ export function MacrosTab({ body, setBody, db, store }) {
     deep.drifts.length ? React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
       React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16, marginBottom: 8 } }, 'Ce qui a bougé ce mois-ci'),
       deep.drifts.map((d, i3) => React.createElement('div', { key: d.key, style: { fontSize: 12.5, color: INK2, lineHeight: 1.55, marginTop: i3 ? 8 : 0 } }, d.text))) : null,
+
+    fam ? React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
+      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16, marginBottom: 3 } }, 'D’où viennent tes calories'),
+      React.createElement('div', { style: { fontSize: 12, color: INK3, marginBottom: 12, lineHeight: 1.45 } },
+        'Sur ', fam.days, ' journée', fam.days > 1 ? 's' : '', ' notée', fam.days > 1 ? 's' : '',
+        ', soit ', fam.kcalJour, ' kcal par jour. La barre claire marque la part habituellement conseillée.'),
+      fam.items.filter((it) => it.kcal > 0 || it.min != null).map((it, iF) => {
+        // Échelle commune à toutes les barres, sinon deux familles de poids
+        // très différents paraîtraient comparables.
+        const ech = Math.max(50, ...fam.items.map((x) => x.pct))
+        const pos = (v) => Math.max(0, Math.min(100, v / ech * 100))
+        const teinte = it.verdict === 'ok' ? C.success : it.verdict === 'sans_cible' ? INK3 : C.warn
+        return React.createElement('div', { key: it.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: iF ? `1px solid ${LINE}` : 'none' } },
+          React.createElement('span', { style: { width: 112, fontSize: 12.5, fontWeight: 600, flex: '0 0 auto', lineHeight: 1.2 } }, it.label),
+          React.createElement('div', { style: { flex: 1, height: 9, borderRadius: 999, background: SURFACE2, position: 'relative', overflow: 'hidden' } },
+            it.min != null && React.createElement('div', { style: { position: 'absolute', left: pos(it.min) + '%', width: Math.max(1.5, pos(it.max) - pos(it.min)) + '%', top: 0, bottom: 0, background: `color-mix(in srgb, ${C.success} 30%, transparent)` } }),
+            React.createElement('div', { style: { position: 'absolute', left: 0, width: pos(it.pct) + '%', top: 3, bottom: 3, borderRadius: 999, background: teinte } })),
+          React.createElement('span', { style: { width: 86, textAlign: 'right', fontSize: 12, flex: '0 0 auto' } },
+            React.createElement('strong', { style: { color: teinte } }, String(it.pct).replace('.', ','), ' %'),
+            it.min != null ? React.createElement('span', { style: { color: INK3, fontSize: 10.5, display: 'block', lineHeight: 1.2 } }, it.min, '–', it.max, ' %') : null))
+      }),
+      famTips.length > 0 && React.createElement('div', { style: { marginTop: 12, paddingTop: 10, borderTop: `1px solid ${LINE}` } },
+        famTips.slice(0, 3).map((t, iT) => React.createElement('div', { key: t.id, style: { fontSize: 12, color: t.level === 'info' ? INK3 : INK2, lineHeight: 1.5, marginTop: iT ? 8 : 0 } }, t.text)))) : null,
 
     React.createElement(SpaceBanner, { ic: 'apple', tint: NUTRI, title: 'Protéines & glucides', text: "L'objectif pilote les protéines et le cadre énergétique ; les glucides se calent sur le volume du jour." }),
     React.createElement(SecLab, null, 'Poids'),
