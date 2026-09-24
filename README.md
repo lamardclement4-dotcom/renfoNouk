@@ -120,3 +120,12 @@ Deux points hors de portée du dépôt, à contrôler sur le dashboard Supabase 
 - **Authentication → URL Configuration** : les *Redirect URLs* ne doivent
   pas contenir de joker. Une entrée trop large permet de faire rediriger le
   jeton d'authentification vers un site tiers après connexion.
+
+Et un point côté GitHub :
+
+- **Durcissement du déploiement** : `.github/deploiement-durci.yml` contient
+  la version durcie du workflow (`npm ci`, droits réduits par job, lint et
+  tests avant publication). Elle n'a pas pu être poussée depuis la ligne de
+  commande — GitHub refuse toute modification d'un fichier de workflow à un
+  jeton sans la portée `workflow`. À coller depuis l'éditeur web, ou après
+  `gh auth refresh -h github.com -s workflow`.

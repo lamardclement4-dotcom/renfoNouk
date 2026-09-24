@@ -1,0 +1,77 @@
+# Durcissement du déploiement — à appliquer à la main
+#
+# Ce fichier n'est PAS actif. Il contient la version durcie de
+# .github/workflows/deploy.yml, que l'outil en ligne de commande ne peut
+# pas pousser : GitHub refuse toute modification d'un fichier de workflow
+# à un jeton dépourvu de la portée `workflow`.
+#
+# Deux façons de l'appliquer :
+#   - éditer .github/workflows/deploy.yml depuis l'éditeur web de GitHub
+#     et y coller le contenu ci-dessous (le web agit au nom du compte,
+#     pas de l'application OAuth) ;
+#   - ou accorder la portée : gh auth refresh -h github.com -s workflow
+#
+# Ce qu'il change : npm ci au lieu de npm install (le lockfile est
+# respecté à l'octet près), droits réduits par job, et lint + tests
+# exécutés avant toute publication.
+#
+# Une fois appliqué, remettre les deux assertions correspondantes dans
+# tests/suites/t71.mjs (voir le commentaire qui les remplace).
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Construire ne demande que de lire le dépôt. Les droits d'écriture sur
+    # Pages et le jeton d'identité ne servent qu'au job `deploy`, qui les
+    # redemande : c'est là que du code de dépendance s'exécute (npm ci,
+    # build), donc là qu'il faut le moins de pouvoir possible.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # `npm ci` et non `npm install` : install peut résoudre une version
+      # plus récente que celle du package-lock et la déployer sans que rien
+      # ne le signale. ci installe exactement le lockfile, et échoue s'il
+      # ne correspond pas au package.json.
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
