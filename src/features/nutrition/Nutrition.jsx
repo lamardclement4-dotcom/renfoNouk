@@ -10,6 +10,7 @@ import { familyBreakdown, familyAdvice } from './foodFamilies'
 import { daySeries, dayEntries, drinkAsEntry } from './nutriIntel'
 import { parseFoodText, toFoodEntry, readingIssue } from './foodOcr'
 import { imageTooLarge } from '../health/fileGuard'
+import { makeRecipe, recipeToEntry, recipeIssue, servingLabel, servingTotals, servingGrams, recipeGrams, upsertRecipe, removeRecipe, MAX_SERVINGS } from './recipes'
 
 // ============================================================
 // Jetons de style : ils pointent vers ceux du kit partagé plutôt que
@@ -603,6 +604,14 @@ export function FoodTab({ db, store }) {
   // montrer — sans écran de validation, c'est le seul moment où l'on voit
   // ce qui a été compris.
   const [cap, setCap] = useState({ phase: 'idle', progress: 0, error: null, done: null })
+  // Recettes : un repas composé une fois, rappelé d'un geste. `cible` dit où
+  // part l'aliment qu'on est en train de choisir — le journal, ou la recette
+  // en cours d'écriture. Sans elle, il faudrait un second écran de recherche
+  // identique au premier.
+  const [draft, setDraft] = useState(null)
+  const [cible, setCible] = useState('journal')
+  const [parts, setParts] = useState(1)
+  const [recPick, setRecPick] = useState(null)
   useEffect(() => { if (store.ensureDay) store.ensureDay(date) }, [date])
   const log = (db.foodLog && db.foodLog[date]) || []
   // L'objectif suit la journée : une grosse séance déplace l'apport
@@ -699,7 +708,26 @@ export function FoodTab({ db, store }) {
     return { foodLog: fl }
   })
   const removeEntry = (id) => store.set((s) => { const fl = { ...s.foodLog || {} }; fl[date] = (fl[date] || []).filter((e) => e.id !== id); return { foodLog: fl } })
-  const openAdd = (ml) => { setMeal(ml); setEditId(null); setPick(null); setQ(''); setMode('search') }
+  const openAdd = (ml) => { setCible('journal'); setMeal(ml); setEditId(null); setPick(null); setQ(''); setMode('search') }
+
+  const recettes = db.recipes || []
+  const saveRecettes = (next) => store.set({ recipes: next })
+  const newDraft = () => { setDraft(makeRecipe({ n: '', servings: 1, items: [] })); setMode('recette') }
+  const editDraft = (r) => { setDraft(r); setMode('recette') }
+  const commitDraft = () => {
+    const r = makeRecipe(draft)
+    saveRecettes(upsertRecipe(recettes, r)); setDraft(null); setMode('recettes')
+  }
+  const dropDraft = () => { saveRecettes(removeRecipe(recettes, draft.id)); setDraft(null); setMode('recettes') }
+  const addIngredient = () => { setCible('recette'); setEditId(null); setPick(null); setQ(''); setMode('search') }
+  const dropItem = (i) => setDraft((d) => ({ ...d, items: (d.items || []).filter((_, j) => j !== i) }))
+  const openPart = (r) => { setRecPick(r); setParts(1); setMeal(defaultMeal()); setMode('part') }
+  const logRecette = () => {
+    const e = recipeToEntry(recPick, { servings: parts, meal })
+    if (!e) return
+    store.set((st) => { const fl = { ...st.foodLog || {} }; fl[date] = [...(fl[date] || []), e]; return { foodLog: fl } })
+    setRecPick(null); setMode('main')
+  }
   const openEdit = (e) => {
     const pr = per100(e)
     setPick({ n: e.n, k: pr.k, p: pr.p, g: pr.g, l: pr.l, port: e.grams, portLab: '' })
@@ -743,6 +771,18 @@ export function FoodTab({ db, store }) {
             'Étiquette d’un paquet ou capture d’une autre app. La lecture se fait sur l’appareil : l’image n’est envoyée nulle part.')),
         React.createElement('input', { type: 'file', accept: 'image/*', disabled: cap.phase === 'reading', onChange: (ev) => { const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; handleCapture(f) }, style: { display: 'none' } })),
       cap.error && React.createElement('div', { style: { fontSize: 12.5, color: C.danger, marginBottom: 12, lineHeight: 1.45 } }, cap.error),
+      React.createElement('button', { onClick: () => setMode('recettes'), style: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '11px 14px', marginBottom: 12, borderRadius: RADIUS_SM, border: `1.5px solid ${LINE}`, background: 'transparent', cursor: 'pointer' } },
+        React.createElement(Icon, { name: 'apple', size: 18, color: NUTRI }),
+        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+          React.createElement('div', { style: { fontWeight: 700, fontSize: 14, color: INK } }, 'Mes recettes', recettes.length ? ` (${recettes.length})` : ''),
+          React.createElement('div', { style: { fontSize: 11.5, color: INK3, marginTop: 2, lineHeight: 1.4 } },
+            recettes.length ? 'Un repas composé une fois, ajouté d’un geste.' : 'Compose un repas une fois, retrouve-le ensuite d’un geste.')),
+        React.createElement(Icon, { name: 'arrow', size: 16, color: INK3 })),
+      nq === '' && recettes.length > 0 && React.createElement(React.Fragment, null,
+        React.createElement(SecLab, null, 'Recettes'),
+        React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } },
+          recettes.slice(-8).reverse().map((r) => React.createElement('button', { key: r.id, onClick: () => openPart(r), style: { ...chipBtn(false), display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: '100%' } },
+            React.createElement('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis' } }, r.n))))),
       nq === '' && favs.length > 0 && React.createElement(React.Fragment, null,
         React.createElement(SecLab, null, 'Favoris'),
         React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } }, favs.map((f, i) => React.createElement(Quick, { key: 'fav' + i, kk: 'fav' + i, food: f })))),
@@ -773,6 +813,88 @@ export function FoodTab({ db, store }) {
         React.createElement('button', { onClick: () => { setPick({ n: q || 'Aliment', k: 0, p: 0, g: 0, l: 0, custom: true }); setGrams(100); setEditId(null); setMode('qty') }, style: { ...xst.ghostBtn, width: '100%', marginTop: 12, padding: 12, fontSize: 14 } }, '+ Aliment personnalisé')))
   }
 
+  // ─── Liste des recettes ───
+  if (mode === 'recettes') {
+    return React.createElement('div', null,
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 } },
+        React.createElement('button', { onClick: () => setMode('search'), style: xst.iconBtn, 'aria-label': 'Retour' }, React.createElement(Icon, { name: 'back', size: 19 })),
+        React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 18, flex: 1 } }, 'Mes recettes')),
+      React.createElement('button', { onClick: newDraft, style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}`, marginBottom: 16 } }, '+ Nouvelle recette'),
+      recettes.length === 0
+        ? React.createElement('div', { style: { textAlign: 'center', color: INK3, fontSize: 13.5, padding: '24px 8px', lineHeight: 1.55 } },
+          'Aucune recette pour l’instant. Compose un plat avec ses ingrédients et sa quantité : il s’ajoutera ensuite au journal en une seule ligne, à son nom.')
+        : React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+          recettes.slice().reverse().map((r) => React.createElement('div', { key: r.id, style: { display: 'flex', alignItems: 'center', borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, overflow: 'hidden' } },
+            React.createElement('button', { onClick: () => openPart(r), style: { flex: 1, minWidth: 0, textAlign: 'left', padding: '11px 14px', background: 'transparent', border: 'none', cursor: 'pointer' } },
+              React.createElement('div', { style: { fontWeight: 600, fontSize: 14.5 } }, r.n),
+              React.createElement('div', { style: { fontSize: 12, color: INK3, marginTop: 2 } }, servingLabel(r))),
+            React.createElement('button', { onClick: () => editDraft(r), 'aria-label': 'Modifier', style: { flex: '0 0 auto', padding: '11px 14px', background: 'transparent', border: 'none', borderLeft: `1px solid ${LINE}`, color: NUTRI, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Modifier')))))
+  }
+
+  // ─── Éditeur d'une recette ───
+  if (mode === 'recette' && draft) {
+    const items = draft.items || []
+    const blocage = recipeIssue(draft)
+    const part = servingTotals(draft)
+    return React.createElement('div', null,
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 } },
+        React.createElement('button', { onClick: () => { setDraft(null); setMode('recettes') }, style: xst.iconBtn, 'aria-label': 'Retour' }, React.createElement(Icon, { name: 'back', size: 19 })),
+        React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 18, flex: 1 } }, 'Recette')),
+      React.createElement(SecLab, null, 'Nom'),
+      React.createElement('input', { value: draft.n, onChange: (ev) => setDraft({ ...draft, n: ev.target.value }), placeholder: 'Bowl poulet-quinoa…', style: { ...xst.input, marginTop: 0, marginBottom: 14 } }),
+      React.createElement(SecLab, null, 'Nombre de parts'),
+      React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6 } },
+        [1, 2, 3, 4, 6].map((nP) => React.createElement('button', { key: nP, onClick: () => setDraft({ ...draft, servings: nP }), style: chipBtn(draft.servings === nP) }, nP, nP > 1 ? ' parts' : ' part'))),
+      React.createElement('div', { style: { fontSize: 12, color: INK3, marginBottom: 14, lineHeight: 1.45 } },
+        'La recette entière sera divisée par ce nombre : c’est une part qui s’ajoute au journal.'),
+      React.createElement(SecLab, null, `Ingrédients (${items.length})`),
+      items.length === 0
+        ? React.createElement('div', { style: { fontSize: 13, color: INK3, padding: '6px 0 12px', lineHeight: 1.5 } }, 'Aucun ingrédient. Ajoute-les un par un, avec leur poids.')
+        : React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 } },
+          items.map((it, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}` } },
+            React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+              React.createElement('div', { style: { fontWeight: 600, fontSize: 13.5 } }, it.n),
+              React.createElement('div', { style: { fontSize: 11.5, color: INK3, marginTop: 1 } }, it.grams, ' g · ', Math.round((it.per.k || 0) * it.grams / 100), ' kcal')),
+            React.createElement('button', { onClick: () => dropItem(i), 'aria-label': 'Retirer', style: { flex: '0 0 auto', background: 'transparent', border: 'none', color: DANGER, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Retirer')))),
+      React.createElement('button', { onClick: addIngredient, style: { ...xst.ghostBtn, width: '100%', marginBottom: 16, padding: 12, fontSize: 14 } }, '+ Ajouter un ingrédient'),
+      items.length > 0 && React.createElement(React.Fragment, null,
+        React.createElement(SecLab, null, 'Une part'),
+        React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 6 } },
+          React.createElement(ResultCard, { label: 'kcal', value: part.k, tint: NUTRI, big: true }),
+          React.createElement(ResultCard, { label: 'Prot.', value: Math.round(part.p) + ' g', tint: NUTRI }),
+          React.createElement(ResultCard, { label: 'Gluc.', value: Math.round(part.g) + ' g', tint: NUTRI }),
+          React.createElement(ResultCard, { label: 'Lip.', value: Math.round(part.l) + ' g', tint: NUTRI })),
+        React.createElement('div', { style: { fontSize: 12, color: INK3, marginBottom: 14 } },
+          servingGrams(draft), ' g par part · ', recipeGrams(draft), ' g au total')),
+      blocage && React.createElement('div', { style: { fontSize: 12.5, color: C.warn, marginBottom: 10, lineHeight: 1.45 } }, blocage),
+      React.createElement('button', { onClick: commitDraft, disabled: !!blocage, style: { ...xst.primaryBtn, background: blocage ? SURFACE2 : NUTRI, color: blocage ? INK3 : '#fff', cursor: blocage ? 'default' : 'pointer', boxShadow: blocage ? 'none' : `0 12px 26px -14px ${NUTRI}` } }, 'Enregistrer la recette'),
+      recettes.some((r) => r.id === draft.id) && React.createElement('button', { onClick: dropDraft, style: { width: '100%', marginTop: 10, padding: 12, fontSize: 14, fontWeight: 700, color: DANGER, background: 'transparent', border: 'none', cursor: 'pointer' } }, 'Supprimer la recette'))
+  }
+
+  // ─── Combien de parts, et pour quel repas ───
+  if (mode === 'part' && recPick) {
+    const uneP = servingTotals(recPick)
+    const mul = (v) => Math.round(v * parts)
+    return React.createElement('div', null,
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 } },
+        React.createElement('button', { onClick: () => { setRecPick(null); setMode('search') }, style: xst.iconBtn, 'aria-label': 'Retour' }, React.createElement(Icon, { name: 'back', size: 19 })),
+        React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 18, flex: 1 } }, recPick.n)),
+      React.createElement('div', { style: { fontSize: 12.5, color: INK3, marginBottom: 14 } }, servingLabel(recPick)),
+      React.createElement(SecLab, null, 'Repas'),
+      React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } },
+        MEALS.map((m) => React.createElement('button', { key: m.id, onClick: () => setMeal(m.id), style: chipBtn(meal === m.id) }, m.label))),
+      React.createElement(SecLab, null, 'Combien de parts'),
+      React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } },
+        [0.5, 1, 1.5, 2, 3].map((nP) => React.createElement('button', { key: nP, onClick: () => setParts(nP), style: chipBtn(parts === nP) }, String(nP).replace('.', ','), nP > 1 ? ' parts' : ' part'))),
+      React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 6 } },
+        React.createElement(ResultCard, { label: 'kcal', value: mul(uneP.k), tint: NUTRI, big: true }),
+        React.createElement(ResultCard, { label: 'Prot.', value: mul(uneP.p) + ' g', tint: NUTRI }),
+        React.createElement(ResultCard, { label: 'Gluc.', value: mul(uneP.g) + ' g', tint: NUTRI }),
+        React.createElement(ResultCard, { label: 'Lip.', value: mul(uneP.l) + ' g', tint: NUTRI })),
+      React.createElement('div', { style: { fontSize: 12, color: INK3, marginBottom: 16 } }, Math.round(servingGrams(recPick) * parts), ' g au total'),
+      React.createElement('button', { onClick: logRecette, style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}` } }, 'Ajouter au journal'))
+  }
+
   if (mode === 'qty' && pick) {
     const f = grams / 100
     const ck = pick.k * f, cp = pick.p * f, cg = pick.g * f, cl = pick.l * f
@@ -788,8 +910,8 @@ export function FoodTab({ db, store }) {
           React.createElement(NumField, { label: 'Prot.', unit: 'g', value: pick.p, set: (v) => setPick({ ...pick, p: v }), min: 0, max: 100 }),
           React.createElement(NumField, { label: 'Gluc.', unit: 'g', value: pick.g, set: (v) => setPick({ ...pick, g: v }), min: 0, max: 100 }),
           React.createElement(NumField, { label: 'Lip.', unit: 'g', value: pick.l, set: (v) => setPick({ ...pick, l: v }), min: 0, max: 100 }))),
-      React.createElement(SecLab, null, 'Repas'),
-      React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } }, MEALS.map((m) => React.createElement('button', { key: m.id, onClick: () => setMeal(m.id), style: chipBtn(meal === m.id) }, m.label))),
+      cible === 'journal' ? React.createElement(SecLab, null, 'Repas') : null,
+      cible === 'journal' ? React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } }, MEALS.map((m) => React.createElement('button', { key: m.id, onClick: () => setMeal(m.id), style: chipBtn(meal === m.id) }, m.label))) : null,
       React.createElement(SecLab, null, 'Quantité'),
       React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-end' } }, React.createElement(NumField, { label: 'Poids', unit: 'g', value: grams, set: setGrams, min: 1, max: 2000 })),
       React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 } },
@@ -803,7 +925,13 @@ export function FoodTab({ db, store }) {
       editId ? React.createElement('div', null,
         React.createElement('button', { onClick: () => { updateEntry(editId, grams, meal); setMode('main'); setPick(null); setEditId(null) }, style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}`, marginTop: 16 } }, 'Enregistrer'),
         React.createElement('button', { onClick: () => { removeEntry(editId); setMode('main'); setPick(null); setEditId(null) }, style: { width: '100%', marginTop: 10, padding: 12, fontSize: 14, fontWeight: 700, color: DANGER, background: 'transparent', border: 'none', cursor: 'pointer' } }, 'Supprimer du journal'))
-        : React.createElement('button', { onClick: () => { addEntry(pick, grams, meal); setMode('main'); setQ(''); setPick(null) }, style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}`, marginTop: 16 } }, 'Ajouter au journal'))
+        : React.createElement('button', { onClick: () => {
+          if (cible === 'recette') {
+            setDraft((d) => ({ ...d, items: [...((d && d.items) || []), { n: pick.n, grams, per: { k: pick.k, p: pick.p, g: pick.g, l: pick.l, fib: pick.fib || 0 } }] }))
+            setCible('journal'); setPick(null); setQ(''); setMode('recette')
+          } else { addEntry(pick, grams, meal); setMode('main'); setQ(''); setPick(null) }
+        }, style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}`, marginTop: 16 } },
+        cible === 'recette' ? 'Ajouter à la recette' : 'Ajouter au journal'))
   }
 
   const days = []

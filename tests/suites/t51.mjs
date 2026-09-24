@@ -324,4 +324,28 @@ a(/9,9 g/.test(jt), 'et ses grammes d alcool, a la francaise')
 a(/Hydratation/.test(jt), 'en disant d ou elles viennent')
 a(!/Eau plate/.test(jt), 'l eau n encombre pas le journal alimentaire : zero calorie, zero ligne')
 
+// Les recettes doivent se VOIR depuis la recherche d aliments : c est de la
+// qu on ajoute un repas, pas depuis un menu enfoui.
+__reset(); __setDb({})
+__render('foodtab-rec', FoodTab, mkProps({}))
+__setState('foodtab-rec', 1, 'search')
+const recTxt = text(__render('foodtab-rec', FoodTab, mkProps({})))
+a(/Mes recettes/.test(recTxt), 'l acces aux recettes est visible des l ouverture de la recherche')
+a(/Compose un repas une fois/.test(recTxt), 'et ce qu elles servent est dit quand il n y en a aucune')
+
+// Une recette enregistree remonte en raccourci, sans passer par la liste.
+const maRecette = { id: 'r1', n: 'Bowl poulet-quinoa', servings: 2, items: [
+  { n: 'Blanc de poulet', grams: 200, per: { k: 165, p: 31, g: 0, l: 3.6, fib: 0 } },
+  { n: 'Quinoa cuit', grams: 150, per: { k: 120, p: 4.4, g: 21, l: 1.9, fib: 2.8 } },
+] }
+const dbMaRecette = { nutrition: { recipes: [maRecette] } }
+__reset(); __setDb(dbMaRecette)
+__render('foodtab-rec2', FoodTab, mkProps(dbMaRecette))
+__setState('foodtab-rec2', 1, 'search')
+const recTxt2 = text(__render('foodtab-rec2', FoodTab, mkProps(dbMaRecette)))
+a(/Bowl poulet-quinoa/.test(recTxt2), 'la recette enregistree apparait en raccourci')
+// L extracteur ajoute une espace apres chaque noeud : « Mes recettes » et
+// « (1) » arrivent separes.
+a(/Mes recettes\s+\(1\)/.test(recTxt2), 'et leur nombre est annonce')
+
 console.log('\nALL PASS')

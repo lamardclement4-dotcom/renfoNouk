@@ -19,7 +19,7 @@ function isoDaysAgo(n) {
 
 // Clés que l'ancienne app rangeait sous profiles.phys.nutrition (regroupées
 // pour éviter d'encombrer le niveau racine de phys).
-const NUTRITION_KEYS = ['foodFav', 'foodTargets', 'hydroSport', 'hydroPrefs', 'diagHistory']
+const NUTRITION_KEYS = ['foodFav', 'foodTargets', 'hydroSport', 'hydroPrefs', 'diagHistory', 'recipes']
 // Clés à routage spécial : ni top-level phys, ni phys.nutrition.
 const SPECIAL_KEYS = ['profilePhys', 'foodLog', 'hydroLog', 'cycle', 'goals', 'sensitiveZones']
 
@@ -33,7 +33,7 @@ const SPECIAL_KEYS = ['profilePhys', 'foodLog', 'hydroLog', 'cycle', 'goals', 's
 const DATE_KEYED_LOGS = ['sleepLog', 'suppTaken', 'recoveryLog', 'weatherLog', 'vitalsLog', 'routineLog']
 const LOG_RETENTION_DAYS = 400
 // Listes qui grossissent lentement mais sans borne.
-const CAPPED_LISTS = { physTests: 400, customGoals: 200, peakGoals: 100, routines: 60 }
+const CAPPED_LISTS = { physTests: 400, customGoals: 200, peakGoals: 100, routines: 60, recipes: 200 }
 
 function pruneDateMap(obj, maxDays) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
@@ -160,7 +160,7 @@ export function resetStore() {
 // modules cessent d'avoir à s'en soucier chacun de leur côté.
 const LIST_KEYS = [
   'planningSessions', 'physTests', 'weightLog', 'sessionLog', 'customGoals',
-  'mobilityHistory', 'peakGoals', 'smartGoals', 'breathLog', 'foodFav', 'diagHistory',
+  'mobilityHistory', 'peakGoals', 'smartGoals', 'breathLog', 'foodFav', 'diagHistory', 'recipes',
   'routines',
 ]
 
@@ -195,11 +195,18 @@ export const buildDb = (rawPhys, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO
   ...physSrc,
   profilePhys: physSrc,
   cycle: cycleSrc,
-  foodFav: physSrc.nutrition?.foodFav || [],
+  // `normalizeNested` ne passe asList que sur les cles de premier niveau :
+  // celles imbriquees sous `nutrition` y echappaient. Une valeur corrompue —
+  // une chaine la ou une liste est attendue — faisait alors tomber l ecran au
+  // premier .map(), sans que rien ne dise d ou venait le probleme.
+  foodFav: asList(physSrc.nutrition?.foodFav),
+  // Repas composés une fois par l'utilisateur, rangés comme les favoris :
+  // sous profiles.phys.nutrition, normalisés en liste, bornés à 200.
+  recipes: asList(physSrc.nutrition?.recipes),
   foodTargets: physSrc.nutrition?.foodTargets || null,
   hydroSport: physSrc.nutrition?.hydroSport || {},
   hydroPrefs: physSrc.nutrition?.hydroPrefs || {},
-  diagHistory: physSrc.nutrition?.diagHistory || [],
+  diagHistory: asList(physSrc.nutrition?.diagHistory),
   physTests: asList(physSrc.physTests),
   foodLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.food || []])),
   hydroLog: Object.fromEntries(Object.entries(rowsSrc).map(([d, v]) => [d, v.hydration || []])),
