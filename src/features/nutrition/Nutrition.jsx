@@ -8,7 +8,7 @@ import { coherence, views, outOfRange, forDay, buildPlan, suggest, kcalFromMacro
 import { macroDeepAnalysis } from './macroIntel'
 import { familyBreakdown, familyAdvice } from './foodFamilies'
 import { daySeries, dayEntries, drinkAsEntry } from './nutriIntel'
-import { parseFoodText, toFoodEntry, readingIssue } from './foodOcr'
+import { parseFoodText, readingIssue } from './foodOcr'
 import { imageTooLarge } from '../health/fileGuard'
 import { makeRecipe, recipeToEntry, recipeIssue, servingLabel, servingTotals, servingGrams, recipeGrams, upsertRecipe, removeRecipe, MAX_SERVINGS } from './recipes'
 
@@ -603,7 +603,11 @@ export function FoodTab({ db, store }) {
   // application. `done` retient la dernière entrée écrite pour pouvoir la
   // montrer — sans écran de validation, c'est le seul moment où l'on voit
   // ce qui a été compris.
-  const [cap, setCap] = useState({ phase: 'idle', progress: 0, error: null, done: null })
+  // `parsed` retient ce que la capture a donné : sans lui, impossible de
+  // montrer quels champs ont été lus, lesquels ont été écartés, ni le texte
+  // brut — donc impossible de vérifier autrement qu'en recomptant à la main.
+  const [cap, setCap] = useState({ phase: 'idle', progress: 0, error: null, parsed: null })
+  const [showRaw, setShowRaw] = useState(false)
   // Recettes : un repas composé une fois, rappelé d'un geste. `cible` dit où
   // part l'aliment qu'on est en train de choisir — le journal, ou la recette
   // en cours d'écriture. Sans elle, il faudrait un second écran de recherche
@@ -650,22 +654,12 @@ export function FoodTab({ db, store }) {
     const entry = { id: 'e' + Date.now(), n: food.n, grams: gr, meal: ml, per, k: per.k * f, p: per.p * f, g: per.g * f, l: per.l * f, fib: (per.fib || 0) * f }
     store.set((s) => { const fl = { ...s.foodLog || {} }; fl[date] = [...(fl[date] || []), entry]; return { foodLog: fl } })
   }
-  // Écrit directement dans le journal du jour, à la forme exacte de la
-  // saisie manuelle. L'entrée porte `src: 'capture'` : elle se corrige d'un
-  // appui comme les autres, mais on sait d'où vient le chiffre.
-  const addParsed = (parsed) => {
-    const entry = toFoodEntry(parsed, { meal })
-    if (!entry) return null
-    store.set((s) => { const fl = { ...s.foodLog || {} }; fl[date] = [...(fl[date] || []), entry]; return { foodLog: fl } })
-    return entry
-  }
-
   async function handleCapture(file) {
     if (!file) return
-    if (!file.type.startsWith('image/')) { setCap({ phase: 'idle', progress: 0, error: "Ce fichier n'est pas une image.", done: null }); return }
+    if (!file.type.startsWith('image/')) { setCap({ phase: 'idle', progress: 0, error: "Ce fichier n'est pas une image.", parsed: null }); return }
     const tropGros = imageTooLarge(file)
-    if (tropGros) { setCap({ phase: 'idle', progress: 0, error: tropGros, done: null }); return }
-    setCap({ phase: 'reading', progress: 0, error: null, done: null })
+    if (tropGros) { setCap({ phase: 'idle', progress: 0, error: tropGros, parsed: null }); return }
+    setCap({ phase: 'reading', progress: 0, error: null, parsed: null })
     let url
     try {
       // Tesseract pèse plusieurs mégaoctets : chargé seulement ici, au
@@ -676,22 +670,20 @@ export function FoodTab({ db, store }) {
         logger: (m) => { if (m.status === 'recognizing text') setCap((c) => ({ ...c, progress: Math.round(m.progress * 100) })) },
       })
       const parsed = parseFoodText((res && res.data && res.data.text) || '')
-      if (parsed.ok) {
-        const entry = addParsed(parsed)
-        setCap({ phase: 'idle', progress: 0, error: null, done: entry })
-        setMode('main')
-        return
-      }
-      // Lecture douteuse : plutôt que d'écrire un chiffre faux qui fausserait
-      // la journée puis la rétrospective sans rien signaler, on ouvre
-      // l'éditeur déjà rempli de ce qui a été compris, et on dit pourquoi.
+      // Rien n'est écrit sans être montré. L'OCR confond « 8 » et « 0 »,
+      // tronque les libellés, lit une ligne pour une autre : un chiffre faux
+      // enregistré en silence fausse la journée, puis la rétrospective, sans
+      // que rien ne le signale. L'écran s'ouvre donc rempli de ce qui a été
+      // compris, et tout y est modifiable — le nom compris.
+      setCible('journal')
       setPick({ n: parsed.name || q || 'Plat', k: parsed.per.k || 0, p: parsed.per.p || 0, g: parsed.per.g || 0, l: parsed.per.l || 0, fib: parsed.per.fib || 0, custom: true })
       setGrams(parsed.grams || 100)
       setEditId(null)
-      setCap({ phase: 'idle', progress: 0, error: readingIssue(parsed), done: null })
+      setShowRaw(false)
+      setCap({ phase: 'idle', progress: 0, error: readingIssue(parsed), parsed })
       setMode('qty')
     } catch (e) {
-      setCap({ phase: 'idle', progress: 0, error: 'La lecture a échoué (' + ((e && e.message) || 'erreur inconnue') + '). Une connexion est nécessaire au premier import, le temps de télécharger le moteur de lecture.', done: null })
+      setCap({ phase: 'idle', progress: 0, error: 'La lecture a échoué (' + ((e && e.message) || 'erreur inconnue') + '). Une connexion est nécessaire au premier import, le temps de télécharger le moteur de lecture.', parsed: null })
     } finally {
       if (url) URL.revokeObjectURL(url)
     }
@@ -904,12 +896,44 @@ export function FoodTab({ db, store }) {
         React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 18, flex: 1 } }, pick.n),
         !pick.custom && React.createElement('button', { onClick: () => toggleFav(pick), 'aria-label': 'Favori', style: { fontSize: 21, color: isFav(pick.n) ? '#d9a441' : INK3, background: 'transparent', border: 'none', flex: '0 0 auto', cursor: 'pointer' } }, isFav(pick.n) ? '★' : '☆')),
       pick.custom && React.createElement('div', { style: { marginBottom: 14 } },
+        // Ce que la capture a donné, exposé pour être vérifié : sur quelle
+        // quantité les valeurs sont libellées, ce qui a été lu, ce qui a été
+        // écarté. Sans cela, « vérifier » se réduit à recompter à la main.
+        cap.parsed && React.createElement('div', { style: { padding: '11px 13px', marginBottom: 14, borderRadius: RADIUS_SM, background: SURFACE2, border: `1px solid ${cap.error ? C.warn : LINE}` } },
+          React.createElement('div', { style: { fontWeight: 700, fontSize: 13, marginBottom: 4 } }, 'Vérifie ce qui a été lu'),
+          React.createElement('div', { style: { fontSize: 12, color: INK2, lineHeight: 1.5 } },
+            cap.parsed.basis === 'portion'
+              ? `La capture annonce une portion de ${cap.parsed.grams} g ; les valeurs ci-dessous ont été ramenées à 100 g.`
+              : 'Les valeurs de la capture sont libellées pour 100 g.'),
+          (() => {
+            const lus = Object.keys(cap.parsed.read || {})
+            return lus.length > 0 ? React.createElement('div', { style: { fontSize: 12, color: INK2, marginTop: 5, lineHeight: 1.5 } },
+              'Champs lus : ', lus.map((k2) => ({ k: 'calories', p: 'protéines', g: 'glucides', l: 'lipides', fib: 'fibres' }[k2] || k2)).join(', '), '.') : null
+          })(),
+          (cap.parsed.rejected || []).length > 0 && React.createElement('div', { style: { fontSize: 12, color: C.warn, marginTop: 5, lineHeight: 1.5 } },
+            'Écarté comme invraisemblable : ', cap.parsed.rejected.map((r) => `${r.label} (${r.value})`).join(', '), '. À saisir à la main.'),
+          cap.error && React.createElement('div', { style: { fontSize: 12, color: C.warn, marginTop: 5, lineHeight: 1.5 } }, cap.error),
+          cap.parsed.raw && React.createElement('button', { onClick: () => setShowRaw((v) => !v), style: { width: '100%', marginTop: 8, padding: 0, background: 'transparent', border: 'none', color: INK3, fontSize: 11.5, fontWeight: 600, cursor: 'pointer', textAlign: 'left' } },
+            showRaw ? '▾ Masquer le texte lu' : '▸ Voir le texte lu par l’appareil'),
+          showRaw && cap.parsed.raw && React.createElement('pre', { style: { fontSize: 10.5, color: INK3, background: SURFACE, padding: 10, borderRadius: RADIUS_SM, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 150, overflowY: 'auto', margin: '8px 0 0' } }, cap.parsed.raw)),
+
+        React.createElement(SecLab, null, 'Nom'),
+        React.createElement('input', {
+          value: pick.n,
+          onChange: (ev) => setPick({ ...pick, n: ev.target.value }),
+          placeholder: 'Nom du plat…',
+          style: { ...xst.input, marginTop: 0, marginBottom: 12 },
+        }),
         React.createElement(SecLab, null, 'Valeurs pour 100 g'),
         React.createElement('div', { style: { display: 'flex', gap: 8 } },
           React.createElement(NumField, { label: 'kcal', value: pick.k, set: (v) => setPick({ ...pick, k: v }), min: 0, max: 900 }),
           React.createElement(NumField, { label: 'Prot.', unit: 'g', value: pick.p, set: (v) => setPick({ ...pick, p: v }), min: 0, max: 100 }),
           React.createElement(NumField, { label: 'Gluc.', unit: 'g', value: pick.g, set: (v) => setPick({ ...pick, g: v }), min: 0, max: 100 }),
-          React.createElement(NumField, { label: 'Lip.', unit: 'g', value: pick.l, set: (v) => setPick({ ...pick, l: v }), min: 0, max: 100 }))),
+          React.createElement(NumField, { label: 'Lip.', unit: 'g', value: pick.l, set: (v) => setPick({ ...pick, l: v }), min: 0, max: 100 })),
+        // Les fibres pilotent un objectif à part entière : les laisser hors
+        // du formulaire obligeait à repasser par l'édition après coup.
+        React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 8 } },
+          React.createElement(NumField, { label: 'Fibres', unit: 'g', value: pick.fib || 0, set: (v) => setPick({ ...pick, fib: v }), min: 0, max: 80 }))),
       cible === 'journal' ? React.createElement(SecLab, null, 'Repas') : null,
       cible === 'journal' ? React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } }, MEALS.map((m) => React.createElement('button', { key: m.id, onClick: () => setMeal(m.id), style: chipBtn(meal === m.id) }, m.label))) : null,
       React.createElement(SecLab, null, 'Quantité'),
@@ -960,10 +984,6 @@ export function FoodTab({ db, store }) {
           React.createElement('div', { style: { fontWeight: 800, fontSize: 18, color: NUTRI } }, Math.round(tot.k), ' kcal')),
         React.createElement('div', { style: { fontSize: 13, color: INK2, marginTop: 4, lineHeight: 1.5 } }, 'Définis des objectifs pour suivre tes apports vs une cible.'),
         React.createElement('button', { onClick: () => setTgtSheet(true), style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}`, marginTop: 12 } }, 'Régler mes objectifs')),
-    cap.done && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', marginBottom: 12, borderRadius: RADIUS_SM, background: SURFACE2, border: `1px solid ${NUTRI}` } },
-      React.createElement('div', { style: { flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.45 } },
-        React.createElement('strong', null, cap.done.n), ' ajouté : ', Math.round(cap.done.k), ' kcal pour ', cap.done.grams, ' g. Valeurs lues sur la capture — un appui dessus pour corriger.'),
-      React.createElement('button', { onClick: () => setCap((c) => ({ ...c, done: null })), style: { background: 'transparent', border: 'none', color: NUTRI, fontWeight: 700, cursor: 'pointer', flex: '0 0 auto' } }, 'OK')),
     React.createElement('button', { onClick: () => openAdd(defaultMeal()), style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}`, marginBottom: 16 } }, '+ Ajouter un aliment'),
     MEALS.map((m) => {
       const items = log.filter((e) => mealOf(e) === m.id)

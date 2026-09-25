@@ -348,4 +348,40 @@ a(/Bowl poulet-quinoa/.test(recTxt2), 'la recette enregistree apparait en raccou
 // « (1) » arrivent separes.
 a(/Mes recettes\s+\(1\)/.test(recTxt2), 'et leur nombre est annonce')
 
+// Rien de ce qu une capture donne ne doit partir au journal sans avoir ete
+// montre : l OCR confond « 8 » et « 0 » et tronque les libelles. L ecran de
+// verification doit donc exposer ce qui a ete lu ET tout laisser corriger,
+// le nom compris — il n etait pas modifiable du tout.
+__reset(); __setDb({})
+__render('foodtab-verif', FoodTab, mkProps({}))
+__setState('foodtab-verif', 1, 'qty')
+__setState('foodtab-verif', 4, { n: 'Galettes de sarrasin', k: 250, p: 9.8, g: 22, l: 12, fib: 2.3, custom: true })
+__setState('foodtab-verif', 9, { phase: 'idle', progress: 0, error: null, parsed: {
+  basis: 'portion', grams: 250, read: { k: 625, p: 24.5 },
+  rejected: [{ key: 'l', label: 'Lipides', value: 150 }],
+  raw: 'Energie 1050 kJ / 250 kcal', coherence: { checked: true, ok: true },
+} })
+const verifArbre = __render('foodtab-verif', FoodTab, mkProps({}))
+const verifTxt = text(verifArbre)
+a(/V[ée]rifie ce qui a [ée]t[ée] lu/.test(verifTxt), 'le bandeau de verification s affiche')
+a(/portion de 250 g/.test(verifTxt), 'la quantite de reference lue est dite')
+a(/ramen[ée]es [àa] 100 g/.test(verifTxt), 'et la reconversion est expliquee')
+a(/Champs lus/.test(verifTxt) && /calories/.test(verifTxt), 'les champs effectivement lus sont nommes')
+a(/[ÉE]cart[ée] comme invraisemblable/.test(verifTxt) && /Lipides/.test(verifTxt), 'et ceux qui ont ete refuses aussi')
+a(/texte lu par l/.test(verifTxt), 'le texte brut de l appareil reste consultable')
+a(/Fibres/.test(verifTxt), 'les fibres sont modifiables, elles pilotent un objectif')
+
+// Le champ nom doit etre lie a l etat, pas seulement affiche : c est ce qui
+// permet de le corriger.
+const parcours = (n, f) => {
+  if (!n || typeof n !== 'object') return
+  if (Array.isArray(n)) { for (const x of n) parcours(x, f); return }
+  f(n); parcours(n.children, f)
+}
+let nomModifiable = false
+parcours(verifArbre, (n) => {
+  if (n.props && n.props.value === 'Galettes de sarrasin' && typeof n.props.onChange === 'function') nomModifiable = true
+})
+a(nomModifiable, 'le nom est un champ lie a l etat : il se corrige avant validation')
+
 console.log('\nALL PASS')
