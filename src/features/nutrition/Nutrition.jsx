@@ -616,6 +616,8 @@ export function FoodTab({ db, store }) {
   const [cible, setCible] = useState('journal')
   const [parts, setParts] = useState(1)
   const [recPick, setRecPick] = useState(null)
+  // Rang de l'ingrédient qu'on corrige, ou null si on en ajoute un nouveau.
+  const [itemIdx, setItemIdx] = useState(null)
   useEffect(() => { if (store.ensureDay) store.ensureDay(date) }, [date])
   const log = (db.foodLog && db.foodLog[date]) || []
   // L'objectif suit la journée : une grosse séance déplace l'apport
@@ -675,7 +677,9 @@ export function FoodTab({ db, store }) {
       // enregistré en silence fausse la journée, puis la rétrospective, sans
       // que rien ne le signale. L'écran s'ouvre donc rempli de ce qui a été
       // compris, et tout y est modifiable — le nom compris.
-      setCible('journal')
+      // La destination n'est pas touchée ici : elle a été fixée en ouvrant la
+      // recherche — journal ou recette en cours. La forcer sur « journal »
+      // envoyait au journal l'étiquette photographiée pour une recette.
       setPick({ n: parsed.name || q || 'Plat', k: parsed.per.k || 0, p: parsed.per.p || 0, g: parsed.per.g || 0, l: parsed.per.l || 0, fib: parsed.per.fib || 0, custom: true })
       setGrams(parsed.grams || 100)
       setEditId(null)
@@ -711,7 +715,22 @@ export function FoodTab({ db, store }) {
     saveRecettes(upsertRecipe(recettes, r)); setDraft(null); setMode('recettes')
   }
   const dropDraft = () => { saveRecettes(removeRecipe(recettes, draft.id)); setDraft(null); setMode('recettes') }
-  const addIngredient = () => { setCible('recette'); setEditId(null); setPick(null); setQ(''); setMode('search') }
+  const addIngredient = () => {
+    setCible('recette'); setItemIdx(null); setEditId(null); setPick(null); setQ('')
+    setCap((c) => ({ ...c, error: null, parsed: null }))
+    setMode('search')
+  }
+  // Un ingredient deja pose se corrige : une quantite mal saisie obligeait
+  // sinon a le retirer puis a le rechercher de nouveau.
+  const editItem = (i) => {
+    const it = ((draft && draft.items) || [])[i]
+    if (!it) return
+    setCible('recette'); setItemIdx(i); setEditId(null)
+    setPick({ n: it.n, k: it.per.k, p: it.per.p, g: it.per.g, l: it.per.l, fib: it.per.fib || 0, custom: true })
+    setGrams(it.grams)
+    setCap((c) => ({ ...c, error: null, parsed: null }))
+    setMode('qty')
+  }
   const dropItem = (i) => setDraft((d) => ({ ...d, items: (d.items || []).filter((_, j) => j !== i) }))
   const openPart = (r) => { setRecPick(r); setParts(1); setMeal(defaultMeal()); setMode('part') }
   const logRecette = () => {
@@ -843,11 +862,11 @@ export function FoodTab({ db, store }) {
       items.length === 0
         ? React.createElement('div', { style: { fontSize: 13, color: INK3, padding: '6px 0 12px', lineHeight: 1.5 } }, 'Aucun ingrédient. Ajoute-les un par un, avec leur poids.')
         : React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 } },
-          items.map((it, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}` } },
-            React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+          items.map((it, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, overflow: 'hidden' } },
+            React.createElement('button', { onClick: () => editItem(i), style: { flex: 1, minWidth: 0, textAlign: 'left', padding: '9px 12px', background: 'transparent', border: 'none', cursor: 'pointer' } },
               React.createElement('div', { style: { fontWeight: 600, fontSize: 13.5 } }, it.n),
-              React.createElement('div', { style: { fontSize: 11.5, color: INK3, marginTop: 1 } }, it.grams, ' g · ', Math.round((it.per.k || 0) * it.grams / 100), ' kcal')),
-            React.createElement('button', { onClick: () => dropItem(i), 'aria-label': 'Retirer', style: { flex: '0 0 auto', background: 'transparent', border: 'none', color: DANGER, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Retirer')))),
+              React.createElement('div', { style: { fontSize: 11.5, color: INK3, marginTop: 1 } }, it.grams, ' g · ', Math.round((it.per.k || 0) * it.grams / 100), ' kcal · modifier')),
+            React.createElement('button', { onClick: () => dropItem(i), 'aria-label': 'Retirer', style: { flex: '0 0 auto', padding: '9px 12px', background: 'transparent', border: 'none', borderLeft: `1px solid ${LINE}`, color: DANGER, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Retirer')))),
       React.createElement('button', { onClick: addIngredient, style: { ...xst.ghostBtn, width: '100%', marginBottom: 16, padding: 12, fontSize: 14 } }, '+ Ajouter un ingrédient'),
       items.length > 0 && React.createElement(React.Fragment, null,
         React.createElement(SecLab, null, 'Une part'),
@@ -951,11 +970,17 @@ export function FoodTab({ db, store }) {
         React.createElement('button', { onClick: () => { removeEntry(editId); setMode('main'); setPick(null); setEditId(null) }, style: { width: '100%', marginTop: 10, padding: 12, fontSize: 14, fontWeight: 700, color: DANGER, background: 'transparent', border: 'none', cursor: 'pointer' } }, 'Supprimer du journal'))
         : React.createElement('button', { onClick: () => {
           if (cible === 'recette') {
-            setDraft((d) => ({ ...d, items: [...((d && d.items) || []), { n: pick.n, grams, per: { k: pick.k, p: pick.p, g: pick.g, l: pick.l, fib: pick.fib || 0 } }] }))
-            setCible('journal'); setPick(null); setQ(''); setMode('recette')
+            const nouvel = { n: pick.n, grams, per: { k: pick.k, p: pick.p, g: pick.g, l: pick.l, fib: pick.fib || 0 } }
+            setDraft((d) => {
+              const liste = [...((d && d.items) || [])]
+              if (itemIdx != null && liste[itemIdx]) liste[itemIdx] = nouvel
+              else liste.push(nouvel)
+              return { ...d, items: liste }
+            })
+            setCible('journal'); setItemIdx(null); setPick(null); setQ(''); setMode('recette')
           } else { addEntry(pick, grams, meal); setMode('main'); setQ(''); setPick(null) }
         }, style: { ...xst.primaryBtn, background: NUTRI, boxShadow: `0 12px 26px -14px ${NUTRI}`, marginTop: 16 } },
-        cible === 'recette' ? 'Ajouter à la recette' : 'Ajouter au journal'))
+        cible === 'recette' ? (itemIdx != null ? 'Enregistrer l’ingrédient' : 'Ajouter à la recette') : 'Ajouter au journal'))
   }
 
   const days = []

@@ -384,4 +384,57 @@ parcours(verifArbre, (n) => {
 })
 a(nomModifiable, 'le nom est un champ lie a l etat : il se corrige avant validation')
 
+// ─── Composer une recette : corriger, et ne pas se tromper de destination ───
+const trouveBouton = (arbre, libelle) => {
+  let trouve = null
+  const marche = (n) => {
+    if (!n || typeof n !== 'object' || trouve) return
+    if (Array.isArray(n)) { for (const x of n) marche(x); return }
+    const txt = text(n.children)
+    if (n.type === 'button' && n.props && n.props.onClick && txt.includes(libelle)) { trouve = n; return }
+    marche(n.children)
+  }
+  marche(arbre)
+  return trouve
+}
+const RIZ = { n: 'Riz blanc cuit', grams: 150, per: { k: 130, p: 2.5, g: 28, l: 0.3, fib: 0.4 } }
+const POULET2 = { n: 'Blanc de poulet', grams: 200, per: { k: 165, p: 31, g: 0, l: 3.6, fib: 0 } }
+
+// Un ingredient deja pose doit se corriger : une quantite mal saisie obligeait
+// sinon a le retirer puis a le rechercher de nouveau.
+__reset(); __setDb({})
+__render('rec-edit', FoodTab, mkProps({}))
+__setState('rec-edit', 1, 'recette')
+__setState('rec-edit', 11, { id: 'r9', n: 'Bowl', servings: 2, items: [RIZ, POULET2] })
+const editArbre = __render('rec-edit', FoodTab, mkProps({}))
+a(/modifier/.test(text(editArbre)), 'chaque ingredient annonce qu il se modifie')
+a(trouveBouton(editArbre, 'Retirer') !== null, 'et peut toujours etre retire')
+
+// Le libelle du bouton final dit ce qui va se passer : ajouter, ou remplacer.
+__reset(); __setDb({})
+__render('rec-add', FoodTab, mkProps({}))
+__setState('rec-add', 1, 'qty')
+__setState('rec-add', 4, { n: 'Quinoa cuit', k: 120, p: 4.4, g: 21, l: 1.9, fib: 2.8, custom: true })
+__setState('rec-add', 5, 100)
+__setState('rec-add', 11, { id: 'r9', n: 'Bowl', servings: 2, items: [RIZ] })
+__setState('rec-add', 12, 'recette')
+__setState('rec-add', 15, null)
+const ajoutArbre = __render('rec-add', FoodTab, mkProps({}))
+a(trouveBouton(ajoutArbre, 'Ajouter à la recette') !== null, 'nouvel ingredient : « Ajouter à la recette »')
+a(trouveBouton(ajoutArbre, 'Ajouter au journal') === null, 'et surtout pas « Ajouter au journal » : la destination est la recette')
+
+// LE defaut : la capture forcait la destination sur le journal. Un ingredient
+// photographie pour une recette partait donc dans la journee.
+__setState('rec-add', 15, 0)
+const remplArbre = __render('rec-add', FoodTab, mkProps({}))
+a(trouveBouton(remplArbre, 'Enregistrer l’ingrédient') !== null, 'ingredient corrige : « Enregistrer l’ingredient »')
+
+// Comportement, pas seulement libelle : on declenche le bouton et on relit.
+__setState('rec-add', 15, null)
+const arbreAvant = __render('rec-add', FoodTab, mkProps({}))
+trouveBouton(arbreAvant, 'Ajouter à la recette').props.onClick()
+const apresAjout = __render('rec-add', FoodTab, mkProps({}))
+a(/Quinoa cuit/.test(text(apresAjout)), 'l ingredient rejoint bien la recette, pas le journal')
+a(/Riz blanc cuit/.test(text(apresAjout)), 'sans effacer celui qui y etait deja')
+
 console.log('\nALL PASS')
