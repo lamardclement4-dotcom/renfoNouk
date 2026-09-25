@@ -10,7 +10,7 @@ import { familyBreakdown, familyAdvice } from './foodFamilies'
 import { daySeries, dayEntries, drinkAsEntry } from './nutriIntel'
 import { parseFoodText, readingIssue } from './foodOcr'
 import { imageTooLarge } from '../health/fileGuard'
-import { makeRecipe, recipeToEntry, recipeIssue, servingLabel, servingTotals, servingGrams, recipeGrams, upsertRecipe, removeRecipe, MAX_SERVINGS } from './recipes'
+import { makeRecipe, recipeToEntry, recipeIssue, servingLabel, servingTotals, servingGrams, recipeGrams, recipeTotals, upsertRecipe, removeRecipe, MAX_SERVINGS } from './recipes'
 
 // ============================================================
 // Jetons de style : ils pointent vers ceux du kit partagé plutôt que
@@ -64,11 +64,13 @@ function NoteBox({ tint, children }) {
     React.createElement('span', { style: { color: tint, fontWeight: 800, flex: '0 0 auto' } }, '!'),
     React.createElement('span', null, children))
 }
-function NumField({ label, value, set, unit, min, max }) {
+// `step` est optionnel : sans lui, un champ nombre refuse les valeurs
+// intermédiaires (un quart de part) que le navigateur juge hors pas.
+function NumField({ label, value, set, unit, min, max, step }) {
   return React.createElement('label', { style: { display: 'block', flex: 1 } },
     React.createElement('span', { style: { fontSize: 12.5, fontWeight: 700, color: INK3 } }, label),
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
-      React.createElement('input', { type: 'number', value, min, max, onChange: (e) => set(Number(e.target.value)), style: { ...xst.input, marginTop: 4 } }),
+      React.createElement('input', { type: 'number', value, min, max, step, onChange: (e) => set(Number(e.target.value)), style: { ...xst.input, marginTop: 4 } }),
       unit && React.createElement('span', { style: { fontSize: 12.5, color: INK3, flex: '0 0 auto' } }, unit)))
 }
 function Choice({ tint, value, set, options, multi }) {
@@ -732,6 +734,20 @@ export function FoodTab({ db, store }) {
     setMode('qty')
   }
   const dropItem = (i) => setDraft((d) => ({ ...d, items: (d.items || []).filter((_, j) => j !== i) }))
+  // Un repas déjà noté EST une recette : ses aliments, leurs quantités. Le
+  // recomposer à la main serait refaire ce qui est déjà là.
+  const recipeFromMeal = (mealId) => {
+    const pris = log.filter((e) => mealOf(e) === mealId)
+    if (pris.length === 0) return
+    const items = pris.map((e) => ({ n: e.n, grams: e.grams, per: per100(e) }))
+    const titre = pris.slice(0, 2).map((e) => e.n).join(' + ') + (pris.length > 2 ? '…' : '')
+    setDraft(makeRecipe({ n: titre, servings: 1, items }))
+    setItemIdx(null); setCap((c) => ({ ...c, error: null, parsed: null })); setMode('recette')
+  }
+  const duplicateDraft = () => {
+    setDraft(makeRecipe({ n: draft.n + ' (copie)', servings: draft.servings, items: draft.items }))
+    setItemIdx(null)
+  }
   const openPart = (r) => { setRecPick(r); setParts(1); setMeal(defaultMeal()); setMode('part') }
   const logRecette = () => {
     const e = recipeToEntry(recPick, { servings: parts, meal })
@@ -854,8 +870,10 @@ export function FoodTab({ db, store }) {
       React.createElement(SecLab, null, 'Nom'),
       React.createElement('input', { value: draft.n, onChange: (ev) => setDraft({ ...draft, n: ev.target.value }), placeholder: 'Bowl poulet-quinoa…', style: { ...xst.input, marginTop: 0, marginBottom: 14 } }),
       React.createElement(SecLab, null, 'Nombre de parts'),
-      React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6 } },
+      React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 } },
         [1, 2, 3, 4, 6].map((nP) => React.createElement('button', { key: nP, onClick: () => setDraft({ ...draft, servings: nP }), style: chipBtn(draft.servings === nP) }, nP, nP > 1 ? ' parts' : ' part'))),
+      React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 6 } },
+        React.createElement(NumField, { label: 'Ou un autre nombre', value: draft.servings, set: (v) => setDraft({ ...draft, servings: v }), min: 1, max: MAX_SERVINGS })),
       React.createElement('div', { style: { fontSize: 12, color: INK3, marginBottom: 14, lineHeight: 1.45 } },
         'La recette entière sera divisée par ce nombre : c’est une part qui s’ajoute au journal.'),
       React.createElement(SecLab, null, `Ingrédients (${items.length})`),
@@ -865,7 +883,15 @@ export function FoodTab({ db, store }) {
           items.map((it, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, overflow: 'hidden' } },
             React.createElement('button', { onClick: () => editItem(i), style: { flex: 1, minWidth: 0, textAlign: 'left', padding: '9px 12px', background: 'transparent', border: 'none', cursor: 'pointer' } },
               React.createElement('div', { style: { fontWeight: 600, fontSize: 13.5 } }, it.n),
-              React.createElement('div', { style: { fontSize: 11.5, color: INK3, marginTop: 1 } }, it.grams, ' g · ', Math.round((it.per.k || 0) * it.grams / 100), ' kcal · modifier')),
+              (() => {
+                const kcalIt = Math.round((it.per.k || 0) * it.grams / 100)
+                const tot = recipeTotals(draft).k
+                // La part de chacun dans les calories : c'est elle qui dit quoi
+                // réduire quand une recette pèse plus que prévu.
+                const pct = tot > 0 ? Math.round(kcalIt / tot * 100) : 0
+                return React.createElement('div', { style: { fontSize: 11.5, color: INK3, marginTop: 1 } },
+                  it.grams, ' g · ', kcalIt, ' kcal · ', pct, ' % des calories · modifier')
+              })()),
             React.createElement('button', { onClick: () => dropItem(i), 'aria-label': 'Retirer', style: { flex: '0 0 auto', padding: '9px 12px', background: 'transparent', border: 'none', borderLeft: `1px solid ${LINE}`, color: DANGER, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Retirer')))),
       React.createElement('button', { onClick: addIngredient, style: { ...xst.ghostBtn, width: '100%', marginBottom: 16, padding: 12, fontSize: 14 } }, '+ Ajouter un ingrédient'),
       items.length > 0 && React.createElement(React.Fragment, null,
@@ -879,6 +905,7 @@ export function FoodTab({ db, store }) {
           servingGrams(draft), ' g par part · ', recipeGrams(draft), ' g au total')),
       blocage && React.createElement('div', { style: { fontSize: 12.5, color: C.warn, marginBottom: 10, lineHeight: 1.45 } }, blocage),
       React.createElement('button', { onClick: commitDraft, disabled: !!blocage, style: { ...xst.primaryBtn, background: blocage ? SURFACE2 : NUTRI, color: blocage ? INK3 : '#fff', cursor: blocage ? 'default' : 'pointer', boxShadow: blocage ? 'none' : `0 12px 26px -14px ${NUTRI}` } }, 'Enregistrer la recette'),
+      recettes.some((r) => r.id === draft.id) && React.createElement('button', { onClick: duplicateDraft, style: { ...xst.ghostBtn, width: '100%', marginTop: 10, padding: 12, fontSize: 14 } }, 'Dupliquer pour créer une variante'),
       recettes.some((r) => r.id === draft.id) && React.createElement('button', { onClick: dropDraft, style: { width: '100%', marginTop: 10, padding: 12, fontSize: 14, fontWeight: 700, color: DANGER, background: 'transparent', border: 'none', cursor: 'pointer' } }, 'Supprimer la recette'))
   }
 
@@ -897,6 +924,8 @@ export function FoodTab({ db, store }) {
       React.createElement(SecLab, null, 'Combien de parts'),
       React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } },
         [0.5, 1, 1.5, 2, 3].map((nP) => React.createElement('button', { key: nP, onClick: () => setParts(nP), style: chipBtn(parts === nP) }, String(nP).replace('.', ','), nP > 1 ? ' parts' : ' part'))),
+      React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 16 } },
+        React.createElement(NumField, { label: 'Ou une autre quantité', unit: 'part(s)', value: parts, set: setParts, min: 0.25, max: MAX_SERVINGS, step: 0.25 })),
       React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 6 } },
         React.createElement(ResultCard, { label: 'kcal', value: mul(uneP.k), tint: NUTRI, big: true }),
         React.createElement(ResultCard, { label: 'Prot.', value: mul(uneP.p) + ' g', tint: NUTRI }),
@@ -1022,7 +1051,9 @@ export function FoodTab({ db, store }) {
             React.createElement('div', { style: { fontWeight: 600, fontSize: 14 } }, e.n),
             React.createElement('div', { style: { fontSize: 12, color: INK3, marginTop: 1 } }, Math.round(e.grams), ' g · ', Math.round(e.k), ' kcal · P ', Math.round(e.p), ' · G ', Math.round(e.g), ' · L ', Math.round(e.l))),
           React.createElement(Icon, { name: 'arrow', size: 16, color: INK3 }))),
-        React.createElement('button', { onClick: () => openAdd(m.id), style: { width: '100%', padding: '11px 14px', border: 'none', borderTop: `1px solid ${LINE}`, color: NUTRI, fontWeight: 700, fontSize: 13.5, textAlign: 'left', background: 'transparent', cursor: 'pointer' } }, '+ Ajouter'))
+        React.createElement('div', { style: { display: 'flex', borderTop: `1px solid ${LINE}` } },
+          React.createElement('button', { onClick: () => openAdd(m.id), style: { flex: 1, padding: '11px 14px', border: 'none', color: NUTRI, fontWeight: 700, fontSize: 13.5, textAlign: 'left', background: 'transparent', cursor: 'pointer' } }, '+ Ajouter'),
+          items.length >= 2 && React.createElement('button', { onClick: () => recipeFromMeal(m.id), style: { flex: '0 0 auto', padding: '11px 14px', border: 'none', borderLeft: `1px solid ${LINE}`, color: INK2, fontWeight: 700, fontSize: 13, background: 'transparent', cursor: 'pointer' } }, 'En faire une recette')))
     }),
     drinks.length > 0 && React.createElement('div', { style: { marginBottom: 12, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, overflow: 'hidden' } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px' } },

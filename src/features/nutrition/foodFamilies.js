@@ -151,6 +151,33 @@ function shiftISO(iso, delta) {
   return x.toISOString().slice(0, 10)
 }
 
+// Répartit les calories d'une entrée issue d'une recette sur les familles de
+// ses ingrédients, au prorata de ce que chacun apporte.
+//
+// Sans cela, « Bowl poulet-quinoa » versait 100 % de ses calories dans une
+// seule famille, choisie sur un mot de son nom : féculents pour ce bowl,
+// légumes pour un gratin de courgettes qui est surtout de la crème, et
+// produits sucrés pour une tarte aux poireaux. La répartition devenait
+// fausse dès qu'on cuisinait.
+//
+// C'est la seule lecture possible parce que la recette est enregistrée avec
+// ses ingrédients : un plat acheté, lui, reste indivisible.
+export function splitRecipeEntry(entry, recipesById) {
+  const r = entry && entry.recipeId && recipesById ? recipesById[entry.recipeId] : null
+  if (!r || !Array.isArray(r.items) || r.items.length === 0) return null
+  const parts = r.items.map((it) => ({
+    id: familyOf(it).id,
+    kcal: (Number((it.per || {}).k) || 0) * (Number(it.grams) || 0) / 100,
+  }))
+  const somme = parts.reduce((a, x) => a + x.kcal, 0)
+  if (somme <= 0) return null
+  const kcal = Number(entry.k) || 0
+  // Au prorata des calories, et non des grammes : c'est une part d'apport
+  // énergétique qu'on mesure, et 100 g d'huile ne pèsent pas comme 100 g de
+  // courgette.
+  return parts.map((x) => ({ id: x.id, kcal: kcal * x.kcal / somme }))
+}
+
 // Part de chaque famille dans les calories réellement consommées.
 //
 // Moyenne sur la fenêtre plutôt que sur un jour : une journée n'est jamais
@@ -161,6 +188,10 @@ export function familyBreakdown(db, { days = 14, today } = {}) {
   const parFamille = {}
   let total = 0
   let joursNotes = 0
+  const recipesById = {}
+  for (const r of (db && Array.isArray(db.recipes) ? db.recipes : [])) {
+    if (r && r.id) recipesById[r.id] = r
+  }
   for (let i = days - 1; i >= 0; i--) {
     const date = shiftISO(ref, -i)
     const entrees = dayEntries(db, date)
@@ -169,8 +200,13 @@ export function familyBreakdown(db, { days = 14, today } = {}) {
     for (const e of entrees) {
       const kcal = Number(e && e.k) || 0
       if (kcal <= 0) continue
-      const { id } = familyOf(e)
-      parFamille[id] = (parFamille[id] || 0) + kcal
+      const eclats = splitRecipeEntry(e, recipesById)
+      if (eclats) {
+        for (const x of eclats) parFamille[x.id] = (parFamille[x.id] || 0) + x.kcal
+      } else {
+        const { id } = familyOf(e)
+        parFamille[id] = (parFamille[id] || 0) + kcal
+      }
       total += kcal
       duJour += kcal
     }

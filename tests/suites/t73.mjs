@@ -4,7 +4,7 @@
 // glucides viennent de flocons d avoine ou de sodas. Ce module ajoute cette
 // strate — encore faut-il que le classement soit juste, sans quoi les
 // pourcentages sont pires qu absents : ils sont credibles et faux.
-import { familyOf, familyByMacros, familyBreakdown, familyAdvice, normName, FAMILIES, familyById, ECART_MIN_PCT } from '../../src/features/nutrition/foodFamilies.js'
+import { familyOf, familyByMacros, familyBreakdown, familyAdvice, splitRecipeEntry, normName, FAMILIES, familyById, ECART_MIN_PCT } from '../../src/features/nutrition/foodFamilies.js'
 import { FOODS } from '../../src/features/nutrition/nutritionData.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
 
@@ -147,5 +147,44 @@ a(familyById('nexistepas').id === 'autre', 'un identifiant inconnu retombe sur �
 const classes = FOODS.filter((f) => familyOf(f).id !== 'autre').length
 const taux = classes / FOODS.length * 100
 a(taux >= 90, `${taux.toFixed(1)} % du catalogue est classe (seuil : 90 %)`)
+
+// ─── une recette se repartit sur les familles de SES ingredients ───
+//
+// Sans cela, « Bowl poulet-quinoa » versait 100 % de ses calories dans une
+// seule famille choisie sur un mot de son nom : feculents pour ce bowl,
+// legumes pour un gratin de courgettes qui est surtout de la creme, produits
+// sucres pour une tarte aux poireaux. La repartition devenait fausse des
+// qu on cuisinait.
+const BOWL = { id: 'r1', n: 'Bowl poulet-quinoa', servings: 1, items: [
+  { n: 'Blanc de poulet', grams: 200, per: { k: 165, p: 31, g: 0, l: 3.6, fib: 0 } },
+  { n: 'Quinoa cuit', grams: 150, per: { k: 120, p: 4.4, g: 21, l: 1.9, fib: 2.8 } },
+  { n: 'Huile d’olive', grams: 10, per: { k: 900, p: 0, g: 0, l: 100, fib: 0 } },
+] }
+a(familyOf({ n: 'Bowl poulet-quinoa' }).id === 'feculent', 'seul, le nom du bowl le range en feculents')
+
+const dbRec = { recipes: [BOWL], foodLog: { [J]: [
+  { id: '1', n: 'Bowl poulet-quinoa', k: 600, grams: 360, per: { k: 167 }, src: 'recette', recipeId: 'r1' },
+] } }
+const bRec = familyBreakdown(dbRec, { days: 1, today: J })
+const partDe = (id) => (bRec.items.find((x) => x.id === id) || {}).pct
+a(bRec.total === 600, 'le total de la journee ne change pas')
+a(partDe('proteine_animale') === 55, `les viandes prennent ${partDe('proteine_animale')} % : le poulet pese le plus`)
+a(partDe('feculent') === 30, `les feculents ${partDe('feculent')} %, au prorata du quinoa`)
+a(partDe('matiere_grasse') === 15, `et les matieres grasses ${partDe('matiere_grasse')} % pour 10 g d huile`)
+a(partDe('proteine_animale') + partDe('feculent') + partDe('matiere_grasse') === 100, 'les parts somment a 100')
+
+// Le prorata se fait sur les CALORIES, pas sur les grammes : 10 g d huile
+// pesent 3 % du poids et 15 % de l energie.
+const ecl = splitRecipeEntry(dbRec.foodLog[J][0], { r1: BOWL })
+a(ecl.length === 3, 'un eclat par ingredient')
+a(Math.round(ecl.reduce((a2, x) => a2 + x.kcal, 0)) === 600, 'les eclats redonnent exactement les calories de l entree')
+
+// Sans recette retrouvable, on retombe sur le classement par le nom plutot
+// que de perdre les calories.
+a(splitRecipeEntry({ k: 100, recipeId: 'inconnu' }, { r1: BOWL }) === null, 'recette introuvable : aucun eclat')
+a(splitRecipeEntry({ k: 100 }, { r1: BOWL }) === null, 'entree sans recette : aucun eclat')
+a(splitRecipeEntry({ k: 100, recipeId: 'r2' }, { r2: { id: 'r2', items: [] } }) === null, 'recette sans ingredient : aucun eclat')
+const sansRec = familyBreakdown({ foodLog: { [J]: [{ id: '1', n: 'Bowl poulet-quinoa', k: 600, src: 'recette', recipeId: 'r1' }] } }, { days: 1, today: J })
+a(sansRec.total === 600, 'et les calories restent comptees malgre tout')
 
 console.log('\nALL PASS')

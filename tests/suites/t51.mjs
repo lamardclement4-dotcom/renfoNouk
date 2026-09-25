@@ -437,4 +437,52 @@ const apresAjout = __render('rec-add', FoodTab, mkProps({}))
 a(/Quinoa cuit/.test(text(apresAjout)), 'l ingredient rejoint bien la recette, pas le journal')
 a(/Riz blanc cuit/.test(text(apresAjout)), 'sans effacer celui qui y etait deja')
 
+// ─── Un repas deja note EST une recette ───
+// Le recomposer a la main serait refaire ce qui est deja la.
+const aujMax = new Date().toISOString().slice(0, 10)
+const dbRepasMax = { dayRows: { [aujMax]: { food: [
+  { id: 'a1', n: 'Blanc de poulet', grams: 200, meal: 'midi', per: { k: 165, p: 31, g: 0, l: 3.6, fib: 0 }, k: 330, p: 62, g: 0, l: 7.2, fib: 0 },
+  { id: 'a2', n: 'Quinoa cuit', grams: 150, meal: 'midi', per: { k: 120, p: 4.4, g: 21, l: 1.9, fib: 2.8 }, k: 180, p: 6.6, g: 31.5, l: 2.9, fib: 4.2 },
+], hydration: [] } } }
+__reset(); __setDb(dbRepasMax)
+const arbreJournalMax = __render('max-journal', FoodTab, mkProps(dbRepasMax))
+a(/En faire une recette/.test(text(arbreJournalMax)), 'un repas de deux aliments propose d en faire une recette')
+
+// Comportement : le brouillon doit naitre rempli de ce qui etait au journal.
+trouveBouton(arbreJournalMax, 'En faire une recette').props.onClick()
+const arbreBrouillonMax = __render('max-journal', FoodTab, mkProps(dbRepasMax))
+const txtBrouillonMax = text(arbreBrouillonMax)
+a(/Blanc de poulet/.test(txtBrouillonMax) && /Quinoa cuit/.test(txtBrouillonMax),
+  'les deux aliments du repas deviennent les ingredients')
+a(/% des calories/.test(txtBrouillonMax), 'et chacun annonce sa part des calories')
+a(/Ou un autre nombre/.test(txtBrouillonMax), 'le nombre de parts se saisit librement, pas seulement par pastilles')
+
+// ─── Dupliquer pour creer une variante ───
+const recEnrMax = { id: 'r7', n: 'Bowl', servings: 2, items: [
+  { n: 'Riz blanc cuit', grams: 150, per: { k: 130, p: 2.5, g: 28, l: 0.3, fib: 0.4 } },
+] }
+const dbRecEnrMax = { nutrition: { recipes: [recEnrMax] } }
+__reset(); __setDb(dbRecEnrMax)
+__render('max-dup', FoodTab, mkProps(dbRecEnrMax))
+__setState('max-dup', 1, 'recette')
+__setState('max-dup', 11, recEnrMax)
+const arbreDupMax = __render('max-dup', FoodTab, mkProps(dbRecEnrMax))
+a(/Dupliquer pour cr[ée]er une variante/.test(text(arbreDupMax)), 'une recette enregistree se duplique')
+trouveBouton(arbreDupMax, 'Dupliquer').props.onClick()
+// Le nom vit dans la `value` d un champ, pas dans le texte rendu : il faut
+// parcourir l arbre pour le voir.
+let copieVueMax = false
+parcours(__render('max-dup', FoodTab, mkProps(dbRecEnrMax)), (n) => {
+  if (n.props && typeof n.props.value === 'string' && /\(copie\)/.test(n.props.value)) copieVueMax = true
+})
+a(copieVueMax, 'la copie porte un nom distinct, elle n ecrase pas l originale')
+
+// ─── Quantite libre au moment d ajouter au journal ───
+__reset(); __setDb(dbRecEnrMax)
+__render('max-part', FoodTab, mkProps(dbRecEnrMax))
+__setState('max-part', 1, 'part')
+__setState('max-part', 14, recEnrMax)
+const arbrePartMax = text(__render('max-part', FoodTab, mkProps(dbRecEnrMax)))
+a(/Ou une autre quantit[ée]/.test(arbrePartMax), 'la quantite servie se saisit librement aussi')
+
 console.log('\nALL PASS')
