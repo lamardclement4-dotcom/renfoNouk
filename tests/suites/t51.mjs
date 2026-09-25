@@ -485,4 +485,54 @@ __setState('max-part', 14, recEnrMax)
 const arbrePartMax = text(__render('max-part', FoodTab, mkProps(dbRecEnrMax)))
 a(/Ou une autre quantit[ée]/.test(arbrePartMax), 'la quantite servie se saisit librement aussi')
 
+// ─── Mettre en favori ce qu on vient de creer ───
+// Un aliment personnalise ou lu sur une capture pouvait rejoindre le journal
+// mais pas les favoris : il fallait le ressaisir, ou le rephotographier, a
+// chaque fois.
+__reset(); __setDb({})
+__render('fav-custom', FoodTab, mkProps({}))
+__setState('fav-custom', 1, 'qty')
+__setState('fav-custom', 4, { n: 'Galettes de sarrasin', k: 250, p: 9.8, g: 22, l: 12, fib: 2.3, custom: true })
+const arbreFavCustom = __render('fav-custom', FoodTab, mkProps({}))
+a(trouveBouton(arbreFavCustom, '☆') !== null, 'un aliment personnalise peut etre mis en favori')
+
+// Un nom vide ne doit pas creer un favori fantome.
+__setState('fav-custom', 4, { n: '   ', k: 0, p: 0, g: 0, l: 0, custom: true })
+a(trouveBouton(__render('fav-custom', FoodTab, mkProps({})), '☆') === null, 'sans nom, pas d etoile : un favori sans nom serait introuvable')
+
+// ─── Favoris sur les recettes ───
+const recFavs = [
+  { id: 'r1', n: 'Ancienne', servings: 1, items: [{ n: 'Riz blanc cuit', grams: 100, per: { k: 130, p: 2.5, g: 28, l: 0.3, fib: 0.4 } }] },
+  { id: 'r2', n: 'Recente', servings: 1, fav: true, items: [{ n: 'Riz blanc cuit', grams: 100, per: { k: 130, p: 2.5, g: 28, l: 0.3, fib: 0.4 } }] },
+]
+const dbFavRec = { nutrition: { recipes: recFavs } }
+__reset(); __setDb(dbFavRec)
+__render('fav-rec', FoodTab, mkProps(dbFavRec))
+__setState('fav-rec', 1, 'recettes')
+const txtFavRec = text(__render('fav-rec', FoodTab, mkProps(dbFavRec)))
+a(/★/.test(txtFavRec), 'une recette favorite porte son etoile')
+a(/☆/.test(txtFavRec), 'et les autres une etoile vide, a basculer')
+a(txtFavRec.indexOf('Recente') < txtFavRec.indexOf('Ancienne'), 'la favorite passe en tete de liste')
+
+// Les fibres etaient absentes du favori enregistre : reutiliser un favori les
+// perdait en silence, alors qu elles pilotent un objectif a part entiere.
+// On espionne l ecriture reelle plutot que de lire le code.
+let ecritFav = null
+const dbEspion = buildDb({}, {}, {}, [], {}, '2026-06-15')
+const propsEspion = {
+  ...mkProps({}),
+  db: dbEspion,
+  store: { get: () => dbEspion, ensureDay: () => {}, set: (patch) => { ecritFav = typeof patch === 'function' ? patch(dbEspion) : patch } },
+}
+__reset(); __setDb({})
+__render('fav-fibres', FoodTab, propsEspion)
+__setState('fav-fibres', 1, 'qty')
+__setState('fav-fibres', 4, { n: 'Pain complet', k: 250, p: 9, g: 45, l: 3, fib: 6.8, custom: true })
+trouveBouton(__render('fav-fibres', FoodTab, propsEspion), '☆').props.onClick()
+a(ecritFav && Array.isArray(ecritFav.foodFav), 'la mise en favori ecrit bien dans foodFav')
+const favEnr = ecritFav.foodFav[0]
+a(favEnr.n === 'Pain complet', `le favori enregistre s appelle « ${favEnr.n} »`)
+a(favEnr.fib === 6.8, `et conserve ses ${favEnr.fib} g de fibres`)
+for (const k3 of ['k', 'p', 'g', 'l']) a(favEnr[k3] != null, `avec ses ${k3}`)
+
 console.log('\nALL PASS')

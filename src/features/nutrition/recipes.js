@@ -42,7 +42,7 @@ export function itemPer100(it) {
   }
 }
 
-export function makeRecipe({ id, n, servings, items, now = Date.now } = {}) {
+export function makeRecipe({ id, n, servings, items, fav, now = Date.now } = {}) {
   const list = (Array.isArray(items) ? items : [])
     .filter((it) => it && num(it.grams) > 0)
     .slice(0, MAX_ITEMS)
@@ -52,6 +52,9 @@ export function makeRecipe({ id, n, servings, items, now = Date.now } = {}) {
       per: itemPer100(it),
     }))
   return {
+    // `fav` traverse makeRecipe : sans cela, modifier une recette mise en
+    // favori la sortait silencieusement des favoris.
+    fav: !!fav,
     id: id || 'r' + now().toString(36),
     n: String(n || '').trim().slice(0, MAX_NAME) || 'Recette',
     // Au moins une part : diviser par zéro donnerait des macros infinies,
@@ -145,6 +148,19 @@ export function upsertRecipe(list, recipe) {
   const next = cur.slice()
   next[i] = recipe
   return next
+}
+
+// Bascule le favori sans toucher au reste : une recette mise en avant ne doit
+// pas être reconstruite pour autant.
+export function toggleRecipeFav(list, id) {
+  return (Array.isArray(list) ? list : []).map((r) => (r && r.id === id ? { ...r, fav: !r.fav } : r))
+}
+
+// Favorites d'abord, puis les plus récentes. Le tri est stable, donc l'ordre
+// d'ajout est conservé à l'intérieur de chaque groupe.
+export function sortedRecipes(list) {
+  return (Array.isArray(list) ? list : []).filter(Boolean).slice().reverse()
+    .sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0))
 }
 
 export function removeRecipe(list, id) {

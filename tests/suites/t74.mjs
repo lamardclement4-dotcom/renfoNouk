@@ -5,7 +5,7 @@
 // ce qui la garde modifiable par l ecran existant sans qu il sache ce qu est
 // une recette.
 import { makeRecipe, recipeGrams, recipeTotals, recipePer100, servingGrams, servingTotals,
-  recipeToEntry, recipeIssue, recipeValid, upsertRecipe, removeRecipe, itemPer100,
+  recipeToEntry, recipeIssue, recipeValid, upsertRecipe, removeRecipe, toggleRecipeFav, sortedRecipes, itemPer100,
   MAX_ITEMS, MAX_SERVINGS } from '../../src/features/nutrition/recipes.js'
 import { buildDb } from '../../src/features/nutrition/useNutritionStore.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
@@ -104,5 +104,27 @@ for (const cle of ['recipes', 'foodFav', 'diagHistory']) {
   const casse = buildDb({ nutrition: { [cle]: 'cassé' } }, {}, {}, [], {}, '2026-09-24')
   a(Array.isArray(casse[cle]), `${cle} corrompu est normalise en liste, l ecran tient`)
 }
+
+// ─── favoris ───
+a(bowl.fav === false, 'une recette naît sans favori')
+const favori = makeRecipe({ ...bowl, fav: true })
+a(favori.fav === true, 'le favori traverse makeRecipe : modifier une recette ne la sort pas des favoris')
+
+const troisRec = [
+  makeRecipe({ id: 'a', n: 'Première', items: [POULET] }),
+  makeRecipe({ id: 'b', n: 'Deuxième', items: [POULET] }),
+  makeRecipe({ id: 'c', n: 'Troisième', items: [POULET] }),
+]
+const basculee = toggleRecipeFav(troisRec, 'a')
+a(basculee.find((r) => r.id === 'a').fav === true, 'la bascule met en favori')
+a(basculee.filter((r) => r.fav).length === 1, 'et ne touche pas les autres')
+a(toggleRecipeFav(basculee, 'a').find((r) => r.id === 'a').fav === false, 'la bascule retire aussi')
+a(toggleRecipeFav(basculee, 'a').find((r) => r.id === 'a').n === 'Première', 'sans rien reconstruire du reste')
+a(toggleRecipeFav(null, 'a').length === 0, 'une liste absente ne leve pas')
+
+const triees = sortedRecipes(basculee)
+a(triees[0].id === 'a', 'les favorites viennent en tete')
+a(triees[1].id === 'c' && triees[2].id === 'b', 'et les autres restent des plus recentes aux plus anciennes')
+a(sortedRecipes(null).length === 0, 'liste absente : tri vide, pas d exception')
 
 console.log('\nALL PASS')

@@ -10,7 +10,7 @@ import { familyBreakdown, familyAdvice } from './foodFamilies'
 import { daySeries, dayEntries, drinkAsEntry } from './nutriIntel'
 import { parseFoodText, readingIssue } from './foodOcr'
 import { imageTooLarge } from '../health/fileGuard'
-import { makeRecipe, recipeToEntry, recipeIssue, servingLabel, servingTotals, servingGrams, recipeGrams, recipeTotals, upsertRecipe, removeRecipe, MAX_SERVINGS } from './recipes'
+import { makeRecipe, recipeToEntry, recipeIssue, servingLabel, servingTotals, servingGrams, recipeGrams, recipeTotals, upsertRecipe, removeRecipe, toggleRecipeFav, sortedRecipes, MAX_SERVINGS } from './recipes'
 
 // ============================================================
 // Jetons de style : ils pointent vers ceux du kit partagé plutôt que
@@ -649,7 +649,9 @@ export function FoodTab({ db, store }) {
   const toggleFav = (food) => store.set((s) => {
     const cur = s.foodFav || []
     const exists = cur.some((f) => f.n === food.n)
-    const next = exists ? cur.filter((f) => f.n !== food.n) : [...cur, { n: food.n, k: food.k, p: food.p, g: food.g, l: food.l, port: food.port || 100, portLab: food.portLab || '' }]
+    // Les fibres étaient absentes : un favori réutilisé les perdait en
+    // silence, alors qu'elles pilotent un objectif à part entière.
+    const next = exists ? cur.filter((f) => f.n !== food.n) : [...cur, { n: food.n, k: food.k, p: food.p, g: food.g, l: food.l, fib: food.fib || 0, port: food.port || 100, portLab: food.portLab || '' }]
     return { foodFav: next }
   })
   const addEntry = (food, gr, ml) => {
@@ -744,6 +746,7 @@ export function FoodTab({ db, store }) {
     setDraft(makeRecipe({ n: titre, servings: 1, items }))
     setItemIdx(null); setCap((c) => ({ ...c, error: null, parsed: null })); setMode('recette')
   }
+  const toggleRecFav = (id) => saveRecettes(toggleRecipeFav(recettes, id))
   const duplicateDraft = () => {
     setDraft(makeRecipe({ n: draft.n + ' (copie)', servings: draft.servings, items: draft.items }))
     setItemIdx(null)
@@ -808,8 +811,8 @@ export function FoodTab({ db, store }) {
       nq === '' && recettes.length > 0 && React.createElement(React.Fragment, null,
         React.createElement(SecLab, null, 'Recettes'),
         React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } },
-          recettes.slice(-8).reverse().map((r) => React.createElement('button', { key: r.id, onClick: () => openPart(r), style: { ...chipBtn(false), display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: '100%' } },
-            React.createElement('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis' } }, r.n))))),
+          sortedRecipes(recettes).slice(0, 8).map((r) => React.createElement('button', { key: r.id, onClick: () => openPart(r), style: { ...chipBtn(false), display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: '100%' } },
+            React.createElement('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis' } }, r.fav ? '★ ' : '', r.n))))),
       nq === '' && favs.length > 0 && React.createElement(React.Fragment, null,
         React.createElement(SecLab, null, 'Favoris'),
         React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 } }, favs.map((f, i) => React.createElement(Quick, { key: 'fav' + i, kk: 'fav' + i, food: f })))),
@@ -851,7 +854,8 @@ export function FoodTab({ db, store }) {
         ? React.createElement('div', { style: { textAlign: 'center', color: INK3, fontSize: 13.5, padding: '24px 8px', lineHeight: 1.55 } },
           'Aucune recette pour l’instant. Compose un plat avec ses ingrédients et sa quantité : il s’ajoutera ensuite au journal en une seule ligne, à son nom.')
         : React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
-          recettes.slice().reverse().map((r) => React.createElement('div', { key: r.id, style: { display: 'flex', alignItems: 'center', borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, overflow: 'hidden' } },
+          sortedRecipes(recettes).map((r) => React.createElement('div', { key: r.id, style: { display: 'flex', alignItems: 'center', borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, overflow: 'hidden' } },
+            React.createElement('button', { onClick: () => toggleRecFav(r.id), 'aria-label': 'Favori', style: { flex: '0 0 auto', padding: '11px 4px 11px 12px', background: 'transparent', border: 'none', fontSize: 18, color: r.fav ? '#d9a441' : INK3, cursor: 'pointer' } }, r.fav ? '★' : '☆'),
             React.createElement('button', { onClick: () => openPart(r), style: { flex: 1, minWidth: 0, textAlign: 'left', padding: '11px 14px', background: 'transparent', border: 'none', cursor: 'pointer' } },
               React.createElement('div', { style: { fontWeight: 600, fontSize: 14.5 } }, r.n),
               React.createElement('div', { style: { fontSize: 12, color: INK3, marginTop: 2 } }, servingLabel(r))),
@@ -942,7 +946,10 @@ export function FoodTab({ db, store }) {
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 } },
         React.createElement('button', { onClick: () => setMode(editId ? 'main' : 'search'), style: xst.iconBtn, 'aria-label': 'Retour' }, React.createElement(Icon, { name: 'back', size: 19 })),
         React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 18, flex: 1 } }, pick.n),
-        !pick.custom && React.createElement('button', { onClick: () => toggleFav(pick), 'aria-label': 'Favori', style: { fontSize: 21, color: isFav(pick.n) ? '#d9a441' : INK3, background: 'transparent', border: 'none', flex: '0 0 auto', cursor: 'pointer' } }, isFav(pick.n) ? '★' : '☆')),
+        // Un aliment personnalisé ou lu sur une capture pouvait être ajouté au
+        // journal mais pas mis en favori : il fallait le ressaisir, ou le
+        // rephotographier, à chaque fois. Seul un nom vide l'en empêche encore.
+        String(pick.n || '').trim() && React.createElement('button', { onClick: () => toggleFav(pick), 'aria-label': 'Favori', style: { fontSize: 21, color: isFav(pick.n) ? '#d9a441' : INK3, background: 'transparent', border: 'none', flex: '0 0 auto', cursor: 'pointer' } }, isFav(pick.n) ? '★' : '☆')),
       pick.custom && React.createElement('div', { style: { marginBottom: 14 } },
         // Ce que la capture a donné, exposé pour être vérifié : sur quelle
         // quantité les valeurs sont libellées, ce qui a été lu, ce qui a été
