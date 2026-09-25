@@ -96,6 +96,29 @@ export function detectBasis(text) {
     const grams = parseNumber(portion[1])
     if (grams && grams > 0 && grams <= 3000) return { basis: 'portion', grams }
   }
+  // Une quantité seule sur sa ligne, sans le mot « portion » : c'est ainsi que
+  // les applications de nutrition affichent la quantité pesée.
+  //
+  //   Poulet rôti
+  //   250 g
+  //   Calories 412
+  //
+  // Sans cette lecture, les 412 kcal de la portion étaient pris pour des
+  // valeurs pour 100 g — deux fois et demie trop, sur le cas le plus courant.
+  //
+  // La ligne doit ne contenir QUE la quantité : « Contenu : 250 g » désigne un
+  // emballage, pas une portion, et ne doit pas servir de base.
+  for (const brute of String(text || '').split(/\r?\n/)) {
+    const l = normLine(brute)
+    const m = l.match(/^(\d[\d .,]*)\s*(?:g|ml)$/)
+    if (!m) continue
+    const grams = parseNumber(m[1])
+    // 100 g est déjà la base : rien à reconvertir. En deçà de 20 g on est sur
+    // du bruit de lecture, au-delà de 2 kg sur autre chose qu'une portion.
+    if (grams && grams >= 20 && grams <= 2000 && Math.round(grams) !== 100) {
+      return { basis: 'portion', grams }
+    }
+  }
   return { basis: '100g', grams: 100 }
 }
 

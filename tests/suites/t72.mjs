@@ -84,6 +84,35 @@ for (const key of ['id', 'n', 'grams', 'meal', 'per', 'k', 'p', 'g', 'l', 'fib']
 a(entree.src === 'capture', 'origine marquee : une valeur lue se corrige, une valeur saisie se respecte')
 a(toFoodEntry(fou) === null, 'une lecture non exploitable ne produit aucune entree')
 
+// ─── LE cas le plus courant : une capture d application ───
+// Les applications de nutrition affichent la quantite pesee seule sur sa
+// ligne, sans le mot « portion ». Non reconnue, les calories de la portion
+// etaient prises pour des valeurs pour 100 g : deux fois et demie trop sur
+// une assiette de 250 g.
+const appliSansMot = parseFoodText(`Poulet rôti
+250 g
+Calories 412
+Glucides 0 g   Lipides 24 g   Protéines 47 g`)
+a(appliSansMot.basis === 'portion' && appliSansMot.grams === 250,
+  `une quantite seule sur sa ligne est lue comme une portion (${appliSansMot.grams} g)`)
+a(appliSansMot.read.k === 412, 'la valeur lue reste celle de la portion')
+a(Math.abs(appliSansMot.per.k - 165) <= 2,
+  `ramenee a 100 g : ${appliSansMot.per.k} kcal — le poulet roti en vaut 165`)
+
+// Ce qui ne doit PAS devenir une base de conversion.
+a(detectBasis('Valeurs pour 100 g\nÉnergie 250 kcal').basis === '100g',
+  '« pour 100 g » l emporte toujours')
+a(detectBasis('Contenu : 250 g\nÉnergie 250 kcal').basis === '100g',
+  '« Contenu : 250 g » designe un emballage, pas une portion : la ligne n est pas seule')
+a(detectBasis('100 g\nÉnergie 250 kcal').grams === 100,
+  '« 100 g » seul est deja la base, rien a reconvertir')
+a(detectBasis('5 g\nÉnergie 20 kcal').basis === '100g',
+  'en deca de 20 g : du bruit de lecture, pas une portion')
+a(detectBasis('3000 g\nÉnergie 20 kcal').basis === '100g',
+  'au-dela de 2 kg : autre chose qu une portion')
+a(detectBasis('330 ml\nCalories 139').grams === 330,
+  'une canette de 330 ml est bien une portion')
+
 // ─── details ───
 a(detectBasis('valeurs pour 100 ml').grams === 100, 'pour 100 ml compte comme pour 100 g')
 a(detectName('Nutrition Facts\n250 kcal\nSaumon fumé') === 'Saumon fumé', 'une ligne de mesure n est jamais prise pour un nom')
