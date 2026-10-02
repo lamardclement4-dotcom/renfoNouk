@@ -14,6 +14,9 @@ const PreventionSpace = lazy(() => import('./Prevention'))
 const CycleSpace = lazy(() => import('./Cycle'))
 const BreathingSpace = lazy(() => import('./Breathing'))
 const ComplementsSpace = lazy(() => import('./Complements'))
+// Recettes à suivre en cuisinant : à part de la nutrition, dont les recettes
+// sont des compositions pesées pour les macros.
+const CookbookSpace = lazy(() => import('../nutrition/CookbookSpace'))
 
 // ============================================================
 // Écran "Santé & bien-être" — porte de sortie de l'ancienne app
@@ -37,6 +40,7 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
   if (space === 'cycle') return React.createElement(CycleSpace, { userId, onClose: backToHub })
   if (space === 'esprit') return React.createElement(BreathingSpace, { userId, onClose: backToHub })
   if (space === 'complements') return React.createElement(ComplementsSpace, { userId, onClose: backToHub })
+  if (space === 'cuisine') return React.createElement(CookbookSpace, { userId, onClose: backToHub })
 
   if (loading) {
     return React.createElement('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 55, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font } }, 'Chargement...')
@@ -66,6 +70,7 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
     { ic: 'moon', tint: MODULE_TINTS.cycle, lab: 'Cycle', sub: cyclePhaseLabel, on: 'cycle' },
     { ic: 'wave', tint: MODULE_TINTS.esprit, lab: 'Esprit', sub: 'Respiration · mental', on: 'esprit' },
     { ic: 'spark', tint: MODULE_TINTS.complements, lab: 'Compléments', sub: 'Plan · rappels', on: 'complements' },
+    { ic: 'flame', tint: MODULE_TINTS.nutrition, lab: 'Cuisine', sub: (db.cookbook || []).length ? `${db.cookbook.length} recette${db.cookbook.length > 1 ? 's' : ''}` : 'Recettes à suivre', on: 'cuisine' },
   ]
 
   const el = React.createElement

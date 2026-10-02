@@ -4,7 +4,7 @@
 // signale : ni la compilation, ni les tests d unite.
 import '../harness/browser-env.mjs'
 import { __render, __reset, __setState } from '../harness/react-stub4.mjs'
-import { __setDb } from '../harness/store-hook-stub.mjs'
+import { __setDb, __lastSet } from '../harness/store-hook-stub.mjs'
 import { RICH } from './t50fixture.mjs'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
 
@@ -35,6 +35,7 @@ const SCREENS = [
   ['Programme', '../../src/features/train/ProgramView.jsx'],
   ['Import d activite', '../../src/features/train/ActivityImport.jsx'],
   ['Routines', '../../src/features/train/RoutinesSpace.jsx'],
+  ['Cuisine', '../../src/features/nutrition/CookbookSpace.jsx'],
 ]
 
 // Certains ecrans recoivent db et store en props, d autres passent par le hook :
@@ -534,5 +535,75 @@ const favEnr = ecritFav.foodFav[0]
 a(favEnr.n === 'Pain complet', `le favori enregistre s appelle « ${favEnr.n} »`)
 a(favEnr.fib === 6.8, `et conserve ses ${favEnr.fib} g de fibres`)
 for (const k3 of ['k', 'p', 'g', 'l']) a(favEnr[k3] != null, `avec ses ${k3}`)
+
+// ─── Cuisine : recettes a suivre, importees par l utilisateur ───
+const HubSante = (await import('../../src/features/health/HealthHome.jsx')).default
+__reset(); __setDb({})
+const hubTxt = text(__render('hub-cuisine', HubSante, mkProps({})))
+a(/Cuisine/.test(hubTxt) && /Recettes [àa] suivre/.test(hubTxt), 'la tuile Cuisine est visible dans l espace Sante')
+
+const Carnet = (await import('../../src/features/nutrition/CookbookSpace.jsx')).default
+__reset(); __setDb({})
+const vide = text(__render('cb', Carnet, mkProps({})))
+a(/Importer une recette/.test(vide), 'l import est le premier geste propose')
+a(/carnet est vide/.test(vide), 'un carnet vide explique ce qu on peut y mettre')
+
+__setState('cb', 0, 'import')
+const imp2 = text(__render('cb', Carnet, mkProps({})))
+a(/Coller un texte/.test(imp2) && /Photographier une page/.test(imp2) && /[ÀA] la main/i.test(imp2), 'trois sources : texte colle, photo, saisie')
+a(/adresse d.un site ne peut pas [êe]tre lue/.test(imp2), 'et la limite des adresses web est dite, avec le contournement')
+
+// Bout en bout : un texte colle devient une recette, verifiee avant d etre gardee.
+const GATEAU = `Gâteau au yaourt
+Préparation : 10 min
+Cuisson : 35 min
+Ingrédients (pour 6 personnes)
+- 1 pot de yaourt nature
+- 3 pots de farine
+- 3 œufs
+Préparation
+1. Préchauffer le four à 180 °C.
+2. Mélanger le tout.
+3. Enfourner 35 minutes.`
+__setState('cb', 3, GATEAU)
+trouveBouton(__render('cb', Carnet, mkProps({})), 'Lire ce texte').props.onClick()
+const arbreVerif = __render('cb', Carnet, mkProps({}))
+const verif = text(arbreVerif)
+a(/V[ée]rifier la recette/.test(verif), 'le texte lu ouvre la verification, rien n est garde d office')
+a(/3 ingr[ée]dients et 3 [ée]tapes reconnus/.test(verif), 'ce qui a ete reconnu est annonce')
+let ingrLus = ''
+parcours(arbreVerif, (n) => { if (n.type === 'textarea' && typeof n.props.value === 'string' && /yaourt/.test(n.props.value)) ingrLus = n.props.value })
+a(ingrLus.split('\n').length === 3 && !/^-/.test(ingrLus), 'les ingredients arrivent dans un champ modifiable, un par ligne, sans puces')
+
+trouveBouton(arbreVerif, 'Enregistrer dans mon carnet').props.onClick()
+const ecritCb = __lastSet()
+a(ecritCb && Array.isArray(ecritCb.cookbook) && ecritCb.cookbook.length === 1, 'la validation ecrit bien dans le carnet')
+const garde = ecritCb.cookbook[0]
+a(garde.title === 'Gâteau au yaourt' && garde.servings === 6, 'avec son titre et ses six parts')
+a(garde.steps.length === 3 && garde.ingredients.length === 3, 'et ses ingredients et etapes')
+
+// Fiche : les quantites suivent le nombre de parts.
+__reset(); __setDb({ nutrition: { cookbook: [garde] } })
+__render('cb2', Carnet, mkProps({ nutrition: { cookbook: [garde] } }))
+__setState('cb2', 0, 'recette'); __setState('cb2', 5, garde.id); __setState('cb2', 6, 6)
+const arbreFiche = __render('cb2', Carnet, mkProps({ nutrition: { cookbook: [garde] } }))
+const fiche = text(arbreFiche)
+a(/Pour 6 parts/.test(fiche) && /3 pots de farine/.test(fiche), 'pour six parts : les quantites de la recette')
+a(/Cuisiner pas [àa] pas/.test(fiche), 'le mode cuisine se lance depuis la fiche')
+a(/35 min/.test(fiche), 'la duree d une etape est signalee comme minuteur')
+trouveBouton(arbreFiche, '+').props.onClick()
+const fiche7 = text(__render('cb2', Carnet, mkProps({ nutrition: { cookbook: [garde] } })))
+a(/Pour 7 parts/.test(fiche7) && /3,5 pots de farine/.test(fiche7), 'une part de plus : 3,5 pots de farine, a la francaise')
+
+// Mode cuisine : une etape a la fois, et son minuteur.
+__setState('cb2', 0, 'cuisine'); __setState('cb2', 8, 2)
+__render('cb2', Carnet, mkProps({ nutrition: { cookbook: [garde] } }))
+const arbreCuisine = __render('cb2', Carnet, mkProps({ nutrition: { cookbook: [garde] } }))
+const cuisine = text(arbreCuisine)
+a(/[ÉE]tape\s+3\s+\/\s+3/.test(cuisine), 'la progression est affichee')
+a(/Enfourner 35 minutes/.test(cuisine), 'l etape courante en grand')
+a(trouveBouton(arbreCuisine, 'Minuteur') !== null, 'sa duree devient un minuteur d un appui')
+a(trouveBouton(arbreCuisine, 'Terminé') !== null, 'derniere etape : un bouton pour terminer')
+a(/garder l.[ée]cran allum[ée]/.test(cuisine), 'sans maintien d ecran possible, le navigateur le dit plutot que de s eteindre en silence')
 
 console.log('\nALL PASS')

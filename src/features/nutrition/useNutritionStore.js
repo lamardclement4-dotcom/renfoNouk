@@ -19,7 +19,7 @@ function isoDaysAgo(n) {
 
 // Clés que l'ancienne app rangeait sous profiles.phys.nutrition (regroupées
 // pour éviter d'encombrer le niveau racine de phys).
-const NUTRITION_KEYS = ['foodFav', 'foodTargets', 'hydroSport', 'hydroPrefs', 'diagHistory', 'recipes']
+const NUTRITION_KEYS = ['foodFav', 'foodTargets', 'hydroSport', 'hydroPrefs', 'diagHistory', 'recipes', 'cookbook']
 // Clés à routage spécial : ni top-level phys, ni phys.nutrition.
 const SPECIAL_KEYS = ['profilePhys', 'foodLog', 'hydroLog', 'cycle', 'goals', 'sensitiveZones']
 
@@ -33,7 +33,7 @@ const SPECIAL_KEYS = ['profilePhys', 'foodLog', 'hydroLog', 'cycle', 'goals', 's
 const DATE_KEYED_LOGS = ['sleepLog', 'suppTaken', 'recoveryLog', 'weatherLog', 'vitalsLog', 'routineLog']
 const LOG_RETENTION_DAYS = 400
 // Listes qui grossissent lentement mais sans borne.
-const CAPPED_LISTS = { physTests: 400, customGoals: 200, peakGoals: 100, routines: 60, recipes: 200 }
+const CAPPED_LISTS = { physTests: 400, customGoals: 200, peakGoals: 100, routines: 60, recipes: 200, cookbook: 60 }
 
 function pruneDateMap(obj, maxDays) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
@@ -160,7 +160,7 @@ export function resetStore() {
 // modules cessent d'avoir à s'en soucier chacun de leur côté.
 const LIST_KEYS = [
   'planningSessions', 'physTests', 'weightLog', 'sessionLog', 'customGoals',
-  'mobilityHistory', 'peakGoals', 'smartGoals', 'breathLog', 'foodFav', 'diagHistory', 'recipes',
+  'mobilityHistory', 'peakGoals', 'smartGoals', 'breathLog', 'foodFav', 'diagHistory', 'recipes', 'cookbook',
   'routines',
 ]
 
@@ -203,6 +203,8 @@ export const buildDb = (rawPhys, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO
   // Repas composés une fois par l'utilisateur, rangés comme les favoris :
   // sous profiles.phys.nutrition, normalisés en liste, bornés à 200.
   recipes: asList(physSrc.nutrition?.recipes),
+  // Carnet de cuisine : recettes à suivre, importées par l'utilisateur.
+  cookbook: asList(physSrc.nutrition?.cookbook),
   foodTargets: physSrc.nutrition?.foodTargets || null,
   hydroSport: physSrc.nutrition?.hydroSport || {},
   hydroPrefs: physSrc.nutrition?.hydroPrefs || {},
