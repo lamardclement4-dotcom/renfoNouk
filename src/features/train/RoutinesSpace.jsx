@@ -25,7 +25,7 @@ function MovePicker({ kind, selected, onToggle, onClose }) {
   const list = q.trim() ? all.filter((m) => norm(m.name).includes(norm(q.trim()))) : all
   return h('div', { style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 60, display: 'flex', alignItems: 'flex-end' }, onClick: onClose },
     h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxHeight: '84vh', overflowY: 'auto', background: C.surface, borderRadius: `${C.radius}px ${C.radius}px 0 0`, padding: 16 } },
-      h('div', { style: { width: 38, height: 4, borderRadius: 999, background: C.line, margin: '0 auto 14px' } }),
+      h('div', { style: { width: 38, height: 4, borderRadius: 'var(--r-pill)', background: C.line, margin: '0 auto 14px' } }),
       h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 4 } }, 'Choisis tes mouvements'),
       h('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 10 } }, all.length, ' mouvements de ', kindOf(kind).label.toLowerCase(), ' · ', selected.length, ' retenu', selected.length > 1 ? 's' : ''),
       h('input', {
@@ -38,13 +38,13 @@ function MovePicker({ kind, selected, onToggle, onClose }) {
           key: m.key, onClick: () => onToggle(m.key),
           style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 6, borderRadius: C.radiusXs, border: `1px solid ${on ? C.primary : C.line}`, background: on ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : 'transparent', cursor: 'pointer' },
         },
-          h('div', { style: { width: 20, height: 20, borderRadius: 6, flex: '0 0 auto', border: `1.5px solid ${on ? C.primary : C.line}`, background: on ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-            on ? h(Icon, { name: 'check', size: 12, color: '#fff' }) : null),
+          h('div', { style: { width: 20, height: 20, borderRadius: 0, flex: '0 0 auto', border: `1.5px solid ${on ? C.primary : C.line}`, background: on ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+            on ? h(Icon, { name: 'check', size: 12, color: 'var(--c-on-fill)' }) : null),
           h('div', { style: { flex: 1, minWidth: 0 } },
             h('div', { style: { fontSize: 13.5, fontWeight: 600, color: C.ink } }, m.name),
             h('div', { style: { fontSize: 11.5, color: C.ink3 } }, m.type === 'hold' ? `${m.secs || 30} s de maintien` : `${m.reps || 10} répétitions`)))
       }),
-      h('button', { onClick: onClose, style: { width: '100%', marginTop: 8, padding: 13, borderRadius: C.radiusSm, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Terminé')))
+      h('button', { onClick: onClose, style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', marginTop: 8, padding: 13, borderRadius: C.radiusSm, border: 'none', background: C.primary, color: 'var(--c-on-fill)', cursor: 'pointer' } }, 'Terminé')))
 }
 
 function Editor({ initial, startKind, onSave, onCancel }) {
@@ -58,7 +58,7 @@ function Editor({ initial, startKind, onSave, onCancel }) {
 
   const draft = makeRoutine({ kind, name, keys, sets, restSecs: rest, dows, id: initial ? initial.id : undefined })
   const mins = routineMins(draft)
-  const chip = (on) => ({ padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${on ? C.primary : C.line}`, background: on ? C.primary : 'transparent', color: on ? '#fff' : C.ink2 })
+  const chip = (on) => ({ padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${on ? C.primary : C.line}`, background: on ? C.primary : 'transparent', color: on ? 'var(--c-on-fill)' : C.ink2 })
   const moves = movementsFor(kind)
 
   return h('div', null,
@@ -111,17 +111,17 @@ function Editor({ initial, startKind, onSave, onCancel }) {
             const m = moves.find((x) => x.key === k)
             return h('button', {
               key: k, onClick: () => setKeys((prev) => prev.filter((x) => x !== k)),
-              style: { padding: '6px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600, border: `1px solid ${C.line}`, background: C.surface2, color: C.ink2, cursor: 'pointer' },
+              style: { padding: '6px 10px', borderRadius: 'var(--r-pill)', fontSize: 12, fontWeight: 600, border: `1px solid ${C.line}`, background: C.surface2, color: C.ink2, cursor: 'pointer' },
             }, m ? m.name : k, ' ×')
           }))
         : h('div', { style: { fontSize: 12.5, color: C.ink3, marginBottom: 10, lineHeight: 1.45 } }, 'Aucun mouvement pour l’instant.'),
-      h('button', { onClick: () => setPicker(true), style: { width: '100%', padding: 11, borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, 'Ajouter des mouvements')),
+      h('button', { onClick: () => setPicker(true), style: { width: '100%', padding: 11, borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, 'Ajouter des mouvements')),
 
     h('div', { style: { display: 'flex', gap: 9 } },
       h('button', { onClick: onCancel, style: { flex: 1, padding: 13, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Annuler'),
       h('button', {
         onClick: () => routineValid(draft) && onSave(draft), disabled: !routineValid(draft),
-        style: { flex: 2, padding: 13, borderRadius: C.radiusSm, border: 'none', background: routineValid(draft) ? C.primary : C.surface2, color: routineValid(draft) ? '#fff' : C.ink3, fontSize: 14, fontWeight: 700, cursor: routineValid(draft) ? 'pointer' : 'default' },
+        style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 2, padding: 13, borderRadius: C.radiusSm, border: 'none', background: routineValid(draft) ? C.primary : C.surface2, color: routineValid(draft) ? 'var(--c-on-fill)' : C.ink3, cursor: routineValid(draft) ? 'pointer' : 'default' },
       }, initial ? 'Enregistrer' : 'Créer la routine')))
 }
 
@@ -154,7 +154,7 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
             const since = last ? daysSince(last, undefined) : null
             return h(Card, { key: r.id, style: { marginBottom: 10 } },
               h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 11 } },
-                h('div', { style: { width: 38, height: 38, borderRadius: 12, flex: '0 0 auto', background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+                h('div', { style: { width: 38, height: 38, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
                   h(Icon, { name: k.icon, size: 18, color: C.primary })),
                 h('div', { style: { flex: 1, minWidth: 0 } },
                   h('div', { style: { fontSize: 14.5, fontWeight: 700 } }, r.name),
@@ -168,9 +168,9 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
                     ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3 } }, st.count, ' fois sur 28 jours', since != null ? ` · la dernière il y a ${since} j` : '')
                     : null)),
               h('div', { style: { display: 'flex', gap: 7, marginTop: 11 } },
-                h('button', { onClick: () => play(r), style: { flex: 2, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
-                h('button', { onClick: () => setEdit(r), style: { flex: 1, padding: 10, borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Modifier'),
-                h('button', { onClick: () => remove(r.id), 'aria-label': 'Supprimer', style: { padding: '10px 13px', borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 13, cursor: 'pointer' } }, '×')))
+                h('button', { onClick: () => play(r), style: { flex: 2, padding: 10, borderRadius: 'var(--r-pill)', border: 'none', background: C.primary, color: 'var(--c-on-fill)', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
+                h('button', { onClick: () => setEdit(r), style: { flex: 1, padding: 10, borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Modifier'),
+                h('button', { onClick: () => remove(r.id), 'aria-label': 'Supprimer', style: { padding: '10px 13px', borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 13, cursor: 'pointer' } }, '×')))
   }
 
   return h(FlowSpace, { title: 'Mes routines', onClose, fixed: false, bg: 'entrainer' },
@@ -187,7 +187,7 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
           const reco = recommendedRoutines(db || {}, { limit: 3 })
           if (!reco.length && !(reco.blocked && reco.blocked.length)) return null
           return h('div', { style: { marginBottom: 16 } },
-            h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 9px' } }, 'Pour toi aujourd’hui'),
+            h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, margin: '0 2px 9px' } }, 'Pour toi aujourd’hui'),
             reco.map((x) => h(Card, { key: x.family.id, style: { marginBottom: 9, border: `1px solid color-mix(in srgb, ${C.primary} 35%, ${C.line})` } },
               h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
                 h('div', { style: { flex: 1, fontSize: 14, fontWeight: 700 } }, x.routine.name),
@@ -195,7 +195,7 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
               h('div', { style: { fontSize: 12, color: C.ink2, marginTop: 5, lineHeight: 1.5 } }, x.why),
               h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5 } },
                 x.routine.keys.length, ' mouvements · ~', routineMins(x.routine), ' min'),
-              h('button', { onClick: () => play(x.routine), style: { width: '100%', marginTop: 10, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'))),
+              h('button', { onClick: () => play(x.routine), style: { width: '100%', marginTop: 10, padding: 10, borderRadius: 'var(--r-pill)', border: 'none', background: C.primary, color: 'var(--c-on-fill)', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'))),
             (reco.blocked || []).map((x) => h('div', { key: x.family.id, style: { fontSize: 11.5, color: C.ink3, lineHeight: 1.5, padding: '2px 4px 6px' } },
               x.family.label, ' — ', x.why)))
         })(),
@@ -209,11 +209,11 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
           h('div', { style: { display: 'flex', gap: 5, marginTop: 9, flexWrap: 'wrap' } },
             h('button', {
               onClick: () => setMins(null),
-              style: { padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${mins == null ? C.primary : C.line}`, background: mins == null ? C.primary : 'transparent', color: mins == null ? '#fff' : C.ink2 },
+              style: { padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${mins == null ? C.primary : C.line}`, background: mins == null ? C.primary : 'transparent', color: mins == null ? 'var(--c-on-fill)' : C.ink2 },
             }, 'Complète'),
             DURATION_CHOICES.map((t) => h('button', {
               key: t, onClick: () => setMins(t),
-              style: { padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${mins === t ? C.primary : C.line}`, background: mins === t ? C.primary : 'transparent', color: mins === t ? '#fff' : C.ink2 },
+              style: { padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${mins === t ? C.primary : C.line}`, background: mins === t ? C.primary : 'transparent', color: mins === t ? 'var(--c-on-fill)' : C.ink2 },
             }, t, ' min')))),
 
         // Mobilité et pliométrie ne se rangent pas ensemble : l'une prépare et
@@ -226,7 +226,7 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
           return h('div', { key: k.id, style: { marginBottom: 18 } },
             h('div', { style: { display: 'flex', alignItems: 'center', gap: 7, margin: '0 2px 9px' } },
               h(Icon, { name: k.icon, size: 15, color: C.primary }),
-              h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } },
+              h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } },
                 k.label, ofKind.length ? ` · ${ofKind.length}` : ''),
               h('div', { style: { flex: 1 } }),
               h('button', { onClick: () => setEdit({ newKind: k.id }), style: { fontSize: 12.5, fontWeight: 700, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Ajouter')),
@@ -252,10 +252,10 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
                 ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4, lineHeight: 1.45 } }, sg.note)
                 : null,
               h('div', { style: { display: 'flex', gap: 7, marginTop: 10 } },
-                h('button', { onClick: () => play(sg.routine), style: { flex: 2, padding: 10, borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
+                h('button', { onClick: () => play(sg.routine), style: { flex: 2, padding: 10, borderRadius: 'var(--r-pill)', border: 'none', background: C.primary, color: 'var(--c-on-fill)', fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Lancer'),
                 h('button', {
                   onClick: () => save({ ...sg.routine, id: 'rt_' + Date.now().toString(36), custom: true, template: false, name: sg.routine.name, dows: [] }),
-                  style: { flex: 1, padding: 10, borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13, fontWeight: 700, cursor: 'pointer' },
+                  style: { flex: 1, padding: 10, borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 13, fontWeight: 700, cursor: 'pointer' },
                 }, 'Copier')))))
         }),
 
@@ -263,5 +263,5 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
             h('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } }, 'Aucune routine pour l’instant.'),
             h('div', { style: { fontSize: 12, color: C.ink3, marginTop: 6, lineHeight: 1.5 } }, 'Une routine, c’est l’enchaînement de dix minutes que tu refais trois fois par semaine.')) : null,
 
-        h('button', { onClick: () => setEdit({ newKind: 'mobilite' }), style: { width: '100%', marginTop: 4, padding: 13, borderRadius: C.radiusSm, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Créer une routine')))
+        h('button', { onClick: () => setEdit({ newKind: 'mobilite' }), style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', marginTop: 4, padding: 13, borderRadius: C.radiusSm, border: 'none', background: C.primary, color: 'var(--c-on-fill)', cursor: 'pointer' } }, 'Créer une routine')))
 }

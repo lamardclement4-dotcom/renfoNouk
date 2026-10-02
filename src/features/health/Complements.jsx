@@ -38,7 +38,7 @@ const COMPS = {
 const ALL_COMPS = [...COMPS.A.items, ...COMPS.B.items, ...COMPS.C.items]
 const COMP_BY_ID = Object.fromEntries(ALL_COMPS.map((c) => [c.id, c]))
 
-const navBtn = { width: 38, height: 38, borderRadius: 999, flex: '0 0 auto', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
+const navBtn = { width: 38, height: 38, borderRadius: 'var(--r-pill)', flex: '0 0 auto', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
 
 // Décale une date ISO d'un nombre de jours, en UTC pur : construire la
 // date en heure locale puis repasser par toISOString décale d'un jour dans
@@ -112,19 +112,19 @@ function ComplementsTab({ db, store }) {
       React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, marginTop: 4, lineHeight: 1.4 } }, it.e),
       React.createElement('div', { style: { display: 'flex', gap: 16, marginTop: 9, flexWrap: 'wrap' } },
         React.createElement('div', null,
-          React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase' } }, 'Dose'),
+          React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Dose'),
           React.createElement('div', { style: { fontSize: 13, fontWeight: 600 } }, it.dose)),
         React.createElement('div', { style: { minWidth: 130 } },
-          React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase' } }, 'Moment'),
+          React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Moment'),
           React.createElement('div', { style: { fontSize: 13, fontWeight: 600 } }, it.m)),
         React.createElement('div', { style: { flex: 1, minWidth: 130 } },
-          React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase' } }, 'Cure'),
+          React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Cure'),
           React.createElement('div', { style: { fontSize: 13, color: C.ink2 } }, it.cure))),
       React.createElement('div', { style: { marginTop: 6 } },
-        React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase' } }, 'Précautions'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Précautions'),
         React.createElement('div', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.4 } }, it.pre)),
-      React.createElement('button', { onClick: () => toggle(it), style: { marginTop: 11, width: '100%', padding: 10, borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', border: '1.5px solid ' + (sel ? SUPP : C.line), background: sel ? SUPP : C.surface, color: sel ? '#fff' : C.ink2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 } },
-        sel ? React.createElement(React.Fragment, null, React.createElement(Icon, { name: 'check', size: 16, color: '#fff' }), ' Dans le plan') : '+ Ajouter au plan'))
+      React.createElement('button', { onClick: () => toggle(it), style: { marginTop: 11, width: '100%', padding: 10, borderRadius: 'var(--r-pill)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', border: '1.5px solid ' + (sel ? SUPP : C.line), background: sel ? SUPP : C.surface, color: sel ? 'var(--c-on-fill)' : C.ink2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 } },
+        sel ? React.createElement(React.Fragment, null, React.createElement(Icon, { name: 'check', size: 16, color: 'var(--c-on-fill)' }), ' Dans le plan') : '+ Ajouter au plan'))
   }
 
   return React.createElement('div', null,
@@ -164,11 +164,11 @@ function ComplementsTab({ db, store }) {
               React.createElement('span', { style: { fontSize: 10.5, fontWeight: 700, color: w.iso === day ? SUPP : C.ink3 } }, w.letter),
               React.createElement('span', {
                 style: {
-                  width: '100%', height: 26, borderRadius: 8,
+                  width: '100%', height: 26, borderRadius: 0,
                   border: w.iso === day ? `2px solid ${SUPP}` : `1px solid ${C.line}`,
                   background: w.pct > 0 ? `color-mix(in srgb, ${SUPP} ${Math.round(w.pct * 70) + 15}%, ${C.surface})` : C.surface,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10.5, fontWeight: 700, color: w.pct >= 0.6 ? '#fff' : C.ink3,
+                  fontSize: 10.5, fontWeight: 700, color: w.pct >= 0.6 ? 'var(--c-on-fill)' : C.ink3,
                 },
               }, w.future ? '' : w.count)))),
 
@@ -180,7 +180,7 @@ function ComplementsTab({ db, store }) {
             planItems.length === 0
               ? React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 8, lineHeight: 1.5 } }, 'Coche « Ajouter au plan » sur les compléments que tu prends : ils se rangent ici avec une coche de prise, jour par jour.')
               : React.createElement(React.Fragment, null,
-                  React.createElement('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, isToday ? 'Pris aujourd’hui' : 'Pris ce jour-là'),
+                  React.createElement('div', { style: { fontFamily: C.display, fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, isToday ? 'Pris aujourd’hui' : 'Pris ce jour-là'),
                   // Regroupé par moment de la journée : une liste à plat ne
                   // dit pas quoi prendre maintenant, alors que c'est la
                   // seule question au moment de cocher.
@@ -194,15 +194,15 @@ function ComplementsTab({ db, store }) {
                           const t = taken.includes(it.id)
                           const dose = personalDose(it.id, weightKg)
                           return React.createElement('button', { key: it.id, onClick: () => toggleTaken(it.id), style: { display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: C.radiusSm, border: `1px solid ${C.line}`, background: C.surface, cursor: 'pointer' } },
-                            React.createElement('span', { style: { width: 24, height: 24, borderRadius: 999, flex: '0 0 auto', border: '2px solid ' + (t ? SUPP : C.line), background: t ? SUPP : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, t && React.createElement(Icon, { name: 'check', size: 14, color: '#fff' })),
+                            React.createElement('span', { style: { width: 24, height: 24, borderRadius: 'var(--r-pill)', flex: '0 0 auto', border: '2px solid ' + (t ? SUPP : C.line), background: t ? SUPP : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, t && React.createElement(Icon, { name: 'check', size: 14, color: 'var(--c-on-fill)' })),
                             React.createElement('div', { style: { flex: 1, minWidth: 0 } },
                               React.createElement('div', { style: { fontWeight: 600, fontSize: 14 } }, it.n),
                               React.createElement('div', { style: { fontSize: 12, color: C.ink3 } }, dose ? dose.text + ' pour toi' : it.m)))
                         }))))),
-                  React.createElement('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '14px 0 8px' } }, 'Rythme des cures'),
+                  React.createElement('div', { style: { fontFamily: C.display, fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, margin: '14px 0 8px' } }, 'Rythme des cures'),
                   React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
                     planItems.map((x) => React.createElement('div', { key: x.id, style: { fontSize: 13, color: C.ink2, lineHeight: 1.4 } }, React.createElement('strong', { style: { color: C.ink } }, x.n), ' — ', x.cure))),
-                  React.createElement('button', { onClick: () => store.set({ suppPlan: [] }), style: { width: '100%', marginTop: 12, padding: 12, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Vider le plan'))),
+                  React.createElement('button', { onClick: () => store.set({ suppPlan: [] }), style: { width: '100%', marginTop: 12, padding: 12, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Vider le plan'))),
 
           // ─── Interactions ─────────────────────────────────────
           // Le catalogue signalait « à distance du fer » dans un texte que
@@ -212,7 +212,7 @@ function ComplementsTab({ db, store }) {
             React.createElement(SecLab, null, 'Interactions de ton plan'),
             React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
               interactions.map((i, k) => {
-                const col = i.kind === 'synergy' ? '#2fb865' : i.severity === 'high' ? C.danger : i.severity === 'moderate' ? C.warn : C.ink3
+                const col = i.kind === 'synergy' ? 'var(--c-success)' : i.severity === 'high' ? C.danger : i.severity === 'moderate' ? C.warn : C.ink3
                 const both = sameSlot.has(i.a + '|' + i.b)
                 const na = (COMP_BY_ID[i.a] || {}).n || i.a
                 const nb = (COMP_BY_ID[i.b] || {}).n || i.b
@@ -238,14 +238,14 @@ function ComplementsTab({ db, store }) {
                 const it = COMP_BY_ID[r.id]
                 if (!it) return null
                 const cure = cureStatus(r.id, db.suppTaken, today)
-                const col = r.pct >= 80 ? '#2fb865' : r.pct >= 50 ? C.warn : C.danger
+                const col = r.pct >= 80 ? 'var(--c-success)' : r.pct >= 50 ? C.warn : C.danger
                 return React.createElement('div', { key: r.id, style: { padding: '11px 0', borderTop: k ? `1px solid ${C.line}` : 'none' } },
                   React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
                     React.createElement('span', { style: { flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.n),
                     React.createElement('span', { style: { fontSize: 11.5, color: C.ink3 } }, r.taken, '/', r.days, ' j'),
                     React.createElement('span', { style: { fontFamily: C.font, fontSize: 14.5, fontWeight: 800, color: col, minWidth: 42, textAlign: 'right' } }, r.pct, ' %')),
-                  React.createElement('div', { style: { width: '100%', height: 5, borderRadius: 999, background: C.surface2, overflow: 'hidden', marginTop: 6 } },
-                    React.createElement('div', { style: { width: r.pct + '%', height: '100%', borderRadius: 999, background: col } })),
+                  React.createElement('div', { style: { width: '100%', height: 5, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden', marginTop: 6 } },
+                    React.createElement('div', { style: { width: r.pct + '%', height: '100%', borderRadius: 'var(--r-pill)', background: col } })),
                   cure && cure.flag && React.createElement('div', { style: { fontSize: 11.5, color: cure.flag.level === 'warn' ? C.warn : C.ink3, marginTop: 5, lineHeight: 1.4 } }, cure.flag.text))
               }))),
 

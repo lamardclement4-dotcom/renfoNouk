@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
 import { supabase } from './lib'
 import AccueilSpace from './features/home/AccueilSpace'
-import { Icon, C, SyncBanner } from './features/health/kit'
+import { C, SyncBanner } from './features/health/kit'
 import { useNutritionStore, resetStore } from './features/nutrition/useNutritionStore'
 
 // Accueil est le seul espace chargé d'emblée : c'est celui qu'on voit en
@@ -107,6 +107,13 @@ function Login({ signIn, signUp }) {
     <div style={styles.wrapper}>
       <form style={styles.card} onSubmit={handleSubmit}>
         <h1 style={styles.title}>Renfo</h1>
+        {/* Le tracé d'un enregistreur qui s'écrit à l'ouverture : la signature
+            de l'app, avant même d'être connecté. */}
+        <svg viewBox="0 0 300 36" preserveAspectRatio="none" aria-hidden="true" style={{ width: '100%', height: 36, display: 'block', marginBottom: 14, borderBottom: `1px solid ${C.line}` }}>
+          <polyline points="0,28 40,28 52,26 64,29 78,27 92,12 100,30 108,6 116,28 140,27 168,25 196,20 214,22 232,14 250,17 270,9 300,11"
+            fill="none" pathLength="1" strokeDasharray="1" strokeDashoffset="1" strokeWidth="2" strokeLinejoin="round"
+            style={{ stroke: C.trace, animation: 'traceDraw 1.4s cubic-bezier(.3,.6,.3,1) .15s forwards' }} />
+        </svg>
         <p style={styles.subtitle}>{mode === 'signin' ? 'Connecte-toi à ton compte' : 'Crée ton compte'}</p>
 
         <label style={styles.label} htmlFor="email">Email</label>
@@ -386,7 +393,7 @@ function Onboarding({ userId, onDone }) {
         {stepId !== 'welcome' && stepId !== 'final' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 18 }}>
             {order.slice(1, -1).map((_, i) => (
-              <div key={i} style={{ flex: 1, height: 4, borderRadius: 999, background: i < idx ? C.primary : C.line }} />
+              <div key={i} style={{ flex: 1, height: 4, borderRadius: 'var(--r-pill)', background: i < idx ? C.primary : C.line }} />
             ))}
             {idx > 0 && (
               <button type="button" onClick={back} style={{ marginLeft: 10, background: 'none', border: 'none', color: C.ink3, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
@@ -579,32 +586,31 @@ function Onboarding({ userId, onDone }) {
 }
 
 const styles = {
-  // Écrans de connexion et d'onboarding : ils suivent le thème comme le
-  // reste (sinon une carte blanche figée resterait aveuglante sur le
-  // thème Nuit).
-  wrapper: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, fontFamily: C.font, padding: 16 },
-  card: { width: '100%', maxWidth: 400, background: C.surface, borderRadius: C.radius, padding: 28, boxShadow: C.shadow, display: 'flex', flexDirection: 'column' },
-  title: { fontSize: 28, fontWeight: 800, letterSpacing: '-.02em', color: C.primary, marginBottom: 4 },
+  // Écrans de connexion et d'onboarding : ils suivent l'apparence comme
+  // le reste, posés sur le même papier millimétré.
+  wrapper: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg, backgroundImage: 'var(--g-paper)', backgroundSize: 'var(--g-paper-size)', backgroundPosition: '-1px -1px', fontFamily: C.font, color: C.ink, padding: 16 },
+  card: { width: '100%', maxWidth: 400, background: C.surface, borderRadius: 0, padding: 28, border: `1px solid ${C.line}`, borderTop: `3px solid ${C.ink}`, display: 'flex', flexDirection: 'column' },
+  title: { fontFamily: C.display, fontSize: 56, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em', lineHeight: .85, color: C.ink, marginBottom: 8 },
   subtitle: { fontSize: 14, color: C.ink2, marginBottom: 20 },
-  stepIndicator: { fontSize: 12, color: C.ink3, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  stepTitle: { fontSize: 20, fontWeight: 700, color: C.ink, marginBottom: 18 },
-  label: { fontSize: 13, fontWeight: 600, marginTop: 12, marginBottom: 6, color: C.ink },
+  stepIndicator: { fontFamily: C.mono, fontSize: 11, color: C.ink3, marginBottom: 6, textTransform: 'uppercase' },
+  stepTitle: { fontFamily: C.display, fontSize: 26, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, color: C.ink, marginBottom: 18 },
+  label: { fontFamily: C.mono, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', marginTop: 12, marginBottom: 6, color: C.ink2 },
   input: { padding: '11px 12px', borderRadius: C.radiusXs, border: `1px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 15, marginBottom: 8, width: '100%', boxSizing: 'border-box' },
-  button: { padding: '13px 20px', borderRadius: 999, border: 'none', background: C.primary, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', flex: 1 },
-  buttonSecondary: { padding: '13px 20px', borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.ink2, fontSize: 15, fontWeight: 600, cursor: 'pointer' },
+  button: { padding: '13px 20px', borderRadius: 0, border: 'none', background: C.primary, color: C.onFill, fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', cursor: 'pointer', flex: 1 },
+  buttonSecondary: { padding: '13px 20px', borderRadius: 0, border: `1px solid ${C.ink3}`, background: 'transparent', color: C.ink2, fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', cursor: 'pointer' },
   switchLink: { marginTop: 14, background: 'none', border: 'none', color: C.primary, fontSize: 13, cursor: 'pointer' },
   error: { color: C.danger, fontSize: 13, marginTop: 10 },
   info: { color: C.success, fontSize: 13, marginTop: 10 },
   chipGrid: { display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  chip: { padding: '8px 14px', borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.ink2, fontSize: 14, cursor: 'pointer' },
-  chipActive: { padding: '8px 14px', borderRadius: 999, border: `1px solid ${C.primary}`, background: C.primary, color: '#fff', fontSize: 14, cursor: 'pointer' },
+  chip: { padding: '8px 14px', borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: C.surface, color: C.ink2, fontSize: 14, cursor: 'pointer' },
+  chipActive: { padding: '8px 14px', borderRadius: 'var(--r-pill)', border: `1px solid ${C.primary}`, background: C.primary, color: 'var(--c-on-fill)', fontSize: 14, cursor: 'pointer' },
   optBtn: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: C.radiusXs, border: `1.5px solid ${C.line}`, background: C.surface, color: C.ink, cursor: 'pointer', textAlign: 'left' },
   optBtnActive: { border: `1.5px solid ${C.primary}`, background: `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` },
-  optCheck: { width: 22, height: 22, borderRadius: 999, border: `2px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: C.primary, flex: '0 0 auto' },
+  optCheck: { width: 22, height: 22, borderRadius: 'var(--r-pill)', border: `2px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: C.primary, flex: '0 0 auto' },
   optCheckActive: { border: `2px solid ${C.primary}` },
   statCard: { flex: 1, padding: '16px 12px', borderRadius: C.radiusXs, background: C.surface2, border: `1px solid ${C.line}`, textAlign: 'center' },
-  statValue: { fontWeight: 800, fontSize: 24, color: C.primary },
-  statLabel: { fontSize: 11.5, color: C.ink3, fontWeight: 600, marginTop: 3 },
+  statValue: { fontFamily: C.mono, fontWeight: 600, fontSize: 21, letterSpacing: '-.03em', color: C.primary },
+  statLabel: { fontFamily: C.mono, fontSize: 10.5, color: C.ink3, textTransform: 'uppercase', marginTop: 5 },
 }
 
 // ============================================================
@@ -654,11 +660,11 @@ function App() {
 // leur position:fixed plein écran existante et couvrent donc naturellement
 // cette barre — elle ne reste visible qu'au niveau racine de chaque onglet.
 const NAV = [
-  { id: 'accueil', label: 'Accueil', ic: 'home' },
-  { id: 'entrainer', label: 'Entraîner', ic: 'route' },
-  { id: 'sante', label: 'Santé', ic: 'shield' },
-  { id: 'progres', label: 'Progrès', ic: 'chart' },
-  { id: 'profil', label: 'Profil', ic: 'user' },
+  { id: 'accueil', label: 'Accueil' },
+  { id: 'entrainer', label: 'Entraîner' },
+  { id: 'sante', label: 'Santé' },
+  { id: 'progres', label: 'Progrès' },
+  { id: 'profil', label: 'Profil' },
 ]
 
 function Home({ profile, signOut, refreshProfile }) {
@@ -684,28 +690,21 @@ function Home({ profile, signOut, refreshProfile }) {
         {space === 'progres' && <ProgressSpace userId={userId} onClose={() => setSpace('accueil')} />}
         {space === 'profil' && <ProfilSpace userId={userId} profile={profile} refreshProfile={refreshProfile} signOut={signOut} onClose={() => setSpace('accueil')} />}
       </Suspense>
-      {/* Barre de navigation : l'onglet actif est marqué par une pastille
-          teintée derrière l'icône plutôt que par la seule couleur du texte,
-          plus lisible d'un coup d'œil sur fond clair. */}
-      <nav style={{ display: 'flex', flexShrink: 0, width: '100%', maxWidth: 460, margin: '0 auto', borderTop: `1px solid ${C.line}`, background: 'rgba(255,255,255,.92)', backdropFilter: 'saturate(180%) blur(12px)', WebkitBackdropFilter: 'saturate(180%) blur(12px)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        {NAV.map((n) => {
+      {/* Barre de navigation : des libellés seuls, en capitales étroites,
+          comme les touches d'un appareil. L'onglet actif est marqué par un
+          trait de tracé au-dessus de son nom, posé sur le filet de la barre. */}
+      <nav aria-label="Navigation principale" style={{ display: 'flex', flexShrink: 0, width: '100%', maxWidth: 460, margin: '0 auto', borderTop: `1px solid ${C.ink}`, background: C.bg, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {NAV.map((n, i) => {
           const active = space === n.id
           return (
-            <button key={n.id} onClick={() => setSpace(n.id)} style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              padding: '8px 0 7px', background: 'none', border: 'none', cursor: 'pointer',
-              color: active ? C.primary : C.ink3, fontWeight: active ? 700 : 600, fontSize: 10.5,
-              fontFamily: C.font,
+            <button key={n.id} onClick={() => setSpace(n.id)} aria-current={active ? 'page' : undefined} style={{
+              flex: 1, position: 'relative', padding: '15px 0 14px', background: 'none', border: 'none',
+              borderLeft: i ? `1px solid ${C.line}` : 'none', cursor: 'pointer',
+              color: active ? C.ink : C.ink3, fontFamily: C.display, fontWeight: 800, fontSize: 13,
+              textTransform: 'uppercase', letterSpacing: '.06em', lineHeight: 1,
             }}>
-              <span style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 42, height: 26, borderRadius: 999,
-                background: active ? `color-mix(in srgb, ${C.primary} 13%, #fff)` : 'transparent',
-                transition: 'background .2s ease',
-              }}>
-                <Icon name={n.ic} size={19} />
-              </span>
-              <span>{n.label}</span>
+              <span aria-hidden="true" style={{ position: 'absolute', top: -1, left: 0, right: 0, height: 3, background: active ? C.trace : 'transparent', transition: 'background .2s ease' }} />
+              {n.label}
             </button>
           )
         })}

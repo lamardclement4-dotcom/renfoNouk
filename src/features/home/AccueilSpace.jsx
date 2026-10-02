@@ -1,10 +1,12 @@
 import React, { useState, lazy } from 'react'
-import { C, Icon, Pill, MODULE_TINTS, isoToday } from '../health/kit'
+import { C, Icon, Ring, MODULE_TINTS, isoToday } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
-import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro } from '../train/renfoIntel'
+import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
+import { neededHours } from '../health/sleepIntel'
 import { HealthScoreCard, PeakHomeCard } from '../progress/cards'
+import { weekTrace, traceGeometry } from './weekTrace'
 
 // Ouverts uniquement sur une action (une tuile, une recommandation) : rien
 // de tout cela n'est nécessaire au premier affichage de l'accueil. La
@@ -13,6 +15,18 @@ const TrainSpace = lazy(() => import('../train/TrainSpace'))
 const HealthHome = lazy(() => import('../health/HealthHome'))
 
 const h = React.createElement
+
+// Les nombres s'écrivent avec une virgule, et les milliers avec une espace
+// fine insécable, comme sur un afficheur.
+const fr = (v) => String(v).replace('.', ',')
+const milliers = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
+function heures(x) {
+  const hh = Math.floor(x)
+  const mm = Math.round((x - hh) * 60)
+  if (mm === 60) return (hh + 1) + ' h'
+  return mm ? `${hh} h ${String(mm).padStart(2, '0')}` : hh + ' h'
+}
 
 function nextPlannedSession(db) {
   const sessions = db.planningSessions || []
@@ -29,7 +43,7 @@ function getSportInfo(id) {
   return sp ? { label: sp.label, ic: sp.ic } : { label: 'Séance', ic: 'calendar' }
 }
 
-// Choisit ce que montre la carte "hero" : séance de programme correctif
+// Choisit ce que montre le bloc « À faire » : séance de programme correctif
 // non faite, séance planifiée aujourd'hui (Calendrier), les deux à la fois,
 // ou une suggestion générique si rien n'est en cours.
 function pickHeroContent(db) {
@@ -58,65 +72,93 @@ function describeSession(sportLabel, exercises) {
   return names.slice(0, 2).join(' · ') + ` + ${names.length - 2} autre${names.length - 2 > 1 ? 's' : ''}`
 }
 
-function renderTwinCard({ tint, icon, eyebrow, title, meta, onClick }) {
-  return h('button', {
-    onClick,
-    style: { display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radiusSm, border: `1.5px solid color-mix(in srgb, ${tint} 28%, ${C.line})`, background: `color-mix(in srgb, ${tint} 10%, ${C.surface})`, cursor: 'pointer' },
-  },
-    h('div', { style: { width: 46, height: 46, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${tint} 16%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-      h(Icon, { name: icon, size: 21, color: tint })),
-    h('div', { style: { flex: 1, minWidth: 0 } },
-      h('div', { style: { fontSize: 12, color: tint, fontWeight: 700 } }, eyebrow),
-      h('div', { style: { fontFamily: C.font, fontSize: 16.5, fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, title),
-      h('div', { style: { fontSize: 13, color: C.ink3, marginTop: 2 } }, meta)),
-    h(Icon, { name: 'arrow', size: 18, color: C.ink3, style: { flex: '0 0 auto' } }))
+// Intitulé de section : capitales étroites et filet fin, comme les
+// rubriques d'une fiche de mesure. Un repère à chasse fixe peut s'y ajouter.
+function Titre(label, repere) {
+  return h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, fontFamily: C.display, fontSize: 15, fontWeight: 800, color: C.ink2, textTransform: 'uppercase', letterSpacing: '.07em', margin: '28px 0 12px', paddingBottom: 5, borderBottom: `1px solid ${C.line}` } },
+    h('span', null, label),
+    repere ? h('span', { style: { fontFamily: C.mono, fontSize: 10, fontWeight: 400, letterSpacing: 0, color: C.ink3 } }, repere) : null)
 }
 
-function renderHeroCard(heroInfo, onOpen, onPlanner) {
-  if (heroInfo.kind === 'planned') {
+// ------------------------------------------------------------
+// La courbe de la semaine, imprimée sans cadre sur le papier : la zone
+// habituelle en bande, la charge en tracé qui s'écrit, un repère carré par
+// jour (plein les jours de séance), et le réticule sur aujourd'hui.
+// ------------------------------------------------------------
+function TraceChart({ trace }) {
+  const W = 340, H = 158
+  const g = traceGeometry(trace, { width: W, height: H, left: 8, right: 8, top: 28, bottom: 24 })
+  const pts = g.points
+  const n = pts.length
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ',' + p[1]).join(' ')
+  const last = pts[n - 1]
+  const auj = trace.days[n - 1]
+  const mono = { fontFamily: C.mono }
+  // L'étiquette de la zone se pose au-dessus de la bande, ou dessous si la
+  // courbe passe par là au début : elle ne doit jamais masquer un repère.
+  let etiquetteZone = 0
+  if (g.band) {
+    const dessus = g.band.y1 - 4, dessous = g.band.y2 + 11
+    const genant = (y) => pts.slice(0, 3).some((p) => Math.abs(p[1] - (y - 3)) < 9)
+    etiquetteZone = !genant(dessus) || genant(dessous) || dessous > g.baseline - 3 ? dessus : dessous
+  }
+  return h('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': 'Charge des 7 derniers jours, en minutes équivalentes : ' + trace.days.map((x) => x.value).join(', '), style: { display: 'block', overflow: 'visible' } },
+    g.band && h('g', null,
+      h('rect', { x: g.left, y: g.band.y1, width: g.right - g.left, height: Math.max(1, g.band.y2 - g.band.y1), style: { fill: `color-mix(in srgb, ${C.trace} 12%, transparent)` } }),
+      h('line', { x1: g.left, x2: g.right, y1: g.band.y1, y2: g.band.y1, strokeWidth: 1, strokeDasharray: '3 3', style: { stroke: C.trace, opacity: .6 } }),
+      h('line', { x1: g.left, x2: g.right, y1: g.band.y2, y2: g.band.y2, strokeWidth: 1, strokeDasharray: '3 3', style: { stroke: C.trace, opacity: .6 } }),
+      h('text', { x: g.left + 3, y: etiquetteZone, style: { ...mono, fontSize: 8.5, fill: C.ink3, letterSpacing: '.02em' } }, 'ZONE HABITUELLE')),
+    h('line', { x1: g.left, x2: g.right, y1: g.baseline, y2: g.baseline, strokeWidth: 1.2, style: { stroke: C.ink } }),
+    pts.map((p, i) => h('line', { key: 't' + i, x1: p[0], x2: p[0], y1: g.baseline, y2: g.baseline + 4, strokeWidth: 1, style: { stroke: C.ink2 } })),
+    trace.days.map((dd, i) => h('text', { key: 'l' + i, x: pts[i][0], y: g.baseline + 16, textAnchor: 'middle', style: { ...mono, fontSize: 9.5, fontWeight: dd.isToday ? 600 : 400, fill: dd.isToday ? C.ink : C.ink3 } }, dd.letter)),
+    h('line', { x1: last[0], x2: last[0], y1: g.top - 12, y2: g.baseline, strokeWidth: 1, strokeDasharray: '2 3', style: { stroke: C.ink2 } }),
+    h('text', { x: last[0], y: g.top - 16, textAnchor: 'end', style: { ...mono, fontSize: 9.5, fill: C.ink2 } }, 'AUJ. ' + milliers(auj.value)),
+    trace.empty
+      ? h('text', { x: W / 2, y: g.baseline - 30, textAnchor: 'middle', style: { fontFamily: C.font, fontSize: 12, fill: C.ink3 } }, 'La courbe s’écrit à ta première séance réalisée.')
+      : null,
+    // Le tracé s'écrit de gauche à droite, comme sous la plume d'un
+    // enregistreur ; les repères apparaissent au passage de la plume.
+    h('path', { d, fill: 'none', strokeWidth: 2.2, strokeLinejoin: 'round', pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1, style: { stroke: C.trace, animation: 'traceDraw 1.3s cubic-bezier(.3,.6,.3,1) .1s forwards' } }),
+    pts.map((p, i) => {
+      const seance = trace.days[i].sessions > 0
+      return h('rect', { key: 'm' + i, x: p[0] - 3.5, y: p[1] - 3.5, width: 7, height: 7, strokeWidth: 1.5, style: { fill: seance ? C.trace : C.bg, stroke: C.trace, animation: `fadeIn .25s ease ${(0.1 + 1.3 * i / Math.max(1, n - 1)).toFixed(2)}s backwards` } })
+    }))
+}
+
+// Cadran d'un relevé du jour : l'aiguille monte jusqu'à la valeur.
+function Cadran({ label, value, unit, progress, sub, color, onClick }) {
+  return h('button', { onClick, style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', color: C.ink } },
+    h(Ring, { size: 98, stroke: 6, progress, color, track: C.surface2 },
+      h('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1, marginTop: 8, whiteSpace: 'nowrap' } }, value),
+      unit ? h('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3, marginTop: 4 } }, unit) : null),
+    h('div', { style: { fontFamily: C.display, fontSize: 14.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', marginTop: -6 } }, label),
+    h('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3, marginTop: 3, textAlign: 'center' } }, sub))
+}
+
+// Une séance à faire, sur une étiquette posée sur le papier.
+function LigneSeance({ eyebrow, title, meta, tint = C.trace, onClick }) {
+  return h('button', { onClick, style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '13px 14px', background: C.surface, border: `1px solid ${C.line}`, borderTop: `2px solid ${C.ink}`, cursor: 'pointer', color: C.ink, marginBottom: 10 } },
+    h('div', { style: { flex: 1, minWidth: 0 } },
+      h('div', { style: { fontFamily: C.mono, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', color: tint } }, eyebrow),
+      h('div', { style: { fontFamily: C.display, fontSize: 23, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, marginTop: 5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } }, title),
+      meta ? h('div', { style: { fontFamily: C.mono, fontSize: 10.5, color: C.ink2, marginTop: 6 } }, meta) : null),
+    h('span', { style: { flex: '0 0 auto', fontFamily: C.display, fontSize: 15, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: tint, whiteSpace: 'nowrap' } }, 'Ouvrir →'))
+}
+
+function seancesAFaire(heroInfo, onOpen, onPlanner) {
+  const rows = []
+  if (heroInfo.session) {
+    const s = heroInfo.session
+    rows.push(h(LigneSeance, { key: 'seance', eyebrow: heroInfo.kind === 'suggestion' ? 'Suggestion du jour' : 'Ta prochaine séance', title: s.title, meta: `${s.mins} min · ${sessionExercises(s).length} mouvements`, onClick: () => onOpen(s.id) }))
+  }
+  if (heroInfo.planned) {
     const p = heroInfo.planned, sp = heroInfo.sportInfo
     const mins = dureeToMins(p.duree)
-    const metaParts = [p.heure, mins ? mins + ' min' : null].filter(Boolean).join(' · ')
-    const tint = MODULE_TINTS.hydratation
-    return h('button', {
-      onClick: onPlanner,
-      style: { display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radiusSm, border: `1.5px solid color-mix(in srgb, ${tint} 28%, ${C.line})`, background: `color-mix(in srgb, ${tint} 10%, ${C.surface})`, marginBottom: 18, cursor: 'pointer' },
-    },
-      h('div', { style: { width: 46, height: 46, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${tint} 16%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-        h(Icon, { name: sp.ic, size: 21, color: tint })),
-      h('div', { style: { flex: 1, minWidth: 0 } },
-        h('div', { style: { fontSize: 12, color: tint, fontWeight: 700 } }, "Prévu aujourd'hui · à suivre"),
-        h('div', { style: { fontFamily: C.font, fontSize: 16.5, fontWeight: 700, marginTop: 2 } }, describeSession(sp.label, p.exercises)),
-        metaParts && h('div', { style: { fontSize: 13, color: C.ink3, marginTop: 2 } }, sp.label + (metaParts ? ' · ' + metaParts : ''))),
-      h(Icon, { name: 'arrow', size: 20, color: C.ink3, style: { flex: '0 0 auto' } }))
+    rows.push(h(LigneSeance, { key: 'prevue', eyebrow: "Prévu aujourd'hui · à suivre", title: describeSession(sp.label, p.exercises), meta: [sp.label, p.heure, mins ? mins + ' min' : null].filter(Boolean).join(' · '), tint: MODULE_TINTS.hydratation, onClick: onPlanner }))
   }
-  const hero = heroInfo.session
-  const pillLabel = (heroInfo.kind === 'program' || heroInfo.kind === 'both') ? 'Ta prochaine séance' : 'Suggestion du jour'
-  const heroStyle = heroInfo.kind === 'both'
-    ? { position: 'relative', minHeight: 180, padding: 22, borderRadius: `${C.radius}px ${C.radius}px 0 0`, background: C.primary, marginBottom: 0, boxShadow: `0 18px 40px -22px ${C.primary}`, textAlign: 'left', width: '100%', border: 'none', cursor: 'pointer' }
-    : { position: 'relative', minHeight: 210, padding: 22, borderRadius: C.radius, background: C.primary, marginBottom: 18, boxShadow: `0 18px 40px -22px ${C.primary}`, textAlign: 'left', width: '100%', border: 'none', cursor: 'pointer' }
-  return h('button', { onClick: () => onOpen(hero.id), style: heroStyle },
-    h('div', { style: { position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18 } },
-      h(Pill, { style: { background: 'rgba(255,255,255,.18)', color: '#fff' } }, h(Icon, { name: 'spark', size: 13 }), ' ' + pillLabel),
-      h('div', { style: { textAlign: 'left' } },
-        h('div', { style: { fontFamily: C.font, fontSize: 32, fontWeight: 700, color: '#fff', lineHeight: 1.04, letterSpacing: '-.02em' } }, hero.title),
-        h('div', { style: { color: 'rgba(255,255,255,.85)', fontSize: 14.5, marginTop: 6, display: 'flex', gap: 14, alignItems: 'center' } },
-          h('span', { style: { display: 'inline-flex', gap: 5, alignItems: 'center' } }, h(Icon, { name: 'clock', size: 15 }), ' ', hero.mins, ' min'),
-          h('span', { style: { display: 'inline-flex', gap: 5, alignItems: 'center' } }, h(Icon, { name: 'layers', size: 15 }), ' ', sessionExercises(hero).length, ' mvts'))),
-      h('span', { style: { position: 'absolute', right: 0, bottom: 0, width: 54, height: 54, borderRadius: 999, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px -8px rgba(0,0,0,.4)' } },
-        h(Icon, { name: 'play', size: 22, color: C.primary }))))
+  return rows
 }
 
-function renderBothEqual(heroInfo, onOpen, onPlanner) {
-  const hero = heroInfo.session, planned = heroInfo.planned, sp = heroInfo.sportInfo
-  const mins = dureeToMins(planned.duree)
-  return h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 } },
-    renderTwinCard({ tint: MODULE_TINTS.renfo, icon: 'spark', eyebrow: 'Ta prochaine séance', title: hero.title, meta: hero.mins + ' min · ' + sessionExercises(hero).length + ' mvts', onClick: () => onOpen(hero.id) }),
-    renderTwinCard({ tint: MODULE_TINTS.hydratation, icon: sp.ic, eyebrow: "Prévu aujourd'hui · à suivre", title: describeSession(sp.label, planned.exercises), meta: sp.label + ((planned.heure || mins) ? ' · ' + [planned.heure, mins ? mins + ' min' : null].filter(Boolean).join(' · ') : ''), onClick: onPlanner }))
-}
-
-// Alerte visible seulement en cas de charge ACWR "Vigilance renforcée" —
-// mêmes seuils que le pilier Charge et le Profil (inferUserLevel).
 // Rétrospective affichée chaque lundi : analyse précise (pas juste des
 // chiffres) de la semaine qui vient de se terminer — entraînement,
 // nutrition, hydratation, compléments. Fermeture locale seulement (pas
@@ -127,34 +169,49 @@ function MondayRetroCard({ db, onOpen }) {
   if (dismissed || new Date().getDay() !== 1) return null
   const r = mondayRetro(db)
   if (!r.training.count && !r.nutrition && !r.hydration) return null
-  return h('div', { onClick: onOpen, style: { padding: 20, borderRadius: C.radius, background: '#3f3a5c', color: '#fff', marginBottom: 16, boxShadow: '0 10px 24px -12px #3f3a5c', cursor: onOpen ? 'pointer' : 'default' } },
-    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 } },
-      h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-        h('div', { style: { width: 36, height: 36, borderRadius: 11, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-          h(Icon, { name: 'chart', size: 18, color: '#fff' })),
-        h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15.5 } }, 'Rétrospective de la semaine')),
-      h('button', { onClick: (e) => { e.stopPropagation(); setDismissed(true) }, 'aria-label': 'Fermer', style: { background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', cursor: 'pointer', padding: 4 } },
-        h(Icon, { name: 'close', size: 16, color: 'rgba(255,255,255,.7)' }))),
-    r.lines.map((line, i) => h('p', { key: i, style: { fontSize: 13, lineHeight: 1.55, opacity: 0.95, marginTop: i ? 8 : 0 } }, line)))
+  return h('div', { onClick: onOpen, style: { padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: '3px solid var(--ch4)', marginTop: 22, cursor: onOpen ? 'pointer' : 'default' } },
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 } },
+      h('div', { style: { fontFamily: C.display, fontSize: 19, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', lineHeight: 1 } }, 'Rétrospective de la semaine'),
+      h('button', { onClick: (e) => { e.stopPropagation(); setDismissed(true) }, 'aria-label': 'Fermer', style: { background: 'none', border: 'none', cursor: 'pointer', padding: 4 } },
+        h(Icon, { name: 'close', size: 16, color: C.ink3 }))),
+    r.lines.map((line, i) => h('p', { key: i, style: { fontSize: 13, lineHeight: 1.55, color: C.ink2, marginTop: i ? 8 : 0 } }, line)))
 }
 
+// Alerte visible seulement en cas de charge ACWR "Vigilance renforcée" —
+// mêmes seuils que le pilier Charge et le Profil (inferUserLevel).
 function OverloadAlert({ db, onPrevention }) {
   const r = acwrRisk(db)
   if (!r.available || r.level !== 'Vigilance renforcée') return null
   return h('button', {
     onClick: onPrevention,
-    style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: C.radiusSm, marginBottom: 16, cursor: 'pointer', background: `color-mix(in srgb, ${r.color} 12%, ${C.surface})`, border: `1.5px solid color-mix(in srgb, ${r.color} 32%, ${C.line})` },
+    style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '13px 14px', marginTop: 18, cursor: 'pointer', color: C.ink, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${r.color}` },
   },
-    h('div', { style: { width: 40, height: 40, borderRadius: 12, flex: '0 0 auto', background: `color-mix(in srgb, ${r.color} 18%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-      h(Icon, { name: 'shield', size: 20, color: r.color })),
+    h(Icon, { name: 'shield', size: 20, color: r.color, style: { flex: '0 0 auto' } }),
     h('div', { style: { flex: 1, minWidth: 0 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 14.5, color: r.color, marginBottom: 2 } }, "Charge d'entraînement élevée"),
-      h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.35 } }, 'Ratio ' + r.ratio + ' · surveille fatigue et douleurs')),
-    h(Icon, { name: 'arrow', size: 18, color: C.ink3, style: { flex: '0 0 auto' } }))
+      h('div', { style: { fontFamily: C.display, fontWeight: 800, fontSize: 17, textTransform: 'uppercase', letterSpacing: '.03em', color: r.color, marginBottom: 3 } }, "Charge d'entraînement élevée"),
+      h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.35 } }, 'Rapport ' + fr(r.ratio) + ' · surveille fatigue et douleurs')),
+    h('span', { style: { fontFamily: C.mono, color: C.ink3 } }, '→'))
 }
 
-// 3 rappels : prochaine séance planifiée, résumé nutrition/hydratation du
-// jour, charge ACWR (si assez d'historique et pas déjà signalée par OverloadAlert).
+// Ligne de liste réglée : pictogramme dans un carré au trait. Les filets
+// entre lignes viennent de la classe .liste (index.css).
+function Ligne(ic, color, title, detail, onClick, key) {
+  return h(onClick ? 'button' : 'div', {
+    key,
+    onClick, style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '11px 0', background: 'none', border: 'none', cursor: onClick ? 'pointer' : 'default', color: C.ink },
+  },
+    h('div', { style: { width: 32, height: 32, flex: '0 0 auto', border: `1.5px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      h(Icon, { name: ic, size: 16, color })),
+    h('div', { style: { flex: 1, minWidth: 0 } },
+      h('div', { style: { fontWeight: 600, fontSize: 14.5 } }, title),
+      h('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 1 } }, detail)),
+    onClick ? h('span', { style: { fontFamily: C.mono, color: C.ink3, fontSize: 13 } }, '→') : null)
+}
+const listeStyle = { background: C.surface, border: `1px solid ${C.line}`, padding: '0 12px' }
+
+// Rappels : prochaine séance planifiée, résumé nutrition/hydratation du
+// jour, routines, charge ACWR (si assez d'historique et pas déjà signalée
+// par OverloadAlert).
 function TodayInsights({ db, onPlanner, onNutrition, onRoutines }) {
   const iso = isoToday()
   const pillarList = intelPillars(db, iso)
@@ -165,17 +222,6 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines }) {
   const nextSport = next ? getSportInfo(next.sport) : null
   const nextMins = next ? dureeToMins(next.duree) : 0
 
-  const Row = (ic, color, title, detail, onClick, key) => h(onClick ? 'button' : 'div', {
-    key,
-    onClick, style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: 14, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, background: C.surface, marginBottom: 10, cursor: onClick ? 'pointer' : 'default' },
-  },
-    h('div', { style: { width: 38, height: 38, borderRadius: 11, flex: '0 0 auto', background: `color-mix(in srgb, ${color} 14%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-      h(Icon, { name: ic, size: 18, color })),
-    h('div', { style: { flex: 1, minWidth: 0 } },
-      h('div', { style: { fontWeight: 600, fontSize: 14.5 } }, title),
-      h('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 1 } }, detail)),
-    onClick && h(Icon, { name: 'arrow', size: 17, color: C.ink3, style: { flex: '0 0 auto' } }))
-
   // Les routines du jour se rappellent au même endroit que les séances
   // planifiées : c'est le seul moyen qu'elles ne soient pas oubliées, et
   // une routine oubliée ne sert à rien.
@@ -184,33 +230,36 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines }) {
   const nextDetail = next ? `${next.date === iso ? "Aujourd'hui" : next.date}${next.heure ? ' · ' + next.heure : ''}${nextMins ? ' · ' + nextMins + ' min' : ''}` : 'Aucune séance planifiée'
   const nextTitle = next ? (nextSport ? nextSport.label : 'Séance planifiée') : 'Planifier une séance'
 
-  return h('div', { style: { marginTop: 22 } },
-    h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 10px' } }, "Aujourd'hui"),
-    !(next && next.date === iso) && Row('calendar', C.primary, nextTitle, nextDetail, onPlanner),
-    (nutPillar || hydPillar) && Row('apple', C.carb, 'Nutrition & hydratation', [nutPillar && nutPillar.status === 'ok' ? nutPillar.detail : null, hydPillar && hydPillar.status === 'ok' ? hydPillar.detail : null].filter(Boolean).join(' · ') || "Rien enregistré aujourd'hui", onNutrition),
+  const rappels = [
+    !(next && next.date === iso) && Ligne('calendar', C.primary, nextTitle, nextDetail, onPlanner, 'next'),
+    (nutPillar || hydPillar) && Ligne('apple', C.carb, 'Nutrition & hydratation', [nutPillar && nutPillar.status === 'ok' ? nutPillar.detail : null, hydPillar && hydPillar.status === 'ok' ? hydPillar.detail : null].filter(Boolean).join(' · ') || "Rien enregistré aujourd'hui", onNutrition, 'nut'),
+    acwr.available && acwr.level !== 'Vigilance renforcée' && Ligne('chart', acwr.color, 'Charge : ' + acwr.level, `Rapport ${fr(acwr.ratio)} · ${acwr.acuteMin} min (7 j) contre ${acwr.chronicAvgWeek} min/sem. en moyenne`, onPlanner, 'acwr'),
+  ].filter(Boolean)
+
+  return h('div', null,
+    rappels.length ? h('div', null, Titre('Rappels'), h('div', { className: 'liste', style: listeStyle }, rappels)) : null,
     // Les routines ne sont pas des séances planifiées : elles se répètent,
     // se cochent, et ne coûtent que quelques minutes. Les mêler aux rappels
     // du jour les faisait passer pour des séances, et une routine annoncée
     // comme une séance décourage autant qu'elle rappelle. Elles ont donc leur
     // propre bloc, sous leur propre titre.
-    routines.length ? h('div', { key: 'routines', style: { marginTop: 18 } },
-      h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 10px' } },
-        'Tes routines du jour', routinesLeft.length ? ` · ${routinesLeft.length} à faire` : ' · terminées'),
-      routines.map((r) => Row(
-        r.done ? 'check' : kindOf(r.kind).icon,
-        r.done ? C.success : '#7d9471',
-        r.name,
-        `${kindOf(r.kind).label} · ${r.keys.length} mouvement${r.keys.length > 1 ? 's' : ''} · ~${r.mins} min${r.done ? ' · faite' : ''}`,
-        onRoutines, r.id,
-      ))) : null,
-    acwr.available && acwr.level !== 'Vigilance renforcée' && Row('chart', acwr.color, 'Charge : ' + acwr.level, `Ratio ${acwr.ratio} · ${acwr.acuteMin} min (7j) vs ${acwr.chronicAvgWeek} min/sem moy.`, onPlanner))
+    routines.length ? h('div', { key: 'routines' },
+      Titre('Tes routines du jour', routinesLeft.length ? `${routinesLeft.length} à faire` : 'terminées'),
+      h('div', { className: 'liste', style: listeStyle },
+        routines.map((r) => Ligne(
+          r.done ? 'check' : kindOf(r.kind).icon,
+          C.success,
+          r.name,
+          `${kindOf(r.kind).label} · ${r.keys.length} mouvement${r.keys.length > 1 ? 's' : ''} · ~${r.mins} min${r.done ? ' · faite' : ''}`,
+          onRoutines, r.id,
+        )))) : null)
 }
 
 // ============================================================
-// "Accueil" — porté depuis l'écran Home de l'ancienne app : salutation,
-// carte hero (séance du jour), stats de la semaine, alerte de charge,
-// score santé, rappels du jour, prochain objectif pic de forme, CTA
-// test de mobilité. Remplace le placeholder brut de App.jsx.
+// Accueil — l'enregistreur. En premier, la courbe de charge de la semaine
+// imprimée sur le papier ; dessous, les cadrans des relevés du jour
+// (sommeil, eau, protéines), la séance à faire, puis les rappels, le score
+// santé et le prochain objectif.
 // ============================================================
 export default function AccueilSpace({ userId, profile, onProfil }) {
   const { db, loading } = useNutritionStore(userId)
@@ -219,7 +268,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   const [healthTile, setHealthTile] = useState(null)
 
   if (loading) {
-    return h('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font } }, 'Chargement...')
+    return h('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.mono, fontSize: 12, textTransform: 'uppercase' } }, 'Chargement...')
   }
 
   if (tile) return h(TrainSpace, { userId, initialTile: tile, embedded: true, onClose: () => setTile(null) })
@@ -241,6 +290,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     setHealthTile(dest)
   }
 
+  const iso = isoToday()
   const heroInfo = pickHeroContent(db)
   const totals = trainingTotals(db)
   const streak = totals.streak
@@ -250,55 +300,92 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   const initial = (firstName || '?').trim().charAt(0).toUpperCase()
 
   const now = new Date()
-  const J = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
-  const M = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
-  const dateLabel = (() => { const x = `${J[now.getDay()]} ${now.getDate()} ${M[now.getMonth()]}`; return x.charAt(0).toUpperCase() + x.slice(1) })()
+  const J = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
+  const p2 = (x) => String(x).padStart(2, '0')
+  const repereDate = `${J[now.getDay()]} ${p2(now.getDate())}.${p2(now.getMonth() + 1)}`
   const hr = now.getHours()
   const greeting = hr < 12 ? 'Bonjour' : hr < 18 ? 'Bon après-midi' : 'Bonsoir'
 
+  // ─── en-tête : marque et date en repère, salutation en étiquette ───
+  const header = h('div', null,
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 7, borderBottom: `2px solid ${C.ink}` } },
+      h('span', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.1em', color: C.trace } }, 'Renfo'),
+      h('span', { style: { fontFamily: C.mono, fontSize: 10.5, color: C.ink2, textTransform: 'uppercase' } }, repereDate)),
+    h('div', { style: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 } },
+      h('h1', { style: { fontFamily: C.display, fontSize: 34, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em', lineHeight: .92, margin: 0, color: C.ink } }, greeting, firstName ? ', ' + firstName : ''),
+      h('button', { onClick: onProfil, 'aria-label': 'Profil', style: { width: 40, height: 40, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.ink}`, color: C.ink, fontFamily: C.display, fontWeight: 800, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } }, initial)))
+
+  // ─── la courbe de la semaine ───
+  const trace = weekTrace(db, { today: iso })
+  const acwr = acwrRisk(db)
+  const lecture = acwr.available
+    ? h('span', null, 'Rapport aigu/chronique ', h('span', { style: { fontFamily: C.mono, fontWeight: 600, color: C.ink } }, fr(acwr.ratio)), ' — ', h('span', { style: { color: acwr.color, fontWeight: 600 } }, acwr.level.toLowerCase()))
+    : acwr.reason === 'not_enough_history'
+      ? `Zone habituelle tracée après 14 jours d’historique (${acwr.daysOfHistory} pour l’instant).`
+      : acwr.reason === 'no_data' ? 'Aucune séance réalisée pour l’instant.' : 'Pas encore de charge habituelle.'
+
   const statCards = [
-    { ic: 'flame', big: streak, lab: 'jours de suite' },
-    { ic: 'clock', big: totalMins, lab: 'min cette semaine' },
-    { ic: 'check', big: doneCount, lab: 'séances faites' },
-  ].map((s, i) => h('button', { key: i, onClick: () => setTile('planner'), style: { textAlign: 'center', width: '100%', background: 'none', border: 'none', borderLeft: i > 0 ? `1px solid ${C.line}` : 'none', cursor: 'pointer', padding: '0 4px' } },
-    h(Icon, { name: s.ic, size: 18, color: C.primary }),
-    h('div', { style: { fontSize: 24, fontWeight: 700, lineHeight: 1, marginTop: 8 } }, s.big),
-    h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4, fontWeight: 600 } }, s.lab)))
+    { big: streak, lab: 'jours de suite' },
+    { big: totalMins, lab: 'min cette semaine' },
+    { big: doneCount, lab: 'séances faites' },
+  ].map((s, i) => h('button', { key: i, onClick: () => setTile('planner'), style: { textAlign: 'left', background: 'none', border: 'none', borderLeft: i ? `1px solid ${C.line}` : 'none', padding: '11px 10px 10px', cursor: 'pointer', color: C.ink } },
+    h('div', { style: { fontFamily: C.mono, fontSize: 20, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, s.big),
+    h('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3, textTransform: 'uppercase', marginTop: 6, lineHeight: 1.3 } }, s.lab)))
 
-  const mobilityCta = !db.mobility && h('button', {
-    onClick: () => setTile('mobility'),
-    style: { display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, background: C.surface, marginTop: 22, cursor: 'pointer' },
-  },
-    h('div', { style: { width: 46, height: 46, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-      h(Icon, { name: 'target', size: 23, color: C.primary })),
-    h('div', { style: { flex: 1 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 16 } }, 'Test de mobilité'),
-      h('div', { style: { fontSize: 13, color: C.ink3, marginTop: 2 } }, '9 questions · identifie tes zones raides et génère ton programme')),
-    h(Icon, { name: 'arrow', size: 20, color: C.ink3, style: { flex: '0 0 auto' } }))
+  const charge = h('section', { 'aria-label': 'Charge des 7 derniers jours' },
+    Titre('Charge · 7 jours', 'glissants'),
+    h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+      h('span', { style: { fontFamily: C.mono, fontSize: 40, fontWeight: 600, letterSpacing: '-.04em', lineHeight: 1 } }, milliers(trace.acute)),
+      h('span', { style: { fontFamily: C.mono, fontSize: 12, color: C.ink3 } }, 'min éq.')),
+    h('div', { style: { fontSize: 13, color: C.ink2, marginTop: 7, lineHeight: 1.4 } }, lecture),
+    h('div', { style: { marginTop: 12 } }, h(TraceChart, { trace })),
+    h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Minutes d’effort sur 7 jours glissants, pondérées par l’effort ressenti et la chaleur.'),
+    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: `1px solid ${C.ink}`, borderBottom: `1px solid ${C.line}`, marginTop: 14 } }, statCards))
 
-  const header = h('div', { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 } },
-    h('div', null,
-      h('div', { style: { color: C.ink3, fontSize: 14, fontWeight: 600 } }, dateLabel),
-      h('h1', { style: { fontFamily: C.font, fontSize: 27, fontWeight: 700, letterSpacing: '-.02em', marginTop: 2 } }, greeting, ', ', firstName)),
-    h('button', { onClick: onProfil, 'aria-label': 'Profil', style: { width: 44, height: 44, borderRadius: 999, background: C.ink, color: C.surface, fontFamily: C.font, fontWeight: 700, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', flex: '0 0 auto' } }, initial))
+  // ─── relevés du jour, en cadrans ───
+  const nuit = db.sleepLog && typeof db.sleepLog === 'object' && !Array.isArray(db.sleepLog) ? db.sleepLog[iso] : null
+  const dormi = nuit ? num(nuit.hours) : 0
+  let cibleSommeil = neededHours(totalMins)
+  const rt = db.sleepRoutine
+  if (rt && rt.enabled && rt.bedtime && rt.wake) {
+    const toMin = (t) => { const a = ('' + t).split(':'); return (parseInt(a[0], 10) || 0) * 60 + (parseInt(a[1], 10) || 0) }
+    let diff = toMin(rt.wake) - toMin(rt.bedtime); if (diff <= 0) diff += 1440
+    if (diff > 0 && diff < 1440) cibleSommeil = diff / 60
+  }
+  const eau = hydroDay(db, iso).ml
+  const cibleEau = hydricTargetMl(db) || 2000
+  const prot = nutritionDay(db, iso).p
+  const t = db.foodTargets
+  const cibleProt = t ? (num(t.prot) || num(t.p)) : 0
+  const litres = (ml) => fr((Math.max(0, ml) / 1000).toFixed(1))
 
-  const hero = heroInfo.kind === 'both'
-    ? renderBothEqual(heroInfo, setOpenId, () => setTile('planner'))
-    : renderHeroCard(heroInfo, setOpenId, () => setTile('planner'))
+  const cadrans = h('section', { 'aria-label': 'Relevés du jour' },
+    Titre('Relevés du jour'),
+    h('div', { style: { display: 'flex', gap: 6 } },
+      h(Cadran, { label: 'Sommeil', value: dormi ? heures(dormi) : '—', progress: cibleSommeil ? dormi / cibleSommeil : 0, color: MODULE_TINTS.sommeil, sub: !dormi ? 'à saisir' : dormi >= cibleSommeil ? 'cible atteinte' : 'cible ' + heures(cibleSommeil), onClick: () => setHealthTile('sommeil') }),
+      h(Cadran, { label: 'Eau', value: litres(eau), unit: 'L', progress: eau / cibleEau, color: MODULE_TINTS.hydratation, sub: eau >= cibleEau ? 'cible atteinte' : 'reste ' + litres(cibleEau - eau) + ' L', onClick: () => setHealthTile('hydratation') }),
+      h(Cadran, { label: 'Protéines', value: String(Math.round(prot)), unit: 'g', progress: cibleProt ? prot / cibleProt : 0, color: C.protein, sub: !cibleProt ? 'sans objectif' : prot >= cibleProt ? 'cible atteinte' : 'reste ' + Math.round(cibleProt - prot) + ' g', onClick: () => setHealthTile('nutrition') })))
 
-  const statRow = h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', marginBottom: 22, background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, padding: '16px 0' } }, statCards)
+  // ─── séance à faire ───
+  const aFaire = h('section', { 'aria-label': 'Séance à faire' },
+    Titre('À faire'),
+    seancesAFaire(heroInfo, setOpenId, () => setTile('planner')))
 
-  const content = h('div', { style: { maxWidth: 460, margin: '0 auto', padding: '20px 18px 32px' } },
-    h('div', { style: { fontSize: 15, color: C.primary, fontWeight: 700, marginBottom: 14 } }, 'Renfo'),
+  const mobilityCta = !db.mobility && h('div', { className: 'liste', style: { ...listeStyle, marginTop: 22 } },
+    Ligne('target', C.primary, 'Test de mobilité', '9 questions · identifie tes zones raides et génère ton programme', () => setTile('mobility'), 'mob'))
+
+  const content = h('div', { style: { maxWidth: 460, margin: '0 auto', padding: '16px 18px 36px' } },
     header,
-    hero,
-    statRow,
+    charge,
+    cadrans,
+    aFaire,
     h(MondayRetroCard, { db, onOpen: () => setTile('planner') }),
     h(OverloadAlert, { db, onPrevention: () => setHealthTile('prevention') }),
-    h(HealthScoreCard, { db, onAction: handleAction }),
+    h('div', { style: { marginTop: 22 } }, h(HealthScoreCard, { db, onAction: handleAction })),
     h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition'), onRoutines: () => setTile('routines') }),
-    h(PeakHomeCard, { db, onPeak: () => setTile('peak') }),
+    h('div', { style: { marginTop: 22 } }, h(PeakHomeCard, { db, onPeak: () => setTile('peak') })),
     mobilityCta)
 
-  return h('div', { style: { flex: 1, overflowY: 'auto', background: C.bg, fontFamily: C.font } }, content)
+  // Le papier défile avec le contenu, comme une bande d'enregistreur.
+  return h('div', { style: { flex: 1, overflowY: 'auto', backgroundColor: C.bg, backgroundImage: 'var(--g-paper)', backgroundSize: 'var(--g-paper-size)', backgroundPosition: '-1px -1px', backgroundAttachment: 'local', fontFamily: C.font, color: C.ink } }, content)
 }

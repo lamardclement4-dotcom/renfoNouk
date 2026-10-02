@@ -40,8 +40,8 @@ export function generateProgram(zones, score) {
 }
 
 export const RENFO_GOALS = {
-  force: { id: 'force', label: 'Force', tint: '#bf6a40', icon: 'bolt', desc: 'Charges plus lourdes, moins de répétitions, technique soignée', sessions: ['renfo-bas', 'renfo-post', 'renfo-haut', 'renfo-mb'] },
-  tonus: { id: 'tonus', label: 'Tonification', tint: '#a85a36', icon: 'target', desc: 'Volume modéré sur l’ensemble du corps, gainage inclus', sessions: ['renfo-core', 'renfo-bas', 'renfo-haut', 'renfo-core2'] },
-  endurance: { id: 'endurance', label: 'Endurance musculaire', tint: '#7d9471', icon: 'heart', desc: 'Circuits dynamiques, peu de repos, tout le corps', sessions: ['full-circuit', 'full-elast', 'renfo-full', 'full-mb'] },
+  force: { id: 'force', label: 'Force', tint: 'var(--ch1)', icon: 'bolt', desc: 'Charges plus lourdes, moins de répétitions, technique soignée', sessions: ['renfo-bas', 'renfo-post', 'renfo-haut', 'renfo-mb'] },
+  tonus: { id: 'tonus', label: 'Tonification', tint: 'var(--ch1)', icon: 'target', desc: 'Volume modéré sur l’ensemble du corps, gainage inclus', sessions: ['renfo-core', 'renfo-bas', 'renfo-haut', 'renfo-core2'] },
+  endurance: { id: 'endurance', label: 'Endurance musculaire', tint: 'var(--c-success)', icon: 'heart', desc: 'Circuits dynamiques, peu de repos, tout le corps', sessions: ['full-circuit', 'full-elast', 'renfo-full', 'full-mb'] },
 }
 export const RENFO_GOAL_ORDER = ['force', 'tonus', 'endurance']

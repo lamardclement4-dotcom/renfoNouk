@@ -51,7 +51,7 @@ const NORMS = {
   },
 }
 
-const LEVEL_COLORS = { Excellent: 'var(--c-success)', Bien: '#7a9a4a', Acceptable: 'var(--c-warn)', Faible: '#c47a3a', 'Très faible': '#c4503a' }
+const LEVEL_COLORS = { Excellent: 'var(--c-success)', Bien: 'var(--c-success)', Acceptable: 'var(--c-warn)', Faible: 'var(--c-warn)', 'Très faible': 'var(--c-danger)' }
 const LEVEL_SCORES = { Excellent: 5, Bien: 4, Acceptable: 3, Faible: 2, 'Très faible': 1 }
 
 function makeInterpret(testId) {
@@ -71,19 +71,19 @@ function makeInterpret(testId) {
 }
 
 export const TESTS_DEF = [
-  { id: 'cooper', label: 'Test de Cooper', unit: 'm', icon: 'route', color: '#e07b54', input: { type: 'number', min: 500, max: 5000, step: 50, placeholder: 'Distance en mètres' },
+  { id: 'cooper', label: 'Test de Cooper', unit: 'm', icon: 'route', color: 'var(--c-trace)', input: { type: 'number', min: 500, max: 5000, step: 50, placeholder: 'Distance en mètres' },
     protocol: "Courir 12 minutes à allure maximale sur terrain plat. Mesurer la distance. VO₂max ≈ (d – 504,9) / 44,73. Source : Cooper (1968), ACSM Guidelines (2021).",
     interpret: makeInterpret('cooper'), vo2max: (val) => Math.round((Number(val) - 504.9) / 44.73) },
-  { id: 'gai_max', label: 'Gainage ventral max', unit: 's', icon: 'layers', color: '#5b6fa5', input: { type: 'number', min: 0, max: 600, step: 5, placeholder: 'Durée en secondes' },
+  { id: 'gai_max', label: 'Gainage ventral max', unit: 's', icon: 'layers', color: 'var(--ch4)', input: { type: 'number', min: 0, max: 600, step: 5, placeholder: 'Durée en secondes' },
     protocol: 'Position planche avant-bras, corps aligné. Maintenir le plus longtemps possible sans compensation. Source : McGill (2002), NSCA.',
     interpret: makeInterpret('gai_max') },
-  { id: 'squat30', label: 'Squats 30 secondes', unit: 'rép.', icon: 'bolt', color: '#7a5fa5', input: { type: 'number', min: 0, max: 80, step: 1, placeholder: 'Nombre de répétitions' },
+  { id: 'squat30', label: 'Squats 30 secondes', unit: 'rép.', icon: 'bolt', color: 'var(--ch3)', input: { type: 'number', min: 0, max: 80, step: 1, placeholder: 'Nombre de répétitions' },
     protocol: 'Pieds écartés, descendre cuisses parallèles au sol, remonter complet. Maximum en 30s. Source : YMCA, Rikli & Jones (2013).',
     interpret: makeInterpret('squat30') },
   { id: 'souplesse', label: 'Sit & Reach', unit: 'cm', icon: 'target', color: 'var(--c-success)', input: { type: 'number', min: -30, max: 40, step: 1, placeholder: 'cm (+ = au-delà des pieds)' },
     protocol: 'Assis, jambes tendues, se pencher le plus loin possible. + = au-delà des pieds, - = en-deçà. Source : ACSM (2021), Wells & Dillon (1952).',
     interpret: makeInterpret('souplesse') },
-  { id: 'push30', label: 'Pompes 30 secondes', unit: 'rép.', icon: 'dumbbell', color: '#a55b5b', input: { type: 'number', min: 0, max: 80, step: 1, placeholder: 'Nombre de répétitions' },
+  { id: 'push30', label: 'Pompes 30 secondes', unit: 'rép.', icon: 'dumbbell', color: 'var(--c-danger)', input: { type: 'number', min: 0, max: 80, step: 1, placeholder: 'Nombre de répétitions' },
     protocol: "Pompes standard ou sur genoux. Descendre jusqu'au contact de poitrine, remonter bras tendus. Maximum en 30s. Source : YMCA, NSCA.",
     interpret: makeInterpret('push30') },
 ]

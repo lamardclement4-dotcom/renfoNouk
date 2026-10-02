@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { Icon, C, GRADIENTS } from '../health/kit'
+import { Icon, C } from '../health/kit'
 import { DRINK_CATEGORIES, scaleDrink, searchDrinks } from '../nutrition/drinksData'
 import { hydroAnalysis, CAF_HALF_LIFE_H } from './hydroIntel'
 
@@ -57,7 +57,7 @@ const QUICK = [
 ]
 
 function chipBtn(active, color) {
-  return { padding: '7px 13px', borderRadius: 999, fontWeight: 700, fontSize: 12.5, cursor: 'pointer',
+  return { padding: '7px 13px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer',
     border: '1.5px solid ' + (active ? color : LINE),
     background: active ? `color-mix(in srgb, ${color} 12%, ${SURFACE})` : SURFACE,
     color: active ? color : INK2, transition: 'all .15s ease' }
@@ -66,8 +66,8 @@ const ST = {
   secLab: { fontSize: 11.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.04em', margin: '18px 2px 10px' },
   card: { background: SURFACE, border: `1px solid ${LINE}`, borderRadius: RADIUS_SM, padding: 14, marginBottom: 10 },
   logEntry: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: SURFACE, border: `1px solid ${LINE}`, borderRadius: RADIUS_SM, marginBottom: 8 },
-  delBtn: { width: 30, height: 30, borderRadius: 9, background: SURFACE2, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto', cursor: 'pointer', border: 'none' },
-  primaryBtn: (col) => ({ width: '100%', padding: 13, borderRadius: 999, fontSize: 15, fontWeight: 800, border: 'none', color: '#fff', background: col, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }),
+  delBtn: { width: 30, height: 30, borderRadius: 0, background: SURFACE2, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto', cursor: 'pointer', border: 'none' },
+  primaryBtn: (col) => ({ width: '100%', padding: 13, borderRadius: 'var(--r-pill)', fontSize: 15, fontWeight: 800, border: 'none', color: 'var(--c-on-fill)', background: col, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }),
   noteBox: (col) => ({ display: 'flex', gap: 10, padding: '12px 13px', borderRadius: RADIUS_SM, fontSize: 12.5, color: INK2, lineHeight: 1.5, marginTop: 14, background: `color-mix(in srgb, ${col} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${col} 22%, ${LINE})` }),
   fieldInput: { width: '100%', padding: '10px 13px', border: `1.5px solid ${LINE}`, borderRadius: RADIUS_XS, fontSize: 14, background: SURFACE2, color: INK, outline: 'none', boxSizing: 'border-box' },
 }
@@ -104,7 +104,7 @@ function Dashboard({ totals: t, limits: lim }) {
       return React.createElement('div', { key: i, style: { background: SURFACE, border: `1px solid ${border}`, borderRadius: RADIUS_SM, padding: '12px 8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 } },
         React.createElement(MiniRing, { pct: c.pct, color: c.col, ic: c.ic }),
         React.createElement('div', { style: { fontSize: 18, fontWeight: 900, color: c.col, lineHeight: 1 } }, c.val, React.createElement('span', { style: { fontSize: 11, fontWeight: 700, marginLeft: 2 } }, c.unit)),
-        React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.02em' } }, c.lab),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3 } }, c.lab),
         React.createElement('div', { style: { fontSize: 10.5, color: c.flag === 'over' ? c.col : INK3, fontWeight: c.flag === 'over' ? 700 : 500 } }, c.sub))
     }))
 }
@@ -121,7 +121,7 @@ function CustomDrinkForm({ onSave, onCancel }) {
       React.createElement('input', { value: mg, onChange: (e) => setMg(e.target.value), type: 'number', placeholder: 'caféine mg', min: 0, style: ST.fieldInput }),
       React.createElement('input', { value: sug, onChange: (e) => setSug(e.target.value), type: 'number', placeholder: 'sucre g', min: 0, style: ST.fieldInput })),
     React.createElement('button', { onClick: () => onSave(nm.trim() || 'Boisson perso', Number(ml) || 0, Number(mg) || 0, Number(sug) || 0), style: ST.primaryBtn(COL_EAU) }, 'Enregistrer'),
-    React.createElement('button', { onClick: onCancel, style: { width: '100%', marginTop: 8, padding: 10, borderRadius: 999, border: `1.5px solid ${LINE}`, background: 'transparent', color: INK2, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Annuler'))
+    React.createElement('button', { onClick: onCancel, style: { width: '100%', marginTop: 8, padding: 10, borderRadius: 'var(--r-pill)', border: `1.5px solid ${LINE}`, background: 'transparent', color: INK2, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Annuler'))
 }
 
 function TodayTab({ db, store }) {
@@ -179,7 +179,7 @@ function TodayTab({ db, store }) {
     React.createElement('div', { style: ST.secLab }, 'Ajout rapide — eau'),
     React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 6 } },
       QUICK.map((q, i) => React.createElement('button', { key: i, onClick: () => addEntry(q.n, 'eaux', q.ml, 0, 0),
-        style: { flex: 1, padding: '11px 4px', borderRadius: 12, border: `1.5px solid color-mix(in srgb, ${COL_EAU} 30%, ${LINE})`, background: `color-mix(in srgb, ${COL_EAU} 6%, ${SURFACE})`, fontWeight: 700, fontSize: 12, color: COL_EAU, textAlign: 'center', cursor: 'pointer' } },
+        style: { flex: 1, padding: '11px 4px', borderRadius: 0, border: `1.5px solid color-mix(in srgb, ${COL_EAU} 30%, ${LINE})`, background: `color-mix(in srgb, ${COL_EAU} 6%, ${SURFACE})`, fontWeight: 700, fontSize: 12, color: COL_EAU, textAlign: 'center', cursor: 'pointer' } },
         React.createElement(Icon, { name: q.ic, size: 18, color: COL_EAU }),
         React.createElement('div', { style: { fontSize: 11, color: INK3, marginTop: 3 } }, q.ml + ' ml')))),
 
@@ -195,7 +195,7 @@ function TodayTab({ db, store }) {
         ? React.createElement('div', null,
             React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } },
               React.createElement('strong', { style: { fontSize: 15, fontWeight: 800 } }, selSrc.n),
-              React.createElement('button', { onClick: () => setSelSrc(null), style: { fontSize: 12, color: INK3, fontWeight: 700, padding: '6px 10px', border: `1px solid ${LINE}`, borderRadius: 8, background: SURFACE2, cursor: 'pointer' } }, 'Changer')),
+              React.createElement('button', { onClick: () => setSelSrc(null), style: { fontSize: 12, color: INK3, fontWeight: 700, padding: '6px 10px', border: `1px solid ${LINE}`, borderRadius: 0, background: SURFACE2, cursor: 'pointer' } }, 'Changer')),
             React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-end' } },
               React.createElement('div', { style: { flex: 1 } },
                 React.createElement('label', { style: { fontSize: 12, fontWeight: 700, color: INK3, marginBottom: 5, display: 'block' } }, 'Quantité'),
@@ -235,7 +235,7 @@ function TodayTab({ db, store }) {
             if (e.sugar) parts.push(e.sugar + ' g sucre')
             const meta = e.ts ? parts.join(' · ') + '  ·  ' + hhMM(e.ts) : parts.join(' · ')
             return React.createElement('div', { key: e.id, style: ST.logEntry },
-              React.createElement('div', { style: { width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: `color-mix(in srgb, ${COL_EAU} 14%, ${SURFACE2})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+              React.createElement('div', { style: { width: 34, height: 34, borderRadius: 0, flexShrink: 0, background: 'transparent', border: `1.5px solid ${COL_EAU}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
                 React.createElement(Icon, { name: icon, size: 17, color: COL_EAU })),
               React.createElement('div', { style: { flex: 1 } },
                 React.createElement('div', { style: { fontWeight: 700, fontSize: 14 } }, entryName(e)),
@@ -258,7 +258,7 @@ function TodayTab({ db, store }) {
 // comparée à ce qui avait réellement été bu.
 function HydroAnalysis({ db, targetMl }) {
   const ana = hydroAnalysis(db, { days: 28, targetMl })
-  const LVL = { ok: 'var(--c-success)', info: INK3, warn: C.warn, alert: '#c4503a', none: INK3 }
+  const LVL = { ok: 'var(--c-success)', info: INK3, warn: C.warn, alert: 'var(--c-danger)', none: INK3 }
   const card = (children, tint) => React.createElement('div', {
     style: {
       padding: '14px 15px', borderRadius: RADIUS_SM, marginBottom: 10,
@@ -266,7 +266,7 @@ function HydroAnalysis({ db, targetMl }) {
       border: `1px solid ${tint ? `color-mix(in srgb, ${tint} 26%, ${LINE})` : LINE}`,
     },
   }, children)
-  const lab = (t) => React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 } }, t)
+  const lab = (t) => React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3, marginBottom: 6 } }, t)
   const body = (t, col) => React.createElement('div', { style: { fontSize: 12.5, color: col || INK2, lineHeight: 1.5 } }, t)
 
   if (!ana.series.length) return null
@@ -278,7 +278,7 @@ function HydroAnalysis({ db, targetMl }) {
     ana.adherence ? card([
       React.createElement('div', { key: 'l' }, lab('Cible atteinte')),
       React.createElement('div', { key: 'v', style: { display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 4 } },
-        React.createElement('span', { style: { fontSize: 21, fontWeight: 800, color: LVL[ana.adherence.level] } }, ana.adherence.hit + '/' + ana.adherence.days),
+        React.createElement('span', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', color: LVL[ana.adherence.level] } }, ana.adherence.hit + '/' + ana.adherence.days),
         React.createElement('span', { style: { fontSize: 12, color: INK3, fontWeight: 600 } }, 'jours')),
       React.createElement('div', { key: 't' }, body(ana.adherence.text)),
     ], ana.adherence.level === 'ok' ? null : C.warn) : null,
@@ -301,7 +301,7 @@ function HydroAnalysis({ db, targetMl }) {
 
     ana.distribution ? card([
       React.createElement('div', { key: 'l' }, lab('Répartition dans la journée')),
-      React.createElement('div', { key: 'b', style: { display: 'flex', height: 9, borderRadius: 999, overflow: 'hidden', marginBottom: 8 } },
+      React.createElement('div', { key: 'b', style: { display: 'flex', height: 9, borderRadius: 'var(--r-pill)', overflow: 'hidden', marginBottom: 8 } },
         React.createElement('div', { style: { width: ana.distribution.morningPct + '%', background: COL_EAU } }),
         React.createElement('div', { style: { flex: 1, background: `color-mix(in srgb, ${COL_EAU} 35%, ${SURFACE2})` } }),
         React.createElement('div', { style: { width: ana.distribution.eveningPct + '%', background: C.warn } })),
@@ -339,7 +339,7 @@ function TrendsTab({ db, store }) {
           const h = Math.max(4, (d[key] / top) * 64)
           const day = new Date(d.iso + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'narrow' })
           return React.createElement('div', { key: d.iso, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, justifyContent: 'flex-end' } },
-            React.createElement('div', { style: { width: '100%', borderRadius: '5px 5px 0 0', height: h, minHeight: 3, transition: 'height .3s ease', background: isT ? col : `color-mix(in srgb, ${col} 35%, ${SURFACE2})` } }),
+            React.createElement('div', { style: { width: '100%', borderRadius: 0, height: h, minHeight: 3, transition: 'height .3s ease', background: isT ? col : `color-mix(in srgb, ${col} 35%, ${SURFACE2})` } }),
             React.createElement('span', { style: { fontSize: 10, color: isT ? col : INK3, fontWeight: 700 } }, day))
         })))
   }
@@ -352,8 +352,8 @@ function TrendsTab({ db, store }) {
         { v: String(avg.mg), u: 'mg', l: 'Caféine', c: COL_CAF },
         { v: String(avg.sugar), u: 'g', l: 'Sucres', c: COL_SUC },
       ].map((s, i) => React.createElement('div', { key: i, style: { background: SURFACE, border: `1px solid ${LINE}`, borderRadius: RADIUS_SM, padding: 13, textAlign: 'center' } },
-        React.createElement('div', { style: { fontSize: 20, fontWeight: 800, color: s.c } }, s.v, React.createElement('span', { style: { fontSize: 11, marginLeft: 2 } }, s.u)),
-        React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', marginTop: 4 } }, s.l)))),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 17, fontWeight: 600, letterSpacing: '-.03em', color: s.c } }, s.v, React.createElement('span', { style: { fontSize: 11, marginLeft: 2 } }, s.u)),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3, marginTop: 4 } }, s.l)))),
 
     Chart('Hydratation (ml/j)', 'ml', COL_EAU, poids * 35),
     Chart('Caféine (mg/j)', 'mg', COL_CAF, 400),
@@ -395,17 +395,17 @@ export default function HydrationSpace({ userId, onClose }) {
     { id: 'trends', lab: 'Tendances', ic: 'chart' },
   ]
 
-  return React.createElement('div', { style: { position: 'fixed', inset: 0, zIndex: 55, backgroundColor: C.bg, backgroundImage: GRADIENTS.sante, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat', display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: FONT, animation: 'spaceIn .22s ease' } },
+  return React.createElement('div', { style: { position: 'fixed', inset: 0, zIndex: 55, backgroundColor: C.bg, backgroundImage: 'var(--g-paper)', backgroundSize: 'var(--g-paper-size)', backgroundPosition: '-1px -1px', backgroundAttachment: 'local', display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: FONT, animation: 'spaceIn .22s ease' } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px 0', flexShrink: 0 } },
-      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 11, background: SURFACE, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', boxShadow: '0 1px 3px rgba(43,43,43,.06), 0 1px 2px rgba(43,43,43,.04)' } },
+      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 0, background: SURFACE, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', boxShadow: 'none' } },
         React.createElement(Icon, { name: 'back', size: 20 })),
-      React.createElement('div', { style: { flex: 1, fontFamily: FONT, fontSize: 18, fontWeight: 700 } }, 'Hydratation')),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, flex: 1 } }, 'Hydratation')),
     React.createElement('div', { style: { display: 'flex', padding: '12px 16px 0' } },
       TABS.map((t) => {
         const isActive = tab === t.id
         return React.createElement('button', { key: t.id, onClick: () => setTab(t.id),
-          style: { flex: 1, padding: '9px 6px', borderRadius: 999, fontWeight: 700, fontSize: 13, border: '1.5px solid ' + (isActive ? COL_EAU : LINE), background: isActive ? COL_EAU : SURFACE, color: isActive ? '#fff' : INK2, margin: '0 3px', transition: 'all .15s ease', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 } },
-          React.createElement(Icon, { name: t.ic, size: 14, color: isActive ? '#fff' : INK3 }), t.lab)
+          style: { flex: 1, padding: '9px 6px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: 13, border: '1.5px solid ' + (isActive ? COL_EAU : LINE), background: isActive ? COL_EAU : SURFACE, color: isActive ? 'var(--c-on-fill)' : INK2, margin: '0 3px', transition: 'all .15s ease', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 } },
+          React.createElement(Icon, { name: t.ic, size: 14, color: isActive ? 'var(--c-on-fill)' : INK3 }), t.lab)
       })),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '4px 16px 32px' } },
       tab === 'today' && React.createElement(TodayTab, { db, store }),

@@ -253,11 +253,11 @@ export const DIAG_QUESTIONS = [
 ];
 
 export const PILIERS = [
-  {id:"energie",      label:"Énergie",       col:"#e07b39", ic:"battery"},
-  {id:"alimentation", label:"Alimentation",  col:"#6f8a3a", ic:"apple"},
-  {id:"hydratation",  label:"Hydratation",   col:"#5f7d8c", ic:"droplet"},
-  {id:"recuperation", label:"Récupération",  col:"#8b6fb3", ic:"moon"},
-  {id:"comportement", label:"Comportement",  col:"#b5566a", ic:"heart"},
+  {id:"energie",      label:"Énergie",       col:"var(--c-warn)", ic:"battery"},
+  {id:"alimentation", label:"Alimentation",  col:"var(--c-success)", ic:"apple"},
+  {id:"hydratation",  label:"Hydratation",   col:"var(--ch2)", ic:"droplet"},
+  {id:"recuperation", label:"Récupération",  col:"var(--ch3)", ic:"moon"},
+  {id:"comportement", label:"Comportement",  col:"var(--c-danger)", ic:"heart"},
 ];
 
 // ─── Radar SVG ────────────────────────────────────────────────────

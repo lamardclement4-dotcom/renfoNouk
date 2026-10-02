@@ -28,7 +28,7 @@ function DurationPicker({ value, onChange }) {
   return React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 18 } },
     DURATIONS.map((d) => {
       const active = value === d
-      return React.createElement('button', { key: d, onClick: () => onChange(d), style: { flex: 1, padding: '10px 0', borderRadius: 12, fontWeight: 700, fontSize: 14.5, border: '1.5px solid ' + (active ? BR : C.line), background: active ? BR : C.surface, color: active ? '#fff' : C.ink, cursor: 'pointer' } }, d + ' min')
+      return React.createElement('button', { key: d, onClick: () => onChange(d), style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: '10px 0', borderRadius: 0, border: '1.5px solid ' + (active ? BR : C.line), background: active ? BR : C.surface, color: active ? 'var(--c-on-fill)' : C.ink, cursor: 'pointer' } }, d + ' min')
     }))
 }
 
@@ -85,19 +85,19 @@ function BreathingSession({ protocol, minutes, onFinish, onExit, onComplete }) {
 
   if (st.done) {
     return React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 14, minHeight: '70vh' } },
-      React.createElement('div', { style: { width: 64, height: 64, borderRadius: 999, background: `color-mix(in srgb, ${BR} 16%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: 'check', size: 30, color: BR })),
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19 } }, 'Séance terminée'),
+      React.createElement('div', { style: { width: 64, height: 64, borderRadius: 'var(--r-pill)', background: 'transparent', border: `1.5px solid ${BR}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: 'check', size: 30, color: BR })),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, 'Séance terminée'),
       React.createElement('div', { style: { fontSize: 13.5, color: C.ink3 } }, minutes + ' minute' + (minutes > 1 ? 's' : '') + ' de respiration guidée'))
   }
 
   return React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: '70vh' } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 } },
-      React.createElement('button', { onClick: onExit, style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } }, React.createElement(Icon, { name: 'close', size: 18 })),
+      React.createElement('button', { onClick: onExit, style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } }, React.createElement(Icon, { name: 'close', size: 18 })),
       React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, color: C.ink3 } }, timeLabel)),
     React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
-      React.createElement('div', { style: { width: 180, height: 180, borderRadius: 999, background: `color-mix(in srgb, ${BR} 22%, ${C.surface})`, border: `2px solid ${BR}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: `scale(${scale})`, transition: `transform ${curPhase.secs}s ease-in-out`, marginBottom: 28 } },
-        React.createElement('span', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 30, color: BR } }, st.secLeft)),
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 21, color: C.ink } }, curPhase.label)))
+      React.createElement('div', { style: { width: 180, height: 180, borderRadius: 'var(--r-pill)', background: `color-mix(in srgb, ${BR} 22%, ${C.surface})`, border: `2px solid ${BR}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: `scale(${scale})`, transition: `transform ${curPhase.secs}s ease-in-out`, marginBottom: 28 } },
+        React.createElement('span', { style: { fontFamily: C.mono, fontSize: 26, fontWeight: 600, letterSpacing: '-.03em', color: BR } }, st.secLeft)),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 24, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, color: C.ink } }, curPhase.label)))
 }
 
 // Préparation mentale : techniques de psychologie du sport.
@@ -139,11 +139,11 @@ function SmartGoalForm({ db, store }) {
   }))
   const remove = (id) => store.set((sx) => ({ smartGoals: ((sx && sx.smartGoals) || []).filter((g) => g.id !== id) }))
 
-  const STATUS_COL = { late: '#b5566a', today: C.warn, soon: C.warn, nodate: C.ink3, ok: C.ink3, done: C.success }
+  const STATUS_COL = { late: 'var(--c-danger)', today: C.warn, soon: C.warn, nodate: C.ink3, ok: C.ink3, done: C.success }
 
   const input = (props) => React.createElement('input', {
     ...props,
-    style: { width: '100%', padding: '9px 11px', borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 13.5, boxSizing: 'border-box' },
+    style: { width: '100%', padding: '9px 11px', borderRadius: 0, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 13.5, boxSizing: 'border-box' },
   })
 
   const form = React.createElement('div', null,
@@ -155,7 +155,7 @@ function SmartGoalForm({ db, store }) {
       input({ type: 'date', value: f.due, onChange: (e) => setF({ ...f, due: e.target.value }) })),
     React.createElement('button', {
       onClick: save, disabled: !comp.filled,
-      style: { width: '100%', padding: 13, borderRadius: 999, border: 'none', marginTop: 4, fontSize: 14.5, fontWeight: 700, cursor: comp.filled ? 'pointer' : 'default', background: comp.filled ? BR : C.surface2, color: comp.filled ? '#fff' : C.ink3 },
+      style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 13, borderRadius: 'var(--r-pill)', border: 'none', marginTop: 4, cursor: comp.filled ? 'pointer' : 'default', background: comp.filled ? BR : C.surface2, color: comp.filled ? 'var(--c-on-fill)' : C.ink3 },
     }, 'Enregistrer cet objectif'),
     React.createElement('p', { style: { fontSize: 11.5, color: comp.complete ? C.success : C.ink3, marginTop: 7, lineHeight: 1.45 } },
       comp.complete
@@ -166,31 +166,31 @@ function SmartGoalForm({ db, store }) {
     list.length ? React.createElement('div', { style: { marginBottom: 14 } },
       list.map((g) => {
         const stt = goalStatus(g)
-        return React.createElement('div', { key: g.id, style: { padding: '11px 13px', borderRadius: 11, marginBottom: 8, background: C.surface, border: `1px solid ${g.doneAt ? C.line : `color-mix(in srgb, ${STATUS_COL[stt.level]} 26%, ${C.line})`}` } },
+        return React.createElement('div', { key: g.id, style: { padding: '11px 13px', borderRadius: 0, marginBottom: 8, background: C.surface, border: `1px solid ${g.doneAt ? C.line : `color-mix(in srgb, ${STATUS_COL[stt.level]} 26%, ${C.line})`}` } },
           React.createElement('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 10 } },
             React.createElement('button', {
               onClick: () => toggleDone(g.id), 'aria-label': g.doneAt ? 'Rouvrir' : 'Marquer atteint',
-              style: { width: 22, height: 22, borderRadius: 999, flex: '0 0 auto', marginTop: 1, cursor: 'pointer', border: `2px solid ${g.doneAt ? C.success : C.line}`, background: g.doneAt ? C.success : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-            }, g.doneAt ? React.createElement(Icon, { name: 'check', size: 12, color: '#fff' }) : null),
+              style: { width: 22, height: 22, borderRadius: 'var(--r-pill)', flex: '0 0 auto', marginTop: 1, cursor: 'pointer', border: `2px solid ${g.doneAt ? C.success : C.line}`, background: g.doneAt ? C.success : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+            }, g.doneAt ? React.createElement(Icon, { name: 'check', size: 12, color: 'var(--c-on-fill)' }) : null),
             React.createElement('div', { style: { flex: 1, minWidth: 0 } },
               React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: g.doneAt ? C.ink3 : C.ink, textDecoration: g.doneAt ? 'line-through' : 'none', lineHeight: 1.35 } }, g.s || 'Objectif'),
               g.m ? React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 2, lineHeight: 1.4 } }, g.m) : null,
               React.createElement('div', { style: { fontSize: 11.5, fontWeight: 600, color: STATUS_COL[stt.level], marginTop: 4 } }, stt.text)),
-            React.createElement('button', { onClick: () => remove(g.id), 'aria-label': 'Supprimer', style: { width: 26, height: 26, borderRadius: 999, flex: '0 0 auto', border: 'none', background: 'transparent', color: C.ink3, cursor: 'pointer' } }, React.createElement(Icon, { name: 'close', size: 13, color: C.ink3 }))),
+            React.createElement('button', { onClick: () => remove(g.id), 'aria-label': 'Supprimer', style: { width: 26, height: 26, borderRadius: 'var(--r-pill)', flex: '0 0 auto', border: 'none', background: 'transparent', color: C.ink3, cursor: 'pointer' } }, React.createElement(Icon, { name: 'close', size: 13, color: C.ink3 }))),
           g.r && !g.doneAt ? React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 7, paddingTop: 7, borderTop: `1px solid ${C.line}`, lineHeight: 1.4, fontStyle: 'italic' } }, '« ' + g.r + ' »') : null)
       })) : null,
     editing || !list.length
       ? form
       : React.createElement('button', {
         onClick: () => setEditing(true),
-        style: { width: '100%', padding: 12, borderRadius: 999, border: `1.5px solid ${BR}`, background: 'transparent', color: BR, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' },
+        style: { width: '100%', padding: 12, borderRadius: 'var(--r-pill)', border: `1.5px solid ${BR}`, background: 'transparent', color: BR, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' },
       }, 'Ajouter un objectif'))
 }
 
 function TechniqueCard({ t, open, onToggle, db, store }) {
   return React.createElement('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, marginBottom: 10, overflow: 'hidden' } },
     React.createElement('button', { onClick: onToggle, style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '14px 16px', cursor: 'pointer', background: 'transparent', border: 'none' } },
-      React.createElement('div', { style: { width: 36, height: 36, borderRadius: 11, flex: '0 0 auto', background: `color-mix(in srgb, ${BR} 14%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: t.ic, size: 17, color: BR })),
+      React.createElement('div', { style: { width: 36, height: 36, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${BR}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: t.ic, size: 17, color: BR })),
       React.createElement('div', { style: { flex: 1, minWidth: 0 } },
         React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 14.5 } }, t.name),
         React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 1 } }, t.niveau)),
@@ -200,7 +200,7 @@ function TechniqueCard({ t, open, onToggle, db, store }) {
       t.interactive === 'smart'
         ? React.createElement(SmartGoalForm, { db, store })
         : React.createElement('div', null,
-            React.createElement('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Pour commencer'),
+            React.createElement('div', { style: { fontFamily: C.display, fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Pour commencer'),
             t.script.map((s, i) => React.createElement('div', { key: i, style: { display: 'flex', gap: 8, marginBottom: 6, fontSize: 13, color: C.ink2, lineHeight: 1.4 } },
               React.createElement('span', { style: { fontWeight: 700, color: BR, flex: '0 0 auto' } }, (i + 1) + '.'),
               React.createElement('span', null, s)))),
@@ -211,13 +211,13 @@ function MentalTab({ db, store }) {
   const [openId, setOpenId] = useState(null)
   const card = (t) => React.createElement(TechniqueCard, { key: t.id, t, db, store, open: openId === t.id, onToggle: () => setOpenId(openId === t.id ? null : t.id) })
   return React.createElement('div', null,
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: BR, color: '#fff', marginBottom: 18 } },
-      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } }, React.createElement(Icon, { name: 'target', size: 24, color: '#fff' })),
-      React.createElement('div', { style: { fontFamily: C.font, fontSize: 21, fontWeight: 700, lineHeight: 1.15 } }, 'Prépare ta tête'),
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: BR, color: 'var(--c-on-fill)', marginBottom: 18 } },
+      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } }, React.createElement(Icon, { name: 'target', size: 24, color: 'var(--c-on-fill)' })),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 24, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.15 } }, 'Prépare ta tête'),
       React.createElement('p', { style: { fontSize: 14, opacity: .92, marginTop: 7, lineHeight: 1.5 } }, 'Techniques de psychologie du sport pour la concentration, la confiance et la gestion de la pression avant un effort important.')),
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10 } }, 'Avant l’effort'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10 } }, 'Avant l’effort'),
     MENTAL_TECHNIQUES.filter((t) => t.phase === 'avant').map(card),
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10, marginTop: 14 } }, 'Pendant l’effort'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10, marginTop: 14 } }, 'Pendant l’effort'),
     MENTAL_TECHNIQUES.filter((t) => t.phase === 'pendant').map(card),
     React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, marginTop: 8, background: `color-mix(in srgb, ${BR} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${BR} 22%, ${C.line})` } },
       React.createElement(Icon, { name: 'search', size: 16, color: BR, style: { flex: '0 0 auto', marginTop: 2 } }),
@@ -231,7 +231,7 @@ function PracticeStrip({ db }) {
   const st = breathStats(db, { days: 30 })
   if (!st.count) return null
   const cell = (v, l) => React.createElement('div', { style: { flex: 1, textAlign: 'center' } },
-    React.createElement('div', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 19, color: BR } }, v),
+    React.createElement('div', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', color: BR } }, v),
     React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 1 } }, l))
   return React.createElement('div', { style: { display: 'flex', gap: 6, padding: '12px 10px', borderRadius: C.radiusSm, marginBottom: 16, background: C.surface, border: `1px solid ${C.line}` } },
     cell(st.streak > 0 ? st.streak + ' j' : '—', 'Série en cours'),
@@ -242,16 +242,16 @@ function PracticeStrip({ db }) {
 function BreathingTab({ proto, setProto, mins, setMins, onStart, db }) {
   return React.createElement('div', null,
     React.createElement(PracticeStrip, { db }),
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: BR, color: '#fff', marginBottom: 18 } },
-      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } }, React.createElement(Icon, { name: 'wave', size: 24, color: '#fff' })),
-      React.createElement('div', { style: { fontFamily: C.font, fontSize: 21, fontWeight: 700, lineHeight: 1.15 } }, 'Régule ton stress'),
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: BR, color: 'var(--c-on-fill)', marginBottom: 18 } },
+      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } }, React.createElement(Icon, { name: 'wave', size: 24, color: 'var(--c-on-fill)' })),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 24, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.15 } }, 'Régule ton stress'),
       React.createElement('p', { style: { fontSize: 14, opacity: .92, marginTop: 7, lineHeight: 1.5 } }, 'Respiration guidée avec minuteur visuel. Quelques minutes suffisent pour ralentir avant un effort, après une journée chargée, ou avant de dormir.')),
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10 } }, 'Choisis ton protocole'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10 } }, 'Choisis ton protocole'),
     PROTOCOLS.map((p) => React.createElement(ProtocolCard, { key: p.id, p, active: proto.id === p.id, onClick: () => setProto(p) })),
     React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, lineHeight: 1.5, marginBottom: 18 } }, proto.desc),
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10 } }, 'Durée'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10 } }, 'Durée'),
     React.createElement(DurationPicker, { value: mins, onChange: setMins }),
-    React.createElement('button', { onClick: onStart, style: { width: '100%', padding: 16, borderRadius: C.radiusSm, border: 'none', background: BR, color: '#fff', fontWeight: 700, fontSize: 15.5, cursor: 'pointer', boxShadow: `0 12px 26px -14px ${BR}` } }, 'Commencer'),
+    React.createElement('button', { onClick: onStart, style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 16, borderRadius: C.radiusSm, border: 'none', background: BR, color: 'var(--c-on-fill)', cursor: 'pointer', boxShadow: 'none' } }, 'Commencer'),
     React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, marginTop: 14, background: `color-mix(in srgb, ${BR} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${BR} 22%, ${C.line})` } },
       React.createElement(Icon, { name: 'search', size: 16, color: BR, style: { flex: '0 0 auto', marginTop: 2 } }),
       React.createElement('p', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.45 } }, 'Niveau de preuve modéré-bon sur le stress perçu à court terme (Lehrer & Gevirtz 2014). Outil de régulation ponctuelle, pas un substitut à une prise en charge du stress chronique ou de l’anxiété.')))
@@ -285,8 +285,8 @@ export default function BreathingSpace({ userId, onClose }) {
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, margin: '10px 0 18px' } },
       TABS.map((it) => {
         const active = tab === it.id
-        return React.createElement('button', { key: it.id, onClick: () => setTab(it.id), style: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 13px', borderRadius: 14, border: '1.5px solid ' + (active ? BR : C.line), background: active ? `color-mix(in srgb, ${BR} 11%, ${C.surface})` : C.surface, color: active ? BR : C.ink, fontWeight: 700, fontSize: 13.5, textAlign: 'left', cursor: 'pointer' } },
-          React.createElement('span', { style: { width: 30, height: 30, borderRadius: 9, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? BR : `color-mix(in srgb, ${BR} 13%, ${C.surface})`, color: active ? '#fff' : BR } }, React.createElement(Icon, { name: it.ic, size: 16 })), it.lab)
+        return React.createElement('button', { key: it.id, onClick: () => setTab(it.id), style: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 13px', borderRadius: 0, border: '1.5px solid ' + (active ? BR : C.line), background: active ? `color-mix(in srgb, ${BR} 11%, ${C.surface})` : C.surface, color: active ? BR : C.ink, fontWeight: 700, fontSize: 13.5, textAlign: 'left', cursor: 'pointer' } },
+          React.createElement('span', { style: { width: 30, height: 30, borderRadius: 0, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? BR : `color-mix(in srgb, ${BR} 13%, ${C.surface})`, color: active ? 'var(--c-on-fill)' : BR } }, React.createElement(Icon, { name: it.ic, size: 16 })), it.lab)
       })),
     tab === 'mental'
       ? React.createElement(MentalTab, { db, store })

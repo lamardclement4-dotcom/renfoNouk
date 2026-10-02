@@ -222,10 +222,10 @@ export function trainingTotals(db) {
 // valeurs alignées sur MODULE_TINTS (kit.jsx) sans importer le kit UI
 // dans ce module purement logique.
 const CAT_META = {
-  mobilite: { label: 'Mobilité', color: '#6f8fa6' },
-  renfo: { label: 'Renforcement', color: '#bf6a40' },
-  fullbody: { label: 'Full body', color: '#bd923f' },
-  plyo: { label: 'Pliométrie', color: '#a85a36' },
+  mobilite: { label: 'Mobilité', color: 'var(--ch2)' },
+  renfo: { label: 'Renforcement', color: 'var(--ch1)' },
+  fullbody: { label: 'Full body', color: 'var(--ch1)' },
+  plyo: { label: 'Pliométrie', color: 'var(--ch1)' },
   recup: { label: 'Récupération', color: 'var(--c-success)' },
 }
 
@@ -262,7 +262,7 @@ export function weekRetro(db, refDate = new Date()) {
   }
   for (const e of asList(db && db.sessionLog)) {
     if (!e || !e.date) continue
-    const meta = CAT_META[e.cat] || { label: 'Séance', color: '#999' }
+    const meta = CAT_META[e.cat] || { label: 'Séance', color: 'var(--c-ink3)' }
     addMins(meta.label, e.title || meta.label, meta.color, e.date, num(e.mins, 0), 'player')
   }
 
@@ -623,7 +623,7 @@ export function acwrRisk(db) {
         ? 'Charge élevée mais dans ta zone de tolérance. Surveille : fatigue, raideurs, qualité du sommeil.'
         : 'Charge sensiblement plus haute que ta moyenne. Surveille fatigue et douleurs, priorise le sommeil.'
   } else {
-    level = 'Vigilance renforcée'; color = '#c4503a'
+    level = 'Vigilance renforcée'; color = 'var(--c-danger)'
     advice = (ul.id === 'debutant'
       ? "Charge en forte hausse pour un profil débutant — laisse plus de temps à l'adaptation. Réduis le volume et repose-toi 1–2 jours."
       : ul.id === 'confirme'
@@ -638,7 +638,7 @@ function acwrLevelFor(ratio, ul) {
   if (ratio < 0.8) return { level: 'Sous-charge', color: 'var(--c-carb)' }
   if (ratio <= ul.acwrWarn) return { level: 'Zone optimale', color: 'var(--c-success)' }
   if (ratio <= ul.acwrAlert) return { level: 'Vigilance', color: 'var(--c-warn)' }
-  return { level: 'Vigilance renforcée', color: '#c4503a' }
+  return { level: 'Vigilance renforcée', color: 'var(--c-danger)' }
 }
 
 // "Si je fais aussi cette séance-là (extraMins), ma charge deviendrait…" —
@@ -758,7 +758,7 @@ export function globalScore(db, iso) {
 }
 
 // --- Stats d'entraînement (planning + historique d'exercices Supabase) ---
-const PALETTE = ['#e07b54', 'var(--c-carb)', 'var(--c-success)', 'var(--c-warn)', '#7a6fa5', '#4a8aa5', '#a5704a', '#9a7ab5', '#c4503a', 'var(--c-success)']
+const PALETTE = ['var(--c-trace)', 'var(--c-carb)', 'var(--c-success)', 'var(--c-warn)', 'var(--ch4)', 'var(--ch2)', 'var(--ch1)', 'var(--ch3)', 'var(--c-danger)', 'var(--c-success)']
 export function sportMeta(id) {
   const sp = SPORTS.find((s) => s.id === id)
   const idx = SPORTS.findIndex((s) => s.id === id)

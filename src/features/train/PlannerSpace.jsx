@@ -68,17 +68,17 @@ function mondayOf(d) {
 function estimateLoad(s) { return LOAD_BY_DUREE[s.duree] || 45 }
 function sportLabel(id) { const sp = SPORTS.find((s) => s.id === id); return sp ? sp.label : id }
 function sportEmoji(id) { return SPORT_EMOJI[id] || '🏋️' }
-function loadColor(load) { return load > 80 ? '#c46a5a' : load > 50 ? '#6f8fa6' : C.success }
+function loadColor(load) { return load > 80 ? 'var(--c-danger)' : load > 50 ? 'var(--ch2)' : C.success }
 
 function SessionCard({ s, onOpen }) {
   const meta = [s.heure, s.duree].filter(Boolean).join(' · ')
   return React.createElement('button', { onClick: () => onOpen(s), style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: 12, borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, cursor: 'pointer', marginBottom: 8 } },
-    React.createElement('div', { style: { width: 40, height: 40, borderRadius: 12, flex: '0 0 auto', background: C.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19 } }, sportEmoji(s.sport)),
+    React.createElement('div', { style: { width: 40, height: 40, borderRadius: 0, flex: '0 0 auto', background: C.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19 } }, sportEmoji(s.sport)),
     React.createElement('div', { style: { flex: 1, minWidth: 0 } },
       React.createElement('div', { style: { fontWeight: 600, fontSize: 15 } }, sportLabel(s.sport)),
       React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 2 } }, meta),
       React.createElement('div', { style: { display: 'flex', gap: 6, marginTop: 6 } },
-        React.createElement('span', { style: { fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: s.statut === 'realise' ? 'color-mix(in srgb, #5b8a72 15%, ' + C.surface + ')' : 'color-mix(in srgb, #6f8fa6 15%, ' + C.surface + ')', color: s.statut === 'realise' ? C.success : '#6f8fa6' } }, s.statut === 'realise' ? '✅ Réalisé' : '📅 Planifié'),
+        React.createElement('span', { style: { fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-pill)', background: s.statut === 'realise' ? 'color-mix(in srgb, var(--c-success) 15%, ' + C.surface + ')' : 'color-mix(in srgb, var(--ch2) 15%, ' + C.surface + ')', color: s.statut === 'realise' ? C.success : 'var(--ch2)' } }, s.statut === 'realise' ? '✅ Réalisé' : '📅 Planifié'),
         s.exercises && s.exercises.length > 0 && React.createElement('span', { style: { fontSize: 11, color: C.ink3 } }, '💪 ' + s.exercises.length + ' ex.'),
         s.notes && React.createElement('span', { style: { fontSize: 11, color: C.ink3 } }, '📝'))),
     s.ressenti && React.createElement('div', { style: { fontSize: 20, flex: '0 0 auto' } }, RESSENTI[s.ressenti - 1].e))
@@ -87,7 +87,7 @@ function SessionCard({ s, onOpen }) {
 function LoadBar({ load }) {
   return React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface2 } },
     React.createElement('div', { style: { fontSize: 12, color: C.ink3, fontWeight: 600, flex: '0 0 auto' } }, 'Charge du jour'),
-    React.createElement('div', { style: { flex: 1, height: 6, borderRadius: 999, background: C.line, overflow: 'hidden' } },
+    React.createElement('div', { style: { flex: 1, height: 6, borderRadius: 'var(--r-pill)', background: C.line, overflow: 'hidden' } },
       React.createElement('div', { style: { height: '100%', width: `${Math.min(load, 100)}%`, background: loadColor(load) } })),
     React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink2, flex: '0 0 auto' } }, load + '%'))
 }
@@ -98,14 +98,14 @@ function DayView({ date, sessions, onOpen, onAdd }) {
   if (!ss.length) {
     return React.createElement('div', { style: { textAlign: 'center', padding: '36px 10px' } },
       React.createElement('div', { style: { fontSize: 14, color: C.ink3, marginBottom: 14 } }, 'Aucune séance ce jour.'),
-      React.createElement('button', { onClick: () => onAdd(ds), style: { padding: '10px 18px', borderRadius: 999, background: C.primary, color: '#fff', border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' } }, '+ Ajouter une séance'))
+      React.createElement('button', { onClick: () => onAdd(ds), style: { padding: '10px 18px', borderRadius: 'var(--r-pill)', background: C.primary, color: 'var(--c-on-fill)', border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' } }, '+ Ajouter une séance'))
   }
   const load = ss.reduce((a, s) => a + estimateLoad(s), 0)
   return React.createElement('div', null,
     React.createElement('div', { style: { fontSize: 12, color: C.ink3, fontWeight: 700, marginBottom: 10 } }, ss.length + ' séance' + (ss.length > 1 ? 's' : '')),
     ss.map((s) => React.createElement(SessionCard, { key: s.id, s, onOpen })),
     React.createElement(LoadBar, { load }),
-    React.createElement('button', { onClick: () => onAdd(ds), style: { width: '100%', marginTop: 14, padding: 13, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontWeight: 700, fontSize: 13.5, cursor: 'pointer' } }, '+ Ajouter une séance'))
+    React.createElement('button', { onClick: () => onAdd(ds), style: { width: '100%', marginTop: 14, padding: 13, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontWeight: 700, fontSize: 13.5, cursor: 'pointer' } }, '+ Ajouter une séance'))
 }
 
 function WeekView({ date, sessions, onOpen, onAdd }) {
@@ -123,12 +123,12 @@ function WeekView({ date, sessions, onOpen, onAdd }) {
       const load = ss.reduce((a, s) => a + estimateLoad(s), 0)
       return React.createElement('div', { key: ds, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 } },
         React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: isToday ? C.primary : C.ink3 } }, JOURS[i]),
-        React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: isToday ? C.primary : C.ink, width: 26, height: 26, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isToday ? `color-mix(in srgb, ${C.primary} 15%, ${C.surface})` : 'transparent' } }, d.getDate()),
+        React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: isToday ? C.primary : C.ink, width: 26, height: 26, borderRadius: 'var(--r-pill)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isToday ? `color-mix(in srgb, ${C.primary} 15%, ${C.surface})` : 'transparent' } }, d.getDate()),
         React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, width: '100%', minHeight: 30 } },
           ss.length
-            ? ss.map((s) => React.createElement('button', { key: s.id, onClick: () => onOpen(s), title: sportLabel(s.sport), style: { width: '100%', height: 26, borderRadius: 8, background: s.statut === 'planifie' ? 'transparent' : C.surface2, border: s.statut === 'planifie' ? `1.5px dashed ${C.line}` : 'none', fontSize: 14, cursor: 'pointer' } }, sportEmoji(s.sport)))
-            : React.createElement('button', { onClick: () => onAdd(ds), style: { width: '100%', height: 26, borderRadius: 8, background: 'transparent', border: `1px dashed ${C.line}`, color: C.ink3, fontSize: 13, cursor: 'pointer' } }, '+')),
-        load > 0 && React.createElement('div', { style: { width: '100%', height: 4, borderRadius: 999, background: C.line, overflow: 'hidden' } },
+            ? ss.map((s) => React.createElement('button', { key: s.id, onClick: () => onOpen(s), title: sportLabel(s.sport), style: { width: '100%', height: 26, borderRadius: 0, background: s.statut === 'planifie' ? 'transparent' : C.surface2, border: s.statut === 'planifie' ? `1.5px dashed ${C.line}` : 'none', fontSize: 14, cursor: 'pointer' } }, sportEmoji(s.sport)))
+            : React.createElement('button', { onClick: () => onAdd(ds), style: { width: '100%', height: 26, borderRadius: 0, background: 'transparent', border: `1px dashed ${C.line}`, color: C.ink3, fontSize: 13, cursor: 'pointer' } }, '+')),
+        load > 0 && React.createElement('div', { style: { width: '100%', height: 4, borderRadius: 'var(--r-pill)', background: C.line, overflow: 'hidden' } },
           React.createElement('div', { style: { height: '100%', width: `${Math.min(load, 100)}%`, background: loadColor(load) } })))
     }))
 }
@@ -151,19 +151,19 @@ function MonthView({ date, sessions, onGoDay }) {
         const ds = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`
         const daySs = ss.filter((s) => s.date === ds)
         const isToday = ds === today
-        return React.createElement('button', { key: ds, onClick: () => onGoDay(ds), style: { aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 10, background: isToday ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : 'transparent', border: 'none', cursor: 'pointer' } },
+        return React.createElement('button', { key: ds, onClick: () => onGoDay(ds), style: { aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, borderRadius: 0, background: isToday ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : 'transparent', border: 'none', cursor: 'pointer' } },
           React.createElement('div', { style: { fontSize: 12.5, fontWeight: isToday ? 700 : 500, color: isToday ? C.primary : C.ink } }, day),
           React.createElement('div', { style: { display: 'flex', gap: 2 } },
-            daySs.slice(0, 4).map((s, k) => React.createElement('div', { key: k, style: { width: 4, height: 4, borderRadius: 999, background: s.statut === 'realise' ? C.success : '#6f8fa6' } }))))
+            daySs.slice(0, 4).map((s, k) => React.createElement('div', { key: k, style: { width: 4, height: 4, borderRadius: 'var(--r-pill)', background: s.statut === 'realise' ? C.success : 'var(--ch2)' } }))))
       })),
     (() => {
       const real = ss.filter((s) => s.statut === 'realise').length
       return React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 16 } },
         React.createElement('div', { style: { flex: 1, padding: '12px 8px', borderRadius: C.radiusSm, background: C.surface2, textAlign: 'center' } },
-          React.createElement('div', { style: { fontWeight: 800, fontSize: 20 } }, ss.length),
+          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 17, fontWeight: 600, letterSpacing: '-.03em' } }, ss.length),
           React.createElement('div', { style: { fontSize: 11, color: C.ink3, fontWeight: 600 } }, 'Planifiées')),
         React.createElement('div', { style: { flex: 1, padding: '12px 8px', borderRadius: C.radiusSm, background: C.surface2, textAlign: 'center' } },
-          React.createElement('div', { style: { fontWeight: 800, fontSize: 20 } }, real),
+          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 17, fontWeight: 600, letterSpacing: '-.03em' } }, real),
           React.createElement('div', { style: { fontSize: 11, color: C.ink3, fontWeight: 600 } }, 'Réalisées')))
     })())
 }
@@ -181,7 +181,7 @@ function parseCustomMins(s) {
 
 function fieldLabel() { return { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }
 const fieldInputStyle = { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }
-function pillStyle(active) { return { padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (active ? C.primary : C.line), background: active ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, color: active ? C.primary : C.ink } }
+function pillStyle(active) { return { padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (active ? C.primary : C.line), background: active ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, color: active ? C.primary : C.ink } }
 
 function computeAllure(distance, temps) {
   const dist = parseFloat(distance)
@@ -300,11 +300,8 @@ function SprintPerfFields({ data, setData }) {
 
     React.createElement('button', {
       onClick: addPerf, disabled: !valid,
-      style: {
-        width: '100%', padding: 12, borderRadius: 999, border: 'none', marginBottom: 12,
-        background: valid ? C.primary : C.surface2, color: valid ? '#fff' : C.ink3,
-        fontSize: 14, fontWeight: 700, cursor: valid ? 'pointer' : 'default', fontFamily: C.font,
-      },
+      style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 12, borderRadius: 'var(--r-pill)', border: 'none', marginBottom: 12,
+        background: valid ? C.primary : C.surface2, color: valid ? 'var(--c-on-fill)' : C.ink3, cursor: valid ? 'pointer' : 'default', },
     }, valid ? `Ajouter ${temps} sur ${(SPRINT_EVENTS.find((e) => e.id === epreuve) || {}).label}` : 'Saisis un temps (ex. 10.85)'),
 
     perfs.length > 0 ? React.createElement('div', { style: { background: C.surface2, borderRadius: C.radiusSm, overflow: 'hidden' } },
@@ -405,7 +402,7 @@ function EscaladeFields({ data, setData }) {
     // voie de falaise — pas à chaque échauffement : il reste replié.
     React.createElement('button', {
       onClick: () => setDetail(!detail),
-      style: { width: '100%', padding: '9px 12px', borderRadius: 999, marginBottom: 10, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: C.font },
+      style: { width: '100%', padding: '9px 12px', borderRadius: 'var(--r-pill)', marginBottom: 10, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: C.font },
     }, detail ? 'Masquer le détail' : 'Nom, essais, lieu, prises…'),
 
     detail ? React.createElement('div', { style: { marginBottom: 12 } },
@@ -424,17 +421,14 @@ function EscaladeFields({ data, setData }) {
 
     React.createElement('button', {
       onClick: addAscent, disabled: !grade,
-      style: {
-        width: '100%', padding: 12, borderRadius: 999, border: 'none', marginBottom: 12,
-        background: grade ? C.primary : C.surface2, color: grade ? '#fff' : C.ink3,
-        fontSize: 14, fontWeight: 700, cursor: grade ? 'pointer' : 'default', fontFamily: C.font,
-      },
+      style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 12, borderRadius: 'var(--r-pill)', border: 'none', marginBottom: 12,
+        background: grade ? C.primary : C.surface2, color: grade ? 'var(--c-on-fill)' : C.ink3, cursor: grade ? 'pointer' : 'default', },
     }, grade ? `Ajouter ${grade}` : 'Choisis une cotation'),
 
     ascents.length > 0 ? React.createElement('div', { style: { background: C.surface2, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 8 } },
       ascents.map((x, i) => React.createElement('div', { key: x.id || i, style: { display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px', borderTop: i ? `1px solid ${C.line}` : 'none' } },
         React.createElement('span', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 14, color: C.ink, minWidth: 34 } }, x.grade),
-        React.createElement('span', { style: { fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: C.surface, color: C.ink3 } }, styleShort(x.style)),
+        React.createElement('span', { style: { fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: C.surface, color: C.ink3 } }, styleShort(x.style)),
         React.createElement('span', { style: { flex: 1, fontSize: 11.5, color: C.ink3, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
           [
             x.name,
@@ -539,7 +533,7 @@ function GenericSportFields({ sportId, data, setData }) {
     React.createElement('div', { style: grid }, shown.map(renderField)),
     folded.length ? React.createElement('button', {
       onClick: () => setDetail(!detail),
-      style: { width: '100%', padding: '9px 12px', borderRadius: 999, marginTop: 10, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+      style: { width: '100%', padding: '9px 12px', borderRadius: 'var(--r-pill)', marginTop: 10, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
     }, detail ? 'Masquer le détail' : `Plus de détail (${folded.length})`) : null,
     detail && folded.length
       ? React.createElement('div', { style: { ...grid, marginTop: 10 } }, folded.map(renderField))
@@ -551,7 +545,7 @@ function ExerciseSetRow({ exIdx, setIdx, set, onUpdate, onRemove }) {
   return React.createElement('div', { style: { marginBottom: 10 } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 } },
       React.createElement('span', { style: { fontSize: 11, fontWeight: 700, color: C.ink3 } }, `Série ${setIdx + 1}`),
-      onRemove && React.createElement('button', { onClick: onRemove, 'aria-label': 'Retirer cette série', style: { fontSize: 13, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: '10px 6px 10px 16px' } }, '✕')),
+      onRemove && React.createElement('button', { onClick: onRemove, 'aria-label': 'Retirer cette série', style: { fontSize: 13, color: 'var(--c-danger)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: '10px 6px 10px 16px' } }, '✕')),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 } },
       React.createElement('div', null,
         React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'Séries'),
@@ -566,8 +560,8 @@ function ExerciseSetRow({ exIdx, setIdx, set, onUpdate, onRemove }) {
         React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'RPE'),
         React.createElement('input', { type: 'number', min: 1, max: 10, placeholder: '—', value: set.rpe || '', onChange: (e) => onUpdate(exIdx, setIdx, 'rpe', e.target.value), style: { ...fieldInputStyle, padding: '8px 9px', fontSize: 13 } }))),
     React.createElement('div', { style: { display: 'flex', gap: 6, marginTop: 6 } },
-      React.createElement('button', { onClick: () => onUpdate(exIdx, setIdx, 'mode', 'reps'), style: { flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: mode === 'reps' ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface2, color: mode === 'reps' ? C.primary : C.ink3 } }, 'Répétitions'),
-      React.createElement('button', { onClick: () => onUpdate(exIdx, setIdx, 'mode', 'duree'), style: { flex: 1, padding: '6px 0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: mode === 'duree' ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface2, color: mode === 'duree' ? C.primary : C.ink3 } }, 'Tenue chronométrée')))
+      React.createElement('button', { onClick: () => onUpdate(exIdx, setIdx, 'mode', 'reps'), style: { flex: 1, padding: '6px 0', borderRadius: 0, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: mode === 'reps' ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface2, color: mode === 'reps' ? C.primary : C.ink3 } }, 'Répétitions'),
+      React.createElement('button', { onClick: () => onUpdate(exIdx, setIdx, 'mode', 'duree'), style: { flex: 1, padding: '6px 0', borderRadius: 0, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: mode === 'duree' ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface2, color: mode === 'duree' ? C.primary : C.ink3 } }, 'Tenue chronométrée')))
 }
 
 function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemoveSet, onRemove }) {
@@ -586,10 +580,10 @@ function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemoveSet, on
         record && React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.primary } }, record),
         est && React.createElement('div', { style: { fontSize: 10, color: C.ink3 } }, est),
         last && React.createElement('div', { style: { fontSize: 10, color: C.ink3 } }, last),
-        React.createElement('button', { onClick: () => onRemove(idx), style: { fontSize: 12.5, color: '#b3402e', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', marginTop: 3, padding: '9px 4px 9px 14px' } }, 'Retirer'))),
+        React.createElement('button', { onClick: () => onRemove(idx), style: { fontSize: 12.5, color: 'var(--c-danger)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', marginTop: 3, padding: '9px 4px 9px 14px' } }, 'Retirer'))),
     sug && sug.reason ? React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, lineHeight: 1.4, marginBottom: 9, paddingBottom: 9, borderBottom: `1px solid ${C.line}` } }, sug.reason) : null,
     sets.map((set, si) => React.createElement(ExerciseSetRow, { key: si, exIdx: idx, setIdx: si, set, onUpdate: onUpdateSet, onRemove: sets.length > 1 ? () => onRemoveSet(idx, si) : null })),
-    React.createElement('button', { onClick: () => onAddSet(idx), style: { width: '100%', padding: '8px 0', borderRadius: 8, background: 'transparent', border: `1px dashed ${C.line}`, color: C.ink3, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', marginTop: 4 } }, '+ Ajouter une série'))
+    React.createElement('button', { onClick: () => onAddSet(idx), style: { width: '100%', padding: '8px 0', borderRadius: 0, background: 'transparent', border: `1px dashed ${C.line}`, color: C.ink3, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', marginTop: 4 } }, '+ Ajouter une série'))
 }
 
 // Filtres de matériel : le premier critère quand on prépare une séance
@@ -662,7 +656,7 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
   const chip = (active, label, onClick, key) => React.createElement('button', {
     key, onClick,
     style: {
-      padding: '6px 11px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+      padding: '6px 11px', borderRadius: 'var(--r-pill)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
       border: '1.5px solid ' + (active ? C.primary : C.line),
       background: active ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface,
       color: active ? C.primary : C.ink2,
@@ -676,7 +670,7 @@ function MuscuFields({ sport, exercises, setExercises, exerciseHistory }) {
   },
     React.createElement('span', { style: { fontSize: 13.5, fontWeight: 600, color: C.ink, minWidth: 0 } }, r.n),
     React.createElement('span', { style: { display: 'flex', gap: 6, alignItems: 'center', flex: '0 0 auto' } },
-      r.equip ? React.createElement('span', { style: { fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: C.surface2, color: C.ink3 } }, r.equip) : null,
+      r.equip ? React.createElement('span', { style: { fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: C.surface2, color: C.ink3 } }, r.equip) : null,
       React.createElement('span', { style: { fontSize: 11.5, color: C.ink3 } }, r.g)))
 
   return React.createElement('div', { style: { marginBottom: 16 } },
@@ -716,7 +710,7 @@ function WarmupFields({ sport, data, setData, stiffZones }) {
   const kinds = Array.isArray(w.kinds) ? w.kinds : []
   const set = (patch) => setData({ ...data, echauffement: { ...w, ...patch } })
   const chip = (on) => ({
-    padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+    padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
     border: `1.5px solid ${on ? C.primary : C.line}`,
     background: on ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface,
     color: on ? C.primary : C.ink2,
@@ -738,7 +732,7 @@ function WarmupFields({ sport, data, setData, stiffZones }) {
         const plan = buildWarmup(sport, { mins: w.mins || 15, stiffZones: stiffZones || [], hard })
         setData({ ...data, echauffement: { ...w, ...plan } })
       },
-      style: { width: '100%', padding: '9px 12px', borderRadius: 999, marginBottom: 9, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' },
+      style: { width: '100%', padding: '9px 12px', borderRadius: 'var(--r-pill)', marginBottom: 9, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' },
     }, w.phases ? 'Recomposer l’échauffement' : 'Composer mon échauffement'),
 
     w.phases ? React.createElement('div', { style: { marginBottom: 10 } },
@@ -774,7 +768,7 @@ function DrillFields({ sport, data, setData }) {
         return React.createElement('button', {
           key: d.id, onClick: () => toggle(d.id), title: d.aim,
           style: {
-            padding: '7px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+            padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
             border: `1.5px solid ${on ? C.primary : C.line}`,
             background: on ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface,
             color: on ? C.primary : C.ink2,
@@ -924,46 +918,46 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
   }
 
   return React.createElement('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 70, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
-    React.createElement('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: '24px 24px 0 0', padding: '18px 22px calc(24px + env(safe-area-inset-bottom))', maxHeight: '88vh', overflowY: 'auto', animation: 'sheetUp .3s ease' } },
-      React.createElement('div', { style: { width: 38, height: 4, borderRadius: 999, background: C.line, margin: '0 auto 16px' } }),
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, textAlign: 'center', marginBottom: 18 } }, initial ? 'Modifier la séance' : 'Nouvelle séance'),
+    React.createElement('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: 0, padding: '18px 22px calc(24px + env(safe-area-inset-bottom))', maxHeight: '88vh', overflowY: 'auto', animation: 'sheetUp .3s ease' } },
+      React.createElement('div', { style: { width: 38, height: 4, borderRadius: 'var(--r-pill)', background: C.line, margin: '0 auto 16px' } }),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center', marginBottom: 18 } }, initial ? 'Modifier la séance' : 'Nouvelle séance'),
 
-      React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Sport'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Sport'),
       React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 16 } },
         activeSports.map((sp) => {
           const active = sport === sp.id
-          return React.createElement('button', { key: sp.id, onClick: () => { setSport(sp.id); setReuseDismissed(false) }, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (active ? C.primary : C.line), background: active ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, color: active ? C.primary : C.ink } },
+          return React.createElement('button', { key: sp.id, onClick: () => { setSport(sp.id); setReuseDismissed(false) }, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (active ? C.primary : C.line), background: active ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, color: active ? C.primary : C.ink } },
             React.createElement('span', null, sportEmoji(sp.id)), sp.label)
         })),
 
       lastOfSport && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.primary} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.primary} 25%, ${C.line})`, marginBottom: 16 } },
         React.createElement('div', { style: { flex: 1, fontSize: 12.5, color: C.ink2, lineHeight: 1.4 } },
           'Reprendre ta dernière séance de ce sport ', React.createElement('strong', { style: { color: C.ink } }, '(' + fmtDate(lastOfSport.date) + ')'), ' ?'),
-        React.createElement('button', { onClick: reuseLastSession, style: { flex: '0 0 auto', padding: '8px 13px', borderRadius: 999, background: C.primary, color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } }, 'Reprendre'),
-        React.createElement('button', { onClick: () => setReuseDismissed(true), 'aria-label': 'Ignorer', style: { flex: '0 0 auto', width: 28, height: 28, borderRadius: 999, background: 'transparent', border: 'none', color: C.ink3, fontSize: 15, cursor: 'pointer' } }, '✕')),
+        React.createElement('button', { onClick: reuseLastSession, style: { flex: '0 0 auto', padding: '8px 13px', borderRadius: 'var(--r-pill)', background: C.primary, color: 'var(--c-on-fill)', border: 'none', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } }, 'Reprendre'),
+        React.createElement('button', { onClick: () => setReuseDismissed(true), 'aria-label': 'Ignorer', style: { flex: '0 0 auto', width: 28, height: 28, borderRadius: 'var(--r-pill)', background: 'transparent', border: 'none', color: C.ink3, fontSize: 15, cursor: 'pointer' } }, '✕')),
 
       muscuSuggestions.length > 0 && React.createElement('div', { style: { padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.primary} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.primary} 25%, ${C.line})`, marginBottom: 16 } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 } },
           React.createElement('span', { style: { fontSize: 12.5, color: C.ink2 } }, 'Reprendre une séance récente (exercices + dernière charge) :'),
-          React.createElement('button', { onClick: () => setReuseDismissed(true), 'aria-label': 'Ignorer', style: { flex: '0 0 auto', width: 24, height: 24, borderRadius: 999, background: 'transparent', border: 'none', color: C.ink3, fontSize: 14, cursor: 'pointer' } }, '✕')),
+          React.createElement('button', { onClick: () => setReuseDismissed(true), 'aria-label': 'Ignorer', style: { flex: '0 0 auto', width: 24, height: 24, borderRadius: 'var(--r-pill)', background: 'transparent', border: 'none', color: C.ink3, fontSize: 14, cursor: 'pointer' } }, '✕')),
         React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7 } },
-          muscuSuggestions.map(({ family, session }, i) => React.createElement('button', { key: i, onClick: () => applyMuscuSuggestion(session), style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 999, background: C.surface, border: `1.5px solid ${C.primary}`, color: C.primary, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } },
+          muscuSuggestions.map(({ family, session }, i) => React.createElement('button', { key: i, onClick: () => applyMuscuSuggestion(session), style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 'var(--r-pill)', background: C.surface, border: `1.5px solid ${C.primary}`, color: C.primary, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } },
             FAMILY_ICON[family] || '💪', family, React.createElement('span', { style: { color: C.ink3, fontWeight: 500 } }, '(' + fmtDate(session.date) + ')'))))),
 
-      React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Quand'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Quand'),
       React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 16 } },
         React.createElement('input', { type: 'date', value: date, onChange: (e) => setDate(e.target.value), style: { flex: 1, padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } }),
         React.createElement('input', { type: 'time', value: heure, onChange: (e) => setHeure(e.target.value), style: { flex: '0 0 auto', width: 110, padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } })),
 
-      React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Durée'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Durée'),
       React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: duree === 'Personnalisée' ? 8 : 16 } },
         DUREES.map((d) => {
           const active = duree === d
-          return React.createElement('button', { key: d, onClick: () => setDuree(d), style: { padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (active ? C.primary : C.line), background: active ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, color: active ? C.primary : C.ink } }, d)
+          return React.createElement('button', { key: d, onClick: () => setDuree(d), style: { padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (active ? C.primary : C.line), background: active ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, color: active ? C.primary : C.ink } }, d)
         })),
       duree === 'Personnalisée' && React.createElement('input', { value: dureeCustom, onChange: (e) => setDureeCustom(e.target.value), placeholder: 'ex : 1h45', style: { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box', marginBottom: 16 } }),
 
-      React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Statut'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Statut'),
       React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 16 } },
         [{ id: 'planifie', label: '📅 Planifié' }, { id: 'realise', label: '✅ Réalisé' }].map((o) => {
           const active = statut === o.id
@@ -971,7 +965,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
         })),
 
       statut === 'realise' && React.createElement(React.Fragment, null,
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Ressenti'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Ressenti'),
         React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 16 } },
           RESSENTI.map((r) => React.createElement('button', { key: r.val, onClick: () => setRessenti(r.val), title: r.l, style: { flex: 1, padding: '10px 0', borderRadius: C.radiusSm, fontSize: 22, cursor: 'pointer', border: '1.5px solid ' + (ressenti === r.val ? C.primary : C.line), background: ressenti === r.val ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface } }, r.e)))),
 
@@ -985,34 +979,34 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
       sport && MUSCU_SPORTS.includes(sport) && React.createElement(MuscuFields, { sport, exercises, setExercises, exerciseHistory }),
       sport && !MUSCU_SPORTS.includes(sport) && sport !== 'course' && sport !== 'sprint' && sport !== 'trail' && sport !== 'perche' && sport !== 'escalade' && React.createElement(GenericSportFields, { sportId: sport, data, setData }),
 
-      React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Notes'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Notes'),
       React.createElement('textarea', { value: notes, onChange: (e) => setNotes(e.target.value), placeholder: 'Objectifs, commentaires…', rows: 3, style: { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14, outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: C.font, marginBottom: 18 } }),
 
       (overload?.worsened || consecDays >= 5 || showTaperSuggestion) && React.createElement('div', { style: { marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 } },
         overload?.worsened && React.createElement('div', { style: { display: 'flex', gap: 9, alignItems: 'flex-start', padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${overload.color} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${overload.color} 28%, ${C.line})` } },
           React.createElement(Icon, { name: 'shield', size: 15, color: overload.color, style: { flex: '0 0 auto', marginTop: 1 } }),
           React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, 'Avec cette séance, ta charge passerait en zone "', React.createElement('strong', { style: { color: overload.color } }, overload.level.toLowerCase()), `" (ratio ${overload.currentRatio} → ${overload.ratio}).`)),
-        consecDays >= 5 && React.createElement('div', { style: { display: 'flex', gap: 9, alignItems: 'flex-start', padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, #c4a03a 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, #c4a03a 28%, ${C.line})` } },
+        consecDays >= 5 && React.createElement('div', { style: { display: 'flex', gap: 9, alignItems: 'flex-start', padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, var(--ch1) 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, var(--ch1) 28%, ${C.line})` } },
           React.createElement(Icon, { name: 'alert', size: 15, color: C.warn, style: { flex: '0 0 auto', marginTop: 1 } }),
           React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, `Ce serait ton ${consecDays}e jour d'entraînement consécutif — pense à un jour de repos.`)),
         showTaperSuggestion && React.createElement('div', { style: { display: 'flex', gap: 9, alignItems: 'center', padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.primary} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.primary} 25%, ${C.line})` } },
           React.createElement('span', { style: { flex: 1, fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, `En affûtage pour « ${activePeakPlan.goal.label} » (vise ~${activePeakPlan.plan.targetVolumePct}% du volume habituel) — réduire cette séance à ${taperTarget} min ?`),
-          React.createElement('button', { type: 'button', onClick: applyTaperTarget, style: { flex: '0 0 auto', padding: '7px 11px', borderRadius: 999, background: C.primary, color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' } }, 'Réduire'))),
+          React.createElement('button', { type: 'button', onClick: applyTaperTarget, style: { flex: '0 0 auto', padding: '7px 11px', borderRadius: 'var(--r-pill)', background: C.primary, color: 'var(--c-on-fill)', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' } }, 'Réduire'))),
 
       showRepeatOption && React.createElement('button', { type: 'button', onClick: () => setRepeatNextWeek(!repeatNextWeek), style: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '11px 13px', borderRadius: C.radiusSm, background: repeatNextWeek ? `color-mix(in srgb, ${C.primary} 8%, ${C.surface})` : C.surface2, border: `1px solid ${repeatNextWeek ? 'color-mix(in srgb, ' + C.primary + ' 25%, ' + C.line + ')' : C.line}`, cursor: 'pointer', marginBottom: 12 } },
-        React.createElement('div', { style: { width: 20, height: 20, borderRadius: 6, flex: '0 0 auto', border: `1.5px solid ${repeatNextWeek ? C.primary : C.line}`, background: repeatNextWeek ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-          repeatNextWeek && React.createElement(Icon, { name: 'check', size: 13, color: '#fff' })),
+        React.createElement('div', { style: { width: 20, height: 20, borderRadius: 0, flex: '0 0 auto', border: `1.5px solid ${repeatNextWeek ? C.primary : C.line}`, background: repeatNextWeek ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          repeatNextWeek && React.createElement(Icon, { name: 'check', size: 13, color: 'var(--c-on-fill)' })),
         React.createElement('span', { style: { flex: 1, fontSize: 12.5, color: C.ink2, lineHeight: 1.4 } }, 'Ajouter aussi la même séance le ', React.createElement('strong', { style: { color: C.ink } }, fmtDate(nextWeekDate)), ' (semaine prochaine)')),
 
-      React.createElement('button', { disabled: !canSave, onClick: handleSave, style: { width: '100%', padding: 15, borderRadius: 999, background: canSave ? C.primary : C.surface2, color: canSave ? '#fff' : C.ink3, border: 'none', fontSize: 15, fontWeight: 700, cursor: canSave ? 'pointer' : 'default' } }, '⚡ Enregistrer'),
+      React.createElement('button', { disabled: !canSave, onClick: handleSave, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 15, borderRadius: 'var(--r-pill)', background: canSave ? C.primary : C.surface2, color: canSave ? 'var(--c-on-fill)' : C.ink3, border: 'none', cursor: canSave ? 'pointer' : 'default' } }, '⚡ Enregistrer'),
 
       initial && React.createElement('div', { style: { marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Dupliquer vers un autre jour'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Dupliquer vers un autre jour'),
         React.createElement('div', { style: { display: 'flex', gap: 8 } },
           React.createElement('input', { type: 'date', value: dupDate, onChange: (e) => setDupDate(e.target.value), style: { flex: 1, padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } }),
           React.createElement('button', { disabled: !dupDate, onClick: handleDuplicate, style: { flex: '0 0 auto', padding: '11px 16px', borderRadius: C.radiusSm, background: dupDate ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface2, border: `1.5px solid ${dupDate ? C.primary : C.line}`, color: dupDate ? C.primary : C.ink3, fontSize: 13.5, fontWeight: 700, cursor: dupDate ? 'pointer' : 'default' } }, '📋 Copier'))),
 
-      initial && React.createElement('button', { onClick: () => onDelete(initial.id), style: { width: '100%', marginTop: 10, padding: 13, borderRadius: 999, background: 'transparent', border: `1px solid ${C.line}`, color: '#b3402e', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, '🗑 Supprimer cette séance')))
+      initial && React.createElement('button', { onClick: () => onDelete(initial.id), style: { width: '100%', marginTop: 10, padding: 13, borderRadius: 'var(--r-pill)', background: 'transparent', border: `1px solid ${C.line}`, color: 'var(--c-danger)', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, '🗑 Supprimer cette séance')))
 }
 
 // ── Bilan de la semaine planifiée ──
@@ -1023,17 +1017,17 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
 // changer d'avis.
 function WeekBrief({ db, weekOf }) {
   const ana = plannerAnalysis(db, { weekOf })
-  const LVL = { ok: C.success, low: C.ink3, info: C.ink3, warn: C.warn, alert: '#c4503a' }
+  const LVL = { ok: C.success, low: C.ink3, info: C.ink3, warn: C.warn, alert: 'var(--c-danger)' }
   if (!ana.structure.all.length) return null
 
   const load = ana.load
   const ratioCol = load.available && load.verdict ? LVL[load.verdict.level] : C.ink3
   const stat = (v, l, col) => React.createElement('div', { style: { flex: 1, textAlign: 'center' } },
-    React.createElement('div', { style: { fontFamily: C.font, fontSize: 19, fontWeight: 800, color: col || C.ink } }, v),
+    React.createElement('div', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', color: col || C.ink } }, v),
     React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 2, fontWeight: 600 } }, l))
 
   return React.createElement('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '14px 15px', marginBottom: 14 } },
-    React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 } }, 'Bilan de la semaine'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10 } }, 'Bilan de la semaine'),
 
     React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 12 } },
       stat(load.available ? String(load.ratio).replace('.', ',') : '—', 'charge projetée', ratioCol),
@@ -1051,7 +1045,7 @@ function WeekBrief({ db, weekOf }) {
             React.createElement('div', {
               style: {
                 width: '100%', height: d.load > 0 ? Math.max(4, Math.round(d.load / max * 34)) : 3,
-                borderRadius: 4,
+                borderRadius: 0,
                 background: d.rest ? C.surface2 : d.hard ? C.warn : C.primary,
               },
             })),
@@ -1172,16 +1166,16 @@ export default function PlannerSpace({ db, store, onClose }) {
 
   return React.createElement(FlowSpace, { bg: 'entrainer',
     title: 'Calendrier', onClose,
-    action: React.createElement('button', { onClick: () => openAdd(view === 'day' ? isoDate(date) : null), 'aria-label': 'Ajouter une séance', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
+    action: React.createElement('button', { onClick: () => openAdd(view === 'day' ? isoDate(date) : null), 'aria-label': 'Ajouter une séance', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
       React.createElement(Icon, { name: 'plus', size: 20, color: C.primary })),
   },
     React.createElement(SegTabs, { tabs: [{ id: 'day', lab: 'Jour' }, { id: 'week', lab: 'Semaine' }, { id: 'month', lab: 'Mois' }], value: view, onChange: setView }),
 
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 } },
-      React.createElement('button', { onClick: () => navDate(-1), 'aria-label': 'Précédent', style: { width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
+      React.createElement('button', { onClick: () => navDate(-1), 'aria-label': 'Précédent', style: { width: 34, height: 34, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
         React.createElement(Icon, { name: 'prev', size: 16 })),
       React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15, textTransform: 'capitalize' } }, label),
-      React.createElement('button', { onClick: () => navDate(1), 'aria-label': 'Suivant', style: { width: 34, height: 34, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
+      React.createElement('button', { onClick: () => navDate(1), 'aria-label': 'Suivant', style: { width: 34, height: 34, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
         React.createElement(Icon, { name: 'next', size: 16 }))),
 
     view === 'day' && React.createElement(DayView, { date, sessions, onOpen: openEdit, onAdd: openAdd }),

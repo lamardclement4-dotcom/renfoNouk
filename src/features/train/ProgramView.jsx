@@ -7,23 +7,23 @@ const optRowStyle = { display: 'flex', alignItems: 'center', gap: 12, width: '10
 
 function Sheet({ title, sub, onClose, children }) {
   return React.createElement('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 70, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
-    React.createElement('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: '24px 24px 0 0', padding: '18px 22px calc(24px + env(safe-area-inset-bottom))', maxHeight: '82vh', display: 'flex', flexDirection: 'column', animation: 'sheetUp .3s ease' } },
-      React.createElement('div', { style: { width: 38, height: 4, borderRadius: 999, background: C.line, margin: '0 auto 16px' } }),
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, textAlign: 'center', marginBottom: 4 } }, title),
+    React.createElement('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: 0, padding: '18px 22px calc(24px + env(safe-area-inset-bottom))', maxHeight: '82vh', display: 'flex', flexDirection: 'column', animation: 'sheetUp .3s ease' } },
+      React.createElement('div', { style: { width: 38, height: 4, borderRadius: 'var(--r-pill)', background: C.line, margin: '0 auto 16px' } }),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center', marginBottom: 4 } }, title),
       sub && React.createElement('p', { style: { fontSize: 12.5, color: C.ink3, textAlign: 'center', marginBottom: 14 } }, sub),
       React.createElement('div', { style: { overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 } }, children),
-      React.createElement('button', { onClick: onClose, style: { marginTop: 14, width: '100%', padding: 16, borderRadius: 999, background: C.primary, color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer' } }, 'Terminé')))
+      React.createElement('button', { onClick: onClose, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 14, width: '100%', padding: 16, borderRadius: 'var(--r-pill)', background: C.primary, color: 'var(--c-on-fill)', border: 'none', cursor: 'pointer' } }, 'Terminé')))
 }
 
 function Card({ s, idx, tagText, done, onToggle, onOpen }) {
   const cat = CATS[s.cat] || { tint: C.primary }
   const isDone = !!done
   return React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: C.radiusSm, background: C.surface, border: '1.5px solid ' + (isDone ? `color-mix(in srgb, ${C.primary} 35%, ${C.line})` : C.line) } },
-    React.createElement('button', { onClick: onToggle, 'aria-label': isDone ? 'Fait, toucher pour annuler' : 'Marquer comme fait', style: { width: 48, height: 48, borderRadius: 14, flex: '0 0 auto', background: isDone ? C.primary : `color-mix(in srgb, ${cat.tint} 15%, ${C.surface})`, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
-      isDone ? React.createElement(Icon, { name: 'check', size: 22, color: '#fff' }) : React.createElement('span', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 17, color: cat.tint } }, idx)),
+    React.createElement('button', { onClick: onToggle, 'aria-label': isDone ? 'Fait, toucher pour annuler' : 'Marquer comme fait', style: { width: 48, height: 48, borderRadius: 0, flex: '0 0 auto', background: isDone ? C.primary : `color-mix(in srgb, ${cat.tint} 15%, ${C.surface})`, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
+      isDone ? React.createElement(Icon, { name: 'check', size: 22, color: 'var(--c-on-fill)' }) : React.createElement('span', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 17, color: cat.tint } }, idx)),
     React.createElement('button', { onClick: onOpen, style: { flex: 1, minWidth: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', cursor: 'pointer' } },
       React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-        tagText && React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: cat.tint, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 2 } }, tagText),
+        tagText && React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: cat.tint, marginBottom: 2 } }, tagText),
         React.createElement('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 15.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, s.title),
         React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 2 } }, s.mins, ' min · ', (s.keys || []).length, ' mvts')),
       React.createElement(Icon, { name: 'arrow', size: 18, color: C.ink3, style: { flex: '0 0 auto' } })))
@@ -37,11 +37,11 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
   if (!prog) {
     return React.createElement(FlowSpace, { bg: 'entrainer', title: 'Mon programme', onClose },
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', minHeight: '55vh' } },
-        React.createElement('div', { style: { width: 88, height: 88, borderRadius: 999, background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' } },
+        React.createElement('div', { style: { width: 88, height: 88, borderRadius: 'var(--r-pill)', background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' } },
           React.createElement(Icon, { name: 'route', size: 40, color: C.primary })),
-        React.createElement('h1', { style: { fontFamily: C.font, fontSize: 23, fontWeight: 700, letterSpacing: '-.02em' } }, 'Pas encore de programme'),
+        React.createElement('h1', { style: { fontFamily: C.display, fontSize: 26, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, 'Pas encore de programme'),
         React.createElement('p', { style: { color: C.ink2, fontSize: 14.5, lineHeight: 1.5, marginTop: 12, maxWidth: 300, marginInline: 'auto' } }, 'Fais le test de mobilité : on génère des séances ciblées sur tes points faibles.'),
-        React.createElement('button', { onClick: onMobility, style: { marginTop: 26, maxWidth: 300, marginInline: 'auto', width: '100%', padding: 15, borderRadius: 999, background: C.primary, color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer' } }, 'Faire le test')))
+        React.createElement('button', { onClick: onMobility, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 26, maxWidth: 300, marginInline: 'auto', width: '100%', padding: 15, borderRadius: 'var(--r-pill)', background: C.primary, color: 'var(--c-on-fill)', border: 'none', cursor: 'pointer' } }, 'Faire le test')))
   }
 
   const renfoGoalId = (db.profilePhys && db.profilePhys.renfoGoal) || 'tonus'
@@ -65,21 +65,21 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
 
   return React.createElement(FlowSpace, { bg: 'entrainer',
     title: 'Mon programme', onClose,
-    action: React.createElement('button', { onClick: onMobility, 'aria-label': 'Refaire le test', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
+    action: React.createElement('button', { onClick: onMobility, 'aria-label': 'Refaire le test', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
       React.createElement(Icon, { name: 'target', size: 18 })),
   },
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.primary, color: '#fff', marginBottom: 18 } },
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.primary, color: 'var(--c-on-fill)', marginBottom: 18 } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 16 } },
-        React.createElement(Ring, { size: 74, stroke: 8, progress: pct / 100, color: '#fff', track: 'rgba(255,255,255,.25)' },
-          React.createElement('div', { style: { fontFamily: C.font, fontSize: 19, fontWeight: 700, color: '#fff' } }, pct, '%')),
+        React.createElement(Ring, { size: 74, stroke: 8, progress: pct / 100, color: 'var(--c-on-fill)', track: 'color-mix(in srgb, var(--c-on-fill) 25%, transparent)' },
+          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', color: 'var(--c-on-fill)' } }, pct, '%')),
         React.createElement('div', null,
-          React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 18, lineHeight: 1.1 } }, 'Programme mobilité'),
+          React.createElement('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.1 } }, 'Programme mobilité'),
           React.createElement('div', { style: { fontSize: 13, opacity: 0.9, marginTop: 4 } }, doneCount, '/', total, ' séances · score mobilité ', prog.score, '/100')))),
 
     React.createElement('p', { style: { color: C.ink2, fontSize: 14, lineHeight: 1.5, margin: '0 2px 16px' } }, 'Construit à partir de ton test. On commence par tes zones les plus raides — ',
       React.createElement('strong', { style: { color: C.ink } }, prog.weak.map((id) => (ZONES[id] ? ZONES[id].label : id).toLowerCase()).join(', ')), '.'),
 
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '4px 2px 8px' } }, 'Mon sport'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, margin: '4px 2px 8px' } }, 'Mon sport'),
     React.createElement('button', { onClick: () => setSheet(true), style: optRowStyle },
       React.createElement(Icon, { name: 'bolt', size: 18, color: C.primary, style: { flex: '0 0 auto' } }),
       React.createElement('div', { style: { flex: 1, minWidth: 0 } },
@@ -87,7 +87,7 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
         React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 1 } }, sportObjs.length ? sportSessions.length + ' séances spécifiques ajoutées' : 'Ajoute des séances orientées performance')),
       React.createElement(Icon, { name: 'arrow', size: 18, color: C.ink3, style: { flex: '0 0 auto' } })),
 
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '4px 2px 8px' } }, 'Mon objectif renfo'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, margin: '4px 2px 8px' } }, 'Mon objectif renfo'),
     React.createElement('button', { onClick: () => setSheetGoal(true), style: optRowStyle },
       React.createElement(Icon, { name: renfoGoal.icon, size: 18, color: renfoGoal.tint, style: { flex: '0 0 auto' } }),
       React.createElement('div', { style: { flex: 1, minWidth: 0 } },
@@ -95,16 +95,16 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
         React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 1 } }, renfoSessions.length + ' séances adaptées')),
       React.createElement(Icon, { name: 'arrow', size: 18, color: C.ink3, style: { flex: '0 0 auto' } })),
 
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 8px' } }, 'Ciblé mobilité'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, margin: '0 2px 8px' } }, 'Ciblé mobilité'),
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: sportSessions.length ? 18 : 8 } },
       prog.sessions.map((s, i) => React.createElement(Card, { key: s.id, s, idx: i + 1, tagText: s.tag, done: done[s.id], onToggle: () => toggleDone(s.id), onOpen: () => onOpenSession(s.id) }))),
 
     sportSessions.length > 0 && React.createElement(React.Fragment, null,
-      React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 8px' } }, 'Spécifique à ton sport'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, margin: '0 2px 8px' } }, 'Spécifique à ton sport'),
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 } },
         sportSessions.map((s, j) => React.createElement(Card, { key: s.id, s, idx: prog.sessions.length + j + 1, tagText: (CATS[s.cat] && CATS[s.cat].label) || 'Performance', done: done[s.id], onToggle: () => toggleDone(s.id), onOpen: () => onOpenSession(s.id) })))),
 
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '0 2px 8px' } }, 'Renforcement — ' + renfoGoal.label),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, margin: '0 2px 8px' } }, 'Renforcement — ' + renfoGoal.label),
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
       renfoSessions.map((s, k) => React.createElement(Card, { key: s.id, s, idx: k + 1, tagText: renfoGoal.label, done: done[s.id], onToggle: () => toggleDone(s.id), onOpen: () => onOpenSession(s.id) }))),
 

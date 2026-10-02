@@ -185,13 +185,13 @@ export default function WeightSpace({ db, store, onClose }) {
           ? h('div', { style: { fontSize: 12.5, color: C.ink3, lineHeight: 1.4 } }, 'Deux pesées à des jours différents suffisent pour l’estimer.')
           : h(React.Fragment, null,
             h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 4 } },
-              h('span', { style: { fontFamily: C.font, fontSize: 26, fontWeight: 800, letterSpacing: '-.02em', color: verdictCol } }, signed(a.rate, 2)),
+              h('span', { style: { fontFamily: C.mono, fontSize: 22, fontWeight: 600, letterSpacing: '-.03em', color: verdictCol } }, signed(a.rate, 2)),
               h('span', { style: { fontSize: 12, color: C.ink3, fontWeight: 700 } }, 'kg/sem.')),
             a.verdict && h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 6, lineHeight: 1.35 } }, a.verdict.text)))),
 
     // ─── Projection ─────────────────────────────────────────────
     hasData && goal > 0 && h(Card, { style: { marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 } },
-      h('div', { style: { width: 40, height: 40, borderRadius: 12, flex: '0 0 auto', background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      h('div', { style: { width: 40, height: 40, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
         h(Icon, { name: 'target', size: 20, color: C.primary })),
       h('div', { style: { flex: 1, minWidth: 0 } },
         a.projection
@@ -210,9 +210,9 @@ export default function WeightSpace({ db, store, onClose }) {
       h(Chart, { series: windowed, trend: windowedTrend, goal }),
       windowed.length >= 2 && h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 12, fontSize: 11.5, color: C.ink3 } },
         h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 5 } },
-          h('span', { style: { width: 14, height: 2.5, borderRadius: 2, background: C.primary } }), 'Tendance lissée'),
+          h('span', { style: { width: 14, height: 2.5, borderRadius: 0, background: C.primary } }), 'Tendance lissée'),
         h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 5 } },
-          h('span', { style: { width: 6, height: 6, borderRadius: 999, background: C.ink3, opacity: 0.5 } }), 'Pesées'))),
+          h('span', { style: { width: 6, height: 6, borderRadius: 'var(--r-pill)', background: C.ink3, opacity: 0.5 } }), 'Pesées'))),
 
     // ─── Repères ────────────────────────────────────────────────
     hasData && h(Card, { style: { marginBottom: 12 } },
@@ -225,7 +225,7 @@ export default function WeightSpace({ db, store, onClose }) {
           { lab: 'Maximum', val: a.max.toFixed(1) + ' kg', col: C.ink },
         ].map((s, i) => h('div', { key: i, style: { padding: '11px 12px', borderRadius: C.radiusSm, background: C.surface2 } },
           h('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, s.lab),
-          h('div', { style: { fontFamily: C.font, fontSize: 18, fontWeight: 800, marginTop: 3, color: s.col } }, s.val)))),
+          h('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', marginTop: 3, color: s.col } }, s.val)))),
       a.bmi
         ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, padding: '11px 12px', borderRadius: C.radiusSm, background: C.surface2 } },
           h('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600, flex: 1 } }, 'IMC'),
@@ -255,7 +255,7 @@ export default function WeightSpace({ db, store, onClose }) {
           const col = m.rate == null || Math.abs(m.rate) < 0.05 ? C.ink2 : m.good(m.rate) ? C.success : C.danger
           return h('div', { key: i, style: { padding: '11px 12px', borderRadius: C.radiusSm, background: C.surface2 } },
             h('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, m.lab),
-            h('div', { style: { fontFamily: C.font, fontSize: 19, fontWeight: 800, marginTop: 3, color: col } }, m.to.toFixed(1), h('span', { style: { fontSize: 11, color: C.ink3, fontWeight: 600, marginLeft: 2 } }, 'kg')),
+            h('div', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', marginTop: 3, color: col } }, m.to.toFixed(1), h('span', { style: { fontSize: 11, color: C.ink3, fontWeight: 600, marginLeft: 2 } }, 'kg')),
             h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 2 } }, signed(m.to - m.from), ' kg depuis le début'))
         })),
       h('div', { style: { display: 'flex', gap: 9, padding: '10px 12px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${VERDICT_COLOR[rates.verdict.level] || C.ink2} 10%, ${C.surface})` } },
@@ -273,7 +273,7 @@ export default function WeightSpace({ db, store, onClose }) {
         ? h(React.Fragment, null,
           h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.primary} 9%, ${C.surface})` } },
             h('span', { style: { flex: 1, fontSize: 13, color: C.ink2, fontWeight: 600 } }, 'Ta dépense réelle'),
-            h('span', { style: { fontFamily: C.font, fontSize: 19, fontWeight: 800, color: C.primary } }, tdee.tdee),
+            h('span', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', color: C.primary } }, tdee.tdee),
             h('span', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, 'kcal/j')),
           h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 8, lineHeight: 1.45 } },
             'Mesurée sur toi, pas calculée par une formule : ', tdee.meanIntake, ' kcal/j consommés en moyenne sur ', tdee.loggedDays, ' jours, croisés avec ta variation de poids. Confiance ', tdee.confidence, '.'))
@@ -328,16 +328,16 @@ export default function WeightSpace({ db, store, onClose }) {
 
     // ─── Actions ────────────────────────────────────────────────
     h('div', { style: { display: 'flex', gap: 10, marginBottom: 16 } },
-      h('button', { onClick: () => setSheet({ kind: 'weigh' }), style: { flex: 1, padding: 14, borderRadius: 999, background: C.primary, color: '#fff', fontWeight: 800, fontSize: 14.5, border: 'none', cursor: 'pointer', boxShadow: `0 12px 24px -14px ${C.primary}` } }, 'Me peser'),
-      h('button', { onClick: () => setSheet({ kind: 'goal' }), style: { flex: 1, padding: 14, borderRadius: 999, background: C.surface, color: C.ink2, fontWeight: 700, fontSize: 14.5, border: `1.5px solid ${C.line}`, cursor: 'pointer' } }, goal > 0 ? 'Modifier l’objectif' : 'Définir un objectif')),
+      h('button', { onClick: () => setSheet({ kind: 'weigh' }), style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: 14, borderRadius: 'var(--r-pill)', background: C.primary, color: 'var(--c-on-fill)', border: 'none', cursor: 'pointer', boxShadow: 'none' } }, 'Me peser'),
+      h('button', { onClick: () => setSheet({ kind: 'goal' }), style: { flex: 1, padding: 14, borderRadius: 'var(--r-pill)', background: C.surface, color: C.ink2, fontWeight: 700, fontSize: 14.5, border: `1.5px solid ${C.line}`, cursor: 'pointer' } }, goal > 0 ? 'Modifier l’objectif' : 'Définir un objectif')),
 
-    h('button', { onClick: () => setSheet({ kind: 'import' }), style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, width: '100%', marginBottom: 16, padding: 13, borderRadius: 999, background: C.surface, border: `1.5px dashed ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14, cursor: 'pointer' } },
+    h('button', { onClick: () => setSheet({ kind: 'import' }), style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, width: '100%', marginBottom: 16, padding: 13, borderRadius: 'var(--r-pill)', background: C.surface, border: `1.5px dashed ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14, cursor: 'pointer' } },
       h(Icon, { name: 'plus', size: 17, color: C.primary }),
       'Importer une capture de ma balance'),
 
     h('div', { style: { display: 'flex', gap: 10, marginBottom: 16 } },
-      h('button', { onClick: () => setSheet({ kind: 'girth' }), style: { flex: 1, padding: 13, borderRadius: 999, background: C.surface, border: `1.5px solid ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14, cursor: 'pointer' } }, 'Mensurations'),
-      hasData && h('button', { onClick: exportCsv, style: { flex: 1, padding: 13, borderRadius: 999, background: C.surface, border: `1.5px solid ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14, cursor: 'pointer' } }, 'Exporter (CSV)')),
+      h('button', { onClick: () => setSheet({ kind: 'girth' }), style: { flex: 1, padding: 13, borderRadius: 'var(--r-pill)', background: C.surface, border: `1.5px solid ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14, cursor: 'pointer' } }, 'Mensurations'),
+      hasData && h('button', { onClick: exportCsv, style: { flex: 1, padding: 13, borderRadius: 'var(--r-pill)', background: C.surface, border: `1.5px solid ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14, cursor: 'pointer' } }, 'Exporter (CSV)')),
 
     // ─── Historique ─────────────────────────────────────────────
     hasData && h(Card, null,
@@ -387,27 +387,27 @@ function WeightSheet({ sheet, fallback, goal, onSave, onDelete, onClose }) {
   const title = sheet.kind === 'goal' ? 'Poids objectif' : sheet.kind === 'edit' ? 'Pesée du ' + fmtShort(sheet.date) : 'Ma pesée du jour'
   const ok = Number(v) > 0
   return h('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(17,24,39,.45)', zIndex: 65, display: 'flex', alignItems: 'flex-end' } },
-    h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', background: C.surface, borderRadius: '24px 24px 0 0', padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto', boxSizing: 'border-box' } },
-      h('div', { style: { width: 38, height: 4, borderRadius: 999, background: C.line, margin: '0 auto 18px' } }),
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, textAlign: 'center' } }, title),
+    h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', background: C.surface, borderRadius: 0, padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto', boxSizing: 'border-box' } },
+      h('div', { style: { width: 38, height: 4, borderRadius: 'var(--r-pill)', background: C.line, margin: '0 auto 18px' } }),
+      h('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center' } }, title),
       h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, margin: '22px 0 24px' } },
-        h('button', { onClick: () => step(-0.1), 'aria-label': 'Diminuer', style: { width: 46, height: 46, borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 22, fontWeight: 700, color: C.ink, cursor: 'pointer' } }, '–'),
+        h('button', { onClick: () => step(-0.1), 'aria-label': 'Diminuer', style: { width: 46, height: 46, borderRadius: 'var(--r-pill)', border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 22, fontWeight: 700, color: C.ink, cursor: 'pointer' } }, '–'),
         h('div', { style: { textAlign: 'center' } },
           h('input', {
             type: 'number', inputMode: 'decimal', step: '0.1', value: v,
             onChange: (e) => setV(e.target.value === '' ? '' : Number(e.target.value)),
-            style: { width: 130, textAlign: 'center', fontFamily: C.font, fontSize: 40, fontWeight: 800, letterSpacing: '-.03em', color: C.primary, border: 'none', outline: 'none', background: 'transparent', padding: 0 },
+            style: { fontFamily: C.mono, fontSize: 34, fontWeight: 600, letterSpacing: '-.03em', width: 130, textAlign: 'center', color: C.primary, border: 'none', outline: 'none', background: 'transparent', padding: 0 },
           }),
           h('div', { style: { fontSize: 13, color: C.ink3, fontWeight: 600 } }, 'kg')),
-        h('button', { onClick: () => step(0.1), 'aria-label': 'Augmenter', style: { width: 46, height: 46, borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 22, fontWeight: 700, color: C.ink, cursor: 'pointer' } }, '+')),
+        h('button', { onClick: () => step(0.1), 'aria-label': 'Augmenter', style: { width: 46, height: 46, borderRadius: 'var(--r-pill)', border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 22, fontWeight: 700, color: C.ink, cursor: 'pointer' } }, '+')),
       h('button', {
         disabled: !ok,
         onClick: () => { onSave(v); onClose() },
-        style: { width: '100%', padding: 15, borderRadius: 999, background: ok ? C.primary : C.surface2, color: ok ? '#fff' : C.ink3, fontWeight: 800, fontSize: 15, border: 'none', cursor: ok ? 'pointer' : 'default' },
+        style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 15, borderRadius: 'var(--r-pill)', background: ok ? C.primary : C.surface2, color: ok ? 'var(--c-on-fill)' : C.ink3, border: 'none', cursor: ok ? 'pointer' : 'default' },
       }, 'Enregistrer'),
       onDelete && h('button', {
         onClick: () => { onDelete(); onClose() },
-        style: { width: '100%', marginTop: 10, padding: 13, borderRadius: 999, background: 'transparent', border: `1.5px solid ${C.line}`, color: C.danger, fontWeight: 700, fontSize: 14, cursor: 'pointer' },
+        style: { width: '100%', marginTop: 10, padding: 13, borderRadius: 'var(--r-pill)', background: 'transparent', border: `1.5px solid ${C.line}`, color: C.danger, fontWeight: 700, fontSize: 14, cursor: 'pointer' },
       }, 'Supprimer cette pesée')))
 }
 
@@ -428,9 +428,9 @@ function GirthSheet({ current, canSave, onSave, onClose }) {
   }
   const any = Object.keys(parsed).length > 0
   return h('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(17,24,39,.45)', zIndex: 65, display: 'flex', alignItems: 'flex-end' } },
-    h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: '24px 24px 0 0', padding: '20px 20px 28px', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto' } },
-      h('div', { style: { width: 38, height: 4, borderRadius: 999, background: C.line, margin: '0 auto 16px' } }),
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, textAlign: 'center' } }, 'Mensurations'),
+    h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: 0, padding: '20px 20px 28px', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto' } },
+      h('div', { style: { width: 38, height: 4, borderRadius: 'var(--r-pill)', background: C.line, margin: '0 auto 16px' } }),
+      h('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center' } }, 'Mensurations'),
       h('p', { style: { fontSize: 12.5, color: C.ink2, textAlign: 'center', margin: '6px 0 16px', lineHeight: 1.45 } },
         'Le mètre ruban ne ment pas comme la balance : un tour de taille qui baisse à poids constant révèle une recomposition.'),
       !canSave && h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45, padding: '11px 13px', borderRadius: C.radiusSm, background: C.surface2, marginBottom: 12 } },
@@ -447,6 +447,6 @@ function GirthSheet({ current, canSave, onSave, onClose }) {
       h('button', {
         disabled: !any || !canSave,
         onClick: () => { onSave(parsed); onClose() },
-        style: { width: '100%', marginTop: 16, padding: 15, borderRadius: 999, background: any && canSave ? C.primary : C.surface2, color: any && canSave ? '#fff' : C.ink3, fontWeight: 800, fontSize: 15, border: 'none', cursor: any && canSave ? 'pointer' : 'default' },
+        style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', marginTop: 16, padding: 15, borderRadius: 'var(--r-pill)', background: any && canSave ? C.primary : C.surface2, color: any && canSave ? 'var(--c-on-fill)' : C.ink3, border: 'none', cursor: any && canSave ? 'pointer' : 'default' },
       }, 'Enregistrer')))
 }

@@ -21,145 +21,93 @@ export const C = {
   ink3: 'var(--c-ink3)',
   line: 'var(--c-line)',
   primary: 'var(--c-primary)',
-  // Accents sémantiques : chaque métrique garde la même couleur partout
-  // (calories/série en orange, glucides et réussite en vert, lipides en
-  // jaune), ce qui rend les anneaux lisibles sans légende.
   accent: 'var(--c-primary)',
+  // Le tracé : la couleur des courbes et des aiguilles.
+  trace: 'var(--c-trace)',
+  // Texte posé sur un aplat coloré. Blanc en clair, presque noir en sombre :
+  // du blanc sur un vert phosphore vif serait illisible.
+  onFill: 'var(--c-on-fill)',
   success: 'var(--c-success)',
   warn: 'var(--c-warn)',
   danger: 'var(--c-danger)',
+  // Voies de mesure : chaque grandeur garde sa couleur partout.
   calorie: 'var(--c-calorie)',
   protein: 'var(--c-protein)',
   carb: 'var(--c-carb)',
   fat: 'var(--c-fat)',
-  radius: 16,
-  radiusSm: 12,
-  radiusXs: 10,
-  font: '-apple-system, BlinkMacSystemFont, sans-serif',
-  // Ombres portées de l'habillage d'origine : plus courtes et plus
-  // marquées que les halos diffus de la refonte, elles posent la carte sur
-  // le fond au lieu de la faire flotter.
-  shadowSm: '0 1px 3px rgba(43,43,43,.06), 0 1px 2px rgba(43,43,43,.04)',
-  shadow: '0 4px 14px rgba(43,43,43,.07), 0 1px 3px rgba(43,43,43,.05)',
-  shadowLg: '0 12px 28px rgba(43,43,43,.1), 0 3px 8px rgba(43,43,43,.06)',
+  // Angles vifs : lignes droites et filets fins, pas de cartes arrondies.
+  radius: 0,
+  radiusSm: 0,
+  radiusXs: 0,
+  font: 'var(--f-text)',
+  // Titres étroits en capitales, façon étiquette de flacon.
+  display: 'var(--f-display)',
+  // Chiffres et étiquettes de mesure, à chasse fixe.
+  mono: 'var(--f-mono)',
+  // Pas d'ombres : un instrument se lit à plat.
+  shadowSm: 'none',
+  shadow: 'none',
+  shadowLg: 'none',
 }
 
-// Dégradés de fond par onglet : ce sont eux qui donnent son identité à
-// chaque écran. Ils sont eux aussi pilotés par variables pour suivre le
-// thème (un dégradé clair sur fond sombre serait illisible).
+// Les anciens fonds dégradés par onglet sont tous ramenés au papier
+// millimétré : l'identité vient du support, plus de la couleur de fond.
 export const GRADIENTS = {
-  accueil: 'var(--g-accueil)',
-  progres: 'var(--g-progres)',
-  entrainer: 'var(--g-entrainer)',
-  sante: 'var(--g-sante)',
-  profil: 'var(--g-profil)',
+  accueil: 'var(--g-paper)',
+  progres: 'var(--g-paper)',
+  entrainer: 'var(--g-paper)',
+  sante: 'var(--g-paper)',
+  profil: 'var(--g-paper)',
 }
 
 // ------------------------------------------------------------
-// Thèmes. Chacun redéfinit la palette complète ; `dark` sert à adapter ce
-// qui ne peut pas l'être par une simple couleur (barre d'état du système,
-// opacité des voiles). L'ordre de la liste est celui affiché dans Profil.
+// Apparence. Une seule identité — le laboratoire —, en clair et en sombre.
+// Les couleurs vivent dans index.css : choisir une apparence revient à
+// poser data-theme sur <html>, ou à le retirer pour suivre le téléphone.
 // ------------------------------------------------------------
-const flat = (c) => `linear-gradient(180deg, ${c} 0%, ${c} 100%)`
-const grad = (a, b, c) => `linear-gradient(180deg, ${a} 0%, ${b} 22%, ${c} 46%)`
-
 export const THEMES = [
-  {
-    // Habillage d'origine, repris valeur pour valeur : terracotta sur crème,
-    // fond uni. Les dégradés par onglet sont arrivés avec la refonte du
-    // 7 août ; ici chaque écran retrouve le fond plat qu'il avait.
-    id: 'origine', label: 'Origine', hint: 'Terracotta sur crème, fond uni',
-    swatch: ['#c25a3f', '#5b8a72', '#d2703f'],
-    vars: {
-      '--c-bg': '#faf9f5', '--c-surface': '#ffffff', '--c-surface2': '#f5f4ef',
-      '--c-ink': '#2b2b2b', '--c-ink2': '#666666', '--c-ink3': '#999999', '--c-line': '#e6e3dd',
-      '--c-primary': '#c25a3f', '--c-success': '#5b8a72', '--c-warn': '#bd923f', '--c-danger': '#b5566a',
-      '--c-calorie': '#d2703f', '--c-protein': '#a3526b', '--c-carb': '#5b8a72', '--c-fat': '#bd923f',
-      '--m-hydra': '#2e7d9e', '--m-sleep': '#4a6fa5', '--m-cycle': '#b5566a', '--m-mind': '#3f8f8a',
-      '--g-accueil': flat('#faf9f5'), '--g-progres': flat('#faf9f5'), '--g-entrainer': flat('#faf9f5'),
-      '--g-sante': flat('#faf9f5'), '--g-profil': flat('#faf9f5'),
-    },
-  },
-  {
-    id: 'clair', label: 'Clair', hint: 'Bleu, lumineux',
-    swatch: ['#2d7ff9', '#2fb865', '#ff8a3d'],
-    vars: {
-      '--c-bg': '#f6f7f9', '--c-surface': '#ffffff', '--c-surface2': '#f1f3f6',
-      '--c-ink': '#111827', '--c-ink2': '#5b6472', '--c-ink3': '#98a1ae', '--c-line': '#e8ebef',
-      '--c-primary': '#2d7ff9', '--c-success': '#2fb865', '--c-warn': '#f0b429', '--c-danger': '#e5533d',
-      '--c-calorie': '#ff8a3d', '--c-protein': '#2d7ff9', '--c-carb': '#2fb865', '--c-fat': '#f2b93b',
-      '--m-hydra': '#2e7d9e', '--m-sleep': '#4a6fa5', '--m-cycle': '#b5566a', '--m-mind': '#3f8f8a',
-      '--g-accueil': grad('#dbeafe', '#eef4fd', '#f6f7f9'),
-      '--g-progres': grad('#d6f5e3', '#eaf8f0', '#f6f7f9'),
-      '--g-entrainer': grad('#ffe8d6', '#fdf1e7', '#f6f7f9'),
-      '--g-sante': grad('#e5e0fb', '#f0edfc', '#f6f7f9'),
-      '--g-profil': grad('#e6eaf0', '#f0f2f6', '#f6f7f9'),
-    },
-  },
-  {
-    id: 'foret', label: 'Forêt', hint: 'Vert, apaisant',
-    swatch: ['#2f9e63', '#3f8f8a', '#e0913a'],
-    vars: {
-      '--c-bg': '#f5f8f5', '--c-surface': '#ffffff', '--c-surface2': '#eef4ef',
-      '--c-ink': '#14241c', '--c-ink2': '#546b5e', '--c-ink3': '#93a89b', '--c-line': '#e2ebe4',
-      '--c-primary': '#2f9e63', '--c-success': '#2f9e63', '--c-warn': '#d9a13c', '--c-danger': '#c9553f',
-      '--c-calorie': '#e0913a', '--c-protein': '#3f8f8a', '--c-carb': '#2f9e63', '--c-fat': '#d9a13c',
-      '--m-hydra': '#2f8f9e', '--m-sleep': '#4a6b8f', '--m-cycle': '#a8577a', '--m-mind': '#3f8f8a',
-      '--g-accueil': grad('#d5efdf', '#e8f5ec', '#f5f8f5'),
-      '--g-progres': grad('#cfeada', '#e4f2e9', '#f5f8f5'),
-      '--g-entrainer': grad('#f6e7d3', '#f2eee4', '#f5f8f5'),
-      '--g-sante': grad('#d8ecec', '#e7f3f2', '#f5f8f5'),
-      '--g-profil': grad('#e4ebe6', '#eef3ef', '#f5f8f5'),
-    },
-  },
-  {
-    id: 'couchant', label: 'Couchant', hint: 'Terracotta, chaleureux',
-    swatch: ['#c25a3f', '#b5566a', '#bd923f'],
-    vars: {
-      '--c-bg': '#faf8f5', '--c-surface': '#ffffff', '--c-surface2': '#f4f0ea',
-      '--c-ink': '#2b2320', '--c-ink2': '#6d5f58', '--c-ink3': '#a99a92', '--c-line': '#ece4dc',
-      '--c-primary': '#c25a3f', '--c-success': '#5b8a72', '--c-warn': '#bd923f', '--c-danger': '#b5566a',
-      '--c-calorie': '#d2703f', '--c-protein': '#a3526b', '--c-carb': '#5b8a72', '--c-fat': '#bd923f',
-      '--m-hydra': '#2e7d9e', '--m-sleep': '#4a6fa5', '--m-cycle': '#b5566a', '--m-mind': '#3f8f8a',
-      '--g-accueil': grad('#fbe3d4', '#f8ece2', '#faf8f5'),
-      '--g-progres': grad('#e6efe0', '#f0f2ea', '#faf8f5'),
-      '--g-entrainer': grad('#fadfd2', '#f7ebe2', '#faf8f5'),
-      '--g-sante': grad('#f4dfe4', '#f7eaed', '#faf8f5'),
-      '--g-profil': grad('#efe8e0', '#f5f0ea', '#faf8f5'),
-    },
-  },
-  {
-    id: 'nuit', label: 'Nuit', hint: 'Sombre, repose les yeux', dark: true,
-    swatch: ['#4c8dff', '#35c07a', '#ff9d4d'],
-    vars: {
-      '--c-bg': '#0e1117', '--c-surface': '#171b23', '--c-surface2': '#1f242e',
-      '--c-ink': '#eef1f6', '--c-ink2': '#a4adbb', '--c-ink3': '#727d8e', '--c-line': '#272d38',
-      '--c-primary': '#4c8dff', '--c-success': '#35c07a', '--c-warn': '#e8bd52', '--c-danger': '#f2684f',
-      '--c-calorie': '#ff9d4d', '--c-protein': '#4c8dff', '--c-carb': '#35c07a', '--c-fat': '#e8bd52',
-      '--m-hydra': '#3fa9c9', '--m-sleep': '#7b93e0', '--m-cycle': '#e0709a', '--m-mind': '#4fb8b0',
-      '--g-accueil': grad('#17233a', '#131a26', '#0e1117'),
-      '--g-progres': grad('#132a20', '#111d18', '#0e1117'),
-      '--g-entrainer': grad('#2a1d13', '#1d1712', '#0e1117'),
-      '--g-sante': grad('#1f1a2e', '#171522', '#0e1117'),
-      '--g-profil': grad('#161a21', '#12151b', '#0e1117'),
-    },
-  },
+  { id: 'auto', label: 'Automatique', hint: 'Suit le réglage du téléphone' },
+  { id: 'clair', label: 'Clair', hint: 'Papier millimétré' },
+  { id: 'sombre', label: 'Sombre', hint: 'Écran d’instrument' },
 ]
-
-export const DEFAULT_THEME = 'origine'
+export const DEFAULT_THEME = 'auto'
 export const THEME_KEY = 'renfo:theme'
 
-// Écrit la palette du thème sur <html>. Appelée au démarrage puis à chaque
-// changement dans Profil ; un id inconnu retombe sur le thème par défaut
-// pour qu'une valeur périmée en base ne laisse pas l'interface sans
-// couleurs.
+// Les thèmes d'avant la refonte : le choix fait est respecté autant que
+// possible. « Nuit » était sombre ; « Clair », « Forêt » et « Couchant »
+// étaient des choix clairs explicites ; « Origine » était le défaut de
+// tout le monde, il suit donc désormais le téléphone.
+const ANCIENS_THEMES = { nuit: 'sombre', clair: 'clair', foret: 'clair', couchant: 'clair', origine: 'auto' }
+
+export function normalizeTheme(id) {
+  if (THEMES.some((t) => t.id === id)) return id
+  return ANCIENS_THEMES[id] || DEFAULT_THEME
+}
+
 export function applyTheme(id) {
-  const t = THEMES.find((x) => x.id === id) || THEMES.find((x) => x.id === DEFAULT_THEME)
+  const choix = normalizeTheme(id)
+  if (typeof document === 'undefined' || !document.documentElement) return choix
   const root = document.documentElement
-  for (const [k, v] of Object.entries(t.vars)) root.style.setProperty(k, v)
-  root.style.colorScheme = t.dark ? 'dark' : 'light'
-  root.dataset.theme = t.id
-  return t.id
+  const st = root.style || {}
+  // Les anciens thèmes écrivaient chaque couleur en style en ligne sur
+  // <html> : on les efface, sinon ils masqueraient la palette d'index.css.
+  if (typeof st.removeProperty === 'function' && typeof st.length === 'number') {
+    for (let k = st.length - 1; k >= 0; k--) {
+      const prop = st[k]
+      if (/^--(c|g|m)-/.test(prop)) st.removeProperty(prop)
+    }
+  }
+  const valeur = choix === 'clair' ? 'light' : choix === 'sombre' ? 'dark' : null
+  if (root.dataset) {
+    if (valeur) root.dataset.theme = valeur
+    else delete root.dataset.theme
+  } else if (valeur && typeof root.setAttribute === 'function') {
+    root.setAttribute('data-theme', valeur)
+  } else if (!valeur && typeof root.removeAttribute === 'function') {
+    root.removeAttribute('data-theme')
+  }
+  st.colorScheme = valeur || ''
+  return choix
 }
 
 // Teintes par module. Elles réutilisent les rôles d'accent déjà définis
@@ -402,20 +350,19 @@ export function Icon({ name, size = 16, color, style }) {
 // `tint` colore le titre (compat. appelants existants) ; `bg` choisit le
 // dégradé d'ambiance parmi GRADIENTS ; `subtitle` ajoute une ligne de
 // contexte sous le titre.
-export function FlowSpace({ title, subtitle, onClose, action, tint, bg, children, fixed = true }) {
-  const surface = bg && GRADIENTS[bg]
-    ? { backgroundImage: GRADIENTS[bg], backgroundColor: C.bg, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat' }
-    : { background: C.bg }
+export function FlowSpace({ title, subtitle, onClose, action, tint, children, fixed = true }) {
+  // Tous les écrans sont posés sur le même papier millimétré.
+  const surface = { backgroundColor: C.bg, backgroundImage: 'var(--g-paper)', backgroundSize: 'var(--g-paper-size)', backgroundPosition: '-1px -1px', backgroundAttachment: 'local' }
   return React.createElement('div', { style: fixed
-    ? { position: 'fixed', inset: 0, ...surface, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' }
-    : { flex: 1, minHeight: 0, ...surface, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font } },
+    ? { position: 'fixed', inset: 0, ...surface, zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, color: C.ink, animation: 'spaceIn .2s ease' }
+    : { flex: 1, minHeight: 0, ...surface, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', width: '100%', fontFamily: C.font, color: C.ink } },
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '14px 18px 32px' } },
-      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 } },
-        React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm, flex: '0 0 auto' } },
-          React.createElement(Icon, { name: 'back', size: 19 })),
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 } },
+        React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, background: C.surface, border: `1px solid ${C.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: '0 0 auto', color: C.ink } },
+          React.createElement(Icon, { name: 'back', size: 18 })),
         React.createElement('div', { style: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', minHeight: 38 } }, action || null)),
-      React.createElement('h1', { style: { fontFamily: C.font, fontSize: 30, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1.1, margin: 0, color: tint || C.ink } }, title),
-      subtitle && React.createElement('p', { style: { fontSize: 13.5, color: C.ink2, margin: '6px 0 0', lineHeight: 1.45 } }, subtitle),
+      React.createElement('h1', { style: { fontFamily: C.display, fontSize: 40, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em', lineHeight: .9, margin: 0, color: tint || C.ink, textWrap: 'balance' } }, title),
+      subtitle && React.createElement('p', { style: { fontSize: 13.5, color: C.ink2, margin: '8px 0 0', lineHeight: 1.45, maxWidth: '60ch' } }, subtitle),
       React.createElement('div', { style: { marginTop: 18 } }, children)))
 }
 
@@ -423,21 +370,23 @@ export function FlowSpace({ title, subtitle, onClose, action, tint, bg, children
 // bloc de couleur pleine : le grand titre de FlowSpace porte déjà l'accent,
 // deux aplats saturés l'un sous l'autre alourdissaient l'écran.
 export function SpaceBanner({ ic, tint, title, text }) {
-  return React.createElement('div', { style: { display: 'flex', gap: 14, padding: 16, borderRadius: C.radius, background: `color-mix(in srgb, ${tint} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${tint} 24%, ${C.line})`, marginBottom: 18 } },
-    React.createElement('div', { style: { width: 44, height: 44, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${tint} 16%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-      React.createElement(Icon, { name: ic, size: 22, color: tint })),
+  // Bandeau réglé plutôt que carte teintée : un filet épais au-dessus, un
+  // filet fin dessous, comme l'en-tête d'une fiche de mesure.
+  return React.createElement('div', { style: { display: 'flex', gap: 14, padding: '13px 0 14px', borderTop: `2px solid ${C.ink}`, borderBottom: `1px solid ${C.line}`, marginBottom: 18 } },
+    React.createElement('div', { style: { width: 40, height: 40, flex: '0 0 auto', border: `1.5px solid ${tint}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      React.createElement(Icon, { name: ic, size: 20, color: tint })),
     React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-      React.createElement('div', { style: { fontFamily: C.font, fontSize: 16.5, fontWeight: 700, lineHeight: 1.2, color: C.ink } }, title),
-      React.createElement('p', { style: { fontSize: 13.5, color: C.ink2, margin: '5px 0 0', lineHeight: 1.45 } }, text)))
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, color: C.ink } }, title),
+      React.createElement('p', { style: { fontSize: 13.5, color: C.ink2, margin: '6px 0 0', lineHeight: 1.45 } }, text)))
 }
 
 export function SecLab({ children, style }) {
-  return React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', margin: '18px 2px 10px', ...style } }, children)
+  return React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.5, fontWeight: 800, color: C.ink2, textTransform: 'uppercase', letterSpacing: '.07em', margin: '20px 0 10px', paddingBottom: 5, borderBottom: `1px solid ${C.line}`, ...style } }, children)
 }
 
 export function NoteBox({ tint = C.primary, children }) {
-  return React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${tint} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${tint} 25%, ${C.line})`, fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: 14 } },
-    React.createElement('span', { style: { color: tint, fontWeight: 800, flex: '0 0 auto' } }, '!'),
+  return React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '3px 0 3px 12px', borderLeft: `3px solid ${tint}`, fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: 14 } },
+    React.createElement('span', { style: { color: tint, fontWeight: 600, flex: '0 0 auto', fontFamily: C.mono } }, '!'),
     React.createElement('span', null, children))
 }
 
@@ -445,31 +394,55 @@ export function NoteBox({ tint = C.primary, children }) {
 // dans une gouttière teintée, plutôt qu'un aplat de couleur — c'est le
 // même vocabulaire que SegPills, en version compacte et pleine largeur.
 export function SegTabs({ tabs, value, onChange, tint = C.primary }) {
-  return React.createElement('div', { style: { display: 'flex', gap: 4, background: C.surface2, padding: 4, borderRadius: 999, marginBottom: 18, border: `1px solid ${C.line}` } },
+  // Onglets soulignés plutôt que pilule coulissante : un trait sous l'onglet
+  // actif, comme le sélecteur de voie d'un appareil.
+  return React.createElement('div', { role: 'tablist', style: { display: 'flex', marginBottom: 18, borderBottom: `1px solid ${C.line}`, overflowX: 'auto' } },
     tabs.map((t) => {
       const active = value === t.id
-      return React.createElement('button', { key: t.id, onClick: () => onChange(t.id),
-        style: { flex: 1, padding: '9px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', border: 'none', cursor: 'pointer', color: active ? tint : C.ink2, background: active ? C.surface : 'transparent', boxShadow: active ? C.shadowSm : 'none', transition: 'all .15s ease' } }, t.lab)
+      return React.createElement('button', { key: t.id, role: 'tab', 'aria-selected': active, onClick: () => onChange(t.id),
+        style: { flex: 1, padding: '10px 10px 8px', fontFamily: C.display, fontSize: 15, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', whiteSpace: 'nowrap', border: 'none', borderBottom: `2px solid ${active ? tint : 'transparent'}`, marginBottom: -1, cursor: 'pointer', color: active ? C.ink : C.ink3, background: 'transparent' } }, t.lab)
     }))
 }
 
 export function Pill({ tint = C.primary, solid, style, children }) {
+  // Étiquette de mesure : petites capitales à chasse fixe, angles vifs.
+  const base = { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 7px', fontFamily: C.mono, fontSize: 10.5, fontWeight: 600, letterSpacing: '.02em', textTransform: 'uppercase', lineHeight: 1.3 }
   return React.createElement('span', { style: solid
-    ? { display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, color: '#fff', background: tint, ...style }
-    : { display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600, color: tint, background: `color-mix(in srgb, ${tint} 12%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${tint} 30%, ${C.line})`, ...style } }, children)
+    ? { ...base, color: C.onFill, background: tint, ...style }
+    : { ...base, color: tint, border: `1px solid ${tint}`, background: 'transparent', ...style } }, children)
 }
 
 // Anneau de progression SVG (utilisé par le lecteur de séance et le suivi de cycle).
 export function Ring({ size = 250, stroke = 12, progress = 0, track = C.surface2, color = C.primary, pulse, children }) {
-  const r = (size - stroke) / 2
-  const circ = 2 * Math.PI * r
+  // Cadran gradué : un arc de 270° ouvert vers le bas, avec ses graduations,
+  // plutôt qu'un anneau fermé. C'est la forme des mesures dans l'app.
+  const p = Math.max(0, Math.min(1, progress))
+  const c = size / 2
+  const m = Math.max(4, size * 0.06)
+  const r = (size - stroke) / 2 - m
+  const pt = (deg, rr) => { const a = deg * Math.PI / 180; return [c + rr * Math.cos(a), c + rr * Math.sin(a)] }
+  const a0 = 135
+  const course = 270
+  const [x0, y0] = pt(a0, r)
+  const [x1, y1] = pt(a0 + course, r)
+  const arc = `M${x0.toFixed(2)},${y0.toFixed(2)} A${r.toFixed(2)},${r.toFixed(2)} 0 1 1 ${x1.toFixed(2)},${y1.toFixed(2)}`
+  const graduations = []
+  const n = 27
+  for (let i = 0; i <= n; i++) {
+    const grand = i % 9 === 0
+    const [ax, ay] = pt(a0 + i * course / n, r + stroke / 2 + 1)
+    const [bx, by] = pt(a0 + i * course / n, r + stroke / 2 + (grand ? m - 1 : m * 0.55))
+    graduations.push(React.createElement('line', { key: i, x1: ax, y1: ay, x2: bx, y2: by, strokeWidth: grand ? 1.4 : 1, style: { stroke: grand ? C.ink2 : C.ink3 } }))
+  }
   return React.createElement('div', { style: { position: 'relative', width: size, height: size, flex: '0 0 auto', animation: pulse ? 'ringPulse 3s ease-in-out infinite' : 'none' } },
-    // Les couleurs passent par `style` et non par l'attribut `stroke` :
-    // les attributs de présentation SVG ne résolvent pas var(), et toute
-    // la palette est désormais en variables CSS (thèmes).
-    React.createElement('svg', { width: size, height: size, style: { transform: 'rotate(-90deg)' } },
-      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', strokeWidth: stroke, style: { stroke: track } }),
-      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', strokeWidth: stroke, strokeLinecap: 'round', strokeDasharray: circ, strokeDashoffset: circ * (1 - Math.max(0, Math.min(1, progress))), style: { stroke: color, transition: 'stroke-dashoffset .4s linear' } })),
+    // Les couleurs passent par `style` : les attributs de présentation SVG
+    // ne résolvent pas var(), et toute la palette est en variables CSS.
+    React.createElement('svg', { width: size, height: size, viewBox: `0 0 ${size} ${size}`, 'aria-hidden': true },
+      graduations,
+      React.createElement('path', { d: arc, fill: 'none', strokeWidth: stroke, style: { stroke: track } }),
+      // L'aiguille monte depuis zéro à l'affichage (dialRise part d'un
+      // décalage de 1, c'est-à-dire d'un arc vide), puis suit la valeur.
+      React.createElement('path', { d: arc, fill: 'none', strokeWidth: stroke, pathLength: 1, strokeDasharray: '1 2', strokeDashoffset: 1 - p, style: { stroke: color, transition: 'stroke-dashoffset .4s linear', animation: 'dialRise 1s cubic-bezier(.3,.6,.3,1) .15s backwards' } })),
     React.createElement('div', { style: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } }, children))
 }
 
@@ -482,7 +455,9 @@ export function Ring({ size = 250, stroke = 12, progress = 0, track = C.surface2
 
 // Carte blanche standard.
 export function Card({ children, style, onClick, pad = 16 }) {
-  const base = { background: C.surface, borderRadius: C.radius, padding: pad, boxShadow: C.shadow, border: `1px solid ${C.line}`, width: '100%', boxSizing: 'border-box' }
+  // Étiquette posée sur le papier : fond uni qui masque la grille, filet
+  // épais en tête, filets fins sur les côtés. Ni coins ronds ni ombre.
+  const base = { background: C.surface, borderRadius: 0, padding: pad, border: `1px solid ${C.line}`, borderTop: `2px solid ${C.ink}`, width: '100%', boxSizing: 'border-box' }
   if (!onClick) return React.createElement('div', { style: { ...base, ...style } }, children)
   return React.createElement('button', { onClick, style: { ...base, textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit', ...style } }, children)
 }
@@ -491,31 +466,35 @@ export function Card({ children, style, onClick, pad = 16 }) {
 // exposant optique. C'est le motif central de la maquette.
 export function BigStat({ label, value, unit, color = C.ink, sub, size = 38, style }) {
   return React.createElement('div', { style },
-    label && React.createElement('div', { style: { fontSize: 13, color: C.ink2, fontWeight: 600, marginBottom: 4 } }, label),
-    React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 4 } },
-      React.createElement('span', { style: { fontFamily: C.font, fontSize: size, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1, color } }, value),
-      unit && React.createElement('span', { style: { fontSize: Math.round(size * 0.42), fontWeight: 700, color: C.ink3 } }, unit)),
+    label && React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.5, color: C.ink2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 } }, label),
+    React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 5 } },
+      // La chasse fixe est large : on réduit un peu pour garder l'encombrement.
+      React.createElement('span', { style: { fontFamily: C.mono, fontSize: Math.round(size * 0.84), fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1, color } }, value),
+      unit && React.createElement('span', { style: { fontFamily: C.mono, fontSize: Math.max(10, Math.round(size * 0.3)), fontWeight: 400, color: C.ink3 } }, unit)),
     sub && React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 6 } }, sub))
 }
 
 // Barre de progression fine.
 export function Bar({ pct, color = C.primary, height = 6, style }) {
-  return React.createElement('div', { style: { width: '100%', height, borderRadius: 999, background: C.surface2, overflow: 'hidden', ...style } },
-    React.createElement('div', { style: { width: Math.max(0, Math.min(100, pct)) + '%', height: '100%', borderRadius: 999, background: color, transition: 'width .45s ease' } }))
+  // Jauge droite, avec son repère d'origine.
+  return React.createElement('div', { style: { position: 'relative', width: '100%', height, background: C.surface2, borderLeft: `1px solid ${C.ink3}`, overflow: 'hidden', ...style } },
+    React.createElement('div', { style: { width: Math.max(0, Math.min(100, pct)) + '%', height: '100%', background: color, transition: 'width .45s ease' } }))
 }
 
 // Pilules de filtre (1 sem. / 1 mois / …) : active pleine, inactives
 // blanches cerclées.
 export function SegPills({ options, value, onChange, tint = C.primary, style }) {
-  return React.createElement('div', { style: { display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2, ...style } },
-    options.map((o) => {
+  // Sélecteur segmenté d'appareil : cases jointives, l'active en aplat.
+  return React.createElement('div', { style: { display: 'flex', overflowX: 'auto', border: `1px solid ${C.line}`, background: C.surface, ...style } },
+    options.map((o, i) => {
       const id = o.id !== undefined ? o.id : o
       const lab = o.label !== undefined ? o.label : o
       const on = id === value
       return React.createElement('button', {
         key: id,
+        'aria-pressed': on,
         onClick: () => onChange(id),
-        style: { flex: '0 0 auto', padding: '9px 16px', borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', color: on ? '#fff' : C.ink2, background: on ? tint : C.surface, border: `1px solid ${on ? tint : C.line}`, boxShadow: on ? `0 8px 18px -10px ${tint}` : C.shadowSm },
+        style: { flex: '1 0 auto', padding: '8px 12px', fontFamily: C.mono, fontSize: 11.5, fontWeight: 600, textTransform: 'uppercase', cursor: 'pointer', whiteSpace: 'nowrap', color: on ? C.onFill : C.ink2, background: on ? tint : 'transparent', border: 'none', borderLeft: i ? `1px solid ${C.line}` : 'none' },
       }, lab)
     }))
 }
@@ -523,18 +502,18 @@ export function SegPills({ options, value, onChange, tint = C.primary, style }) 
 // Bouton d'action pleine largeur.
 export function PrimaryBtn({ tint = C.primary, onClick, disabled, children, style }) {
   return React.createElement('button', { onClick, disabled,
-    style: { width: '100%', padding: 15, borderRadius: 999, fontSize: 15, fontWeight: 800, border: 'none', color: '#fff', background: disabled ? C.surface2 : tint, cursor: disabled ? 'default' : 'pointer', boxShadow: disabled ? 'none' : `0 12px 26px -14px ${tint}`, ...style } }, children)
+    style: { width: '100%', padding: '14px 16px', fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', border: 'none', color: disabled ? C.ink3 : C.onFill, background: disabled ? C.surface2 : tint, cursor: disabled ? 'default' : 'pointer', ...style } }, children)
 }
 
 export function Choice({ tint = C.primary, value, set, options, multi }) {
-  return React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
+  return React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
     options.map((o) => {
       const active = multi ? (value || []).includes(o.id) : value === o.id
-      return React.createElement('button', { key: o.id, type: 'button', onClick: () => set(o.id),
-        style: { padding: '10px 14px', borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
-          border: '1.5px solid ' + (active ? tint : '#ddd'),
+      return React.createElement('button', { key: o.id, type: 'button', 'aria-pressed': active, onClick: () => set(o.id),
+        style: { padding: '9px 12px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+          border: `1.5px solid ${active ? tint : C.line}`,
           background: active ? `color-mix(in srgb, ${tint} 12%, ${C.surface})` : C.surface,
-          color: active ? tint : C.ink2 } }, o.lab)
+          color: active ? C.ink : C.ink2 } }, o.lab)
     }))
 }
 
@@ -571,7 +550,8 @@ export function SyncBanner({ sync, onRetry }) {
       padding: '11px 14px', borderRadius: C.radiusSm,
       background: `color-mix(in srgb, ${tint} 14%, ${C.surface})`,
       border: `1px solid color-mix(in srgb, ${tint} 40%, ${C.line})`,
-      boxShadow: C.shadow, fontFamily: C.font,
+      borderLeft: `3px solid ${tint}`,
+      fontFamily: C.font,
     },
   },
     React.createElement(Icon, { name: isError ? 'shield' : 'clock', size: 16, color: tint, style: { flex: '0 0 auto' } }),
@@ -586,6 +566,6 @@ export function SyncBanner({ sync, onRetry }) {
           : 'Elles partiront dès le retour du réseau — tu peux continuer.')),
     isError && onRetry ? React.createElement('button', {
       onClick: onRetry,
-      style: { flex: '0 0 auto', padding: '7px 12px', borderRadius: 999, border: 'none', background: tint, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+      style: { flex: '0 0 auto', padding: '7px 12px', border: 'none', background: tint, color: C.onFill, fontFamily: C.mono, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', cursor: 'pointer' },
     }, 'Réessayer') : null)
 }

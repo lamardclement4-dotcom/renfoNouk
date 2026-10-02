@@ -54,7 +54,7 @@ function WeekPicker({ offset, setOffset }) {
       h(Icon, { name: 'next', size: 15, color: C.ink3, style: { transform: open ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform .15s ease' } })),
     open && h(React.Fragment, null,
       h('div', { onClick: () => setOpen(false), style: { position: 'fixed', inset: 0, zIndex: 9 } }),
-      h('div', { style: { position: 'absolute', top: '100%', left: 0, marginTop: 6, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, boxShadow: C.shadowLg, zIndex: 10, maxHeight: 260, overflowY: 'auto', minWidth: 190 } },
+      h('div', { style: { position: 'absolute', top: '100%', left: 0, marginTop: 6, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, boxShadow: 'none', zIndex: 10, maxHeight: 260, overflowY: 'auto', minWidth: 190 } },
         weeks.map((wk) => h('button', {
           key: wk,
           onClick: () => { setOffset(wk); setOpen(false) },
@@ -71,16 +71,16 @@ function WeightCard({ db, onOpen }) {
   const col = a.rate == null || Math.abs(a.rate) < 0.05 ? C.ink2 : a.rate < 0 ? C.success : C.calorie
   return h('button', {
     onClick: onOpen,
-    style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: C.shadowSm, marginBottom: 14, cursor: 'pointer', font: 'inherit', color: 'inherit' },
+    style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: 'none', marginBottom: 14, cursor: 'pointer', font: 'inherit', color: 'inherit' },
   },
-    h('div', { style: { width: 44, height: 44, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+    h('div', { style: { width: 44, height: 44, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
       h(Icon, { name: 'chart', size: 21, color: C.primary })),
     h('div', { style: { flex: 1, minWidth: 0 } },
       h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3 } }, 'Suivi du poids'),
       a.count
         ? h(React.Fragment, null,
           h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 } },
-            h('span', { style: { fontFamily: C.font, fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' } }, a.smoothed.toFixed(1)),
+            h('span', { style: { fontFamily: C.mono, fontSize: 19, fontWeight: 600, letterSpacing: '-.03em' } }, a.smoothed.toFixed(1)),
             h('span', { style: { fontSize: 12, color: C.ink3, fontWeight: 700 } }, 'kg'),
             a.rate != null && h('span', { style: { fontSize: 12, fontWeight: 700, color: col, marginLeft: 4 } },
               (a.rate > 0 ? '+' : a.rate < 0 ? '−' : '') + Math.abs(a.rate).toFixed(2) + ' kg/sem.')),
@@ -92,12 +92,12 @@ function WeightCard({ db, onOpen }) {
 
 function sectionTitle(txt, action) {
   return h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '26px 2px 12px' } },
-    h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 18, letterSpacing: '-.01em' } }, txt),
+    h('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, txt),
     action || null)
 }
 
 function iconBadge(name, color) {
-  return h('div', { style: { width: 46, height: 46, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${color} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+  return h('div', { style: { width: 46, height: 46, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
     h(Icon, { name, size: 23, color }))
 }
 
@@ -205,8 +205,8 @@ export default function ProgressSpace({ userId, onClose }) {
       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 } },
         h('span', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3 } }, label),
         h('span', { style: { fontSize: 12.5, fontWeight: 700, color } }, target > 0 ? `${val}/${target}` : `${val}`, h('span', { style: { fontSize: 10.5, color: C.ink3, marginLeft: 2 } }, unit))),
-      h('div', { style: { height: 7, borderRadius: 999, background: C.surface2, overflow: 'hidden' } },
-        h('div', { style: { height: '100%', width: pct + '%', borderRadius: 999, background: color, transition: 'width .4s ease' } })),
+      h('div', { style: { height: 7, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden' } },
+        h('div', { style: { height: '100%', width: pct + '%', borderRadius: 'var(--r-pill)', background: color, transition: 'width .4s ease' } })),
       extra ? h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 4 } }, extra) : null)
   }
   let todayBlock = null
@@ -214,7 +214,7 @@ export default function ProgressSpace({ userId, onClose }) {
     todayBlock = h('div', null,
       sectionTitle("Aujourd'hui"),
       h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 10 } },
-        hasHyd ? miniBar('Hydratation', hyd.ml, hydTarget, 'ml', '#4a8aa5', hyd.caf ? `Caféine : ${hyd.caf} mg${hyd.caf >= 400 ? ' — limite atteinte' : ''}` : null) : null,
+        hasHyd ? miniBar('Hydratation', hyd.ml, hydTarget, 'ml', 'var(--ch2)', hyd.caf ? `Caféine : ${hyd.caf} mg${hyd.caf >= 400 ? ' — limite atteinte' : ''}` : null) : null,
         hasNut && kcalTarget ? miniBar('Calories', Math.round(nut.k), Math.round(kcalTarget), 'kcal', C.primary) : null,
         hasNut && protTarget ? miniBar('Protéines', Math.round(nut.p), Math.round(protTarget), 'g', C.carb) : null,
         hasNut && !kcalTarget ? h('div', { style: { fontSize: 12.5, color: C.ink3 } }, 'Définis tes objectifs caloriques pour suivre la nutrition.') : null))
@@ -230,8 +230,8 @@ export default function ProgressSpace({ userId, onClose }) {
         key: g.id, onClick: () => store.updateGoal(g.id, { done: !g.done }),
         style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '13px 15px', background: 'transparent', border: 'none', borderTop: i ? `1px solid ${C.line}` : 'none', cursor: 'pointer' },
       },
-        h('div', { style: { width: 22, height: 22, borderRadius: 7, flex: '0 0 auto', border: g.done ? 'none' : `2px solid ${C.line}`, background: g.done ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-          g.done ? h(Icon, { name: 'check', size: 14, color: '#fff' }) : null),
+        h('div', { style: { width: 22, height: 22, borderRadius: 0, flex: '0 0 auto', border: g.done ? 'none' : `2px solid ${C.line}`, background: g.done ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          g.done ? h(Icon, { name: 'check', size: 14, color: 'var(--c-on-fill)' }) : null),
         h('span', { style: { fontSize: 14.5, color: g.done ? C.ink3 : C.ink, textDecoration: g.done ? 'line-through' : 'none', lineHeight: 1.3 } }, g.label))))) : null
 
   // ── Mobilité ──
@@ -249,7 +249,7 @@ export default function ProgressSpace({ userId, onClose }) {
     }),
     weakZones.length > 0 ? h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, margin: '2px 2px 10px' } },
       h('span', { style: { fontSize: 12.5, color: C.ink3, fontWeight: 600, alignSelf: 'center' } }, 'À travailler :'),
-      weakZones.map((z, i) => h('span', { key: i, style: { fontSize: 12.5, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'color-mix(in srgb, #c4a03a 14%, ' + C.surface + ')', color: '#9a7a1a', border: '1px solid color-mix(in srgb, #c4a03a 30%, ' + C.line + ')' } }, z))) : null)
+      weakZones.map((z, i) => h('span', { key: i, style: { fontSize: 12.5, fontWeight: 600, padding: '4px 10px', borderRadius: 'var(--r-pill)', background: 'color-mix(in srgb, var(--ch1) 14%, ' + C.surface + ')', color: 'var(--ch1)', border: '1px solid color-mix(in srgb, var(--ch1) 30%, ' + C.line + ')' } }, z))) : null)
 
   // ── Évolution mobilité ──
   // Seul le score global était tracé. Il peut rester plat pendant qu'une
@@ -259,42 +259,42 @@ export default function ProgressSpace({ userId, onClose }) {
   const mobHist = mAna.history
   let mobEvoBlock = null
   if (mobHist.length >= 1) {
-    const ZC = { up: C.success, down: '#c4503a', flat: C.ink3 }
-    const VCOL = (v) => (v <= 1 ? '#c4503a' : v === 2 ? C.warn : C.success)
+    const ZC = { up: C.success, down: 'var(--c-danger)', flat: C.ink3 }
+    const VCOL = (v) => (v <= 1 ? 'var(--c-danger)' : v === 2 ? C.warn : C.success)
     const mhLast = mobHist[mobHist.length - 1]
     const g = mAna.trend
     mobEvoBlock = h('div', null,
       sectionTitle('Mobilité par zone'),
       h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, marginBottom: 10 } },
         h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 } },
-          h('div', { style: { fontFamily: C.font, fontSize: 26, fontWeight: 800, color: C.primary } }, mhLast.score),
+          h('div', { style: { fontFamily: C.mono, fontSize: 22, fontWeight: 600, letterSpacing: '-.03em', color: C.primary } }, mhLast.score),
           h('span', { style: { fontSize: 13, color: C.ink3 } }, '/100'),
-          g ? h('span', { style: { fontSize: 12.5, fontWeight: 700, marginLeft: 4, color: g.delta >= 0 ? C.success : '#c4503a' } },
+          g ? h('span', { style: { fontSize: 12.5, fontWeight: 700, marginLeft: 4, color: g.delta >= 0 ? C.success : 'var(--c-danger)' } },
             (g.delta >= 0 ? '▲+' : '▼') + g.delta + ' vs précédent') : null),
         h('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 14 } }, mAna.freshness.text),
         mAna.zones.map((z, i) => h('div', { key: z.id, style: { display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 } },
           h('div', { style: { fontSize: 12, color: C.ink2, fontWeight: 600, flex: '0 0 108px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, z.label),
           h('div', { style: { flex: 1, display: 'flex', gap: 3 } },
-            [1, 2, 3].map((n) => h('div', { key: n, style: { flex: 1, height: 8, borderRadius: 999, background: z.last.val >= n ? VCOL(z.last.val) : C.surface2 } }))),
+            [1, 2, 3].map((n) => h('div', { key: n, style: { flex: 1, height: 8, borderRadius: 'var(--r-pill)', background: z.last.val >= n ? VCOL(z.last.val) : C.surface2 } }))),
           z.count > 1 && z.dir !== 'flat'
             ? h('span', { style: { fontSize: 11, fontWeight: 800, color: ZC[z.dir], flex: '0 0 auto' } }, z.dir === 'up' ? '▲' : '▼')
             : h('span', { style: { flex: '0 0 auto', width: 8 } }),
-          z.stuck ? h('span', { style: { fontSize: 10, fontWeight: 700, color: '#c4503a', flex: '0 0 auto' } }, 'bloquée') : null))),
+          z.stuck ? h('span', { style: { fontSize: 10, fontWeight: 700, color: 'var(--c-danger)', flex: '0 0 auto' } }, 'bloquée') : null))),
 
-      mAna.corroboration.length ? h('div', { style: { background: `color-mix(in srgb, #c4503a 8%, ${C.surface})`, border: '1px solid color-mix(in srgb, #c4503a 26%, ' + C.line + ')', borderRadius: C.radiusSm, padding: '14px 15px', marginBottom: 10 } },
-        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 } }, 'Confirmé par plusieurs sources'),
+      mAna.corroboration.length ? h('div', { style: { background: `color-mix(in srgb, var(--c-danger) 8%, ${C.surface})`, border: '1px solid color-mix(in srgb, var(--c-danger) 26%, ' + C.line + ')', borderRadius: C.radiusSm, padding: '14px 15px', marginBottom: 10 } },
+        h('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Confirmé par plusieurs sources'),
         mAna.corroboration.map((c) => h('div', { key: c.id, style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: 4 } },
           h('strong', null, c.label), ' — ', c.sources.join(', ')))) : null,
 
       mAna.program ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '14px 15px', marginBottom: 10 } },
-        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 } }, 'Programme ciblé'),
+        h('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Programme ciblé'),
         h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5 } },
           `${mAna.program.done} séance sur ${mAna.program.sessions} réalisée`
           + (mAna.program.ageDays != null ? ` · créé il y a ${mAna.program.ageDays} jours` : '')
           + (mAna.program.stillRelevant ? '' : ' · ne cible plus tes zones les plus raides'))) : null,
 
       h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
-        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 9 } }, 'Ce qu’on en retient'),
+        h('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 9 } }, 'Ce qu’on en retient'),
         mAna.tips.map((t, i) => h('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: i ? 8 : 0 } },
           h('span', { style: { color: C.primary, fontWeight: 800, flex: '0 0 auto' } }, '•'),
           h('span', null, t)))))
@@ -341,7 +341,7 @@ export default function ProgressSpace({ userId, onClose }) {
   let trainBlock = null, recordsBlock = null
   if (ts.hasData) {
     const statMini = (big, lab, unit) => h('div', { style: { background: C.surface, borderRadius: C.radiusSm, padding: '16px 12px', border: `1px solid ${C.line}`, textAlign: 'center' } },
-      h('div', { style: { fontFamily: C.font, fontSize: 22, fontWeight: 700, lineHeight: 1 } }, big, unit ? h('span', { style: { fontSize: 13, fontWeight: 600, color: C.ink3, marginLeft: 2 } }, unit) : null),
+      h('div', { style: { fontFamily: C.mono, fontSize: 19, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, big, unit ? h('span', { style: { fontSize: 13, fontWeight: 600, color: C.ink3, marginLeft: 2 } }, unit) : null),
       h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 5, fontWeight: 600 } }, lab))
     const tm = ts.courseTrendMax || 1
     trainBlock = h('div', null,
@@ -349,19 +349,19 @@ export default function ProgressSpace({ userId, onClose }) {
       h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 12 } },
         statMini(ts.weekSessions, 'séances (sem.)'), statMini(ts.weekKm, 'km (sem.)'), statMini(ts.monthSessions, 'séances (mois)'), statMini(ts.monthKm, 'km (mois)')),
       ts.sports.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, marginBottom: 12 } },
-        h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Répartition des sports · depuis le début'),
+        h('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 12 } }, 'Répartition des sports · depuis le début'),
         h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
           ts.sports.map((sp) => h('div', { key: sp.id, style: { display: 'flex', alignItems: 'center', gap: 10 } },
             h('div', { style: { width: 82, fontSize: 13, fontWeight: 600, flex: '0 0 auto' } }, sp.label),
-            h('div', { style: { flex: 1, height: 8, borderRadius: 999, background: C.surface2, overflow: 'hidden' } },
-              h('div', { style: { height: '100%', width: sp.pct + '%', borderRadius: 999, background: sp.color } })),
+            h('div', { style: { flex: 1, height: 8, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden' } },
+              h('div', { style: { height: '100%', width: sp.pct + '%', borderRadius: 'var(--r-pill)', background: sp.color } })),
             h('div', { style: { width: 28, textAlign: 'right', fontSize: 13, fontWeight: 700, flex: '0 0 auto' } }, sp.count))))) : null,
       tm > 0 ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: 16, marginBottom: 12 } },
-        h('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Course · 8 dernières semaines'),
+        h('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 12 } }, 'Course · 8 dernières semaines'),
         h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 5, height: 64 } },
           ts.courseTrend.map((km, i) => h('div', { key: i, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
             h('div', { style: { width: '100%', height: 48, display: 'flex', alignItems: 'flex-end' } },
-              h('div', { style: { width: '100%', height: `${km > 0 ? Math.max(km / tm * 100, 6) : 0}%`, borderRadius: '5px 5px 0 0', background: i === ts.courseTrend.length - 1 ? '#e07b54' : `color-mix(in srgb,#e07b54 55%,${C.surface2})` } })),
+              h('div', { style: { width: '100%', height: `${km > 0 ? Math.max(km / tm * 100, 6) : 0}%`, borderRadius: 0, background: i === ts.courseTrend.length - 1 ? 'var(--c-trace)' : `color-mix(in srgb,var(--c-trace) 55%,${C.surface2})` } })),
             h('div', { style: { fontSize: 9.5, color: C.ink3, fontWeight: 600 } }, km > 0 ? Math.round(km) : ''))))) : null)
 
     const voirTout = h('button', {
@@ -373,11 +373,11 @@ export default function ProgressSpace({ userId, onClose }) {
         sectionTitle('Records personnels', voirTout),
         h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 10 } },
           ts.perche ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderBottom: ts.records.length ? `1px solid ${C.line}` : 'none' } },
-            h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: 'color-mix(in srgb,#7a6fa5 14%,' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'bolt', size: 17, color: '#7a6fa5' })),
+            h('div', { style: { width: 34, height: 34, borderRadius: 0, flex: '0 0 auto', background: 'color-mix(in srgb,var(--ch4) 14%,' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'bolt', size: 17, color: 'var(--ch4)' })),
             h('div', { style: { flex: 1, fontSize: 14, fontWeight: 600 } }, 'Saut à la perche'),
-            h('div', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: '#7a6fa5' } }, ts.perche, h('span', { style: { fontSize: 12, fontWeight: 600, marginLeft: 1 } }, 'm'))) : null,
+            h('div', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: 'var(--ch4)' } }, ts.perche, h('span', { style: { fontSize: 12, fontWeight: 600, marginLeft: 1 } }, 'm'))) : null,
           ts.records.map((r, i) => h('div', { key: r.name, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderTop: i || ts.perche ? `1px solid ${C.line}` : 'none' } },
-            h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: `color-mix(in srgb,${C.primary} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'dumbbell', size: 16, color: C.primary })),
+            h('div', { style: { width: 34, height: 34, borderRadius: 0, flex: '0 0 auto', background: `color-mix(in srgb,${C.primary} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'dumbbell', size: 16, color: C.primary })),
             h('div', { style: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, r.name),
             h('div', { style: { fontFamily: C.font, fontSize: 16, fontWeight: 800, color: C.primary, flex: '0 0 auto' } }, r.charge, h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 1 } }, 'kg'))))))
     } else {
@@ -400,7 +400,7 @@ export default function ProgressSpace({ userId, onClose }) {
   const mus = muscuAnalysis(db, { days: 28 })
   if (mus.sessions > 0) {
     const maxSeries = Math.max(...mus.volumes.map((v) => v.seriesPerWeek), SERIES_LOW)
-    const VCOL = { low: C.warn, ok: C.success, high: '#c4503a' }
+    const VCOL = { low: C.warn, ok: C.success, high: 'var(--c-danger)' }
     // Les trois exercices les plus travaillés, avec leur progression réelle
     // en force estimée — la seule façon de comparer 90 kg × 10 et 100 kg × 1.
     const tops = mus.tracked.slice(0, 3)
@@ -415,23 +415,23 @@ export default function ProgressSpace({ userId, onClose }) {
           { big: String(mus.totalSeries), lab: 'séries' },
           { big: mus.tonnage >= 1000 ? Math.round(mus.tonnage / 1000) + ' t' : mus.tonnage + ' kg', lab: 'tonnage' },
         ].map((x, i) => h('div', { key: i, style: { background: C.surface, borderRadius: C.radiusSm, padding: '14px 10px', border: `1px solid ${C.line}`, textAlign: 'center' } },
-          h('div', { style: { fontFamily: C.font, fontSize: 21, fontWeight: 800, lineHeight: 1 } }, x.big),
+          h('div', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, x.big),
           h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 5, fontWeight: 600 } }, x.lab)))),
 
       mus.volumes.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
-        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em' } }, 'Séries par semaine et par muscle'),
+        h('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Séries par semaine et par muscle'),
         h('div', { style: { fontSize: 11.5, color: C.ink3, margin: '4px 0 11px', lineHeight: 1.45 } }, `Repère d’usage courant : ${SERIES_LOW} à ${SERIES_HIGH} séries hebdomadaires par groupe.`),
         mus.volumes.map((v) => {
           const vd = groupVerdict(v.seriesPerWeek)
           return h('div', { key: v.group, style: { display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 } },
             h('div', { style: { fontSize: 12, color: C.ink2, fontWeight: 600, flex: '0 0 94px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, v.group),
-            h('div', { style: { flex: 1, height: 8, borderRadius: 999, background: C.surface2, overflow: 'hidden' } },
-              h('div', { style: { width: Math.round(v.seriesPerWeek / maxSeries * 100) + '%', height: '100%', borderRadius: 999, background: VCOL[vd.level] } })),
+            h('div', { style: { flex: 1, height: 8, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden' } },
+              h('div', { style: { width: Math.round(v.seriesPerWeek / maxSeries * 100) + '%', height: '100%', borderRadius: 'var(--r-pill)', background: VCOL[vd.level] } })),
             h('div', { style: { fontSize: 12, fontWeight: 700, color: VCOL[vd.level], flex: '0 0 34px', textAlign: 'right' } }, String(v.seriesPerWeek).replace('.', ',')))
         })) : null,
 
       mus.balance && (mus.balance.push + mus.balance.pull > 0 || mus.balance.lower > 0) ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
-        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 } }, 'Équilibre'),
+        h('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10 } }, 'Équilibre'),
         [
           { a: mus.balance.push, b: mus.balance.pull, la: 'Poussée', lb: 'Tirage' },
           { a: mus.balance.upper, b: mus.balance.lower, la: 'Haut', lb: 'Bas' },
@@ -440,14 +440,14 @@ export default function ProgressSpace({ userId, onClose }) {
           return h('div', { key: i, style: { marginBottom: i ? 0 : 12 } },
             h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 12, color: C.ink2, fontWeight: 600, marginBottom: 5 } },
               h('span', null, r.la + ' ' + r.a), h('span', null, r.b + ' ' + r.lb)),
-            h('div', { style: { display: 'flex', height: 8, borderRadius: 999, overflow: 'hidden', background: C.surface2 } },
+            h('div', { style: { display: 'flex', height: 8, borderRadius: 'var(--r-pill)', overflow: 'hidden', background: C.surface2 } },
               h('div', { style: { width: (tot ? r.a / tot * 100 : 50) + '%', background: C.primary } }),
               h('div', { style: { flex: 1, background: `color-mix(in srgb, ${C.primary} 32%, ${C.surface2})` } })))
         }),
         (mus.balance.flags || []).map((f, i) => h('div', { key: f.id, style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` } }, f.text))) : null,
 
       tops.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
-        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em' } }, 'Force estimée'),
+        h('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Force estimée'),
         h('div', { style: { fontSize: 11.5, color: C.ink3, margin: '4px 0 10px', lineHeight: 1.45 } }, 'Calculée sur la série la plus lourde rapportée à ses répétitions, pour comparer ce qui est comparable.'),
         tops.map((t, i) => h('div', { key: t.name, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
           h('div', { style: { flex: 1, minWidth: 0 } },
@@ -458,14 +458,14 @@ export default function ProgressSpace({ userId, onClose }) {
             String(t.last.best1RM).replace('.', ','), h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 1 } }, 'kg'))))) : null,
 
       mus.tips.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
-        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 9 } }, 'Ce qu’on en retient'),
+        h('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 9 } }, 'Ce qu’on en retient'),
         mus.tips.map((t, i) => h('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: i ? 8 : 0 } },
           h('span', { style: { color: C.primary, fontWeight: 800, flex: '0 0 auto' } }, '•'),
           h('span', null, t)))) : null)
   }
 
   // ── Tests physiques ──
-  const TC = '#5b6fa5'
+  const TC = 'var(--ch4)'
   const allTests = db.physTests || []
   const LABEL = { cooper: 'Cooper 12min', gai_max: 'Gainage max', squat30: 'Squats 30s', souplesse: 'Sit & Reach', push30: 'Pompes 30s' }
   const pp = db.profilePhys || {}
@@ -478,8 +478,8 @@ export default function ProgressSpace({ userId, onClose }) {
     // quand la mesure datait. Un test d'il y a huit mois s'affichait
     // exactement comme celui d'hier.
     const tAna = testsAnalysis(db, { sexe, age })
-    const DIR_COL = { up: C.success, down: '#c4503a', flat: C.ink3 }
-    const FRESH_COL = { fresh: C.ink3, due: C.warn, stale: '#c4503a', absent: C.ink3 }
+    const DIR_COL = { up: C.success, down: 'var(--c-danger)', flat: C.ink3 }
+    const FRESH_COL = { fresh: C.ink3, due: C.warn, stale: 'var(--c-danger)', absent: C.ink3 }
     testsBlock = h('div', null,
       sectionTitle('Tests physiques', h('button', { onClick: () => setFlow('tests'), style: { fontSize: 13, fontWeight: 600, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Voir tout')),
       tAna.profile ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
@@ -495,7 +495,7 @@ export default function ProgressSpace({ userId, onClose }) {
           const ch = it.change
           const fr = it.freshness
           return h('div', { key: it.testId, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderTop: i ? `1px solid ${C.line}` : 'none' } },
-            h('div', { style: { width: 34, height: 34, borderRadius: 10, flex: '0 0 auto', background: `color-mix(in srgb,${TC} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+            h('div', { style: { width: 34, height: 34, borderRadius: 0, flex: '0 0 auto', background: `color-mix(in srgb,${TC} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
               h(Icon, { name: 'chart', size: 16, color: TC })),
             h('div', { style: { flex: 1, minWidth: 0 } },
               h('div', { style: { fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.label),
@@ -509,7 +509,7 @@ export default function ProgressSpace({ userId, onClose }) {
               it.last.value, h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 2 } }, it.unit)))
         })),
       tAna.tips.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
-        h('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 9 } }, 'Ce qu’on en retient'),
+        h('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 9 } }, 'Ce qu’on en retient'),
         tAna.tips.map((x, i) => h('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: i ? 8 : 0 } },
           h('span', { style: { color: TC, fontWeight: 800, flex: '0 0 auto' } }, '•'),
           h('span', null, x)))) : null)
@@ -526,14 +526,14 @@ export default function ProgressSpace({ userId, onClose }) {
     // le compte de jours en grand et le record dessous. Le volume de la
     // semaine et l'objectif de séances restent lisibles juste en dessous,
     // sur la ligne du sélecteur de semaine.
-    h('div', { style: { position: 'relative', minHeight: 150, padding: 22, borderRadius: C.radius, background: C.primary, marginBottom: 18, boxShadow: `0 18px 40px -22px ${C.primary}` } },
+    h('div', { style: { position: 'relative', minHeight: 150, padding: 22, borderRadius: C.radius, background: C.primary, marginBottom: 18, boxShadow: 'none' } },
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 18 } },
-        h(Ring, { size: 92, stroke: 9, progress: Math.min(1, streak / 14), color: '#fff', track: 'rgba(255,255,255,.25)' },
-          h(Icon, { name: 'flame', size: 30, color: '#fff' })),
+        h(Ring, { size: 92, stroke: 9, progress: Math.min(1, streak / 14), color: 'var(--c-on-fill)', track: 'color-mix(in srgb, var(--c-on-fill) 25%, transparent)' },
+          h(Icon, { name: 'flame', size: 30, color: 'var(--c-on-fill)' })),
         h('div', null,
-          h('div', { style: { fontFamily: C.font, fontSize: 40, fontWeight: 700, color: '#fff', lineHeight: 1 } }, streak),
-          h('div', { style: { color: 'rgba(255,255,255,.88)', fontSize: 15, fontWeight: 600 } }, 'jours de suite 🔥'),
-          h('div', { style: { color: 'rgba(255,255,255,.7)', fontSize: 13, marginTop: 2 } }, 'Record : ', db.record, ' jours')))),
+          h('div', { style: { fontFamily: C.mono, fontSize: 34, fontWeight: 600, letterSpacing: '-.03em', color: 'var(--c-on-fill)', lineHeight: 1 } }, streak),
+          h('div', { style: { color: 'color-mix(in srgb, var(--c-on-fill) 88%, transparent)', fontSize: 15, fontWeight: 600 } }, 'jours de suite 🔥'),
+          h('div', { style: { color: 'color-mix(in srgb, var(--c-on-fill) 70%, transparent)', fontSize: 13, marginTop: 2 } }, 'Record : ', db.record, ' jours')))),
 
     h(WeightCard, { db, onOpen: () => setFlow('weight') }),
     h(PeakHomeCard, { db, onPeak: () => setFlow('peak') }),
@@ -561,7 +561,7 @@ export default function ProgressSpace({ userId, onClose }) {
       // planifie pas : il faut le jour, le sport, les minutes et l'intensité.
       story.proposal ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 14 } },
         h('div', { style: { padding: '12px 14px 8px' } },
-          h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Ta semaine proposée'),
+          h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Ta semaine proposée'),
           h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.45 } },
             story.proposal.total, ' points visés · ', story.proposal.basedOn, '.'),
           story.proposal.taper ? h('div', { style: { fontSize: 11.5, color: C.warn, marginTop: 5, lineHeight: 1.45, fontWeight: 600 } }, story.proposal.taper.text) : null),
@@ -595,7 +595,7 @@ export default function ProgressSpace({ userId, onClose }) {
                   store.set((prev) => ({ planningSessions: [...(prev.planningSessions || []), ...add] }))
                   setFlow('planner')
                 },
-                style: { width: '100%', padding: '12px', borderRadius: C.radiusSm, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+                style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: '12px', borderRadius: C.radiusSm, border: 'none', background: C.primary, color: 'var(--c-on-fill)', cursor: 'pointer' },
               }, 'Inscrire ces ', st.count, ' séances au planning'))
           }
           return st.reason && st.existing
@@ -607,7 +607,7 @@ export default function ProgressSpace({ userId, onClose }) {
       // qui s'arrête au constat laisse le travail à faire.
       story.prescription && story.prescription.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 14 } },
         h('div', { style: { padding: '12px 14px 8px' } },
-          h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Pour la semaine qui vient'),
+          h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Pour la semaine qui vient'),
           h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.45 } }, 'Chaque consigne est tirée de la semaine écoulée, et dit d’où elle sort.')),
         story.prescription.map((p, i) => {
           const col = p.level === 'warn' ? C.warn : p.level === 'ok' ? C.success : C.primary
@@ -625,14 +625,14 @@ export default function ProgressSpace({ userId, onClose }) {
       story.takeaway && story.takeaway.text ? (() => {
         const col = story.takeaway.level === 'warn' ? C.warn : story.takeaway.level === 'ok' ? C.success : C.primary
         return h('div', { style: { padding: '12px 14px', borderRadius: C.radiusSm, marginBottom: 14, background: `color-mix(in srgb, ${col} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${col} 28%, ${C.line})` } },
-          h('div', { style: { fontSize: 11.5, fontWeight: 700, color: col, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 5 } }, 'À retenir'),
+          h('div', { style: { fontFamily: C.display, fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: col, marginBottom: 5 } }, 'À retenir'),
           h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5 } }, story.takeaway.text))
       })() : null,
 
       // La semaine jour par jour : on veut la retrouver telle qu'elle s'est
       // passée, pas seulement son total.
       story.detail && story.detail.some((d) => d.active || d.sleep || d.kcal) ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 14 } },
-        h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', padding: '12px 14px 8px' } }, 'Jour par jour'),
+        h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, padding: '12px 14px 8px' } }, 'Jour par jour'),
         story.detail.map((d, i) => {
           const jour = new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
           const bits = []
@@ -653,7 +653,7 @@ export default function ProgressSpace({ userId, onClose }) {
       // Chaque dimension comparée à l'habitude : la charge seule ne dit pas
       // qu'on a moins dormi et moins mangé pour le même travail.
       story.dimensions && story.dimensions.some((d) => d.pct != null) ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '12px 14px', marginBottom: 14 } },
-        h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } },
+        h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } },
           'Contre tes ', 4, ' dernières semaines'),
         story.dimensions.filter((d) => d.pct != null).map((d, i) => {
           const good = d.dir === 'up' ? d.pct > 0 : null
@@ -681,7 +681,7 @@ export default function ProgressSpace({ userId, onClose }) {
           const done = m > 0
           return h('div', { key: k, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 } },
             h('div', { style: { width: '100%', height: 70, display: 'flex', alignItems: 'flex-end' } },
-              h('div', { style: { width: '100%', height: `${Math.max(m / maxM * 100, 6)}%`, borderRadius: 8, background: done ? `linear-gradient(180deg, ${C.success} 0%, color-mix(in srgb, ${C.success} 72%, #fff) 100%)` : C.surface2, transition: 'height .4s ease' } })),
+              h('div', { style: { width: '100%', height: `${Math.max(m / maxM * 100, 6)}%`, borderRadius: 0, background: done ? C.success : C.surface2, transition: 'height .4s ease' } })),
             h('span', { style: { fontSize: 12, fontWeight: 600, color: done ? C.ink : C.ink3 } }, WEEK_DAYS[k]))
         })),
 
@@ -702,19 +702,19 @@ export default function ProgressSpace({ userId, onClose }) {
 
       // Répartition par sport / type de séance.
       retro.bySport.length > 0 && h('div', { style: { marginBottom: 14 } },
-        h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Répartition'),
-        h('div', { style: { display: 'flex', borderRadius: 999, overflow: 'hidden', height: 8, marginBottom: 8 } },
+        h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Répartition'),
+        h('div', { style: { display: 'flex', borderRadius: 'var(--r-pill)', overflow: 'hidden', height: 8, marginBottom: 8 } },
           retro.bySport.map((s, i) => h('div', { key: i, style: { width: `${s.pct}%`, background: s.color } }))),
         retro.bySport.map((s, i) => h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' } },
-          h('div', { style: { width: 8, height: 8, borderRadius: 999, background: s.color, flex: '0 0 auto' } }),
+          h('div', { style: { width: 8, height: 8, borderRadius: 'var(--r-pill)', background: s.color, flex: '0 0 auto' } }),
           h('span', { style: { flex: 1, fontSize: 13, color: C.ink } }, s.label),
           h('span', { style: { fontSize: 12.5, color: C.ink3, fontWeight: 600 } }, s.mins, ' min · ', s.pct, '%')))),
 
       // Détail des séances de la semaine sélectionnée.
       retro.items.length > 0 && h('div', null,
-        h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Séances'),
+        h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Séances'),
         retro.items.map((it, i) => h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
-          h('div', { style: { width: 8, height: 8, borderRadius: 999, background: it.color, flex: '0 0 auto' } }),
+          h('div', { style: { width: 8, height: 8, borderRadius: 'var(--r-pill)', background: it.color, flex: '0 0 auto' } }),
           h('span', { style: { fontSize: 12.5, color: C.ink3, width: 68, flex: '0 0 auto' } }, new Date(it.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })),
           h('span', { style: { flex: 1, fontSize: 13.5, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.label),
           h('span', { style: { fontSize: 12.5, color: C.ink3, fontWeight: 600 } }, it.mins, ' min'))))),
@@ -745,7 +745,7 @@ export default function ProgressSpace({ userId, onClose }) {
             style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0 },
           },
             h('div', { style: { width: '100%', height: 44, display: 'flex', alignItems: 'flex-end' } },
-              h('div', { style: { width: '100%', height: `${Math.max(w.total / maxT * 100, w.total > 0 ? 8 : 3)}%`, borderRadius: 4, background: w.offset === weekOffset ? C.success : (w.total > 0 ? `color-mix(in srgb, ${C.success} 35%, ${C.surface2})` : C.surface2), transition: 'height .4s ease' } })),
+              h('div', { style: { width: '100%', height: `${Math.max(w.total / maxT * 100, w.total > 0 ? 8 : 3)}%`, borderRadius: 0, background: w.offset === weekOffset ? C.success : (w.total > 0 ? `color-mix(in srgb, ${C.success} 35%, ${C.surface2})` : C.surface2), transition: 'height .4s ease' } })),
             h('span', { style: { fontSize: 10, fontWeight: w.offset === weekOffset ? 700 : 500, color: w.offset === weekOffset ? C.success : C.ink3, whiteSpace: 'nowrap' } },
               w.offset === weekOffset || !dense || i % 4 === 0 ? (w.offset === 0 ? 'auj.' : `${w.offset}s`) : ' '))
           )
@@ -757,7 +757,7 @@ export default function ProgressSpace({ userId, onClose }) {
         { big: hoursLabel, lab: 'temps cumulé' },
         { big: goalPct + '%', lab: 'objectif hebdo' },
       ].map((s, i) => h('div', { key: i, style: { background: C.surface, borderRadius: C.radiusSm, padding: '16px 12px', border: `1px solid ${C.line}`, textAlign: 'center' } },
-        h('div', { style: { fontFamily: C.font, fontSize: 24, fontWeight: 700, lineHeight: 1 } }, s.big),
+        h('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, s.big),
         h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5, fontWeight: 600 } }, s.lab)))),
 
     todayBlock, goalsBlock, trainBlock, recordsBlock, muscuBlock, testsBlock, mobBlock, mobEvoBlock, progBlock, suppBlock,

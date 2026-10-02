@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { Icon, GRADIENTS, C } from '../health/kit'
+import { Icon, C } from '../health/kit'
 import { TESTS_DEF, ageGroup } from './testsData'
 
 // ============================================================
@@ -15,7 +15,7 @@ import { TESTS_DEF, ageGroup } from './testsData'
 // Ces jetons étaient figés sur la palette claire : l'écran restait blanc
 // sur les thèmes sombres. Ils pointent désormais vers les variables CSS
 // du kit, comme le reste de l'application.
-const TESTS_COLOR = '#5b6fa5'
+const TESTS_COLOR = 'var(--ch4)'
 const SURFACE = C.surface
 const SURFACE2 = C.surface2
 const INK = C.ink
@@ -41,11 +41,11 @@ function fmtDuration(secs) {
   return m ? m + "'" + String(s).padStart(2, '0') + '"' : s + '"'
 }
 
-const FLOW_STYLE = { position: 'fixed', inset: 0, backgroundColor: C.bg, backgroundImage: GRADIENTS.entrainer, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat', zIndex: 55, display: 'flex', flexDirection: 'column', padding: '20px 22px', fontFamily: FONT, overflowY: 'auto', animation: 'spaceIn .22s ease' }
+const FLOW_STYLE = { position: 'fixed', inset: 0, backgroundColor: C.bg, backgroundImage: 'var(--g-paper)', backgroundSize: 'var(--g-paper-size)', backgroundPosition: '-1px -1px', backgroundAttachment: 'local', zIndex: 55, display: 'flex', flexDirection: 'column', padding: '20px 22px', fontFamily: FONT, overflowY: 'auto', animation: 'spaceIn .22s ease' }
 
 function ProfileBadge({ sexe, age, onEdit }) {
   const label = (sexe === 'f' ? 'Femme' : 'Homme') + ' · ' + ageGroup(age) + ' ans'
-  return React.createElement('button', { onClick: onEdit, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '7px 13px', borderRadius: 999, background: SURFACE, border: `1px solid ${LINE}`, cursor: 'pointer', marginBottom: 14, alignSelf: 'flex-start' } },
+  return React.createElement('button', { onClick: onEdit, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '7px 13px', borderRadius: 'var(--r-pill)', background: SURFACE, border: `1px solid ${LINE}`, cursor: 'pointer', marginBottom: 14, alignSelf: 'flex-start' } },
     React.createElement(Icon, { name: 'user', size: 14, color: INK3 }),
     React.createElement('span', { style: { fontSize: 12.5, fontWeight: 600, color: INK2 } }, label),
     React.createElement('span', { style: { fontSize: 11.5, color: TESTS_COLOR, fontWeight: 700, marginLeft: 2 } }, 'Modifier'))
@@ -55,11 +55,11 @@ function QuickProfileSheet({ sexe, age, onSave, onClose }) {
   const [sx, setSx] = useState(sexe || 'h')
   const [ag, setAg] = useState(age || 30)
   return React.createElement('div', { style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 65, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
-    React.createElement('div', { style: { width: '100%', background: SURFACE, borderRadius: '24px 24px 0 0', padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto', animation: 'sheetUp .3s ease' } },
-      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 19, marginBottom: 6 } }, 'Ton profil'),
+    React.createElement('div', { style: { width: '100%', background: SURFACE, borderRadius: 0, padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto', animation: 'sheetUp .3s ease' } },
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, marginBottom: 6 } }, 'Ton profil'),
       React.createElement('div', { style: { fontSize: 13.5, color: INK3, marginBottom: 18, lineHeight: 1.4 } }, 'Pour calculer des normes adaptées et comparables à ta tranche de population.'),
       React.createElement('div', { style: { marginBottom: 16 } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Sexe'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3, marginBottom: 8 } }, 'Sexe'),
         React.createElement('div', { style: { display: 'flex', gap: 8 } },
           ['h', 'f'].map((v) => {
             const active = sx === v
@@ -70,12 +70,12 @@ function QuickProfileSheet({ sexe, age, onSave, onClose }) {
                 color: active ? TESTS_COLOR : INK } }, v === 'h' ? 'Homme' : 'Femme')
           }))),
       React.createElement('div', { style: { marginBottom: 20 } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Âge'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3, marginBottom: 8 } }, 'Âge'),
         React.createElement('input', { type: 'number', min: 14, max: 100, value: ag, onChange: (e) => setAg(e.target.value),
           style: { width: '100%', padding: '13px 15px', borderRadius: RADIUS_SM, border: `1.5px solid ${LINE}`, background: SURFACE2, color: INK, fontSize: 16, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } })),
       React.createElement('div', { style: { display: 'flex', gap: 10 } },
-        React.createElement('button', { onClick: onClose, style: { flex: 1, padding: 15, borderRadius: 999, background: SURFACE, border: `1px solid ${LINE}`, color: INK, fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Annuler'),
-        React.createElement('button', { onClick: () => onSave(sx, Number(ag) || 30), style: { flex: 1, padding: 15, borderRadius: 999, background: TESTS_COLOR, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Enregistrer'))))
+        React.createElement('button', { onClick: onClose, style: { flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: SURFACE, border: `1px solid ${LINE}`, color: INK, fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Annuler'),
+        React.createElement('button', { onClick: () => onSave(sx, Number(ag) || 30), style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: TESTS_COLOR, border: 'none', color: 'var(--c-on-fill)', cursor: 'pointer' } }, 'Enregistrer'))))
 }
 
 function Timer({ onDone }) {
@@ -92,15 +92,15 @@ function Timer({ onDone }) {
   const display = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
 
   return React.createElement('div', { style: { textAlign: 'center', padding: '20px 0' } },
-    React.createElement('div', { style: { fontFamily: FONT, fontSize: 56, fontWeight: 700, letterSpacing: '-.02em', color: running ? TESTS_COLOR : INK, lineHeight: 1 } }, display),
+    React.createElement('div', { style: { fontFamily: C.mono, fontSize: 48, fontWeight: 600, letterSpacing: '-.03em', color: running ? TESTS_COLOR : INK, lineHeight: 1 } }, display),
     React.createElement('div', { style: { display: 'flex', gap: 10, justifyContent: 'center', marginTop: 18 } },
       React.createElement('button', { onClick: () => setRunning((r) => !r),
-        style: { flex: 1, padding: 14, borderRadius: 999, fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', background: running ? SURFACE2 : TESTS_COLOR, color: running ? INK : '#fff' } },
+        style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: 14, borderRadius: 'var(--r-pill)', border: 'none', cursor: 'pointer', background: running ? SURFACE2 : TESTS_COLOR, color: running ? INK : 'var(--c-on-fill)' } },
         running ? 'Pause' : secs === 0 ? 'Démarrer' : 'Reprendre'),
       secs > 0 && React.createElement('button', { onClick: () => { setRunning(false); onDone && onDone(secs) },
-        style: { padding: '14px 20px', borderRadius: 999, fontSize: 15, fontWeight: 700, cursor: 'pointer', background: SURFACE, border: `1.5px solid ${LINE}`, color: INK } }, 'Valider'),
+        style: { padding: '14px 20px', borderRadius: 'var(--r-pill)', fontSize: 15, fontWeight: 700, cursor: 'pointer', background: SURFACE, border: `1.5px solid ${LINE}`, color: INK } }, 'Valider'),
       secs > 0 && React.createElement('button', { onClick: () => { setSecs(0); setRunning(false) },
-        style: { padding: '14px 20px', borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: 'pointer', background: SURFACE, border: `1.5px solid ${LINE}`, color: INK3 } }, '↺')))
+        style: { padding: '14px 20px', borderRadius: 'var(--r-pill)', fontSize: 14, fontWeight: 700, cursor: 'pointer', background: SURFACE, border: `1.5px solid ${LINE}`, color: INK3 } }, '↺')))
 }
 
 // ============================================================
@@ -153,9 +153,9 @@ function RecoSessions({ testId, level }) {
   if (!msg) return null
   const isGood = level === 'Excellent' || level === 'Bien'
   const isWarn = level === 'Acceptable'
-  const tint = isGood ? 'var(--c-success)' : isWarn ? 'var(--c-warn)' : '#c4503a'
+  const tint = isGood ? 'var(--c-success)' : isWarn ? 'var(--c-warn)' : 'var(--c-danger)'
   return React.createElement('div', { style: { marginTop: 18, padding: '14px 16px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${tint} 9%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${tint} 24%, ${LINE})`, lineHeight: 1.5, textAlign: 'left' } },
-    React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: tint, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 } }, isGood ? 'Très bien' : isWarn ? 'Axe de progression' : 'Priorité'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: tint, marginBottom: 5 } }, isGood ? 'Très bien' : isWarn ? 'Axe de progression' : 'Priorité'),
     React.createElement('div', { style: { fontSize: 13.5, color: INK2 } }, msg))
 }
 
@@ -179,58 +179,58 @@ function TestDetail({ def, history, sexe, age, onSave, onDelete, onBack }) {
   if (step === 'saved') {
     const si = def.interpret(val, sexe, age)
     return React.createElement('div', { style: { display: 'flex', flexDirection: 'column' } },
-      React.createElement('button', { onClick: onBack, style: { alignSelf: 'flex-start', marginBottom: 20, padding: '8px 14px', borderRadius: 999, background: SURFACE, border: `1.5px solid ${LINE}`, color: INK, fontSize: 14, fontWeight: 600, cursor: 'pointer' } }, '← Retour'),
+      React.createElement('button', { onClick: onBack, style: { alignSelf: 'flex-start', marginBottom: 20, padding: '8px 14px', borderRadius: 'var(--r-pill)', background: SURFACE, border: `1.5px solid ${LINE}`, color: INK, fontSize: 14, fontWeight: 600, cursor: 'pointer' } }, '← Retour'),
       React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '20px 0' } },
-        React.createElement('div', { style: { width: 80, height: 80, borderRadius: 999, margin: '0 auto 20px', background: `color-mix(in srgb, ${si.color} 15%, ${SURFACE})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+        React.createElement('div', { style: { width: 80, height: 80, borderRadius: 'var(--r-pill)', margin: '0 auto 20px', background: SURFACE, border: `1px solid ${C.line}`, borderTop: `3px solid ${si.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
           React.createElement('div', { style: { fontFamily: FONT, fontSize: 26, fontWeight: 800, color: si.color } }, '✓')),
-        React.createElement('div', { style: { fontFamily: FONT, fontSize: 28, fontWeight: 700, marginBottom: 8 } }, 'Enregistré !'),
-        React.createElement('div', { style: { fontSize: 20, fontWeight: 700, color: si.color, marginBottom: 6 } }, val + ' ' + def.unit),
-        React.createElement('div', { style: { display: 'inline-block', padding: '6px 16px', borderRadius: 999, fontWeight: 700, fontSize: 15, marginBottom: 16, background: `color-mix(in srgb, ${si.color} 14%, ${SURFACE})`, color: si.color } }, si.level),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 31, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, marginBottom: 8 } }, 'Enregistré !'),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 17, fontWeight: 600, letterSpacing: '-.03em', color: si.color, marginBottom: 6 } }, val + ' ' + def.unit),
+        React.createElement('div', { style: { display: 'inline-block', padding: '6px 16px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: 15, marginBottom: 16, background: `color-mix(in srgb, ${si.color} 14%, ${SURFACE})`, color: si.color } }, si.level),
         def.vo2max && React.createElement('div', { style: { fontSize: 14, color: INK2, marginBottom: 12 } }, 'VO₂max estimé : ' + def.vo2max(val) + ' mL/kg/min'),
         React.createElement('div', { style: { fontSize: 12, color: INK3, marginBottom: 16 } }, 'Norme appliquée : ' + (sexe === 'f' ? 'Femme' : 'Homme') + ' · ' + ageGroup(age) + ' ans'),
         React.createElement(RecoSessions, { testId: def.id, level: si.level }),
-        React.createElement('button', { onClick: onBack, style: { padding: '14px 28px', borderRadius: 999, fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', marginTop: 8, background: TESTS_COLOR, color: '#fff' } }, 'Voir tous les tests')))
+        React.createElement('button', { onClick: onBack, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', padding: '14px 28px', borderRadius: 'var(--r-pill)', border: 'none', cursor: 'pointer', marginTop: 8, background: TESTS_COLOR, color: 'var(--c-on-fill)' } }, 'Voir tous les tests')))
   }
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column' } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 } },
-      React.createElement('button', { onClick: onBack, style: { width: 38, height: 38, borderRadius: 999, cursor: 'pointer', flexShrink: 0, background: SURFACE, border: `1.5px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      React.createElement('button', { onClick: onBack, style: { width: 38, height: 38, borderRadius: 'var(--r-pill)', cursor: 'pointer', flexShrink: 0, background: SURFACE, border: `1.5px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
         React.createElement(Icon, { name: 'back', size: 18 })),
       React.createElement('div', null,
-        React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 19 } }, def.label),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, def.label),
         React.createElement('div', { style: { fontSize: 13, color: INK3 } }, def.unit === 's' ? 'Temps · Chronométré' : 'Résultat · Valeur saisie'))),
 
-    React.createElement('div', { style: { display: 'flex', gap: 6, background: SURFACE2, padding: 4, borderRadius: 999, marginBottom: 18 } },
+    React.createElement('div', { style: { display: 'flex', gap: 6, background: SURFACE2, padding: 4, borderRadius: 'var(--r-pill)', marginBottom: 18 } },
       ['protocol', 'do'].map((s) => {
         const active = step === s
         return React.createElement('button', { key: s, onClick: () => setStep(s),
-          style: { flex: 1, padding: '9px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all .15s', color: active ? '#fff' : INK2, background: active ? TESTS_COLOR : 'transparent' } },
+          style: { flex: 1, padding: '9px 14px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all .15s', color: active ? 'var(--c-on-fill)' : INK2, background: active ? TESTS_COLOR : 'transparent' } },
           s === 'protocol' ? 'Protocole' : 'Passer le test')
       })),
 
     step === 'protocol' && React.createElement('div', null,
-      React.createElement('div', { style: { padding: 20, borderRadius: RADIUS, background: def.color, color: '#fff', marginBottom: 16 } },
-        React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
-          React.createElement(Icon, { name: def.icon, size: 24, color: '#fff' })),
-        React.createElement('div', { style: { fontFamily: FONT, fontSize: 21, fontWeight: 700, lineHeight: 1.1 } }, def.label),
+      React.createElement('div', { style: { padding: 20, borderRadius: RADIUS, background: def.color, color: 'var(--c-on-fill)', marginBottom: 16 } },
+        React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
+          React.createElement(Icon, { name: def.icon, size: 24, color: 'var(--c-on-fill)' })),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 24, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.1 } }, def.label),
         React.createElement('p', { style: { fontSize: 14, opacity: .92, marginTop: 8, lineHeight: 1.5 } }, def.protocol),
         React.createElement('div', { style: { marginTop: 12, fontSize: 12.5, opacity: .85, fontWeight: 600 } }, 'Normes : ' + (sexe === 'f' ? 'Femme' : 'Homme') + ' · ' + ageGroup(age) + ' ans')),
 
       last
         ? React.createElement('div', { style: { background: SURFACE, border: `1px solid ${LINE}`, borderRadius: RADIUS_SM, padding: 16, marginBottom: 14 } },
-            React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 12 } }, 'Dernier résultat'),
+            React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3, marginBottom: 12 } }, 'Dernier résultat'),
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 14 } },
-              React.createElement('div', { style: { fontFamily: FONT, fontSize: 32, fontWeight: 700, color: def.interpret(last.value, sexe, age).color, lineHeight: 1 } }, last.value),
+              React.createElement('div', { style: { fontFamily: C.mono, fontSize: 28, fontWeight: 600, letterSpacing: '-.03em', color: def.interpret(last.value, sexe, age).color, lineHeight: 1 } }, last.value),
               React.createElement('div', null,
                 React.createElement('div', { style: { fontSize: 13, color: INK3 } }, def.unit + ' · ' + fmtDate(last.date)),
-                React.createElement('div', { style: { display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontWeight: 700, fontSize: 12.5, marginTop: 4, background: `color-mix(in srgb, ${def.interpret(last.value, sexe, age).color} 14%, ${SURFACE})`, color: def.interpret(last.value, sexe, age).color } }, def.interpret(last.value, sexe, age).level))),
+                React.createElement('div', { style: { display: 'inline-block', padding: '3px 10px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: 12.5, marginTop: 4, background: `color-mix(in srgb, ${def.interpret(last.value, sexe, age).color} 14%, ${SURFACE})`, color: def.interpret(last.value, sexe, age).color } }, def.interpret(last.value, sexe, age).level))),
             prev && React.createElement('div', { style: { marginTop: 12, padding: '10px 0 0', borderTop: `1px solid ${LINE}`, fontSize: 13, color: INK3 } },
               'Précédent : ', React.createElement('strong', { style: { color: INK } }, prev.value + ' ' + def.unit), ' · ' + fmtDate(prev.date)))
         : React.createElement('div', { style: { padding: '14px 16px', borderRadius: RADIUS_SM, marginBottom: 14, fontSize: 13.5, color: INK2, background: `color-mix(in srgb, ${TESTS_COLOR} 9%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${TESTS_COLOR} 22%, ${LINE})` } }, 'Aucun résultat encore — passe ce test pour établir ta référence.'),
 
       history && history.length > 0 && React.createElement('div', { style: { marginBottom: 14 } },
         React.createElement('button', { onClick: () => setShowHistory(!showHistory), style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px', background: 'transparent', border: 'none', cursor: 'pointer' } },
-          React.createElement('span', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em' } }, `Historique (${history.length})`),
+          React.createElement('span', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3 } }, `Historique (${history.length})`),
           React.createElement(Icon, { name: 'arrow', size: 14, color: INK3, style: { display: 'inline-block', transform: showHistory ? 'rotate(-90deg)' : 'rotate(90deg)' } })),
         showHistory && React.createElement('div', { style: { background: SURFACE, border: `1px solid ${LINE}`, borderRadius: RADIUS_SM, overflow: 'hidden' } },
           history.slice().reverse().map((t, i) => {
@@ -239,10 +239,10 @@ function TestDetail({ def, history, sexe, age, onSave, onDelete, onBack }) {
               React.createElement('div', { style: { flex: 1 } },
                 React.createElement('span', { style: { fontWeight: 700, color: lv.color } }, t.value + ' ' + def.unit),
                 React.createElement('span', { style: { fontSize: 12.5, color: INK3, marginLeft: 8 } }, fmtDate(t.date))),
-              onDelete && React.createElement('button', { onClick: () => onDelete(t.date), 'aria-label': 'Supprimer ce résultat', style: { width: 30, height: 30, borderRadius: 999, border: 'none', background: 'transparent', color: INK3, fontSize: 15, cursor: 'pointer', flex: '0 0 auto' } }, '✕'))
+              onDelete && React.createElement('button', { onClick: () => onDelete(t.date), 'aria-label': 'Supprimer ce résultat', style: { width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: 'transparent', color: INK3, fontSize: 15, cursor: 'pointer', flex: '0 0 auto' } }, '✕'))
           }))),
 
-      React.createElement('button', { onClick: () => setStep('do'), style: { width: '100%', padding: 16, borderRadius: 999, fontSize: 15.5, fontWeight: 700, border: 'none', cursor: 'pointer', background: TESTS_COLOR, color: '#fff', boxShadow: `0 12px 26px -14px ${TESTS_COLOR}` } }, 'Passer le test maintenant →')),
+      React.createElement('button', { onClick: () => setStep('do'), style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 16, borderRadius: 'var(--r-pill)', border: 'none', cursor: 'pointer', background: TESTS_COLOR, color: 'var(--c-on-fill)', boxShadow: 'none' } }, 'Passer le test maintenant →')),
 
     step === 'do' && React.createElement('div', null,
       isTimer && React.createElement('div', { style: { marginBottom: 18 } },
@@ -252,23 +252,23 @@ function TestDetail({ def, history, sexe, age, onSave, onDelete, onBack }) {
 
       React.createElement('div', { style: { marginBottom: 16 } },
         React.createElement('label', { style: { display: 'block' } },
-          React.createElement('span', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em' } }, isTimer ? 'Durée (secondes)' : 'Saisir le résultat'),
+          React.createElement('span', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3 } }, isTimer ? 'Durée (secondes)' : 'Saisir le résultat'),
           React.createElement('div', { style: { position: 'relative' } },
             React.createElement('input', { type: def.input.type, min: def.input.min, max: def.input.max, step: def.input.step, placeholder: def.input.placeholder, value: val, onChange: (e) => setVal(e.target.value),
               style: { width: '100%', marginTop: 6, padding: '14px 70px 14px 15px', borderRadius: RADIUS_SM, border: `1.5px solid ${LINE}`, background: SURFACE2, color: INK, fontSize: 20, fontWeight: 700, outline: 'none', boxSizing: 'border-box' } }),
             React.createElement('span', { style: { position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: INK3, fontWeight: 600, pointerEvents: 'none' } }, def.unit)))),
 
       interp && val !== '' && React.createElement('div', { style: { padding: 16, borderRadius: RADIUS_SM, marginBottom: 16, background: `color-mix(in srgb, ${interp.color} 10%, ${SURFACE})`, border: `1.5px solid color-mix(in srgb, ${interp.color} 30%, ${LINE})` } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: INK3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 6 } }, 'Ton niveau'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3, marginBottom: 6 } }, 'Ton niveau'),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
-          React.createElement('div', { style: { fontSize: 24, fontWeight: 700, color: interp.color, fontFamily: FONT } }, interp.level),
+          React.createElement('div', { style: { fontFamily: C.display, fontSize: 27, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, color: interp.color } }, interp.level),
           def.vo2max && React.createElement('div', { style: { fontSize: 13, color: INK3 } }, '· VO₂max ~' + def.vo2max(val) + ' mL/kg/min')),
         React.createElement('div', { style: { display: 'flex', gap: 4, marginTop: 12 } },
-          [1, 2, 3, 4, 5].map((n) => React.createElement('div', { key: n, style: { flex: 1, height: 6, borderRadius: 999, transition: 'background .3s', background: n <= interp.score ? interp.color : SURFACE2 } })))),
+          [1, 2, 3, 4, 5].map((n) => React.createElement('div', { key: n, style: { flex: 1, height: 6, borderRadius: 'var(--r-pill)', transition: 'background .3s', background: n <= interp.score ? interp.color : SURFACE2 } })))),
 
       React.createElement('button', { onClick: handleSave, disabled: val === '' || isNaN(Number(val)),
-        style: { width: '100%', padding: 16, borderRadius: 999, fontSize: 15.5, fontWeight: 700, border: 'none', cursor: val !== '' && !isNaN(Number(val)) ? 'pointer' : 'default', transition: 'all .2s',
-          background: val !== '' && !isNaN(Number(val)) ? TESTS_COLOR : SURFACE2, color: val !== '' && !isNaN(Number(val)) ? '#fff' : INK3 } }, 'Enregistrer le résultat')))
+        style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 16, borderRadius: 'var(--r-pill)', border: 'none', cursor: val !== '' && !isNaN(Number(val)) ? 'pointer' : 'default', transition: 'all .2s',
+          background: val !== '' && !isNaN(Number(val)) ? TESTS_COLOR : SURFACE2, color: val !== '' && !isNaN(Number(val)) ? 'var(--c-on-fill)' : INK3 } }, 'Enregistrer le résultat')))
 }
 
 export default function PhysicalTestsSpace({ userId, onClose }) {
@@ -325,27 +325,27 @@ export default function PhysicalTestsSpace({ userId, onClose }) {
 
   return React.createElement('div', { style: FLOW_STYLE },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 } },
-      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 22, letterSpacing: '-.01em' } }, 'Tests physiques'),
-      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, cursor: 'pointer', background: SURFACE, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(43,43,43,.06), 0 1px 2px rgba(43,43,43,.04)' } },
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 25, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, 'Tests physiques'),
+      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', cursor: 'pointer', background: SURFACE, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'none' } },
         React.createElement(Icon, { name: 'close', size: 18 }))),
 
     React.createElement(ProfileBadge, { sexe, age, onEdit: () => setProfOpen(true) }),
 
-    !hasProfile && React.createElement('div', { style: { padding: '12px 14px', borderRadius: RADIUS_SM, marginBottom: 14, fontSize: 13, color: INK2, background: `color-mix(in srgb, #c4a03a 10%, ${SURFACE})`, border: `1px solid color-mix(in srgb, #c4a03a 25%, ${LINE})` } },
+    !hasProfile && React.createElement('div', { style: { padding: '12px 14px', borderRadius: RADIUS_SM, marginBottom: 14, fontSize: 13, color: INK2, background: `color-mix(in srgb, var(--ch1) 10%, ${SURFACE})`, border: `1px solid color-mix(in srgb, var(--ch1) 25%, ${LINE})` } },
       'Profil par défaut utilisé (Homme, 20-29 ans). Renseigne ton sexe et ton âge pour des normes précises.'),
 
-    React.createElement('div', { style: { padding: 20, borderRadius: RADIUS, background: TESTS_COLOR, color: '#fff', marginBottom: 18, flexShrink: 0 } },
+    React.createElement('div', { style: { padding: 20, borderRadius: RADIUS, background: TESTS_COLOR, color: 'var(--c-on-fill)', marginBottom: 18, flexShrink: 0 } },
       score !== null
         ? React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 16 } },
-            React.createElement('div', { style: { width: 64, height: 64, borderRadius: 999, flex: '0 0 auto', background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement('div', { style: { fontFamily: FONT, fontSize: 22, fontWeight: 800 } }, score)),
+            React.createElement('div', { style: { width: 64, height: 64, borderRadius: 'var(--r-pill)', flex: '0 0 auto', background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+              React.createElement('div', { style: { fontFamily: C.mono, fontSize: 19, fontWeight: 600, letterSpacing: '-.03em' } }, score)),
             React.createElement('div', null,
-              React.createElement('div', { style: { fontFamily: FONT, fontSize: 18, fontWeight: 700 } }, 'Score condition physique'),
+              React.createElement('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, 'Score condition physique'),
               React.createElement('p', { style: { fontSize: 13, opacity: .9, marginTop: 4 } }, 'Basé sur tes derniers résultats, ajusté à ton profil')))
         : React.createElement('div', null,
-            React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
-              React.createElement(Icon, { name: 'chart', size: 24, color: '#fff' })),
-            React.createElement('div', { style: { fontFamily: FONT, fontSize: 22, fontWeight: 700, lineHeight: 1.1 } }, 'Évalue ta condition physique'),
+            React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
+              React.createElement(Icon, { name: 'chart', size: 24, color: 'var(--c-on-fill)' })),
+            React.createElement('div', { style: { fontFamily: C.display, fontSize: 25, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.1 } }, 'Évalue ta condition physique'),
             React.createElement('p', { style: { fontSize: 14, opacity: .92, marginTop: 8, lineHeight: 1.5 } }, '5 tests validés scientifiquement, avec normes ajustées à ton sexe et ton âge.'))),
 
     React.createElement('div', { style: { flex: 1, overflowY: 'auto' } },
@@ -359,15 +359,15 @@ export default function PhysicalTestsSpace({ userId, onClose }) {
         return React.createElement('button', { key: def.id, onClick: () => setSel(def.id),
           style: { display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left', padding: 16, cursor: 'pointer',
             borderRadius: RADIUS_SM, border: '1.5px solid ' + (interp ? `color-mix(in srgb, ${interp.color} 30%, ${LINE})` : LINE), background: SURFACE, marginBottom: 10 } },
-          React.createElement('div', { style: { width: 52, height: 52, borderRadius: 14, flex: '0 0 auto', background: `color-mix(in srgb, ${def.color} 14%, ${SURFACE})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          React.createElement('div', { style: { width: 52, height: 52, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${def.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
             React.createElement(Icon, { name: def.icon, size: 24, color: def.color })),
           React.createElement('div', { style: { flex: 1, minWidth: 0 } },
             React.createElement('div', { style: { fontFamily: FONT, fontWeight: 600, fontSize: 16, marginBottom: 2 } }, def.label),
             last
               ? React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
                   React.createElement('span', { style: { fontSize: 15, fontWeight: 700, color: interp.color } }, last.value + ' ' + def.unit),
-                  React.createElement('span', { style: { fontSize: 12, padding: '2px 9px', borderRadius: 999, fontWeight: 700, background: `color-mix(in srgb, ${interp.color} 12%, ${SURFACE})`, color: interp.color } }, interp.level),
-                  delta !== null && React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: delta >= 0 ? 'var(--c-success)' : '#c4503a' } }, (delta >= 0 ? '▲+' : '▼') + delta + ' vs précédent'))
+                  React.createElement('span', { style: { fontSize: 12, padding: '2px 9px', borderRadius: 'var(--r-pill)', fontWeight: 700, background: `color-mix(in srgb, ${interp.color} 12%, ${SURFACE})`, color: interp.color } }, interp.level),
+                  delta !== null && React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: delta >= 0 ? 'var(--c-success)' : 'var(--c-danger)' } }, (delta >= 0 ? '▲+' : '▼') + delta + ' vs précédent'))
               : React.createElement('div', { style: { fontSize: 13, color: INK3 } }, 'Pas encore réalisé · ' + def.unit)),
           React.createElement(Icon, { name: 'arrow', size: 19, color: INK3 }))
       })),

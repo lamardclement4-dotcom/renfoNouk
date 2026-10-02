@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { C, Icon, SegTabs, GRADIENTS } from '../health/kit'
+import { C, Icon, SegTabs } from '../health/kit'
 import { recommendations, rankRecommendations } from './renfoIntel'
 import { coachGreeting, coachReply } from './coachChat'
 
-const COACH = '#534ab7'
+const COACH = 'var(--ch4)'
 
 const GROUPS = [
   { level: 'alert', label: 'À traiter en priorité', color: C.danger },
@@ -31,15 +31,15 @@ function AdviceTab({ db, onAction }) {
   const [showAll, setShowAll] = useState(false)
   const recos = showAll ? ranked.top.concat(ranked.rest) : ranked.top
   return React.createElement(React.Fragment, null,
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: COACH, color: '#fff', marginBottom: 18 } },
-      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
-        React.createElement(Icon, { name: 'target', size: 24, color: '#fff' })),
-      React.createElement('div', { style: { fontFamily: C.font, fontSize: 19, fontWeight: 700, lineHeight: 1.15 } }, 'Tes recommandations'),
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: COACH, color: 'var(--c-on-fill)', marginBottom: 18 } },
+      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
+        React.createElement(Icon, { name: 'target', size: 24, color: 'var(--c-on-fill)' })),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.15 } }, 'Tes recommandations'),
       React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, 'Générées à partir de tes données réelles (charge, sommeil, nutrition, mobilité, tests). Touche une carte pour ouvrir le module concerné — ou passe sur « Discuter » pour me poser une question.')),
 
     recos.length === 0
       ? React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 20px', gap: 12 } },
-        React.createElement('div', { style: { width: 56, height: 56, borderRadius: 999, background: 'color-mix(in srgb, #4a8a6a 16%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+        React.createElement('div', { style: { width: 56, height: 56, borderRadius: 'var(--r-pill)', background: 'color-mix(in srgb, var(--c-success) 16%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
           React.createElement(Icon, { name: 'check', size: 26, color: C.success })),
         React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16 } }, 'Rien à signaler'),
         React.createElement('p', { style: { fontSize: 13, color: C.ink3, maxWidth: 280, lineHeight: 1.4 } }, 'Aucune recommandation active selon tes données actuelles. Reviens après avoir renseigné plus d\'informations (sommeil, séances, tests) pour des conseils plus précis.'))
@@ -47,7 +47,7 @@ function AdviceTab({ db, onAction }) {
         const items = recos.filter((r) => r.level === g.level)
         if (!items.length) return null
         return React.createElement('div', { key: g.level, style: { marginBottom: 18 } },
-          React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10 } }, g.label),
+          React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10 } }, g.label),
           items.map((r, i) => {
             const clickable = !!(r.action && onAction)
             return React.createElement(clickable ? 'button' : 'div', {
@@ -70,7 +70,7 @@ function AdviceTab({ db, onAction }) {
     ranked.rest.length > 0 ? React.createElement('button', {
       onClick: () => setShowAll(!showAll),
       style: {
-        width: '100%', padding: '11px 14px', borderRadius: 999, marginBottom: 14,
+        width: '100%', padding: '11px 14px', borderRadius: 'var(--r-pill)', marginBottom: 14,
         border: `1.5px solid ${C.line}`, background: 'transparent', color: C.ink2,
         fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: C.font,
       },
@@ -116,36 +116,36 @@ function ChatTab({ db, onAction }) {
         return React.createElement('div', { key: i, style: { display: 'flex', flexDirection: 'column', alignItems: coach ? 'flex-start' : 'flex-end' } },
           React.createElement('div', { style: {
             maxWidth: '86%', padding: '10px 14px', fontSize: 14, lineHeight: 1.5,
-            borderRadius: coach ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
-            background: coach ? C.surface : COACH, color: coach ? C.ink : '#fff',
+            borderRadius: 0,
+            background: coach ? C.surface : COACH, color: coach ? C.ink : 'var(--c-on-fill)',
             border: coach ? `1px solid ${C.line}` : 'none',
           } }, m.text),
           coach && m.action && onAction && React.createElement('button', {
             onClick: () => onAction(m.action),
-            style: { marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 700, color: COACH, background: `color-mix(in srgb, ${COACH} 10%, ${C.surface})`, border: `1.5px solid color-mix(in srgb, ${COACH} 35%, ${C.line})`, cursor: 'pointer' },
+            style: { marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 700, color: COACH, background: `color-mix(in srgb, ${COACH} 10%, ${C.surface})`, border: `1.5px solid color-mix(in srgb, ${COACH} 35%, ${C.line})`, cursor: 'pointer' },
           }, m.actionLabel || 'Ouvrir', React.createElement(Icon, { name: 'arrow', size: 14, color: COACH })))
       }),
-      typing && React.createElement('div', { style: { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: '4px 16px 16px 16px', background: C.surface, border: `1px solid ${C.line}`, color: C.ink3, fontSize: 14 } }, '…')),
+      typing && React.createElement('div', { style: { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 0, background: C.surface, border: `1px solid ${C.line}`, color: C.ink3, fontSize: 14 } }, '…')),
 
     chips.length > 0 && React.createElement('div', { style: { display: 'flex', gap: 7, overflowX: 'auto', padding: '4px 18px 8px', flexShrink: 0 } },
       chips.map((c, i) => React.createElement('button', { key: i, onClick: () => send(c),
-        style: { flex: '0 0 auto', padding: '7px 13px', borderRadius: 999, fontSize: 12.5, fontWeight: 600, color: COACH, background: C.surface, border: `1.5px solid color-mix(in srgb, ${COACH} 30%, ${C.line})`, cursor: 'pointer', whiteSpace: 'nowrap' } }, c))),
+        style: { flex: '0 0 auto', padding: '7px 13px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 600, color: COACH, background: C.surface, border: `1.5px solid color-mix(in srgb, ${COACH} 30%, ${C.line})`, cursor: 'pointer', whiteSpace: 'nowrap' } }, c))),
 
     React.createElement('form', { onSubmit: (e) => { e.preventDefault(); send(input) }, style: { display: 'flex', gap: 8, padding: '8px 18px calc(14px + env(safe-area-inset-bottom))', borderTop: `1px solid ${C.line}`, background: C.surface, flexShrink: 0 } },
       React.createElement('input', {
         value: input, onChange: (e) => setInput(e.target.value), placeholder: 'Écris ta question…',
-        style: { flex: 1, padding: '11px 14px', borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.bg, fontSize: 14.5, outline: 'none' },
+        style: { flex: 1, padding: '11px 14px', borderRadius: 'var(--r-pill)', border: `1.5px solid ${C.line}`, background: C.bg, fontSize: 14.5, outline: 'none' },
       }),
       React.createElement('button', { type: 'submit', 'aria-label': 'Envoyer', disabled: !input.trim(),
-        style: { width: 42, height: 42, borderRadius: 999, border: 'none', background: input.trim() ? COACH : C.surface2, color: '#fff', fontSize: 17, cursor: input.trim() ? 'pointer' : 'default', flex: '0 0 auto' } }, '➤')))
+        style: { width: 42, height: 42, borderRadius: 'var(--r-pill)', border: 'none', background: input.trim() ? COACH : C.surface2, color: 'var(--c-on-fill)', fontSize: 17, cursor: input.trim() ? 'pointer' : 'default', flex: '0 0 auto' } }, '➤')))
 }
 
 export default function CoachSpace({ db, onClose, onAction }) {
   const [tab, setTab] = useState('chat')
 
-  return React.createElement('div', { style: { position: 'fixed', inset: 0, backgroundColor: C.bg, backgroundImage: GRADIENTS.entrainer, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat', zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' } },
+  return React.createElement('div', { style: { position: 'fixed', inset: 0, backgroundColor: C.bg, backgroundImage: 'var(--g-paper)', backgroundSize: 'var(--g-paper-size)', backgroundPosition: '-1px -1px', backgroundAttachment: 'local', zIndex: 55, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 8px', flexShrink: 0 } },
-      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm } },
+      React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: 'none' } },
         React.createElement(Icon, { name: 'back', size: 20 })),
       React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15 } }, 'Coach'),
       React.createElement('div', { style: { width: 40 } })),

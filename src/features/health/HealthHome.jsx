@@ -1,6 +1,6 @@
 import React, { useState, lazy } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { C, MODULE_TINTS, Icon, isoToday, GRADIENTS } from './kit'
+import { C, MODULE_TINTS, Icon, isoToday } from './kit'
 import { PHASES } from './cycleData'
 
 // Les sept sous-espaces ne s'ouvrent que sur une tuile pressée. Chargés
@@ -80,19 +80,19 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
     ...(embedded
       ? { position: 'fixed', inset: 0, zIndex: 55, animation: 'spaceIn .22s ease' }
       : { flex: 1, minHeight: 0, width: '100%' }),
-    backgroundColor: C.bg, backgroundImage: GRADIENTS.sante, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat',
+    backgroundColor: C.bg, backgroundImage: 'var(--g-paper)', backgroundSize: 'var(--g-paper-size)', backgroundPosition: '-1px -1px', backgroundAttachment: 'local',
     display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font,
   } },
     el('div', { style: { flex: 1, overflowY: 'auto', padding: '14px 18px 32px' } },
-      el('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm, marginBottom: 12 } },
+      el('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 0, background: C.surface, border: `1px solid ${C.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: C.ink, boxShadow: 'none', marginBottom: 12 } },
         el(Icon, { name: 'back', size: 19 })),
-      el('h1', { style: { fontFamily: C.font, fontSize: 30, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1.1, margin: 0 } }, 'Santé'),
+      el('h1', { style: { fontFamily: C.display, fontSize: 34, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: .95, margin: 0 } }, 'Santé'),
       el('p', { style: { fontSize: 13.5, color: C.ink2, margin: '6px 0 18px' } }, 'Nutrition, sommeil, prévention et bien-être'),
       el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
         tiles.map((t, i) => el('button', { key: i, onClick: () => setSpace(t.on),
-          style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: C.shadowSm, cursor: 'pointer' } },
-          el('div', { style: { width: 42, height: 42, borderRadius: 13, background: `color-mix(in srgb, ${t.tint} 15%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 } },
+          style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: 'none', cursor: 'pointer' } },
+          el('div', { style: { width: 42, height: 42, borderRadius: 0, background: 'transparent', border: `1.5px solid ${t.tint}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 } },
             el(Icon, { name: t.ic, size: 21, color: t.tint })),
-          el('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 14.5 } }, t.lab),
-          el('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' } }, t.sub))))))
+          el('div', { style: { fontFamily: C.display, fontWeight: 800, fontSize: 18, textTransform: 'uppercase', letterSpacing: '.03em', lineHeight: 1 } }, t.lab),
+          el('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' } }, t.sub))))))
 }

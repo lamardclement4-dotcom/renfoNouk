@@ -1,38 +1,194 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
 
-/* Retour tactile léger sur tous les boutons : sensation plus réactive
-   au toucher sans devoir instrumenter chaque bouton individuellement. */
-button {
-  transition: transform .12s ease, opacity .12s ease;
+/* ============================================================
+   Identité « laboratoire » : un appareil de mesure de physiologie.
+
+   Papier millimétré d'enregistreur, tracés vert phosphore, chiffres à
+   chasse fixe, titres étroits façon étiquette de flacon. Les mesures clés
+   vivent dans des cadrans en arc ; tout le reste est en lignes droites et
+   filets fins — pas de cartes arrondies, pas d'ombres, pas de dégradés.
+
+   Clair et sombre sont soignés à égalité. Sans choix explicite, l'app suit
+   le réglage du téléphone ; un choix fait dans le profil pose
+   data-theme="light" ou "dark" sur <html>, et l'emporte dans les deux sens.
+
+   Toutes les couleurs sont d'abord définies ici, dans :root, avant d'être
+   redéfinies pour le sombre : une variable qui n'existerait que dans un
+   bloc sombre laisserait le clair sans couleur.
+   ============================================================ */
+:root {
+  color-scheme: light;
+  --c-bg: #F2F4EF;          /* papier d'enregistreur */
+  --c-surface: #F8FAF6;     /* étiquette collée sur le papier */
+  --c-surface2: #E7ECE3;
+  --c-ink: #18201B;
+  --c-ink2: #55615A;
+  --c-ink3: #87938B;
+  --c-line: #C9D3C5;
+  --c-primary: #12804A;     /* vert phosphore, assombri pour tenir sur papier */
+  --c-trace: #12804A;
+  --c-on-fill: #FFFFFF;     /* texte posé sur un aplat coloré */
+  --c-success: #1E7F55;
+  --c-warn: #A8611B;
+  --c-danger: #B23A3A;
+
+  /* Voies de mesure, comme les canaux d'un oscilloscope : chaque grandeur
+     garde sa couleur partout, ce qui rend les cadrans lisibles sans légende. */
+  --ch1: #A66A00;           /* ambre */
+  --ch2: #0B7480;           /* sarcelle */
+  --ch3: #A12F6C;           /* magenta */
+  --ch4: #2E5BB0;           /* bleu */
+  --c-calorie: var(--ch1);
+  --c-protein: var(--ch2);
+  --c-carb: var(--ch3);
+  --c-fat: var(--ch4);
+  --m-hydra: var(--ch2);
+  --m-sleep: var(--ch4);
+  --m-cycle: var(--ch3);
+  --m-mind: var(--ch1);
+
+  --grid-minor: #E2E8DE;
+  --grid-major: #CCD6C8;
+  --g-paper:
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+  --g-paper-size: 30px 30px, 30px 30px, 6px 6px, 6px 6px;
+  /* Anciens fonds par onglet : tous ramenés au papier. */
+  --g-accueil: var(--g-paper);
+  --g-progres: var(--g-paper);
+  --g-entrainer: var(--g-paper);
+  --g-sante: var(--g-paper);
+  --g-profil: var(--g-paper);
+  --surface: var(--c-surface);
+
+  /* Les pilules deviennent des repères à angles vifs. Un seul réglage pour
+     toute l'app plutôt que deux cent cinquante valeurs dispersées. */
+  --r-pill: 0px;
+
+  --f-text: "Instrument Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --f-display: "Big Shoulders Display", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
-button:active {
-  transform: scale(.96);
-  opacity: .85;
+
+/* Le sombre est déclaré trois fois avec les mêmes valeurs : selon le
+   téléphone, sur choix explicite, et pour .ecran — le lecteur d'exercices,
+   un écran d'instrument qui reste sombre quelle que soit l'apparence.
+   Les alias (--c-calorie…) sont redéclarés : une variable qui en cite une
+   autre est résolue là où elle est déclarée, et .ecran n'est pas :root. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c-bg: #0D1411;          /* verre d'écran cathodique */
+    --c-surface: #111A16;
+    --c-surface2: #18241E;
+    --c-ink: #DCE8E0;
+    --c-ink2: #94A89D;
+    --c-ink3: #627469;
+    --c-line: #263830;
+    --c-primary: #5BF08F;
+    --c-trace: #5BF08F;
+    --c-on-fill: #06120B;     /* texte sombre sur aplat vif : lisible, comme un afficheur */
+    --c-success: #4FD98A;
+    --c-warn: #E8A95A;
+    --c-danger: #F07A6A;
+    --ch1: #F2C14E;
+    --ch2: #4FD6E0;
+    --ch3: #F27BC4;
+    --ch4: #8AB0FF;
+    --grid-minor: #141F19;
+    --grid-major: #1D2C24;
+  }
 }
+:root[data-theme="dark"], .ecran {
+  color-scheme: dark;
+  --c-bg: #0D1411;          /* verre d'écran cathodique */
+  --c-surface: #111A16;
+  --c-surface2: #18241E;
+  --c-ink: #DCE8E0;
+  --c-ink2: #94A89D;
+  --c-ink3: #627469;
+  --c-line: #263830;
+  --c-primary: #5BF08F;
+  --c-trace: #5BF08F;
+  --c-on-fill: #06120B;     /* texte sombre sur aplat vif : lisible, comme un afficheur */
+  --c-success: #4FD98A;
+  --c-warn: #E8A95A;
+  --c-danger: #F07A6A;
+  --ch1: #F2C14E;
+  --ch2: #4FD6E0;
+  --ch3: #F27BC4;
+  --ch4: #8AB0FF;
+  --grid-minor: #141F19;
+  --grid-major: #1D2C24;
+}
+.ecran {
+  --c-calorie: var(--ch1);
+  --c-protein: var(--ch2);
+  --c-carb: var(--ch3);
+  --c-fat: var(--ch4);
+  --m-hydra: var(--ch2);
+  --m-sleep: var(--ch4);
+  --m-cycle: var(--ch3);
+  --m-mind: var(--ch1);
+  color: var(--c-ink);
+}
+
+html, body { background-color: var(--c-bg); }
+body {
+  font-family: var(--f-text);
+  color: var(--c-ink);
+  /* Chiffres de même largeur partout : les colonnes de mesures s'alignent
+     et une valeur qui change ne fait pas danser le texte autour d'elle. */
+  font-variant-numeric: tabular-nums;
+  background-image: var(--g-paper);
+  background-size: var(--g-paper-size);
+  background-position: -1px -1px;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, textarea, select, button { font-family: inherit; }
+
+/* Liste réglée : un filet fin entre deux lignes, aucun aux extrémités. */
+.liste > * + * { border-top: 1px solid var(--c-line) !important; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--c-trace);
+  outline-offset: 2px;
+}
+
+/* Un appui s'enfonce d'un pixel, comme une touche d'appareil, au lieu de
+   rétrécir. */
+button { transition: transform .08s ease, opacity .12s ease; }
+button:active { transform: translateY(1px); opacity: .88; }
 
 @keyframes ringPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.015); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: .82; }
 }
 
-/* Entrée douce des écrans "space" (Coach, tests, séances, sommeil…) —
-   fondu + léger glissement vers le haut, pour que l'ouverture d'un
-   module se sente fluide plutôt qu'un simple "pop" instantané. */
+/* Entrée d'un écran : il glisse d'un cran, sans rebond. */
 @keyframes spaceIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
-/* Feuilles du bas (choix de sport, formulaire de séance, sélecteur de
-   test…) : le fond s'estompe pendant que la feuille glisse depuis le
-   bas — PeakSpace référençait déjà ces deux noms d'animation mais ils
-   n'étaient définis nulle part, donc cette transition ne jouait jamais. */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 @keyframes sheetUp {
-  from { opacity: 0; transform: translateY(24px); }
+  from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Un tracé s'écrit comme sur un enregistreur ; une aiguille monte jusqu'à
+   sa valeur. Les éléments animés portent pathLength="1".
+   traceDraw part d'un décalage de 1 posé sur l'élément et va jusqu'à 0 ;
+   dialRise part d'un arc vide et finit sur le décalage propre à chaque
+   cadran (pas d'état final dans l'image clé : c'est celui de l'élément). */
+@keyframes traceDraw { to { stroke-dashoffset: 0; } }
+@keyframes dialRise { from { stroke-dashoffset: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; }
 }

@@ -32,7 +32,7 @@ export function HealthScoreCard({ db, onAction }) {
   return h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radius, padding: '16px 16px 14px', marginBottom: 14 } },
     h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 } },
       h('div', null,
-        h('div', { style: { fontSize: 11.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 3 } }, 'Score santé sportive'),
+        h('div', { style: { fontFamily: C.display, fontSize: 15, fontWeight: 800, color: C.ink2, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 } }, 'Score santé sportive'),
         h('div', { style: { fontSize: 32, fontWeight: 900, fontFamily: C.font, color: scoreColor, lineHeight: 1 } }, score, h('span', { style: { fontSize: 16, fontWeight: 600, marginLeft: 2 } }, '/100'))),
       h('svg', { width: 52, height: 52, viewBox: '0 0 52 52' },
         h('circle', { cx: 26, cy: 26, r: 22, fill: 'none', strokeWidth: 5, style: { stroke: C.surface2 } }),
@@ -50,11 +50,11 @@ export function HealthScoreCard({ db, onAction }) {
           onClick: onAction ? () => onAction(PILLAR_ACTION[p.id] || p.id) : undefined,
           style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: onAction ? 'pointer' : 'default' },
         },
-          h('div', { style: { width: '100%', height: 36, borderRadius: 6, background: isSleep && !active ? `color-mix(in srgb, #4a6fa5 12%, ${C.surface2})` : C.surface2, position: 'relative', overflow: 'hidden', border: isSleep ? `1px solid color-mix(in srgb, #4a6fa5 30%, ${C.line})` : 'none' } },
-            h('div', { style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: pct + '%', background: active ? `color-mix(in srgb, ${col} 80%, transparent)` : C.surface2, borderRadius: 6, transition: 'height .4s ease' } }),
-            isSleep && !active && h('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#4a6fa5', fontWeight: 700 } }, '+')),
-          h(Icon, { name: PILLAR_IC[p.id] || 'target', size: 13, color: isSleep && !active ? '#4a6fa5' : (active ? col : C.ink3) }),
-          h('div', { style: { fontSize: 10, fontWeight: 700, color: isSleep && !active ? '#4a6fa5' : (active ? col : C.ink3) } }, active ? p.score : (isSleep ? 'Log' : '—')))
+          h('div', { style: { width: '100%', height: 36, borderRadius: 0, background: isSleep && !active ? `color-mix(in srgb, var(--ch4) 12%, ${C.surface2})` : C.surface2, position: 'relative', overflow: 'hidden', border: isSleep ? `1px solid color-mix(in srgb, var(--ch4) 30%, ${C.line})` : 'none' } },
+            h('div', { style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: pct + '%', background: active ? `color-mix(in srgb, ${col} 80%, transparent)` : C.surface2, borderRadius: 0, transition: 'height .4s ease' } }),
+            isSleep && !active && h('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: 'var(--ch4)', fontWeight: 700 } }, '+')),
+          h(Icon, { name: PILLAR_IC[p.id] || 'target', size: 13, color: isSleep && !active ? 'var(--ch4)' : (active ? col : C.ink3) }),
+          h('div', { style: { fontSize: 10, fontWeight: 700, color: isSleep && !active ? 'var(--ch4)' : (active ? col : C.ink3) } }, active ? p.score : (isSleep ? 'Log' : '—')))
       })),
 
     topRecos.length > 0 && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
@@ -78,16 +78,16 @@ export function PeakHomeCard({ db, onPeak }) {
   const upcoming = goals.map((g) => ({ g, plan: computePeakPlan(g) })).filter((x) => x.plan.phase !== 'past').sort((a, b) => a.g.eventDate.localeCompare(b.g.eventDate))
   if (!upcoming.length) return null
   const top = upcoming[0]
-  const colors = { base: '#5b6fa5', build: '#bf6a40', taper: C.success, today: '#a3526b' }
+  const colors = { base: 'var(--ch4)', build: 'var(--ch1)', taper: C.success, today: 'var(--ch3)' }
   const labels = { base: 'Développement général', build: 'Développement spécifique', taper: 'Affûtage', today: 'Jour J' }
-  const tint = colors[top.plan.phase] || '#a3526b'
+  const tint = colors[top.plan.phase] || 'var(--ch3)'
   const countdown = top.plan.daysRemaining === 0 ? 'Jour J' : top.plan.daysRemaining === 1 ? 'J-1' : 'J-' + top.plan.daysRemaining
 
   return h('button', {
     onClick: onPeak,
     style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: C.radiusSm, marginBottom: 16, cursor: 'pointer', background: `color-mix(in srgb, ${tint} 10%, ${C.surface})`, border: `1.5px solid color-mix(in srgb, ${tint} 28%, ${C.line})` },
   },
-    h('div', { style: { width: 46, height: 46, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${tint} 16%, ${C.surface})`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
+    h('div', { style: { width: 46, height: 46, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${tint}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
       h('div', { style: { fontSize: 12.5, fontWeight: 800, color: tint } }, countdown)),
     h('div', { style: { flex: 1, minWidth: 0 } },
       h('div', { style: { fontWeight: 700, fontSize: 14.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, top.g.label),

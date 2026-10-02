@@ -4,7 +4,7 @@
 
 export const PHASES = {
   menstruation: {
-    key: "menstruation", label: "R\xE8gles", tint: "#b5566a", icon: "moon",
+    key: "menstruation", label: "R\xE8gles", tint: "var(--c-danger)", icon: "moon",
     days: "J1 \u2013 J5 environ",
     energy: "\xC9nergie souvent basse",
     hormone: "\u0152strog\xE8nes et progest\xE9rone au plus bas \u2014 phase de renouvellement",
@@ -29,7 +29,7 @@ export const PHASES = {
     spm_tips: null
   },
   folliculaire: {
-    key: "folliculaire", label: "Folliculaire", tint: "#c79a4a", icon: "leaf",
+    key: "folliculaire", label: "Folliculaire", tint: "var(--ch1)", icon: "leaf",
     days: "J6 \u2013 J13 environ",
     energy: "\xC9nergie qui monte progressivement",
     hormone: "\u0152strog\xE8nes en hausse continue \u2014 phase de croissance et d\u2019\xE9lan",
@@ -53,7 +53,7 @@ export const PHASES = {
     spm_tips: null
   },
   ovulation: {
-    key: "ovulation", label: "Ovulation", tint: "#bf6a40", icon: "spark",
+    key: "ovulation", label: "Ovulation", tint: "var(--ch1)", icon: "spark",
     days: "J14 \u2013 J17 environ",
     energy: "Pic d\u2019\xE9nergie",
     hormone: "Pic d\u2019\u0153strog\xE8nes, pic de testost\xE9rone \u2014 sommet hormonal du cycle",
@@ -77,7 +77,7 @@ export const PHASES = {
     spm_tips: null
   },
   luteale: {
-    key: "luteale", label: "Lut\xE9ale", tint: "#6f8f86", icon: "heart",
+    key: "luteale", label: "Lut\xE9ale", tint: "var(--ch2)", icon: "heart",
     days: "J18 \u2013 J28 environ",
     energy: "\xC9nergie qui descend progressivement",
     hormone: "Progest\xE9rone dominante en d\xE9but, chute en fin de phase \u2014 phase de r\xE9cup\xE9ration interne",

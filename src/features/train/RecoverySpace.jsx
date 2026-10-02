@@ -18,18 +18,18 @@ const CTX_ICON = { course: 'route', express: 'clock', rouleau: 'spark', jambes: 
 
 export default function RecoverySpace({ onClose, onOpenSession }) {
   return React.createElement(FlowSpace, { bg: 'entrainer', title: 'Récupération', onClose },
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.success, color: '#fff', marginBottom: 18 } },
-      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
-        React.createElement(Icon, { name: 'leaf', size: 24, color: '#fff' })),
-      React.createElement('div', { style: { fontFamily: C.font, fontSize: 20, fontWeight: 700, lineHeight: 1.1 } }, 'Récupère plus vite'),
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.success, color: 'var(--c-on-fill)', marginBottom: 18 } },
+      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
+        React.createElement(Icon, { name: 'leaf', size: 24, color: 'var(--c-on-fill)' })),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 22, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.1 } }, 'Récupère plus vite'),
       React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, 'Des routines guidées à faire juste après ta séance ou ta course pour relâcher les tensions et limiter les courbatures.')),
 
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10 } }, 'Choisis ta récup'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10 } }, 'Choisis ta récup'),
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 } },
       RECOVERY.map((s) => {
         const mins = sessionDuration(s)
         return React.createElement('button', { key: s.id, onClick: () => onOpenSession(s.id), style: { display: 'flex', alignItems: 'flex-start', gap: 12, width: '100%', textAlign: 'left', padding: 12, borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, cursor: 'pointer' } },
-          React.createElement('div', { style: { width: 52, height: 52, borderRadius: 14, flex: '0 0 auto', background: 'color-mix(in srgb, #5b8a72 16%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          React.createElement('div', { style: { width: 52, height: 52, borderRadius: 0, flex: '0 0 auto', background: 'color-mix(in srgb, var(--c-success) 16%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
             React.createElement(Icon, { name: CTX_ICON[s.ctx] || 'heart', size: 22, color: C.success })),
           React.createElement('div', { style: { flex: 1, textAlign: 'left', minWidth: 0 } },
             React.createElement('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 16 } }, s.title),
@@ -37,10 +37,10 @@ export default function RecoverySpace({ onClose, onOpenSession }) {
             React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 6 } }, mins, ' min · ', s.keys.length, ' mvts')))
       })),
 
-    React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10 } }, 'Pour mieux récupérer'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10 } }, 'Pour mieux récupérer'),
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 8 } },
       RECOV_TIPS.map((tp, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'flex-start', gap: 13, padding: '13px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}` } },
-        React.createElement('div', { style: { width: 36, height: 36, borderRadius: 10, flex: '0 0 auto', background: 'color-mix(in srgb, #5b8a72 14%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+        React.createElement('div', { style: { width: 36, height: 36, borderRadius: 0, flex: '0 0 auto', background: 'color-mix(in srgb, var(--c-success) 14%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
           React.createElement(Icon, { name: tp.ic, size: 18, color: C.success })),
         React.createElement('div', { style: { flex: 1 } },
           React.createElement('div', { style: { fontWeight: 600, fontSize: 15 } }, tp.t),

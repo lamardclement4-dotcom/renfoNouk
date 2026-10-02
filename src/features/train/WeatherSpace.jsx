@@ -206,8 +206,8 @@ export default function WeatherSpace({ db, store, onClose }) {
           return h('button', {
             key: e.id,
             onClick: () => setEnvironment(e.id),
-            style: { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: on ? '#fff' : C.ink2, background: on ? C.primary : C.surface, border: `1px solid ${on ? C.primary : C.line}` },
-          }, h(Icon, { name: e.icon, size: 15, color: on ? '#fff' : C.ink3 }), e.label)
+            style: { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 700, cursor: 'pointer', color: on ? 'var(--c-on-fill)' : C.ink2, background: on ? C.primary : C.surface, border: `1px solid ${on ? C.primary : C.line}` },
+          }, h(Icon, { name: e.icon, size: 15, color: on ? 'var(--c-on-fill)' : C.ink3 }), e.label)
         }))),
 
     // ─── Import ─────────────────────────────────────────────────
@@ -215,11 +215,11 @@ export default function WeatherSpace({ db, store, onClose }) {
       phase === 'reading'
         ? h('div', { style: { textAlign: 'center', padding: '8px 0' } },
           h('div', { style: { fontWeight: 700, fontSize: 14.5 } }, 'Lecture de la capture…'),
-          h('div', { style: { width: '100%', height: 6, borderRadius: 999, background: C.surface2, overflow: 'hidden', margin: '14px 0 8px' } },
-            h('div', { style: { width: Math.max(4, progress) + '%', height: '100%', borderRadius: 999, background: C.primary, transition: 'width .3s ease' } })),
+          h('div', { style: { width: '100%', height: 6, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden', margin: '14px 0 8px' } },
+            h('div', { style: { width: Math.max(4, progress) + '%', height: '100%', borderRadius: 'var(--r-pill)', background: C.primary, transition: 'width .3s ease' } })),
           h('div', { style: { fontSize: 12, color: C.ink3 } }, progress > 0 ? progress + ' %' : 'Préparation du moteur…'))
         : h('label', { style: { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' } },
-          h('div', { style: { width: 42, height: 42, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          h('div', { style: { width: 42, height: 42, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
             h(Icon, { name: 'plus', size: 20, color: C.primary })),
           h('div', { style: { flex: 1, minWidth: 0 } },
             h('div', { style: { fontWeight: 700, fontSize: 14.5 } }, 'Importer une capture météo'),
@@ -263,7 +263,7 @@ export default function WeatherSpace({ db, store, onClose }) {
           }),
           h('button', {
             onClick: runSearch, disabled: net !== 'idle',
-            style: { padding: '10px 15px', borderRadius: C.radiusXs, border: 'none', background: C.primary, color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: net === 'idle' ? 'pointer' : 'default', opacity: net === 'idle' ? 1 : 0.6, flex: '0 0 auto' },
+            style: { padding: '10px 15px', borderRadius: C.radiusXs, border: 'none', background: C.primary, color: 'var(--c-on-fill)', fontSize: 13.5, fontWeight: 700, cursor: net === 'idle' ? 'pointer' : 'default', opacity: net === 'idle' ? 1 : 0.6, flex: '0 0 auto' },
           }, net === 'searching' ? 'Recherche…' : net === 'loading' ? 'Relevé…' : 'Chercher')),
 
         // Plusieurs villes portent le même nom : on laisse choisir.
@@ -276,7 +276,7 @@ export default function WeatherSpace({ db, store, onClose }) {
         // Le cas courant : la même ville que la dernière fois, en un appui.
         lastPlace && places.length === 0 && h('button', {
           onClick: () => pickPlace(lastPlace), disabled: net !== 'idle',
-          style: { marginTop: 8, width: '100%', padding: '9px 12px', borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 12.5, fontWeight: 600, cursor: net === 'idle' ? 'pointer' : 'default' },
+          style: { marginTop: 8, width: '100%', padding: '9px 12px', borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: 'transparent', color: C.ink3, fontSize: 12.5, fontWeight: 600, cursor: net === 'idle' ? 'pointer' : 'default' },
         }, 'Relever à ', placeLabel(lastPlace))),
 
       visibleFields.map((f, i) => h('label', { key: f.key, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
@@ -308,7 +308,7 @@ export default function WeatherSpace({ db, store, onClose }) {
       ? h(React.Fragment, null,
         h(Card, { style: { marginBottom: 12, background: `color-mix(in srgb, ${riskCol} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${riskCol} 26%, ${C.line})` } },
           h('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 } },
-            h('div', { style: { width: 46, height: 46, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${riskCol} 16%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+            h('div', { style: { width: 46, height: 46, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${riskCol}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
               h(Icon, { name: advice.risk.level === 'ok' ? 'check' : 'alert', size: 22, color: riskCol })),
             h('div', { style: { flex: 1, minWidth: 0 } },
               h('div', { style: { fontWeight: 800, fontSize: 15.5, color: riskCol } }, advice.risk.label),
@@ -331,7 +331,7 @@ export default function WeatherSpace({ db, store, onClose }) {
             DURATIONS.map((d) => h('button', {
               key: d,
               onClick: () => setMins(d),
-              style: { flex: 1, padding: '9px 0', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', color: d === mins ? '#fff' : C.ink2, background: d === mins ? C.primary : C.surface, border: `1px solid ${d === mins ? C.primary : C.line}` },
+              style: { flex: 1, padding: '9px 0', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', color: d === mins ? 'var(--c-on-fill)' : C.ink2, background: d === mins ? C.primary : C.surface, border: `1px solid ${d === mins ? C.primary : C.line}` },
             }, d + ' min'))),
           adjusted && h('div', { style: { marginTop: 12, padding: '11px 12px', borderRadius: C.radiusSm, background: C.surface2, fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } },
             'Concrètement, une allure de ', h('strong', null, fmtPace(refPace), '/km'), ' se court plutôt à ',
@@ -340,7 +340,7 @@ export default function WeatherSpace({ db, store, onClose }) {
         h(Card, { style: { marginBottom: 14 } },
           h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 10 } }, 'Ce que ça change'),
           advice.tips.map((t, i) => h('div', { key: i, style: { display: 'flex', gap: 9, padding: '8px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
-            h('span', { style: { width: 5, height: 5, borderRadius: 999, background: riskCol, flexShrink: 0, marginTop: 7 } }),
+            h('span', { style: { width: 5, height: 5, borderRadius: 'var(--r-pill)', background: riskCol, flexShrink: 0, marginTop: 7 } }),
             h('span', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.5 } }, t))),
           h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 12, lineHeight: 1.45, fontStyle: 'italic' } },
             'Ordres de grandeur issus des repères usuels de physiologie de l’effort : à ajuster selon ton acclimatation.')))
@@ -350,7 +350,7 @@ export default function WeatherSpace({ db, store, onClose }) {
     h('button', {
       disabled: !advice,
       onClick: save,
-      style: { width: '100%', padding: 15, borderRadius: 999, background: advice ? C.primary : C.surface2, color: advice ? '#fff' : C.ink3, fontWeight: 800, fontSize: 15, border: 'none', cursor: advice ? 'pointer' : 'default' },
+      style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 15, borderRadius: 'var(--r-pill)', background: advice ? C.primary : C.surface2, color: advice ? 'var(--c-on-fill)' : C.ink3, border: 'none', cursor: advice ? 'pointer' : 'default' },
     }, saved ? 'Mettre à jour ces conditions' : 'Enregistrer ces conditions'),
 
     // ─── Historique ─────────────────────────────────────────────
@@ -391,7 +391,7 @@ function ChoiceRow({ label, hint, options, value, onChange, divider }) {
         return h('button', {
           key: o.id,
           onClick: () => onChange(o.id),
-          style: { padding: '8px 13px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', color: on ? '#fff' : C.ink2, background: on ? C.primary : C.surface, border: `1px solid ${on ? C.primary : C.line}` },
+          style: { padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', color: on ? 'var(--c-on-fill)' : C.ink2, background: on ? C.primary : C.surface, border: `1px solid ${on ? C.primary : C.line}` },
         }, o.label)
       })))
 }

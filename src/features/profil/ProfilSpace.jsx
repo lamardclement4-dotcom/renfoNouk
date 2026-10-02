@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { supabase } from '../../lib'
-import { C, Icon, FlowSpace, THEMES, THEME_KEY, DEFAULT_THEME, applyTheme } from '../health/kit'
+import { C, Icon, FlowSpace, THEMES, THEME_KEY, applyTheme, normalizeTheme } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { inferUserLevel, trainingTotals } from '../train/renfoIntel'
 import { SPORTS } from '../train/trainData'
@@ -27,20 +27,20 @@ const ZONES = [
 const AVATARS = ['🏃', '🚴', '🏋️', '🧘', '🥊', '🏊', '⛷️', '🤸', '🏸', '⚽', '🎾', '🧗', '🏀', '🤾', '🚵', '🏄', '😊', '😎', '🔥', '💪']
 
 const LEVEL_OPTS = [
-  { id: 'debutant', label: 'Débutant', desc: 'Tu commences ou reprends une activité régulière', tint: '#5b6fa5' },
+  { id: 'debutant', label: 'Débutant', desc: 'Tu commences ou reprends une activité régulière', tint: 'var(--ch4)' },
   { id: 'intermediaire', label: 'Intermédiaire', desc: "Tu t'entraînes régulièrement depuis plusieurs mois", tint: C.warn },
   { id: 'confirme', label: 'Confirmé', desc: 'Entraînement structuré depuis longtemps, bonne tolérance à la charge', tint: C.success },
 ]
 
 function sheetWrap(onClose, children) {
   return h('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 65, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
-    h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', background: C.surface, borderRadius: '24px 24px 0 0', padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto', boxSizing: 'border-box', animation: 'sheetUp .3s ease' } },
-      h('div', { style: { width: 38, height: 4, borderRadius: 999, background: C.line, margin: '0 auto 18px' } }),
+    h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', background: C.surface, borderRadius: 0, padding: '22px 22px 28px', maxWidth: 460, margin: '0 auto', boxSizing: 'border-box', animation: 'sheetUp .3s ease' } },
+      h('div', { style: { width: 38, height: 4, borderRadius: 'var(--r-pill)', background: C.line, margin: '0 auto 18px' } }),
       children))
 }
 
 const inputStyle = { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box', marginBottom: 14 }
-const primaryBtnStyle = { width: '100%', padding: 15, borderRadius: 999, background: C.primary, color: '#fff', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer' }
+const primaryBtnStyle = { width: '100%', padding: 15, borderRadius: 'var(--r-pill)', background: C.primary, color: 'var(--c-on-fill)', fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer' }
 
 function TextFieldSheet({ title, fields, saveLabel, onSave, onClose }) {
   const [vals, setVals] = useState(() => Object.fromEntries(fields.map((f) => [f.key, f.value || ''])))
@@ -48,9 +48,9 @@ function TextFieldSheet({ title, fields, saveLabel, onSave, onClose }) {
   const canSave = fields.every((f) => !f.required || (vals[f.key] || '').trim())
   return sheetWrap(onClose,
     h('div', null,
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, textAlign: 'center', marginBottom: 20 } }, title),
+      h('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center', marginBottom: 20 } }, title),
       fields.map((f) => h('label', { key: f.key, style: { display: 'block' } },
-        h('span', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } }, f.label),
+        h('span', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, f.label),
         h('input', { value: vals[f.key], onChange: (e) => upd(f.key, e.target.value), placeholder: f.placeholder || '', maxLength: f.maxLength || 40, autoFocus: f.autoFocus, style: { ...inputStyle, marginTop: 6 } }))),
       h('button', { disabled: !canSave, onClick: () => { onSave(vals); onClose() }, style: { ...primaryBtnStyle, opacity: canSave ? 1 : 0.45 } }, saveLabel || 'Enregistrer')))
 }
@@ -61,23 +61,23 @@ function NumberFieldSheet({ title, value, unit, min, max, step, onSave, onClose 
   const inc = () => setV((x) => Math.min(max, x + step))
   return sheetWrap(onClose,
     h('div', null,
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, textAlign: 'center' } }, title),
+      h('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center' } }, title),
       h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, margin: '24px 0 26px' } },
-        h('button', { onClick: dec, 'aria-label': 'Diminuer', style: { width: 44, height: 44, borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 20, fontWeight: 700, color: C.ink, cursor: 'pointer' } }, '–'),
+        h('button', { onClick: dec, 'aria-label': 'Diminuer', style: { width: 44, height: 44, borderRadius: 'var(--r-pill)', border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 20, fontWeight: 700, color: C.ink, cursor: 'pointer' } }, '–'),
         h('div', { style: { textAlign: 'center', minWidth: 96 } },
-          h('span', { style: { fontFamily: C.font, fontSize: 44, fontWeight: 700, lineHeight: 1, color: C.primary } }, v),
+          h('span', { style: { fontFamily: C.mono, fontSize: 38, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1, color: C.primary } }, v),
           h('div', { style: { fontSize: 13, color: C.ink3, fontWeight: 600, marginTop: 2 } }, unit)),
-        h('button', { onClick: inc, 'aria-label': 'Augmenter', style: { width: 44, height: 44, borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 20, fontWeight: 700, color: C.ink, cursor: 'pointer' } }, '+')),
+        h('button', { onClick: inc, 'aria-label': 'Augmenter', style: { width: 44, height: 44, borderRadius: 'var(--r-pill)', border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 20, fontWeight: 700, color: C.ink, cursor: 'pointer' } }, '+')),
       h('button', { onClick: () => { onSave(v); onClose() }, style: primaryBtnStyle }, 'Enregistrer')))
 }
 
 function Stat(v, label) {
   return h('div', { style: { textAlign: 'center', flex: 1 } },
-    h('div', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 22, color: C.ink } }, v),
+    h('div', { style: { fontFamily: C.mono, fontSize: 19, fontWeight: 600, letterSpacing: '-.03em', color: C.ink } }, v),
     h('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600, marginTop: 2 } }, label))
 }
 function Divider() { return h('div', { style: { width: 1, background: C.line, alignSelf: 'stretch', margin: '0 4px' } }) }
-function SecTitle(label) { return h('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em', margin: '22px 0 10px' } }, label) }
+function SecTitle(label) { return h('div', { style: { fontFamily: C.display, fontSize: 14.5, fontWeight: 800, color: C.ink2, textTransform: 'uppercase', letterSpacing: '.07em', margin: '24px 0 10px', paddingBottom: 5, borderBottom: `1px solid ${C.line}` } }, label) }
 function LinkRow(ic, label, value, onClick, key) {
   return h('button', { key, onClick, style: { display: 'flex', alignItems: 'center', gap: 14, padding: '13px 16px', borderBottom: `1px solid ${C.line}`, width: '100%', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', borderBottomWidth: 1, borderBottomStyle: 'solid', borderBottomColor: C.line } },
     h('div', { style: { width: 36, height: 36, borderRadius: C.radiusXs, background: C.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' } },
@@ -93,11 +93,10 @@ function LinkRow(ic, label, value, onClick, key) {
 // perso), raccourcis. Le nom (prénom/nom) vit sur profiles.first_name/
 // last_name (colonnes top-level, pas dans profiles.phys) donc s'édite
 // via un update Supabase direct + refreshProfile, pas via store.set.
-// La galerie d'avatars et le sélecteur de thème sont désormais repris :
-// la palette de kit.jsx passe par des variables CSS, donc changer de
-// thème se résume à les réécrire sur <html> (cf. applyTheme). Le choix
-// est gardé en local (appliqué avant le premier rendu) et dans le profil
-// (pour suivre d'un appareil à l'autre).
+// L'app n'a plus qu'une identité ; on y choisit seulement l'apparence
+// (automatique, claire ou sombre), qui pose data-theme sur <html> (cf.
+// applyTheme). Le choix est gardé en local (appliqué avant le premier
+// rendu) et dans le profil (pour suivre d'un appareil à l'autre).
 // ============================================================
 export default function ProfilSpace({ userId, profile, refreshProfile, signOut, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
@@ -106,16 +105,20 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
   const [sportOpen, setSportOpen] = useState(false)
   const [sportQuery, setSportQuery] = useState('')
   const [flow, setFlow] = useState(null)
-  // Le thème vit dans le stockage local (appliqué avant le premier rendu)
-  // et dans le profil (pour suivre l'utilisateur d'un appareil à l'autre).
-  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || DEFAULT_THEME)
-  // Le profil peut porter un thème choisi sur un autre appareil : on
+  // L'apparence vit dans le stockage local (appliquée avant le premier
+  // rendu) et dans le profil (pour suivre d'un appareil à l'autre). Un
+  // ancien thème (« Nuit », « Forêt »…) est ramené à l'apparence la plus
+  // proche plutôt que perdu.
+  const [theme, setTheme] = useState(() => normalizeTheme(localStorage.getItem(THEME_KEY)))
+  // Le profil peut porter une apparence choisie sur un autre appareil : on
   // s'aligne dessus une fois les données chargées.
   React.useEffect(() => {
-    if (db.theme && db.theme !== theme) {
-      applyTheme(db.theme)
-      localStorage.setItem(THEME_KEY, db.theme)
-      setTheme(db.theme)
+    if (!db.theme) return
+    const choix = normalizeTheme(db.theme)
+    if (choix !== theme) {
+      applyTheme(choix)
+      localStorage.setItem(THEME_KEY, choix)
+      setTheme(choix)
     }
   }, [db.theme])
   function changeTheme(id) {
@@ -146,7 +149,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
 
   const ul = inferUserLevel(db)
   const levelLabel = ul.label
-  const levelTint = ul.id === 'confirme' ? C.success : ul.id === 'intermediaire' ? C.warn : '#5b6fa5'
+  const levelTint = ul.id === 'confirme' ? C.success : ul.id === 'intermediaire' ? C.warn : 'var(--ch4)'
   const isManualLevel = !!ul.manual
 
   function setLevelOverride(id) {
@@ -176,12 +179,12 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
   return h(FlowSpace, { bg: 'profil', title: 'Profil', onClose, fixed: false },
     h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 8, marginBottom: 20 } },
       h('button', { onClick: () => setSheet('avatar'), 'aria-label': "Changer d'avatar", style: { position: 'relative', marginBottom: 14, background: 'none', border: 'none', padding: 0, cursor: 'pointer' } },
-        h('div', { style: { width: 80, height: 80, borderRadius: 999, background: db.avatar ? `color-mix(in srgb, ${C.primary} 14%, ${C.surface})` : C.ink, color: C.surface, fontFamily: C.font, fontWeight: 700, fontSize: db.avatar ? 38 : 32, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, db.avatar || initial),
-        h('div', { style: { position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, borderRadius: 999, background: C.primary, border: `2px solid ${C.surface}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-          h(Icon, { name: 'edit', size: 12, color: '#fff' }))),
+        h('div', { style: { width: 80, height: 80, borderRadius: 'var(--r-pill)', background: db.avatar ? `color-mix(in srgb, ${C.primary} 14%, ${C.surface})` : C.ink, color: C.surface, fontFamily: C.font, fontWeight: 700, fontSize: db.avatar ? 38 : 32, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, db.avatar || initial),
+        h('div', { style: { position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, borderRadius: 'var(--r-pill)', background: C.primary, border: `2px solid ${C.surface}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          h(Icon, { name: 'edit', size: 12, color: 'var(--c-on-fill)' }))),
       h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 } },
-        h('h1', { onClick: () => setSheet('name'), style: { fontFamily: C.font, fontSize: 24, fontWeight: 700, letterSpacing: '-.01em', cursor: 'pointer', margin: 0, color: firstName ? C.ink : C.ink3 } }, firstName ? firstName + (lastName ? ' ' + lastName : '') : 'Ajouter ton nom'),
-        h('button', { onClick: () => setSheet('level'), style: { fontSize: 12, padding: '2px 8px 2px 10px', borderRadius: 999, fontWeight: 700, background: `color-mix(in srgb, ${levelTint} 12%, ${C.surface})`, color: levelTint, display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', cursor: 'pointer' } },
+        h('h1', { onClick: () => setSheet('name'), style: { fontFamily: C.display, fontSize: 27, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, cursor: 'pointer', margin: 0, color: firstName ? C.ink : C.ink3 } }, firstName ? firstName + (lastName ? ' ' + lastName : '') : 'Ajouter ton nom'),
+        h('button', { onClick: () => setSheet('level'), style: { fontSize: 12, padding: '2px 8px 2px 10px', borderRadius: 'var(--r-pill)', fontWeight: 700, background: `color-mix(in srgb, ${levelTint} 12%, ${C.surface})`, color: levelTint, display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', cursor: 'pointer' } },
           levelLabel, h(Icon, { name: isManualLevel ? 'pin' : 'edit', size: 11, color: levelTint })))),
 
     h('div', { style: { display: 'flex', alignItems: 'center', padding: '14px 0', background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}` } },
@@ -195,9 +198,9 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
           sportObjs.length === 0
             ? h('span', { style: { fontSize: 14, color: C.ink3 } }, 'Choisir un ou plusieurs sports...')
             : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 5 } },
-              sportObjs.map((sp) => h('span', { key: sp.id, style: { fontSize: 12.5, fontWeight: 600, padding: '3px 9px', borderRadius: 999, background: `color-mix(in srgb, ${C.primary} 11%, ${C.surface})`, color: C.primary, border: `1px solid color-mix(in srgb, ${C.primary} 28%, ${C.line})` } }, sp.label)))),
+              sportObjs.map((sp) => h('span', { key: sp.id, style: { fontSize: 12.5, fontWeight: 600, padding: '3px 9px', borderRadius: 'var(--r-pill)', background: `color-mix(in srgb, ${C.primary} 11%, ${C.surface})`, color: C.primary, border: `1px solid color-mix(in srgb, ${C.primary} 28%, ${C.line})` } }, sp.label)))),
         h(Icon, { name: 'arrow', size: 17, color: C.ink3, style: { flexShrink: 0, transition: 'transform .2s', transform: sportOpen ? 'rotate(-90deg)' : 'rotate(90deg)' } })),
-      sportOpen && h('div', { style: { position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 20, background: C.surface, borderRadius: C.radiusSm, border: `1.5px solid ${C.primary}`, boxShadow: '0 8px 24px -8px rgba(0,0,0,.18)', overflow: 'hidden' } },
+      sportOpen && h('div', { style: { position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 20, background: C.surface, borderRadius: C.radiusSm, border: `1.5px solid ${C.primary}`, boxShadow: 'none', overflow: 'hidden' } },
         h('div', { style: { padding: '10px 16px', borderBottom: `1px solid ${C.line}` } },
           h('input', { autoFocus: true, placeholder: 'Rechercher...', value: sportQuery, onChange: (e) => setSportQuery(e.target.value), style: { width: '100%', padding: '8px 12px', borderRadius: C.radiusXs, border: `1px solid ${C.line}`, background: C.bg, fontSize: 14, color: C.ink, outline: 'none', boxSizing: 'border-box' } })),
         h('div', { style: { maxHeight: 220, overflowY: 'auto' } },
@@ -215,7 +218,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
       ZONES.map((z) => {
         const cur = db.sensitiveZones || []
         const on = cur.includes(z.id)
-        return h('button', { key: z.id, onClick: () => toggleZone(z.id), style: { padding: '8px 13px', borderRadius: 999, fontSize: 13, fontWeight: 600, border: `1.5px solid ${on ? C.warn : C.line}`, background: on ? 'color-mix(in srgb, #c4a03a 12%, ' + C.surface + ')' : C.surface, color: on ? '#8a6d1e' : C.ink2, cursor: 'pointer' } }, z.label)
+        return h('button', { key: z.id, onClick: () => toggleZone(z.id), style: { padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 600, border: `1.5px solid ${on ? C.warn : C.line}`, background: on ? 'color-mix(in srgb, var(--ch1) 12%, ' + C.surface + ')' : C.surface, color: on ? 'var(--ch1)' : C.ink2, cursor: 'pointer' } }, z.label)
       })),
     h('p', { style: { fontSize: 12, color: C.ink3, lineHeight: 1.4, marginBottom: 4 } }, "Un rappel de prudence s'affiche sur chaque séance tant qu'une zone est active."),
 
@@ -226,13 +229,13 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
 
     db.customGoals.length > 0 && h('div', { style: { marginTop: 10, background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, overflow: 'hidden' } },
       db.customGoals.map((goal) => h('div', { key: goal.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${C.line}` } },
-        h('button', { onClick: () => store.updateGoal(goal.id, { done: !goal.done }), style: { width: 24, height: 24, borderRadius: 999, flex: '0 0 auto', border: `2px solid ${goal.done ? C.primary : C.line}`, background: goal.done ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
-          goal.done ? h(Icon, { name: 'check', size: 13, color: '#fff' }) : null),
+        h('button', { onClick: () => store.updateGoal(goal.id, { done: !goal.done }), style: { width: 24, height: 24, borderRadius: 'var(--r-pill)', flex: '0 0 auto', border: `2px solid ${goal.done ? C.primary : C.line}`, background: goal.done ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
+          goal.done ? h(Icon, { name: 'check', size: 13, color: 'var(--c-on-fill)' }) : null),
         h('span', { onClick: () => { setEditGoal(goal); setSheet('goal') }, style: { flex: 1, fontWeight: 600, fontSize: 14, cursor: 'pointer', color: goal.done ? C.ink3 : C.ink, textDecoration: goal.done ? 'line-through' : 'none' } }, goal.label),
         h('button', { onClick: () => store.removeGoal(goal.id), style: { width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' } },
           h(Icon, { name: 'close', size: 15 }))))),
     h('button', { onClick: () => { setEditGoal('new'); setSheet('goal') }, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0 0', color: C.primary, fontWeight: 700, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' } },
-      h('span', { style: { width: 24, height: 24, borderRadius: 999, border: `2px dashed ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1 } }, '+'),
+      h('span', { style: { width: 24, height: 24, borderRadius: 'var(--r-pill)', border: `2px dashed ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1 } }, '+'),
       'Ajouter un objectif'),
 
     SecTitle('Accès rapide'),
@@ -243,37 +246,36 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
         : LinkRow('route', 'Générer mon programme', 'Faire', () => setFlow('mobility'), 'program'),
       LinkRow('leaf', 'Espace Récupération', '', () => setFlow('recovery'), 'recovery')),
 
-    SecTitle('Thème'),
-    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
-      THEMES.map((t) => {
+    SecTitle('Apparence'),
+    // Sélecteur segmenté d'appareil : trois cases jointives, l'active en
+    // aplat. Chaque case montre un échantillon du papier qu'elle donne.
+    h('div', { role: 'radiogroup', 'aria-label': 'Apparence', style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', border: `1px solid ${C.line}`, background: C.surface } },
+      THEMES.map((t, i) => {
         const on = t.id === theme
         return h('button', {
           key: t.id,
+          role: 'radio',
+          'aria-checked': on,
           onClick: () => changeTheme(t.id),
-          style: { textAlign: 'left', padding: 13, borderRadius: C.radiusSm, cursor: 'pointer', background: C.surface, border: `1.5px solid ${on ? C.primary : C.line}`, boxShadow: on ? `0 8px 20px -12px ${C.primary}` : C.shadowSm },
+          style: { textAlign: 'left', padding: '11px 11px 12px', cursor: 'pointer', background: on ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : 'transparent', border: 'none', borderLeft: i ? `1px solid ${C.line}` : 'none', borderTop: `2px solid ${on ? C.primary : 'transparent'}`, color: C.ink },
         },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 } },
-            // Pastilles en couleurs littérales du thème : elles doivent
-            // montrer la palette proposée, pas celle en cours.
-            t.swatch.map((sw, i) => h('span', { key: i, style: { width: 15, height: 15, borderRadius: 999, background: sw, border: `1px solid rgba(0,0,0,.06)` } })),
-            on && h(Icon, { name: 'check', size: 14, color: C.primary, style: { marginLeft: 'auto' } })),
-          h('div', { style: { fontWeight: 700, fontSize: 14 } }, t.label),
-          h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2 } }, t.hint))
+          h('div', { style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', lineHeight: 1 } }, t.label),
+          h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5, lineHeight: 1.35 } }, t.hint))
       })),
 
-    h('button', { onClick: signOut, style: { width: '100%', marginTop: 24, padding: 14, borderRadius: 999, background: 'transparent', border: `1.5px solid ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14.5, cursor: 'pointer' } }, 'Se déconnecter'),
+    h('button', { onClick: signOut, style: { width: '100%', marginTop: 28, padding: 13, background: 'transparent', border: `1px solid ${C.ink3}`, color: C.ink2, fontFamily: C.display, fontWeight: 800, fontSize: 16, textTransform: 'uppercase', letterSpacing: '.06em', cursor: 'pointer' } }, 'Se déconnecter'),
 
     sheet === 'name' && h(TextFieldSheet, { title: 'Mon nom', fields: [{ key: 'firstName', label: 'Prénom', value: firstName, required: true, autoFocus: true, maxLength: 24 }, { key: 'lastName', label: 'Nom', value: lastName, maxLength: 24 }], onSave: saveName, onClose: () => setSheet(null) }),
     sheet === 'avatar' && sheetWrap(() => setSheet(null),
       h('div', null,
-        h('div', { style: { fontFamily: C.font, fontSize: 18, fontWeight: 700, marginBottom: 16, textAlign: 'center' } }, 'Choisis ton avatar'),
+        h('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, marginBottom: 16, textAlign: 'center' } }, 'Choisis ton avatar'),
         h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 16 } },
           AVATARS.map((em) => h('button', {
             key: em,
             onClick: () => { store.set({ avatar: em }); setSheet(null) },
             style: { width: '100%', aspectRatio: '1', borderRadius: C.radiusSm, fontSize: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: db.avatar === em ? `color-mix(in srgb, ${C.primary} 16%, ${C.surface})` : C.surface2, border: db.avatar === em ? `1.5px solid ${C.primary}` : `1.5px solid transparent`, cursor: 'pointer' },
           }, em))),
-        db.avatar && h('button', { onClick: () => { store.set({ avatar: null }); setSheet(null) }, style: { width: '100%', padding: 13, borderRadius: 999, background: 'none', border: `1.5px solid ${C.line}`, color: C.ink3, fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Retirer l’avatar'))),
+        db.avatar && h('button', { onClick: () => { store.set({ avatar: null }); setSheet(null) }, style: { width: '100%', padding: 13, borderRadius: 'var(--r-pill)', background: 'none', border: `1.5px solid ${C.line}`, color: C.ink3, fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Retirer l’avatar'))),
     sheet === 'dailyMin' && h(NumberFieldSheet, { title: 'Temps par jour', unit: 'min / jour', value: g.dailyMin, min: 5, max: 90, step: 5, onSave: (v) => store.setGoal('dailyMin', v), onClose: () => setSheet(null) }),
     sheet === 'weeklySessions' && h(NumberFieldSheet, { title: 'Séances / semaine', unit: 'séances', value: g.weeklySessions, min: 1, max: 14, step: 1, onSave: (v) => store.setGoal('weeklySessions', v), onClose: () => setSheet(null) }),
     sheet === 'goal' && h(TextFieldSheet, {
@@ -285,7 +287,7 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
     }),
     sheet === 'level' && sheetWrap(() => setSheet(null),
       h('div', null,
-        h('div', { style: { fontFamily: C.font, fontSize: 18, fontWeight: 700, marginBottom: 4, textAlign: 'center' } }, 'Ton niveau'),
+        h('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, marginBottom: 4, textAlign: 'center' } }, 'Ton niveau'),
         h('div', { style: { fontSize: 13, color: C.ink3, marginBottom: 16, lineHeight: 1.4, textAlign: 'center' } }, "Calculé automatiquement par défaut selon ton historique. Tu peux le fixer toi-même si tu te connais mieux."),
         LEVEL_OPTS.map((opt) => {
           const active = ul.manual && ul.id === opt.id

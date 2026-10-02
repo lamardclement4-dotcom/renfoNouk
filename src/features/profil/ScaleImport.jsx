@@ -80,14 +80,14 @@ export default function ScaleImport({ onSave, onClose, defaultDate }) {
   const canSave = parsed.kg > 0
 
   const sheet = (children) => h('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(17,24,39,.5)', zIndex: 70, display: 'flex', alignItems: 'flex-end' } },
-    h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: '24px 24px 0 0', padding: '20px 20px 28px', boxSizing: 'border-box', maxHeight: '92vh', overflowY: 'auto' } },
-      h('div', { style: { width: 38, height: 4, borderRadius: 999, background: C.line, margin: '0 auto 16px' } }),
+    h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: 0, padding: '20px 20px 28px', boxSizing: 'border-box', maxHeight: '92vh', overflowY: 'auto' } },
+      h('div', { style: { width: 38, height: 4, borderRadius: 'var(--r-pill)', background: C.line, margin: '0 auto 16px' } }),
       children))
 
   // ─── Choix du fichier ───────────────────────────────────────
   if (phase === 'pick' || phase === 'error') {
     return sheet(h('div', null,
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, textAlign: 'center' } }, 'Importer une capture'),
+      h('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center' } }, 'Importer une capture'),
       h('p', { style: { fontSize: 13.5, color: C.ink2, textAlign: 'center', margin: '8px 0 18px', lineHeight: 1.5 } },
         'Choisis la capture d’écran de ton application de balance. La lecture se fait sur ton téléphone : l’image n’est envoyée nulle part.'),
       error && h('div', { style: { display: 'flex', gap: 9, padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.danger} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.danger} 28%, ${C.line})`, marginBottom: 14 } },
@@ -98,22 +98,22 @@ export default function ScaleImport({ onSave, onClose, defaultDate }) {
         h('span', { style: { fontWeight: 700, fontSize: 14.5 } }, 'Choisir une image'),
         h('span', { style: { fontSize: 12, color: C.ink3 } }, 'PNG ou JPEG'),
         h('input', { type: 'file', accept: 'image/*', onChange: (e) => handleFile(e.target.files && e.target.files[0]), style: { display: 'none' } })),
-      h('button', { onClick: () => { setFields({}); setRejected([]); setRawText(''); setPhase('review') }, style: { width: '100%', marginTop: 12, padding: 13, borderRadius: 999, background: 'transparent', border: `1.5px solid ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14, cursor: 'pointer' } }, 'Saisir les mesures à la main')))
+      h('button', { onClick: () => { setFields({}); setRejected([]); setRawText(''); setPhase('review') }, style: { width: '100%', marginTop: 12, padding: 13, borderRadius: 'var(--r-pill)', background: 'transparent', border: `1.5px solid ${C.line}`, color: C.ink2, fontWeight: 700, fontSize: 14, cursor: 'pointer' } }, 'Saisir les mesures à la main')))
   }
 
   // ─── Lecture en cours ───────────────────────────────────────
   if (phase === 'reading') {
     return sheet(h('div', { style: { textAlign: 'center', padding: '14px 0 6px' } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 18 } }, 'Lecture de la capture…'),
-      h('div', { style: { width: '100%', height: 6, borderRadius: 999, background: C.surface2, overflow: 'hidden', margin: '18px 0 10px' } },
-        h('div', { style: { width: Math.max(4, progress) + '%', height: '100%', borderRadius: 999, background: C.primary, transition: 'width .3s ease' } })),
+      h('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, 'Lecture de la capture…'),
+      h('div', { style: { width: '100%', height: 6, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden', margin: '18px 0 10px' } },
+        h('div', { style: { width: Math.max(4, progress) + '%', height: '100%', borderRadius: 'var(--r-pill)', background: C.primary, transition: 'width .3s ease' } })),
       h('div', { style: { fontSize: 12.5, color: C.ink3 } }, progress > 0 ? progress + ' %' : 'Préparation du moteur de lecture…'),
       h('p', { style: { fontSize: 11.5, color: C.ink3, marginTop: 14, lineHeight: 1.45 } }, 'Le premier import télécharge le moteur, les suivants sont immédiats.')))
   }
 
   // ─── Vérification avant enregistrement ──────────────────────
   return sheet(h('div', null,
-    h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 19, textAlign: 'center' } }, 'Vérifie les mesures'),
+    h('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center' } }, 'Vérifie les mesures'),
     h('p', { style: { fontSize: 12.5, color: C.ink2, textAlign: 'center', margin: '6px 0 16px', lineHeight: 1.45 } },
       filled.length ? `${filled.length} mesure${filled.length > 1 ? 's' : ''} détectée${filled.length > 1 ? 's' : ''}. Corrige ce qui est faux avant d’enregistrer.` : 'Renseigne au moins le poids.'),
 
@@ -127,7 +127,7 @@ export default function ScaleImport({ onSave, onClose, defaultDate }) {
       'Écarté car illisible ou hors plage : ', rejected.map((r) => r.label).join(', '), '.'),
 
     h('label', { style: { display: 'block', marginBottom: 12 } },
-      h('span', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Date'),
+      h('span', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Date'),
       h('input', { type: 'date', value: date, max: isoToday(), onChange: (e) => setDate(e.target.value),
         style: { width: '100%', marginTop: 6, padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 15, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } })),
 
@@ -149,7 +149,7 @@ export default function ScaleImport({ onSave, onClose, defaultDate }) {
     h('button', {
       disabled: !canSave,
       onClick: () => { onSave({ date, ...parsed }); onClose() },
-      style: { width: '100%', marginTop: 14, padding: 15, borderRadius: 999, background: canSave ? C.primary : C.surface2, color: canSave ? '#fff' : C.ink3, fontWeight: 800, fontSize: 15, border: 'none', cursor: canSave ? 'pointer' : 'default' },
+      style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', marginTop: 14, padding: 15, borderRadius: 'var(--r-pill)', background: canSave ? C.primary : C.surface2, color: canSave ? 'var(--c-on-fill)' : C.ink3, border: 'none', cursor: canSave ? 'pointer' : 'default' },
     }, canSave ? 'Enregistrer' : 'Le poids est obligatoire'),
-    h('button', { onClick: onClose, style: { width: '100%', marginTop: 10, padding: 12, borderRadius: 999, background: 'transparent', border: 'none', color: C.ink3, fontWeight: 700, fontSize: 14, cursor: 'pointer' } }, 'Annuler')))
+    h('button', { onClick: onClose, style: { width: '100%', marginTop: 10, padding: 12, borderRadius: 'var(--r-pill)', background: 'transparent', border: 'none', color: C.ink3, fontWeight: 700, fontSize: 14, cursor: 'pointer' } }, 'Annuler')))
 }

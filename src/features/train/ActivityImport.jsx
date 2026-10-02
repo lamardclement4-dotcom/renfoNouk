@@ -131,7 +131,7 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
   }
 
   const pick = (lab, sub, accepts) => h('label', { style: { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '4px 0' } },
-    h('div', { style: { width: 42, height: 42, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+    h('div', { style: { width: 42, height: 42, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
       h(Icon, { name: 'plus', size: 20, color: C.primary })),
     h('div', { style: { flex: 1, minWidth: 0 } },
       h('div', { style: { fontWeight: 700, fontSize: 14.5 } }, lab),
@@ -143,8 +143,8 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
     phase === 'reading'
       ? h(Card, { style: { marginBottom: 12, textAlign: 'center', padding: '20px 16px' } },
         h('div', { style: { fontWeight: 700, fontSize: 14.5 } }, 'Lecture…'),
-        h('div', { style: { width: '100%', height: 6, borderRadius: 999, background: C.surface2, overflow: 'hidden', margin: '14px 0 8px' } },
-          h('div', { style: { width: Math.max(4, progress) + '%', height: '100%', borderRadius: 999, background: C.primary, transition: 'width .3s ease' } })),
+        h('div', { style: { width: '100%', height: 6, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden', margin: '14px 0 8px' } },
+          h('div', { style: { width: Math.max(4, progress) + '%', height: '100%', borderRadius: 'var(--r-pill)', background: C.primary, transition: 'width .3s ease' } })),
         h('div', { style: { fontSize: 12, color: C.ink3 } }, progress > 0 ? progress + ' %' : 'Préparation…'))
       : null,
 
@@ -159,7 +159,7 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
       // couvre tous — sommeil, séances, pas, fréquence au repos.
       h(Card, { style: { marginBottom: 12 } },
         h('label', { style: { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '4px 0' } },
-          h('div', { style: { width: 42, height: 42, borderRadius: 13, flex: '0 0 auto', background: `color-mix(in srgb, ${C.success} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          h('div', { style: { width: 42, height: 42, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.success}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
             h(Icon, { name: 'spark', size: 20, color: C.success })),
           h('div', { style: { flex: 1, minWidth: 0 } },
             h('div', { style: { fontWeight: 700, fontSize: 14.5 } }, 'Export Apple Santé'),
@@ -206,7 +206,7 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
         }, 'Annuler'),
         h('button', {
           onClick: saveHealth,
-          style: { flex: 2, padding: '13px', borderRadius: C.radiusSm, border: 'none', background: C.primary, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+          style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 2, padding: '13px', borderRadius: C.radiusSm, border: 'none', background: C.primary, color: 'var(--c-on-fill)', cursor: 'pointer' },
         }, 'Tout enregistrer')),
     ) : null,
 
@@ -241,7 +241,7 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
             const on = s.id === draft.sport
             return h('button', {
               key: s.id, onClick: () => setDraft({ ...draft, sport: s.id }),
-              style: { padding: '8px 12px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${on ? C.primary : C.line}`, background: on ? C.primary : 'transparent', color: on ? '#fff' : C.ink2 },
+              style: { padding: '8px 12px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1px solid ${on ? C.primary : C.line}`, background: on ? C.primary : 'transparent', color: on ? 'var(--c-on-fill)' : C.ink2 },
             }, s.label)
           }))),
 
@@ -252,7 +252,7 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
         }, 'Recommencer'),
         h('button', {
           onClick: save, disabled: !draft.sport,
-          style: { flex: 2, padding: '13px', borderRadius: C.radiusSm, border: 'none', background: draft.sport ? C.primary : C.surface2, color: draft.sport ? '#fff' : C.ink3, fontSize: 14, fontWeight: 700, cursor: draft.sport ? 'pointer' : 'default' },
+          style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 2, padding: '13px', borderRadius: C.radiusSm, border: 'none', background: draft.sport ? C.primary : C.surface2, color: draft.sport ? 'var(--c-on-fill)' : C.ink3, cursor: draft.sport ? 'pointer' : 'default' },
         }, 'Enregistrer la séance')),
     ) : null)
 }

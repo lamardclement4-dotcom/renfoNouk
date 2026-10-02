@@ -96,8 +96,8 @@ function painAdvice(k) {
 }
 
 const btnStyle = { display: 'flex', alignItems: 'center', gap: 13, padding: 16, borderRadius: C.radiusSm, background: C.surface, width: '100%', cursor: 'pointer' }
-const primaryBtn = { width: '100%', padding: 16, borderRadius: 999, border: 'none', color: '#fff', fontSize: 15.5, fontWeight: 700, cursor: 'pointer', background: PREV, boxShadow: `0 12px 26px -14px ${PREV}` }
-const ghostBtn = { width: '100%', padding: 16, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 700, cursor: 'pointer' }
+const primaryBtn = { width: '100%', padding: 16, borderRadius: 'var(--r-pill)', border: 'none', color: 'var(--c-on-fill)', fontSize: 15.5, fontWeight: 700, cursor: 'pointer', background: PREV, boxShadow: 'none' }
+const ghostBtn = { width: '100%', padding: 16, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 700, cursor: 'pointer' }
 
 function BilanTab({ db, store }) {
   const [step, setStep] = useState(-1)
@@ -126,7 +126,7 @@ function BilanTab({ db, store }) {
     const ratio = maxv > 0 ? score / maxv : 0
     const level = ratio < 0.18 ? { l: 'Faible', t: C.success, d: 'Entretien : mobilité + renfo préventif 2×/sem.' }
       : ratio < 0.4 ? { l: 'Modéré', t: C.carb, d: 'Cible tes points faibles ci-dessous et revois ta progression de charge.' }
-      : { l: 'Élevé', t: '#b5566a', d: 'Prudence : réduis la charge, priorise les corrections, envisage un bilan pro.' }
+      : { l: 'Élevé', t: 'var(--c-danger)', d: 'Prudence : réduis la charge, priorise les corrections, envisage un bilan pro.' }
     const optOf = (tag) => { const i = QUIZ.findIndex((q) => q.tag === tag); return i < 0 || ans[i] == null ? null : QUIZ[i].opts[ans[i]] }
     const PAIN_TAGS = ['pain_region', 'pain_struct', 'pain_point', 'pain_trigger', 'pain_when', 'pain_swell', 'pain_intensity', 'pain_load', 'pain_dur', 'pain_evo']
     const painParts = PAIN_TAGS.map((t) => { const o = optOf(t); return o ? o[0] : null }).filter(Boolean)
@@ -200,25 +200,25 @@ function BilanTab({ db, store }) {
   if (atResults && result) {
     const { level, tags, flag, bone, painParts, adv } = result
     return React.createElement('div', null,
-      adv && adv.urgent && React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: '#a23a4f', color: '#fff', marginBottom: 14, fontSize: 14, lineHeight: 1.5, fontWeight: 700 } }, "Signes à ne pas négliger : stoppe les impacts et demande l'avis d'un professionnel de santé sans tarder."),
-      flag && !(adv && adv.urgent) && React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: '#b5566a', color: '#fff', marginBottom: 14, fontSize: 14, lineHeight: 1.5, fontWeight: 600 } }, "Repos et avis d'un professionnel de santé recommandés — surtout en cas de douleur au repos, la nuit, sur un point précis ou sur l'os."),
-      React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: level.t, color: '#fff', marginBottom: 16, textAlign: 'center' } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', opacity: 0.9 } }, 'Risque global'),
-        React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 30, marginTop: 4 } }, level.l),
+      adv && adv.urgent && React.createElement('div', { style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', padding: '14px 16px', borderRadius: C.radiusSm, background: 'var(--c-danger)', color: 'var(--c-on-fill)', marginBottom: 14, lineHeight: 1.5 } }, "Signes à ne pas négliger : stoppe les impacts et demande l'avis d'un professionnel de santé sans tarder."),
+      flag && !(adv && adv.urgent) && React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: 'var(--c-danger)', color: 'var(--c-on-fill)', marginBottom: 14, fontSize: 14, lineHeight: 1.5, fontWeight: 600 } }, "Repos et avis d'un professionnel de santé recommandés — surtout en cas de douleur au repos, la nuit, sur un point précis ou sur l'os."),
+      React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: level.t, color: 'var(--c-on-fill)', marginBottom: 16, textAlign: 'center' } },
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', opacity: 0.9 } }, 'Risque global'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 34, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, marginTop: 4 } }, level.l),
         React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 8, lineHeight: 1.5 } }, level.d)),
       hasPain && painParts.length > 0 && React.createElement('div', { style: { padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, marginBottom: 14 } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 6 } }, 'Profil de ta douleur'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Profil de ta douleur'),
         React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.5 } }, painParts.join(' · ')),
         adv && React.createElement('div', { style: { paddingTop: 12, marginTop: 12, borderTop: `1px solid ${C.line}` } },
           React.createElement('div', { style: { fontSize: 14.5, color: C.ink, lineHeight: 1.5, fontWeight: 600, marginBottom: 9 } }, adv.orientation),
           React.createElement('ul', { style: { margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 } }, adv.conseils.map((cc, ci) => React.createElement('li', { key: ci, style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.45 } }, cc))),
           React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 11, fontStyle: 'italic' } }, 'Orientation, pas un diagnostic — en cas de doute, consulte.'))),
-      bone && React.createElement(NoteBox, { tint: '#b5566a' }, 'Antécédent de fracture de fatigue : vigilance santé osseuse (énergie, calcium, vitamine D, sommeil). Toute douleur osseuse précise → consulte sans tarder.'),
+      bone && React.createElement(NoteBox, { tint: 'var(--c-danger)' }, 'Antécédent de fracture de fatigue : vigilance santé osseuse (énergie, calcium, vitamine D, sommeil). Toute douleur osseuse précise → consulte sans tarder.'),
       tags.size > 0 && React.createElement(React.Fragment, null,
         React.createElement(SecLab, null, 'Tes priorités'),
         React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 8 } },
           [...tags].map((t) => RECO[t] && React.createElement('div', { key: t, style: { display: 'flex', gap: 11, alignItems: 'flex-start', padding: '13px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}` } },
-            React.createElement('div', { style: { width: 30, height: 30, borderRadius: 9, flex: '0 0 auto', background: `color-mix(in srgb, ${PREV} 14%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: 'check', size: 16, color: PREV })),
+            React.createElement('div', { style: { width: 30, height: 30, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${PREV}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: 'check', size: 16, color: PREV })),
             React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.45 } }, RECO[t]))))),
       React.createElement('button', { onClick: () => { setAns({}); setStep(-1) }, style: { ...ghostBtn, marginTop: 10 } }, 'Refaire le bilan'),
       hasPain && React.createElement('button', {
@@ -236,16 +236,16 @@ function BilanTab({ db, store }) {
 
   const qq = QUIZ[step]
   return React.createElement('div', null,
-    React.createElement('div', { style: { height: 6, borderRadius: 999, background: C.surface2, overflow: 'hidden', marginBottom: 18 } },
+    React.createElement('div', { style: { height: 6, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden', marginBottom: 18 } },
       React.createElement('div', { style: { height: '100%', width: `${(posOf(step) - 1) / visCount * 100}%`, background: PREV, transition: 'width .25s ease' } })),
-    React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: PREV, textTransform: 'uppercase', letterSpacing: '.04em' } }, qq.theme, ' · ', posOf(step), '/', visCount),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: PREV } }, qq.theme, ' · ', posOf(step), '/', visCount),
     React.createElement('h2', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 21, lineHeight: 1.25, margin: '8px 0 18px' } }, qq.q, qq.soft && React.createElement('span', { style: { fontSize: 13, fontWeight: 600, color: C.ink3 } }, ' (optionnel)')),
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
       qq.opts.map((o, i) => {
         const active = ans[step] === i
         return React.createElement('button', { key: i, onClick: () => { const na = { ...ans, [step]: i }; setAns(na); setTimeout(() => advance(step, na), 140) },
           style: { ...btnStyle, border: '1.5px solid ' + (active ? PREV : C.line), ...(active ? { background: `color-mix(in srgb, ${PREV} 8%, ${C.surface})` } : {}) } },
-          React.createElement('span', { style: { width: 22, height: 22, borderRadius: 999, flex: '0 0 auto', border: '2px solid ' + (active ? PREV : C.line), background: active ? PREV : 'transparent' } }),
+          React.createElement('span', { style: { width: 22, height: 22, borderRadius: 'var(--r-pill)', flex: '0 0 auto', border: '2px solid ' + (active ? PREV : C.line), background: active ? PREV : 'transparent' } }),
           React.createElement('span', { style: { fontWeight: 600, fontSize: 15.5 } }, o[0]))
       })),
     React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 18 } },
@@ -269,17 +269,17 @@ function BlessuresTab() {
   const feux = [
     [C.success, 'Vert', 'Pas de douleur, ou gêne qui disparaît à l’échauffement → on continue.'],
     [C.carb, 'Jaune', 'Gêne légère et stable → on réduit le volume, on surveille, on traite la cause.'],
-    ['#b5566a', 'Rouge', 'Douleur vive, qui s’aggrave ou persiste au repos → stop et avis médical.'],
+    ['var(--c-danger)', 'Rouge', 'Douleur vive, qui s’aggrave ou persiste au repos → stop et avis médical.'],
   ]
   return React.createElement('div', null,
     React.createElement(SpaceBanner, { ic: 'shield', tint: PREV, title: 'Reconnaître & prévenir', text: "Pour chaque blessure : symptômes, causes, ce qui aide, prévention et quand consulter. ~70 % des blessures viennent d'une surcharge." }),
     React.createElement(SecLab, null, 'Le système des feux'),
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 } },
       feux.map(([col, l, d], i) => React.createElement('div', { key: i, style: { display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}` } },
-        React.createElement('span', { style: { width: 14, height: 14, borderRadius: 999, background: col, flex: '0 0 auto', marginTop: 3 } }),
+        React.createElement('span', { style: { width: 14, height: 14, borderRadius: 'var(--r-pill)', background: col, flex: '0 0 auto', marginTop: 3 } }),
         React.createElement('div', null, React.createElement('span', { style: { fontWeight: 700, fontSize: 14.5 } }, l), React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 1, lineHeight: 1.45 } }, d))))),
-    React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: `color-mix(in srgb, #b5566a 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, #b5566a 25%, ${C.line})`, marginBottom: 18 } },
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15.5, color: '#b5566a' } }, 'Fracture de fatigue — à ne pas manquer'),
+    React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: `color-mix(in srgb, var(--c-danger) 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, var(--c-danger) 25%, ${C.line})`, marginBottom: 18 } },
+      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15.5, color: 'var(--c-danger)' } }, 'Fracture de fatigue — à ne pas manquer'),
       React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 5, lineHeight: 1.5 } }, "Douleur à l'impact du pied, point précis au toucher, qui revient à la reprise. Facteurs : hausse de charge, < 7 h de sommeil, déficit énergétique, manque de vitamine D. Dès la suspicion → consulte.")),
     React.createElement(SecLab, null, 'Fiches par blessure'),
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
@@ -288,20 +288,20 @@ function BlessuresTab() {
         return React.createElement('div', { key: i, style: { borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, overflow: 'hidden' } },
           React.createElement('button', { onClick: () => setOpen(isOpen ? null : i), style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: 14, background: 'transparent', border: 'none', cursor: 'pointer' } },
             React.createElement('div', { style: { flex: 1 } },
-              React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: PREV, textTransform: 'uppercase', letterSpacing: '.03em' } }, it.z),
+              React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: PREV } }, it.z),
               React.createElement('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 16, marginTop: 1 } }, it.n)),
             React.createElement(Icon, { name: isOpen ? 'close' : 'next', size: 18, color: C.ink3 })),
           isOpen && React.createElement('div', { style: { padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 9 } },
             [['Symptômes', it.sy], ['Causes & facteurs', it.ca], ['Ce qui aide', it.ai], ['Prévention', it.pr], ['Quand consulter', it.co]].map(([k, v], j) =>
               React.createElement('div', { key: j },
-                React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: k === 'Quand consulter' ? '#b5566a' : C.ink3, textTransform: 'uppercase', letterSpacing: '.03em' } }, k),
+                React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: k === 'Quand consulter' ? 'var(--c-danger)' : C.ink3 } }, k),
                 React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, marginTop: 1, lineHeight: 1.45 } }, v)))))
       })),
     React.createElement(NoteBox, { tint: PREV }, 'Sert à reconnaître et prévenir, pas à diagnostiquer. En cas de doute, on lève le pied — et on consulte.'))
 }
 
 // ── Onglet "Suivi" : ce que la répétition des bilans révèle ──
-const LEVEL_COL = { alert: '#a23a4f', warn: '#b5566a', info: PREV, ok: C.success, flat: C.ink3, aging: C.warn, stale: '#b5566a', fresh: C.success, absent: C.ink3 }
+const LEVEL_COL = { alert: 'var(--c-danger)', warn: 'var(--c-danger)', info: PREV, ok: C.success, flat: C.ink3, aging: C.warn, stale: 'var(--c-danger)', fresh: C.success, absent: C.ink3 }
 
 function SuiviTab({ db }) {
   const acwr = React.useMemo(() => { try { return acwrRisk(db) } catch { return null } }, [db])
@@ -315,7 +315,7 @@ function SuiviTab({ db }) {
       border: `1px solid ${tint ? `color-mix(in srgb, ${tint} 28%, ${C.line})` : C.line}`,
     },
   }, children)
-  const lab = (t) => React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 } }, t)
+  const lab = (t) => React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, t)
   const body = (t, col) => React.createElement('div', { style: { fontSize: 13.5, color: col || C.ink2, lineHeight: 1.5 } }, t)
 
   if (ana.freshness.level === 'absent' && !ana.pain) {
@@ -350,16 +350,16 @@ function SuiviTab({ db }) {
 
     card([
       React.createElement('div', { key: 'l' }, lab('Évolution du risque')),
-      React.createElement('div', { key: 'b' }, body(ana.trend ? ana.trend.text : 'Un seul bilan enregistré : refais-le dans quelques semaines pour voir l’évolution.', ana.trend && ana.trend.level === 'warn' ? '#b5566a' : C.ink2)),
+      React.createElement('div', { key: 'b' }, body(ana.trend ? ana.trend.text : 'Un seul bilan enregistré : refais-le dans quelques semaines pour voir l’évolution.', ana.trend && ana.trend.level === 'warn' ? 'var(--c-danger)' : C.ink2)),
       chart,
       React.createElement('div', { key: 'f', style: { fontSize: 11.5, color: C.ink3, marginTop: chart ? 8 : 6 } }, ana.freshness.text),
-    ], ana.trend && ana.trend.level === 'warn' ? '#b5566a' : null),
+    ], ana.trend && ana.trend.level === 'warn' ? 'var(--c-danger)' : null),
 
     ana.tags.persistent.length || ana.tags.resolved.length || ana.tags.appeared.length ? card([
       React.createElement('div', { key: 'l' }, lab('Tes points faibles d’un bilan à l’autre')),
       ana.tags.persistent.length ? React.createElement('div', { key: 'p', style: { marginTop: 4 } },
         ana.tags.persistent.map((p) => React.createElement('div', { key: p.tag, style: { display: 'flex', gap: 9, alignItems: 'flex-start', marginTop: 8 } },
-          React.createElement('span', { style: { padding: '2px 8px', borderRadius: 999, fontSize: 10.5, fontWeight: 800, background: `color-mix(in srgb, ${PREV} 16%, ${C.surface})`, color: PREV, flex: '0 0 auto' } }, p.bilans + '×'),
+          React.createElement('span', { style: { padding: '2px 8px', borderRadius: 'var(--r-pill)', fontSize: 10.5, fontWeight: 800, background: C.surface, border: `1px solid ${C.line}`, borderTop: `3px solid ${PREV}`, color: PREV, flex: '0 0 auto' } }, p.bilans + '×'),
           React.createElement('span', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.45 } }, RECO[p.tag] || p.tag)))) : null,
       ana.tags.resolved.length ? React.createElement('div', { key: 'r', style: { fontSize: 12.5, color: C.success, marginTop: 10, fontWeight: 600 } }, 'Résolu depuis le bilan précédent : ' + ana.tags.resolved.join(', ')) : null,
       ana.tags.appeared.length ? React.createElement('div', { key: 'a', style: { fontSize: 12.5, color: C.warn, marginTop: 6, fontWeight: 600 } }, 'Nouveau : ' + ana.tags.appeared.join(', ')) : null,
@@ -371,7 +371,7 @@ function SuiviTab({ db }) {
       ana.recurrent.map((r) => React.createElement('div', { key: r.region, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '8px 0', borderBottom: `1px solid ${C.line}` } },
         React.createElement('span', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink2, textTransform: 'capitalize' } }, r.label),
         React.createElement('span', { style: { fontSize: 12, color: C.ink3 } }, r.episodes + ' épisodes' + (r.totalDays ? ' · ' + r.totalDays + ' j cumulés' : '')))),
-    ], '#b5566a') : null,
+    ], 'var(--c-danger)') : null,
 
     ana.loadCheck ? card([
       React.createElement('div', { key: 'l' }, lab('Charge déclarée vs mesurée')),

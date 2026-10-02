@@ -3,10 +3,10 @@ import { MODULE_TINTS } from '../health/kit'
 export { MODULE_TINTS }
 
 export const CATS = {
-  mobilite: { id: "mobilite", label: "Mobilité", tint: "#6f8fa6" },
-  renfo: { id: "renfo", label: "Renforcement", tint: "#bf6a40" },
-  fullbody: { id: "fullbody", label: "Full body", tint: "#bd923f" },
-  plyo: { id: "plyo", label: "Pliométrie", tint: "#a85a36" }
+  mobilite: { id: "mobilite", label: "Mobilité", tint: "var(--ch2)" },
+  renfo: { id: "renfo", label: "Renforcement", tint: "var(--ch1)" },
+  fullbody: { id: "fullbody", label: "Full body", tint: "var(--ch1)" },
+  plyo: { id: "plyo", label: "Pliométrie", tint: "var(--ch1)" }
 }
 
 export const SUBCATS = {"mobilite": ["Cou & haut du corps", "Épaules & bras (élastique)", "Colonne & tronc", "Hanches & bassin", "Jambes & chevilles", "Mur, appuis & intégration", "Mobilité mixte / Flow", "Récupération & relâchement"], "etir": ["Cou & épaules", "Colonne & tronc", "Hanches & bassin", "Jambes, genoux & chevilles", "Bras, poignets & mains", "Étirements globaux & flows"], "renfo": ["Jambes & fessiers", "Dos & tronc", "Pectoraux & épaules", "Dos, tirage & bras", "Mollets, avant-bras & stabilité"], "plyo": ["Appuis & initiation", "Puissance jambes", "Réactivité & latéral", "Avancé / contrebas", "Haut du corps & tronc"], "fullbody": ["Circuits corps entier"]}

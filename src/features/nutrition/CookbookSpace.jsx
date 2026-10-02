@@ -23,12 +23,12 @@ const TINT = MODULE_TINTS.nutrition
 // ============================================================
 
 const champ = {
-  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10,
+  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 0,
   border: `1px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 15, fontFamily: 'inherit',
 }
 const btnPlein = {
   width: '100%', padding: '13px 18px', borderRadius: C.radiusSm, border: 'none', background: TINT,
-  color: '#fff', fontWeight: 700, fontSize: 14.5, cursor: 'pointer', fontFamily: 'inherit',
+  color: 'var(--c-on-fill)', fontWeight: 700, fontSize: 14.5, cursor: 'pointer', fontFamily: 'inherit',
 }
 const btnContour = {
   width: '100%', padding: '12px 16px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`,
@@ -212,15 +212,15 @@ export default function CookbookSpace({ userId, onClose }) {
     const ici = detectTimers(txt)
     return h('div', { style: { position: 'fixed', inset: 0, zIndex: 70, background: C.bg, display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font } },
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px 6px' } },
-        h('button', { onClick: () => setMode('recette'), 'aria-label': 'Quitter le mode cuisine', style: { width: 40, height: 40, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'close', size: 18 })),
+        h('button', { onClick: () => setMode('recette'), 'aria-label': 'Quitter le mode cuisine', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'close', size: 18 })),
         h('div', { style: { flex: 1, minWidth: 0 } },
-          h('div', { style: { fontSize: 12, color: C.ink3, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' } }, 'Étape ', n + 1, ' / ', Math.max(1, etapes.length)),
+          h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Étape ', n + 1, ' / ', Math.max(1, etapes.length)),
           h('div', { style: { fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, recette.title)),
-        h('button', { onClick: () => setVoirIngr((v) => !v), style: { padding: '8px 12px', borderRadius: 999, border: `1.5px solid ${voirIngr ? TINT : C.line}`, background: 'transparent', color: voirIngr ? TINT : C.ink2, fontWeight: 700, fontSize: 12.5, cursor: 'pointer' } }, 'Ingrédients')),
+        h('button', { onClick: () => setVoirIngr((v) => !v), style: { padding: '8px 12px', borderRadius: 'var(--r-pill)', border: `1.5px solid ${voirIngr ? TINT : C.line}`, background: 'transparent', color: voirIngr ? TINT : C.ink2, fontWeight: 700, fontSize: 12.5, cursor: 'pointer' } }, 'Ingrédients')),
       h('div', { style: { padding: '0 16px', fontSize: 11.5, color: veille === 'active' ? C.success : C.ink3 } },
         veille === 'active' ? 'L’écran reste allumé pendant que tu cuisines.'
           : veille === 'inconnu' ? '' : 'Ce navigateur ne peut pas garder l’écran allumé : touche-le de temps en temps.'),
-      h('div', { style: { height: 4, margin: '10px 16px 0', borderRadius: 999, background: C.surface2 || C.line, overflow: 'hidden' } },
+      h('div', { style: { height: 4, margin: '10px 16px 0', borderRadius: 'var(--r-pill)', background: C.surface2 || C.line, overflow: 'hidden' } },
         h('div', { style: { height: '100%', width: (etapes.length ? (n + 1) / etapes.length * 100 : 0) + '%', background: TINT, transition: 'width .3s ease' } })),
 
       h('div', { style: { flex: 1, overflowY: 'auto', padding: '18px 18px 12px' } },
@@ -230,8 +230,8 @@ export default function CookbookSpace({ userId, onClose }) {
             scaleIngredient(x, facteur)))),
         h('p', { style: { fontSize: 23, lineHeight: 1.45, fontWeight: 500, margin: 0, color: C.ink, textWrap: 'pretty' } }, txt),
         ici.length > 0 && h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 20 } },
-          ici.map((tm) => h('button', { key: tm.secs, onClick: () => lancerMinuteur(tm, n), style: { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 999, border: 'none', background: TINT, color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer' } },
-            h(Icon, { name: 'play', size: 15, color: '#fff' }), 'Minuteur ', tm.label))),
+          ici.map((tm) => h('button', { key: tm.secs, onClick: () => lancerMinuteur(tm, n), style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: TINT, color: 'var(--c-on-fill)', cursor: 'pointer' } },
+            h(Icon, { name: 'play', size: 15, color: 'var(--c-on-fill)' }), 'Minuteur ', tm.label))),
 
         minuteurs.length > 0 && h('div', { style: { marginTop: 22, display: 'flex', flexDirection: 'column', gap: 8 } },
           minuteurs.map((m) => {
@@ -240,8 +240,8 @@ export default function CookbookSpace({ userId, onClose }) {
             return h('div', { key: m.id, role: fini ? 'alert' : undefined, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: C.radiusSm, background: fini ? `color-mix(in srgb, ${C.danger} 14%, ${C.surface})` : C.surface, border: `1.5px solid ${fini ? C.danger : C.line}` } },
               h('div', { style: { flex: 1, minWidth: 0 } },
                 h('div', { style: { fontSize: 12, color: C.ink3 } }, 'Étape ', m.etape + 1, ' · ', m.label),
-                h('div', { style: { fontSize: 24, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: fini ? C.danger : C.ink } }, fini ? 'Terminé' : mmss(reste))),
-              h('button', { onClick: () => retirerMinuteur(m.id), 'aria-label': 'Arrêter ce minuteur', style: { padding: '8px 12px', borderRadius: 999, border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontWeight: 700, cursor: 'pointer' } }, fini ? 'OK' : 'Arrêter'))
+                h('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums', color: fini ? C.danger : C.ink } }, fini ? 'Terminé' : mmss(reste))),
+              h('button', { onClick: () => retirerMinuteur(m.id), 'aria-label': 'Arrêter ce minuteur', style: { padding: '8px 12px', borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontWeight: 700, cursor: 'pointer' } }, fini ? 'OK' : 'Arrêter'))
           }))),
 
       h('div', { style: { display: 'flex', gap: 10, padding: '12px 16px calc(14px + env(safe-area-inset-bottom, 0px))', borderTop: `1px solid ${C.line}` } },
@@ -259,19 +259,19 @@ export default function CookbookSpace({ userId, onClose }) {
       title: recette.title, subtitle: cookSummary(recette), tint: TINT, fixed: false,
       onClose: () => { setCourante(null); setMode('liste') },
       action: h('div', { style: { display: 'flex', gap: 8 } },
-        h('button', { onClick: () => basculerFav(recette.id), 'aria-label': 'Favori', style: { width: 38, height: 38, borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, fontSize: 18, color: recette.fav ? '#d9a441' : C.ink3, cursor: 'pointer' } }, recette.fav ? '★' : '☆'),
-        h('button', { onClick: () => { setDraft(versBrouillon(recette)); setErreur(null); setMode('edition') }, style: { padding: '8px 14px', borderRadius: 999, border: `1px solid ${C.line}`, background: C.surface, color: C.ink, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Modifier')),
+        h('button', { onClick: () => basculerFav(recette.id), 'aria-label': 'Favori', style: { width: 38, height: 38, borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: C.surface, fontSize: 18, color: recette.fav ? 'var(--ch1)' : C.ink3, cursor: 'pointer' } }, recette.fav ? '★' : '☆'),
+        h('button', { onClick: () => { setDraft(versBrouillon(recette)); setErreur(null); setMode('edition') }, style: { padding: '8px 14px', borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: C.surface, color: C.ink, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Modifier')),
     },
       etapes.length > 0 && h('button', { onClick: () => { setEtape(0); setVoirIngr(false); setMode('cuisine') }, style: { ...btnPlein, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 6 } },
-        h(Icon, { name: 'play', size: 16, color: '#fff' }), 'Cuisiner pas à pas'),
+        h(Icon, { name: 'play', size: 16, color: 'var(--c-on-fill)' }), 'Cuisiner pas à pas'),
       etapes.length > 0 && h('div', { style: { fontSize: 12, color: C.ink3, textAlign: 'center', marginBottom: 4 } }, 'Une étape à la fois, en grand, l’écran allumé.'),
 
       h(SecLab, null, 'Quantités'),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
-        h('button', { onClick: () => setParts((p) => Math.max(pas, Math.round((p - pas) * 2) / 2)), 'aria-label': 'Moins', style: { width: 42, height: 42, borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 20, cursor: 'pointer', color: C.ink } }, '−'),
+        h('button', { onClick: () => setParts((p) => Math.max(pas, Math.round((p - pas) * 2) / 2)), 'aria-label': 'Moins', style: { width: 42, height: 42, borderRadius: 'var(--r-pill)', border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 20, cursor: 'pointer', color: C.ink } }, '−'),
         h('div', { style: { flex: 1, textAlign: 'center', fontWeight: 700, fontSize: 16 } },
           recette.servings ? `Pour ${String(parts).replace('.', ',')} part${parts > 1 ? 's' : ''}` : `Quantités ×${String(parts).replace('.', ',')}`),
-        h('button', { onClick: () => setParts((p) => Math.min(50, p + pas)), 'aria-label': 'Plus', style: { width: 42, height: 42, borderRadius: 999, border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 20, cursor: 'pointer', color: C.ink } }, '+')),
+        h('button', { onClick: () => setParts((p) => Math.min(50, p + pas)), 'aria-label': 'Plus', style: { width: 42, height: 42, borderRadius: 'var(--r-pill)', border: `1.5px solid ${C.line}`, background: C.surface, fontSize: 20, cursor: 'pointer', color: C.ink } }, '+')),
 
       (recette.ingredients || []).length > 0 && h(SecLab, null, 'Ingrédients'),
       (recette.ingredients || []).length > 0 && h('div', { style: { borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, overflow: 'hidden' } },
@@ -283,7 +283,7 @@ export default function CookbookSpace({ userId, onClose }) {
       etapes.map((s, i) => {
         const tms = detectTimers(s)
         return h('div', { key: i, style: { display: 'flex', gap: 12, padding: '10px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
-          h('div', { style: { flex: '0 0 auto', width: 26, height: 26, borderRadius: 999, background: `color-mix(in srgb, ${TINT} 15%, ${C.surface})`, color: TINT, fontWeight: 800, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, i + 1),
+          h('div', { style: { flex: '0 0 auto', width: 26, height: 26, borderRadius: 'var(--r-pill)', background: 'transparent', border: `1.5px solid ${TINT}`, color: TINT, fontWeight: 800, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, i + 1),
           h('div', { style: { flex: 1, minWidth: 0, fontSize: 14.5, lineHeight: 1.55 } }, s,
             tms.length > 0 && h('div', { style: { fontSize: 12, color: TINT, fontWeight: 700, marginTop: 4 } }, '⏱ ', tms.map((t) => t.label).join(' · '))))
       }),
@@ -310,7 +310,7 @@ export default function CookbookSpace({ userId, onClose }) {
           : 'Rien de structuré n’a été reconnu. Complète la recette à la main ci-dessous.',
         draft.source === 'photo' && lecture.raw && h('button', { onClick: () => setVoirBrut((v) => !v), style: { display: 'block', marginTop: 6, padding: 0, background: 'transparent', border: 'none', color: C.ink3, fontSize: 11.5, fontWeight: 600, cursor: 'pointer' } },
           voirBrut ? '▾ Masquer le texte lu' : '▸ Voir le texte lu par l’appareil'),
-        voirBrut && lecture.raw && h('pre', { style: { fontSize: 10.5, color: C.ink3, background: C.bg, padding: 10, borderRadius: 8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 150, overflowY: 'auto', margin: '8px 0 0' } }, lecture.raw)),
+        voirBrut && lecture.raw && h('pre', { style: { fontSize: 10.5, color: C.ink3, background: C.bg, padding: 10, borderRadius: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 150, overflowY: 'auto', margin: '8px 0 0' } }, lecture.raw)),
 
       h(SecLab, null, 'Titre'),
       h('input', { value: draft.title, onChange: set('title'), placeholder: 'Gâteau au yaourt…', style: champ }),
@@ -367,7 +367,7 @@ export default function CookbookSpace({ userId, onClose }) {
         ? h('div', { style: { textAlign: 'center', color: C.ink3, fontSize: 13.5, padding: '18px 0' } }, 'Aucune recette ne correspond.')
         : h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
           liste.map((r) => h('div', { key: r.id, style: { display: 'flex', alignItems: 'center', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, overflow: 'hidden' } },
-            h('button', { onClick: () => basculerFav(r.id), 'aria-label': 'Favori', style: { flex: '0 0 auto', padding: '12px 4px 12px 12px', background: 'transparent', border: 'none', fontSize: 18, color: r.fav ? '#d9a441' : C.ink3, cursor: 'pointer' } }, r.fav ? '★' : '☆'),
+            h('button', { onClick: () => basculerFav(r.id), 'aria-label': 'Favori', style: { flex: '0 0 auto', padding: '12px 4px 12px 12px', background: 'transparent', border: 'none', fontSize: 18, color: r.fav ? 'var(--ch1)' : C.ink3, cursor: 'pointer' } }, r.fav ? '★' : '☆'),
             h('button', { onClick: () => ouvrir(r), style: { flex: 1, minWidth: 0, textAlign: 'left', padding: '12px 14px 12px 8px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' } },
               h('div', { style: { fontWeight: 700, fontSize: 15, color: C.ink } }, r.title),
               h('div', { style: { fontSize: 12, color: C.ink3, marginTop: 2 } }, cookSummary(r))),

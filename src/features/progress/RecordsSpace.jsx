@@ -31,7 +31,7 @@ const card = (children, key) => React.createElement('div', {
 }, children)
 
 const heading = (txt, sub) => React.createElement('div', { style: { padding: '12px 15px 10px', borderBottom: `1px solid ${C.line}` } },
-  React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.04em' } }, txt),
+  React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, txt),
   sub ? React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.4 } }, sub) : null)
 
 // Une ligne de record : ce qu'on a fait, quand, et le détail qui donne

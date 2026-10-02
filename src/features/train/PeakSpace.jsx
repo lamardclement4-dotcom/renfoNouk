@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, GRADIENTS } from '../health/kit'
+import { C, Icon } from '../health/kit'
 import { SPORTS } from './trainData'
 import { peakReadiness } from './renfoIntel'
 // `computePeakPlan` et les profils d'effort vivent dans `peakIntel.js` : ce
@@ -7,8 +7,8 @@ import { peakReadiness } from './renfoIntel'
 // composant.
 import { computePeakPlan, EFFORT_PROFILES } from './peakIntel'
 
-var PEAK_COLOR = '#a3526b';
-var PHASE_COLORS = { base: '#5b6fa5', build: '#bf6a40', taper: C.success, today: '#a3526b', past: '#9c9489' };
+var PEAK_COLOR = 'var(--ch3)';
+var PHASE_COLORS = { base: 'var(--ch4)', build: 'var(--ch1)', taper: C.success, today: 'var(--ch3)', past: 'var(--c-ink3)' };
 var PHASE_LABELS = { base: 'Développement général', build: 'Développement spécifique', taper: 'Affûtage', today: 'Jour J', past: 'Terminé' };
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -308,7 +308,7 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
    UI
    ═══════════════════════════════════════════════════════════════════════ */
 
-var FLOW_STYLE = { position: 'fixed', inset: 0, backgroundColor: C.bg, backgroundImage: GRADIENTS.entrainer, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat', zIndex: 60, display: 'flex',
+var FLOW_STYLE = { position: 'fixed', inset: 0, backgroundColor: C.bg, backgroundImage: 'var(--g-paper)', backgroundSize: 'var(--g-paper-size)', backgroundPosition: '-1px -1px', backgroundAttachment: 'local', zIndex: 60, display: 'flex',
   flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font, animation: 'spaceIn .22s ease' };
 var SCROLL_STYLE = { flex: 1, overflowY: 'auto', padding: '20px 22px calc(22px + env(safe-area-inset-bottom))' };
 
@@ -327,7 +327,7 @@ function countdownLabel(days) {
 
 function PhaseBadge(phase) {
   return React.createElement('span', { style: {
-    fontSize: 11.5, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
+    fontSize: 11.5, fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--r-pill)',
     background: 'color-mix(in srgb, ' + PHASE_COLORS[phase] + ` 14%, ${C.surface})`,
     color: PHASE_COLORS[phase]
   } }, PHASE_LABELS[phase]);
@@ -371,7 +371,7 @@ function GoalForm({ initial, onSave, onClose }) {
 
   function labeledSelect(label2, value, opts, onChange) {
     return React.createElement('div', { style: { marginBottom: 16 } },
-      React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: `${C.ink3}`, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, label2),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: `${C.ink3}`, marginBottom: 8 } }, label2),
       React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
         opts.map(function(o) {
           var active = value === o.id;
@@ -390,12 +390,12 @@ function GoalForm({ initial, onSave, onClose }) {
   return React.createElement('div', { style: { position: 'absolute', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 65,
     display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
     React.createElement('div', { style: { width: '100%', maxHeight: '92%', overflowY: 'auto', background: `${C.surface}`,
-      borderRadius: '24px 24px 0 0', padding: '22px 22px calc(24px + env(safe-area-inset-bottom))', animation: 'sheetUp .3s ease' } },
+      borderRadius: 0, padding: '22px 22px calc(24px + env(safe-area-inset-bottom))', animation: 'sheetUp .3s ease' } },
       React.createElement('div', { style: { fontFamily: `${C.font}`, fontWeight: 700, fontSize: 19, marginBottom: 18 } },
         initial ? 'Modifier l\u2019objectif' : 'Nouvel objectif'),
 
       React.createElement('div', { style: { marginBottom: 16 } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: `${C.ink3}`, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Objectif'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: `${C.ink3}`, marginBottom: 8 } }, 'Objectif'),
         React.createElement('input', { value: label, onChange: function(e){ setLabel(e.target.value); }, maxLength: 60,
           placeholder: 'Ex : Marathon de Paris, remise en forme été...', autoFocus: true,
           style: { width: '100%', padding: '13px 15px', borderRadius: `${C.radiusSm}`, border: `1.5px solid ${C.line}`,
@@ -403,14 +403,14 @@ function GoalForm({ initial, onSave, onClose }) {
       ),
 
       React.createElement('div', { style: { marginBottom: 16 } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: `${C.ink3}`, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Date de l\u2019objectif'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: `${C.ink3}`, marginBottom: 8 } }, 'Date de l\u2019objectif'),
         React.createElement('input', { type: 'date', value: eventDate, onChange: function(e){ setEventDate(e.target.value); },
           style: { width: '100%', padding: '13px 15px', borderRadius: `${C.radiusSm}`, border: `1.5px solid ${C.line}`,
             background: `${C.bg}`, color: `${C.ink}`, fontSize: 15.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } })
       ),
 
       sports.length ? React.createElement('div', { style: { marginBottom: 16 } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: `${C.ink3}`, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Sport (optionnel)'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: `${C.ink3}`, marginBottom: 8 } }, 'Sport (optionnel)'),
         React.createElement('select', { value: sport, onChange: function(e){ onSportChange(e.target.value); },
           style: { width: '100%', padding: '13px 15px', borderRadius: `${C.radiusSm}`, border: `1.5px solid ${C.line}`,
             background: `${C.bg}`, color: `${C.ink}`, fontSize: 15, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } },
@@ -437,12 +437,12 @@ function GoalForm({ initial, onSave, onClose }) {
       ], setPriority),
 
       React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 6 } },
-        React.createElement('button', { onClick: onClose, style: { flex: 1, padding: 15, borderRadius: 999, background: `${C.surface}`,
+        React.createElement('button', { onClick: onClose, style: { flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: `${C.surface}`,
           border: `1px solid ${C.line}`, color: `${C.ink}`, fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Annuler'),
         React.createElement('button', { disabled: !canSave, onClick: function() {
           onSave({ label: label.trim(), sport: sport, eventDate: eventDate, effortType: effortType, priority: priority });
-        }, style: { flex: 1, padding: 15, borderRadius: 999, background: PEAK_COLOR, border: 'none',
-          color: '#fff', fontSize: 15, fontWeight: 700, cursor: canSave ? 'pointer' : 'default', opacity: canSave ? 1 : 0.45 } }, 'Enregistrer')
+        }, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: PEAK_COLOR, border: 'none',
+          color: 'var(--c-on-fill)', cursor: canSave ? 'pointer' : 'default', opacity: canSave ? 1 : 0.45 } }, 'Enregistrer')
       )
     )
   );
@@ -455,7 +455,7 @@ function PhaseTimeline(plan) {
       var isCurrent = plan.phase === ph;
       var isPast = order.indexOf(plan.phase) > order.indexOf(ph) || plan.phase === 'today' || plan.phase === 'past';
       return React.createElement('div', { key: ph, style: { flex: 1 } },
-        React.createElement('div', { style: { height: 6, borderRadius: 999,
+        React.createElement('div', { style: { height: 6, borderRadius: 'var(--r-pill)',
           background: isCurrent ? PHASE_COLORS[ph] : isPast ? 'color-mix(in srgb, ' + PHASE_COLORS[ph] + ` 40%, ${C.surface2})` : `${C.surface2}` } }),
         React.createElement('div', { style: { fontSize: 10.5, fontWeight: 700, color: isCurrent ? PHASE_COLORS[ph] : `${C.ink3}`, marginTop: 5, textAlign: 'center' } },
           PHASE_LABELS[ph])
@@ -481,11 +481,11 @@ function QuickLinksRow(plan, h) {
   if (h.cycleEnabled && h.onCycle) items.push({ id: 'cycle', label: 'Cycle', icon: 'moon', on: h.onCycle });
   if (!items.length) return null;
   return React.createElement('div', { style: { marginBottom: 18 } },
-    React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: `${C.ink3}`, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 } }, 'Liens rapides'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: `${C.ink3}`, marginBottom: 10 } }, 'Liens rapides'),
     React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap' } },
       items.map(function(it) {
         return React.createElement('button', { key: it.id, onClick: it.on, style: {
-          display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 999,
+          display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 'var(--r-pill)',
           background: `${C.surface}`, border: `1px solid ${C.line}`, fontSize: 12.5, fontWeight: 700, color: `${C.ink}`, cursor: 'pointer'
         } }, React.createElement(Icon, { name: it.icon, size: 14, color: `${C.primary}` }), it.label);
       })
@@ -517,7 +517,7 @@ function SignalsBlock(db, plan) {
   var cycleEnabled = false; // intégration cycle non portée (cycleInfo n'est pas partagé hors du module Cycle)
   if (!rows.length) return null;
   return React.createElement('div', { style: { marginBottom: 18 } },
-    React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: `${C.ink3}`, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 } }, 'Signaux actuels'),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: `${C.ink3}`, marginBottom: 10 } }, 'Signaux actuels'),
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
       rows.map(function(r, i) {
         return React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 13px',
@@ -535,7 +535,7 @@ function SignalsBlock(db, plan) {
   );
 }
 
-var FLAG_COLOR = { alert: '#c4503a', warn: C.warn, info: PEAK_COLOR };
+var FLAG_COLOR = { alert: 'var(--c-danger)', warn: C.warn, info: PEAK_COLOR };
 
 // Analyse concrète, pas juste un compte à rebours : croise le plan
 // d'affûtage avec la charge réelle (ACWR), le respect effectif de la
@@ -544,17 +544,17 @@ var FLAG_COLOR = { alert: '#c4503a', warn: C.warn, info: PEAK_COLOR };
 function ReadinessCard(db, plan) {
   if (!db || plan.phase === 'past' || plan.phase === 'today') return null;
   var r = peakReadiness(db, plan);
-  var scoreColor = r.score >= 75 ? C.success : r.score >= 50 ? C.warn : '#c4503a';
+  var scoreColor = r.score >= 75 ? C.success : r.score >= 50 ? C.warn : 'var(--c-danger)';
   return React.createElement('div', { style: { padding: 18, borderRadius: `${C.radiusSm}`, background: `${C.surface}`, border: `1px solid ${C.line}`, marginBottom: 18 } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: r.flags.length ? 12 : 0 } },
       React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: `${C.ink}` } }, 'Prêt pour le jour J ?'),
       React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 3 } },
-        React.createElement('span', { className: 'num-display', style: { fontSize: 21, fontWeight: 800, color: scoreColor } }, r.score),
+        React.createElement('span', { className: 'num-display', style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', color: scoreColor } }, r.score),
         React.createElement('span', { style: { fontSize: 12, color: `${C.ink3}` } }, '/100'))),
     r.flags.length === 0 && React.createElement('p', { style: { fontSize: 12.5, color: `${C.ink2}`, lineHeight: 1.45 } }, 'Rien à signaler pour l’instant sur charge, affûtage, mobilité ou sommeil — continue comme ça.'),
     r.flags.map(function(f, i) {
       return React.createElement('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: i ? 8 : 0 } },
-        React.createElement('div', { style: { width: 6, height: 6, borderRadius: 999, background: FLAG_COLOR[f.level] || PEAK_COLOR, flex: '0 0 auto', marginTop: 5 } }),
+        React.createElement('div', { style: { width: 6, height: 6, borderRadius: 'var(--r-pill)', background: FLAG_COLOR[f.level] || PEAK_COLOR, flex: '0 0 auto', marginTop: 5 } }),
         React.createElement('p', { style: { fontSize: 12.5, color: `${C.ink2}`, lineHeight: 1.45, margin: 0 } }, f.text));
     }));
 }
@@ -589,7 +589,7 @@ function WeeklySyncRow(goal, plan, db, store) {
       React.createElement('div', { style: { fontSize: 11.5, color: `${C.ink3}`, marginTop: 2 } }, 'Recommandé pour cette phase : ' + target + ' séances/semaine')
     ),
     React.createElement('button', { onClick: function(){ store.setGoal('weeklySessions', target); }, style: {
-      flex: '0 0 auto', padding: '9px 14px', borderRadius: 999, background: PEAK_COLOR, color: '#fff',
+      flex: '0 0 auto', padding: '9px 14px', borderRadius: 'var(--r-pill)', background: PEAK_COLOR, color: 'var(--c-on-fill)',
       fontSize: 12.5, fontWeight: 700, border: 'none', cursor: 'pointer'
     } }, 'Appliquer')
   );
@@ -602,23 +602,23 @@ function GoalDetail({ goal, db, store, onEdit, onDelete, onBack, onNutrition, on
   return React.createElement('div', { style: FLOW_STYLE },
     React.createElement('div', { style: SCROLL_STYLE },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 } },
-        React.createElement('button', { onClick: onBack, style: { width: 40, height: 40, borderRadius: 999, cursor: 'pointer',
+        React.createElement('button', { onClick: onBack, style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', cursor: 'pointer',
           background: `${C.surface}`, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
           React.createElement(Icon, { name: 'back', size: 18 })
         ),
         React.createElement('div', { style: { fontFamily: `${C.font}`, fontWeight: 700, fontSize: 14 } }, 'Objectif'),
-        React.createElement('button', { onClick: onEdit, style: { padding: '9px 14px', borderRadius: 999, cursor: 'pointer',
+        React.createElement('button', { onClick: onEdit, style: { padding: '9px 14px', borderRadius: 'var(--r-pill)', cursor: 'pointer',
           background: `${C.surface}`, border: `1px solid ${C.line}`, fontSize: 13, fontWeight: 700, color: `${C.primary}` } },
           'Modifier'
         )
       ),
 
-      React.createElement('div', { style: { padding: 20, borderRadius: `${C.radius}`, background: PEAK_COLOR, color: '#fff', marginBottom: 18 } },
-        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, opacity: .85, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 6 } },
+      React.createElement('div', { style: { padding: 20, borderRadius: `${C.radius}`, background: PEAK_COLOR, color: 'var(--c-on-fill)', marginBottom: 18 } },
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', opacity: .85, marginBottom: 6 } },
           sportLabel ? sportLabel.label : 'Objectif', goal.priority === 'secondaire' ? ' \u00B7 secondaire' : ''),
         React.createElement('div', { style: { fontFamily: `${C.font}`, fontWeight: 700, fontSize: 21, lineHeight: 1.2 } }, goal.label),
         React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 10 } },
-          React.createElement('span', { className: 'num-display', style: { fontSize: 30, fontWeight: 700 } }, countdownLabel(plan.daysRemaining)),
+          React.createElement('span', { className: 'num-display', style: { fontFamily: C.mono, fontSize: 26, fontWeight: 600, letterSpacing: '-.03em' } }, countdownLabel(plan.daysRemaining)),
           React.createElement('span', { style: { fontSize: 13.5, opacity: .9 } }, fmtDate(goal.eventDate))
         )
       ),
@@ -650,14 +650,14 @@ function GoalDetail({ goal, db, store, onEdit, onDelete, onBack, onNutrition, on
           ),
 
           plan.daysRemaining <= 10 && React.createElement('div', { style: { marginBottom: 18 } },
-            React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: `${C.ink3}`, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 } }, 'Modèle indicatif \u2014 derniers jours'),
+            React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: `${C.ink3}`, marginBottom: 10 } }, 'Modèle indicatif \u2014 derniers jours'),
             React.createElement('p', { style: { fontSize: 12, color: `${C.ink3}`, lineHeight: 1.5, marginBottom: 10 } },
               'Gabarit pratique à ajuster selon tes sensations (pas issu d\u2019une méta-analyse jour par jour) — il traduit les principes validés : volume en forte baisse, intensité maintenue via des efforts courts, repos rapproché du jour J.'),
             FinalWeekList(goal, plan)
           ),
 
           React.createElement('div', { style: { marginBottom: 18 } },
-            React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: `${C.ink3}`, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 } }, 'Plan semaine par semaine'),
+            React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: `${C.ink3}`, marginBottom: 10 } }, 'Plan semaine par semaine'),
             WeeklyOutlineList(goal)
           )
         ),
@@ -697,15 +697,15 @@ function GoalDetail({ goal, db, store, onEdit, onDelete, onBack, onNutrition, on
         )
       ),
 
-      React.createElement('button', { onClick: onDelete, style: { width: '100%', padding: 14, borderRadius: 999, background: 'transparent',
-        border: `1px solid ${C.line}`, color: '#b3402e', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Supprimer cet objectif')
+      React.createElement('button', { onClick: onDelete, style: { width: '100%', padding: 14, borderRadius: 'var(--r-pill)', background: 'transparent',
+        border: `1px solid ${C.line}`, color: 'var(--c-danger)', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Supprimer cet objectif')
     )
   );
 }
 
 function DetailRow(label, value) {
   return React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 9, alignItems: 'flex-start' } },
-    React.createElement('div', { style: { flex: '0 0 96px', fontSize: 11.5, fontWeight: 700, color: `${C.ink3}`, textTransform: 'uppercase', letterSpacing: '.03em', paddingTop: 1 } }, label),
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', flex: '0 0 96px', color: `${C.ink3}`, paddingTop: 1 } }, label),
     React.createElement('div', { style: { flex: 1, fontSize: 13.5, color: `${C.ink2}`, lineHeight: 1.5 } }, value)
   );
 }
@@ -768,7 +768,7 @@ function WeeklyOutlineList(goal) {
         : (r.targetVolumePct !== null ? '\u2248 ' + r.targetVolumePct + ' % du volume habituel en fin de semaine' : 'Dernière ligne droite');
       return React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '11px 13px',
         borderRadius: `${C.radiusXs}`, background: `${C.surface}`, border: `1px solid ${C.line}` } },
-        React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, flex: '0 0 auto', background: PHASE_COLORS[r.phase] } }),
+        React.createElement('div', { style: { width: 8, height: 8, borderRadius: 'var(--r-pill)', flex: '0 0 auto', background: PHASE_COLORS[r.phase] } }),
         React.createElement('div', { style: { flex: 1, minWidth: 0 } },
           React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: `${C.ink}` } }, label),
           React.createElement('div', { style: { fontSize: 11.5, color: `${C.ink3}`, marginTop: 1 } }, sub)
@@ -785,7 +785,7 @@ function GoalCard({ goal, onOpen }) {
   return React.createElement('button', { onClick: onOpen, style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%',
     textAlign: 'left', padding: 15, borderRadius: `${C.radiusSm}`, background: `${C.surface}`,
     border: `1px solid ${C.line}`, marginBottom: 10, cursor: 'pointer' } },
-    React.createElement('div', { style: { width: 50, height: 50, borderRadius: 14, flex: '0 0 auto',
+    React.createElement('div', { style: { width: 50, height: 50, borderRadius: 0, flex: '0 0 auto',
       background: 'color-mix(in srgb, ' + PHASE_COLORS[plan.phase] + ` 14%, ${C.surface})`,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
       React.createElement('div', { className: 'num-display', style: { fontSize: 13, fontWeight: 800, color: PHASE_COLORS[plan.phase] } },
@@ -841,8 +841,8 @@ function PeakSpace({ db, store, onClose, onNutrition, onRecovery, onMobility, on
       React.createElement('div', { style: SCROLL_STYLE },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 } },
           React.createElement('div', { style: { fontFamily: `${C.font}`, fontWeight: 700, fontSize: 22, letterSpacing: '-.01em' } }, 'Pic de forme'),
-          React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 999, cursor: 'pointer',
-            background: `${C.surface}`, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: C.shadowSm } },
+          React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', cursor: 'pointer',
+            background: `${C.surface}`, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'none' } },
             React.createElement(Icon, { name: 'close', size: 18 })
           )
         ),
@@ -850,7 +850,7 @@ function PeakSpace({ db, store, onClose, onNutrition, onRecovery, onMobility, on
           'Programme un objectif dat\u00e9 (comp\u00e9tition, remise en forme...) : l\u2019app calcule automatiquement ta phase actuelle et te guide jusqu\u2019au jour J.'),
 
         sorted.length === 0 ? React.createElement('div', { style: { textAlign: 'center', padding: '40px 10px' } },
-          React.createElement('div', { style: { width: 72, height: 72, borderRadius: 999, background: 'color-mix(in srgb, ' + PEAK_COLOR + ` 14%, ${C.surface})`,
+          React.createElement('div', { style: { width: 72, height: 72, borderRadius: 'var(--r-pill)', background: 'color-mix(in srgb, ' + PEAK_COLOR + ` 14%, ${C.surface})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' } },
             React.createElement(Icon, { name: 'target', size: 32, color: PEAK_COLOR })
           ),
@@ -859,9 +859,9 @@ function PeakSpace({ db, store, onClose, onNutrition, onRecovery, onMobility, on
             'Ajoute une date cible pour obtenir un plan d\u2019affûtage basé sur les données scientifiques.')
         ) : sorted.map(function(g) { return React.createElement(GoalCard, { key: g.id, goal: g, onOpen: function(){ setSelId(g.id); } }); }),
 
-        React.createElement('button', { onClick: function(){ setFormMode('new'); }, style: { display: 'flex', alignItems: 'center',
-          justifyContent: 'center', gap: 8, width: '100%', padding: 15, borderRadius: 999, marginTop: 6,
-          background: PEAK_COLOR, color: '#fff', fontSize: 14.5, fontWeight: 700, cursor: 'pointer' } },
+        React.createElement('button', { onClick: function(){ setFormMode('new'); }, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: 8, width: '100%', padding: 15, borderRadius: 'var(--r-pill)', marginTop: 6,
+          background: PEAK_COLOR, color: 'var(--c-on-fill)', cursor: 'pointer' } },
           React.createElement('span', { style: { fontSize: 18, fontWeight: 700, lineHeight: 1 } }, '+'), 'Ajouter un objectif')
       )
     ),

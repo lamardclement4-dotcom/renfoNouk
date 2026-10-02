@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, MODULE_TINTS, GRADIENTS } from '../health/kit'
+import { C, Icon, MODULE_TINTS } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { getSession, sessionDuration } from './trainData'
 import Detail from './Detail'
@@ -136,12 +136,12 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
     { ic: 'dumbbell', tint: MODULE_TINTS.renfo, lab: 'Renforcement', sub: '16 séances', on: 'renfocatalog' },
   ]
   const rows = [
-    { ic: 'calendar', tint: '#7d9471', lab: 'Calendrier', sub: "Organise ta semaine d'entraînement", on: 'planner' },
-    { ic: 'target', tint: '#5b6fa5', lab: 'Tests physiques', sub: null, on: 'tests' },
-    { ic: 'spark', tint: '#534ab7', lab: 'Coach', sub: 'Recommandations', on: 'coach' },
+    { ic: 'calendar', tint: 'var(--c-success)', lab: 'Calendrier', sub: "Organise ta semaine d'entraînement", on: 'planner' },
+    { ic: 'target', tint: 'var(--ch4)', lab: 'Tests physiques', sub: null, on: 'tests' },
+    { ic: 'spark', tint: 'var(--ch4)', lab: 'Coach', sub: 'Recommandations', on: 'coach' },
     { ic: 'wave', tint: MODULE_TINTS.hydratation, lab: 'Conditions', sub: 'Météo · adaptation de la charge', on: 'weather' },
-    { ic: 'target', tint: '#7d9471', lab: 'Mes routines', sub: 'Mobilité et pliométrie, à ta main', on: 'routines' },
-    { ic: 'target', tint: '#a3526b', lab: 'Pic de forme', sub: db.peakGoals && db.peakGoals.length ? `${db.peakGoals.length} objectif${db.peakGoals.length > 1 ? 's' : ''} programmé${db.peakGoals.length > 1 ? 's' : ''}` : 'Programme tes échéances', on: 'peak' },
+    { ic: 'target', tint: 'var(--c-success)', lab: 'Mes routines', sub: 'Mobilité et pliométrie, à ta main', on: 'routines' },
+    { ic: 'target', tint: 'var(--ch3)', lab: 'Pic de forme', sub: db.peakGoals && db.peakGoals.length ? `${db.peakGoals.length} objectif${db.peakGoals.length > 1 ? 's' : ''} programmé${db.peakGoals.length > 1 ? 's' : ''}` : 'Programme tes échéances', on: 'peak' },
   ]
 
   const el = React.createElement
@@ -152,28 +152,28 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
     ...(embedded
       ? { position: 'fixed', inset: 0, zIndex: 55, animation: 'spaceIn .22s ease' }
       : { flex: 1, minHeight: 0, width: '100%' }),
-    backgroundColor: C.bg, backgroundImage: GRADIENTS.entrainer, backgroundAttachment: 'local', backgroundRepeat: 'no-repeat',
+    backgroundColor: C.bg, backgroundImage: 'var(--g-paper)', backgroundSize: 'var(--g-paper-size)', backgroundPosition: '-1px -1px', backgroundAttachment: 'local',
     display: 'flex', flexDirection: 'column', maxWidth: 460, margin: '0 auto', fontFamily: C.font,
   } },
     el('div', { style: { flex: 1, overflowY: 'auto', padding: '14px 18px 32px' } },
-      el('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 999, background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: C.shadowSm, marginBottom: 12 } },
+      el('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, borderRadius: 0, background: C.surface, border: `1px solid ${C.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: C.ink, boxShadow: 'none', marginBottom: 12 } },
         el(Icon, { name: 'back', size: 19 })),
-      el('h1', { style: { fontFamily: C.font, fontSize: 30, fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1.1, margin: 0 } }, "S'entraîner"),
+      el('h1', { style: { fontFamily: C.display, fontSize: 34, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: .95, margin: 0 } }, "S'entraîner"),
       el('p', { style: { fontSize: 13.5, color: C.ink2, margin: '6px 0 18px' } }, 'Séances, planning et suivi de charge'),
       el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 } },
         tiles.map((t, i) => el('button', { key: i, onClick: () => setTile(t.on),
-          style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: C.shadowSm, cursor: 'pointer' } },
-          el('div', { style: { width: 42, height: 42, borderRadius: 13, background: `color-mix(in srgb, ${t.tint} 15%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 } },
+          style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: 'none', cursor: 'pointer' } },
+          el('div', { style: { width: 42, height: 42, borderRadius: 0, background: 'transparent', border: `1.5px solid ${t.tint}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 } },
             el(Icon, { name: t.ic, size: 21, color: t.tint })),
-          el('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 14.5 } }, t.lab),
-          el('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2 } }, t.sub)))),
+          el('div', { style: { fontFamily: C.display, fontWeight: 800, fontSize: 18, textTransform: 'uppercase', letterSpacing: '.03em', lineHeight: 1 } }, t.lab),
+          el('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5 } }, t.sub)))),
       el('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
         rows.map((r, i) => el('button', { key: i, onClick: () => setTile(r.on),
-          style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: C.shadowSm, cursor: 'pointer' } },
-          el('div', { style: { width: 42, height: 42, borderRadius: 13, background: `color-mix(in srgb, ${r.tint} 15%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' } },
+          style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: 'none', cursor: 'pointer' } },
+          el('div', { style: { width: 42, height: 42, borderRadius: 0, background: 'transparent', border: `1.5px solid ${r.tint}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' } },
             el(Icon, { name: r.ic, size: 20, color: r.tint })),
           el('div', { style: { flex: 1, minWidth: 0 } },
-            el('div', { style: { fontWeight: 700, fontSize: 15 } }, r.lab),
-            r.sub && el('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 2 } }, r.sub)),
+            el('div', { style: { fontFamily: C.display, fontWeight: 800, fontSize: 18, textTransform: 'uppercase', letterSpacing: '.03em', lineHeight: 1 } }, r.lab),
+            r.sub && el('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 4 } }, r.sub)),
           el(Icon, { name: 'arrow', size: 18, color: C.ink3, style: { flex: '0 0 auto' } }))))))
 }
