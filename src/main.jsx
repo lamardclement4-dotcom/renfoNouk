@@ -14,12 +14,13 @@ import '@fontsource/instrument-sans/latin-600'
 import '@fontsource/instrument-sans/latin-700'
 import './index.css'
 import App from './App.jsx'
-import { applyTheme, THEME_KEY } from './features/health/kit'
+import { applyTheme, THEME_KEY, applyPalette, PALETTE_KEY } from './features/health/kit'
 
-// L'apparence est posée avant le premier rendu, depuis le stockage local :
+// L'apparence et la palette sont posées avant le premier rendu, depuis le stockage local :
 // le profil arrive de façon asynchrone et attendre le réseau ferait
 // clignoter l'interface dans la mauvaise teinte à chaque lancement.
 applyTheme(localStorage.getItem(THEME_KEY))
+applyPalette(localStorage.getItem(PALETTE_KEY))
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

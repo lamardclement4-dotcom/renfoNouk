@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { supabase } from '../../lib'
-import { C, Icon, FlowSpace, THEMES, THEME_KEY, applyTheme, normalizeTheme } from '../health/kit'
+import { C, Icon, FlowSpace, THEMES, THEME_KEY, applyTheme, normalizeTheme, PALETTES, PALETTE_KEY, applyPalette, normalizePalette } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { inferUserLevel, trainingTotals } from '../train/renfoIntel'
 import { SPORTS } from '../train/trainData'
@@ -126,6 +126,23 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
     localStorage.setItem(THEME_KEY, applied)
     setTheme(applied)
     store.set({ theme: applied })
+  }
+  // La palette suit exactement le même chemin que l'apparence.
+  const [palette, setPalette] = useState(() => normalizePalette(localStorage.getItem(PALETTE_KEY)))
+  React.useEffect(() => {
+    if (!db.palette) return
+    const choix = normalizePalette(db.palette)
+    if (choix !== palette) {
+      applyPalette(choix)
+      localStorage.setItem(PALETTE_KEY, choix)
+      setPalette(choix)
+    }
+  }, [db.palette])
+  function changePalette(id) {
+    const applied = applyPalette(id)
+    localStorage.setItem(PALETTE_KEY, applied)
+    setPalette(applied)
+    store.set({ palette: applied })
   }
 
   if (loading) {
@@ -261,6 +278,27 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
         },
           h('div', { style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', lineHeight: 1 } }, t.label),
           h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5, lineHeight: 1.35 } }, t.hint))
+      })),
+
+    SecTitle('Couleurs'),
+    // Chaque palette montre ses encres en clair puis en sombre : la
+    // pastille est un aperçu, pas un réglage de la palette en cours.
+    h('div', { role: 'radiogroup', 'aria-label': 'Couleurs', className: 'liste', style: { background: C.surface, border: `1px solid ${C.line}` } },
+      PALETTES.map((p) => {
+        const on = p.id === palette
+        return h('button', {
+          key: p.id,
+          role: 'radio',
+          'aria-checked': on,
+          onClick: () => changePalette(p.id),
+          style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '11px 12px', cursor: 'pointer', background: 'transparent', border: 'none', borderLeft: `4px solid ${on ? C.primary : 'transparent'}`, color: C.ink },
+        },
+          h('div', { 'aria-hidden': true, style: { display: 'grid', gridTemplateColumns: '14px 14px', gridTemplateRows: '14px 14px', border: `1px solid ${C.line}`, flex: '0 0 auto' } },
+            p.swatch.map((c, i) => h('span', { key: i, style: { background: c } }))),
+          h('div', { style: { flex: 1, minWidth: 0 } },
+            h('div', { style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', lineHeight: 1 } }, p.label),
+            h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4 } }, p.hint)),
+          on ? h(Icon, { name: 'check', size: 16, color: C.primary }) : null)
       })),
 
     h('button', { onClick: signOut, style: { width: '100%', marginTop: 28, padding: 13, background: 'transparent', border: `1px solid ${C.ink3}`, color: C.ink2, fontFamily: C.display, fontWeight: 800, fontSize: 16, textTransform: 'uppercase', letterSpacing: '.06em', cursor: 'pointer' } }, 'Se déconnecter'),

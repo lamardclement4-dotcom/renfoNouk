@@ -42,6 +42,7 @@ const s1 = fakeStore({
   'renfo:sync:user-b': '{"phys":{"poids":64}}',
   'renfo:sync:anon': '{}',
   'renfo:theme': 'origine',
+  'renfo:palette': 'neon',
   'autre-app:token': 'xyz',
 })
 const n = clearAllStoredQueues(s1)
@@ -59,6 +60,7 @@ a(s2.length === 0, 'et le stockage est reellement vide : aucune cle sautee par l
 // Le theme n est pas une donnee personnelle : l effacer rendrait l app
 // blanche a la reconnexion sans rien proteger.
 a(s1.getItem('renfo:theme') === 'origine', 'le theme choisi survit a la deconnexion')
+a(s1.getItem('renfo:palette') === 'neon', 'la palette choisie aussi')
 a(s1.getItem('autre-app:token') === 'xyz', 'et rien qui n appartienne pas a l app n est touche')
 
 // Un stockage absent ou recalcitrant ne doit pas faire echouer la

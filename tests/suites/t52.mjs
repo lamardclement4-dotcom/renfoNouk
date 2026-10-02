@@ -9,7 +9,7 @@ import { join } from 'node:path'
 import { __render, __reset } from '../harness/react-stub4.mjs'
 import { __setDb, buildDb } from '../harness/store-hook-stub.mjs'
 import { RICH } from './t50fixture.mjs'
-import { C, THEMES, DEFAULT_THEME, normalizeTheme, applyTheme } from '../../src/features/health/kit.jsx'
+import { C, THEMES, DEFAULT_THEME, normalizeTheme, applyTheme, PALETTES, DEFAULT_PALETTE, normalizePalette, applyPalette } from '../../src/features/health/kit.jsx'
 import Accueil from '../../src/features/home/AccueilSpace.jsx'
 import Progres from '../../src/features/progress/ProgressSpace.jsx'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
@@ -44,6 +44,15 @@ a(!('--c-primary' in props) && !('--g-accueil' in props) && !('--m-sleep' in pro
 a(applyTheme('clair') === 'clair' && document.documentElement.dataset.theme === 'light', 'Clair pose data-theme="light"')
 a(applyTheme('auto') === 'auto' && !('theme' in document.documentElement.dataset) && proxyStyle.colorScheme === '', 'Automatique retire le choix et rend la main au telephone')
 a(applyTheme('nuit') === 'sombre' && document.documentElement.dataset.theme === 'dark', 'un ancien choix « Nuit » s applique en sombre')
+// ─── palettes ───
+a(PALETTES.map((p) => p.id).join() === 'labo,ambre,neon' && DEFAULT_PALETTE === 'labo', 'trois palettes, le laboratoire par defaut')
+a(PALETTES.every((p) => p.swatch.length === 4), 'chaque palette montre ses encres en clair et en sombre')
+a(normalizePalette('neon') === 'neon' && normalizePalette('n importe quoi') === 'labo' && normalizePalette(null) === 'labo', 'une palette inconnue retombe sur le laboratoire')
+a(applyPalette('ambre') === 'ambre' && document.documentElement.dataset.palette === 'ambre', 'Ambre 1984 pose data-palette="ambre"')
+a(applyPalette('neon') === 'neon' && document.documentElement.dataset.palette === 'neon', 'Neon 1986 pose data-palette="neon"')
+a(applyPalette('labo') === 'labo' && !('palette' in document.documentElement.dataset), 'le laboratoire retire l attribut')
+applyTheme('clair'); applyPalette('neon')
+a(document.documentElement.dataset.theme === 'light' && document.documentElement.dataset.palette === 'neon', 'palette et apparence restent independantes')
 document.documentElement = ancien
 a(applyTheme('sombre') === 'sombre', 'et le banc minimal (sans dataset) ne casse pas')
 
@@ -57,6 +66,12 @@ const sombreChoix = noms(bloc(/:root\[data-theme="dark"\], \.ecran \{([\s\S]*?)\
 a(clair.size >= 19, 'le clair definit ses couleurs (' + clair.size + ')')
 a([...clair].every((k) => sombreTel.has(k)), 'chaque couleur du clair est redefinie en sombre automatique')
 a([...clair].every((k) => sombreChoix.has(k)), 'et en sombre choisi, et pour l ecran du lecteur')
+for (const pid of ['ambre', 'neon']) {
+  const pc = noms(bloc(new RegExp(':root\\[data-palette="' + pid + '"\\] \\{([\\s\\S]*?)\\n\\}')))
+  const pt = noms(bloc(new RegExp(':root\\[data-palette="' + pid + '"\\]:not\\(\\[data-theme="light"\\]\\) \\{([\\s\\S]*?)\\}')))
+  const pd = noms(bloc(new RegExp(':root\\[data-palette="' + pid + '"\\]\\[data-theme="dark"\\], :root\\[data-palette="' + pid + '"\\] \\.ecran \\{([\\s\\S]*?)\\}')))
+  a([...clair].every((k) => pc.has(k) && pt.has(k) && pd.has(k)), 'palette ' + pid + ' : chaque couleur definie en clair, en sombre automatique, en sombre choisi et pour le lecteur')
+}
 a(/--c-primary: #5BF08F/i.test(css) && /--c-on-fill: #06120B/i.test(css), 'vert phosphore en sombre, texte presque noir sur ses aplats')
 a(/--g-paper:/.test(css) && /background-image: var\(--g-paper\)/.test(css), 'le papier millimetre est le fond de toute l app')
 a(/--r-pill: 0px/.test(css), 'les anciennes pilules sont a angles vifs')

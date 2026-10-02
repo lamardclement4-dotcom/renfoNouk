@@ -11,6 +11,8 @@
    Clair et sombre sont soignés à égalité. Sans choix explicite, l'app suit
    le réglage du téléphone ; un choix fait dans le profil pose
    data-theme="light" ou "dark" sur <html>, et l'emporte dans les deux sens.
+   La palette (laboratoire, ambre 1984, néon 1986) se choisit à part et
+   pose data-palette ; le laboratoire est la palette par défaut.
 
    Toutes les couleurs sont d'abord définies ici, dans :root, avant d'être
    redéfinies pour le sombre : une variable qui n'existerait que dans un
@@ -133,6 +135,155 @@
   --m-cycle: var(--ch3);
   --m-mind: var(--ch1);
   color: var(--c-ink);
+}
+
+/* ============================================================
+   Palettes années 80, au choix dans Profil. Même identité — papier,
+   tracés, cadrans, polices — mais d'autres encres. Chaque palette
+   redéfinit toutes les couleurs, en clair comme en sombre ; le
+   lecteur d'exercices (.ecran) prend toujours la version sombre.
+   Les sélecteurs portent data-palette en plus : ils l'emportent sur
+   ceux du laboratoire quelle que soit leur place dans la feuille.
+   ============================================================ */
+
+/* Ambre 1984 : plastique beige et touches brunes en clair ; en sombre,
+   l'écran ambre d'un vieux terminal, où même le texte prend la teinte. */
+:root[data-palette="ambre"] {
+  --c-bg: #E8E1CF;
+  --c-surface: #F2ECDD;
+  --c-surface2: #DDD4BE;
+  --c-ink: #2B2620;
+  --c-ink2: #5E5446;
+  --c-ink3: #857A68;
+  --c-line: #CFC4AA;
+  --c-primary: #B4500C;
+  --c-trace: #B4500C;
+  --c-on-fill: #FFFFFF;
+  --c-success: #5E7A1F;
+  --c-warn: #A86A00;
+  --c-danger: #A8321E;
+  --ch1: #9A6400;
+  --ch2: #2F6F6A;
+  --ch3: #8E3B52;
+  --ch4: #3D5A8C;
+  --grid-minor: #DCD3BC;
+  --grid-major: #C9BE9F;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="ambre"]:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c-bg: #120D07;
+    --c-surface: #1A130A;
+    --c-surface2: #241A0E;
+    --c-ink: #FFD9A0;
+    --c-ink2: #D4A86A;
+    --c-ink3: #8F6A3C;
+    --c-line: #3A2A15;
+    --c-primary: #FFB000;
+    --c-trace: #FFB000;
+    --c-on-fill: #1A1004;
+    --c-success: #C8D16A;
+    --c-warn: #FF8A3D;
+    --c-danger: #FF5E4A;
+    --ch1: #FFC857;
+    --ch2: #7FD1B9;
+    --ch3: #FF7A9E;
+    --ch4: #8FB3FF;
+    --grid-minor: #1C140A;
+    --grid-major: #2A1E0F;
+  }
+}
+:root[data-palette="ambre"][data-theme="dark"], :root[data-palette="ambre"] .ecran {
+  color-scheme: dark;
+  --c-bg: #120D07;
+  --c-surface: #1A130A;
+  --c-surface2: #241A0E;
+  --c-ink: #FFD9A0;
+  --c-ink2: #D4A86A;
+  --c-ink3: #8F6A3C;
+  --c-line: #3A2A15;
+  --c-primary: #FFB000;
+  --c-trace: #FFB000;
+  --c-on-fill: #1A1004;
+  --c-success: #C8D16A;
+  --c-warn: #FF8A3D;
+  --c-danger: #FF5E4A;
+  --ch1: #FFC857;
+  --ch2: #7FD1B9;
+  --ch3: #FF7A9E;
+  --ch4: #8FB3FF;
+  --grid-minor: #1C140A;
+  --grid-major: #2A1E0F;
+}
+
+/* Néon 1986 : marine et magenta sur papier bleuté en clair ; en sombre,
+   fond indigo et tracés néon, comme un survêtement sous les spots. */
+:root[data-palette="neon"] {
+  --c-bg: #ECEFF7;
+  --c-surface: #F6F7FC;
+  --c-surface2: #DFE3F0;
+  --c-ink: #14183A;
+  --c-ink2: #454A73;
+  --c-ink3: #7A7FA3;
+  --c-line: #C9CEE3;
+  --c-primary: #B5179E;
+  --c-trace: #B5179E;
+  --c-on-fill: #FFFFFF;
+  --c-success: #0E8A5F;
+  --c-warn: #B86E00;
+  --c-danger: #C62828;
+  --ch1: #C46A00;
+  --ch2: #007FA8;
+  --ch3: #6A2CA8;
+  --ch4: #2B4FC0;
+  --grid-minor: #DDE1EF;
+  --grid-major: #C8CEE4;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="neon"]:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c-bg: #110C26;
+    --c-surface: #18123A;
+    --c-surface2: #221A4A;
+    --c-ink: #EDE8FF;
+    --c-ink2: #B3AADB;
+    --c-ink3: #7D74AD;
+    --c-line: #2E2560;
+    --c-primary: #FF3D9A;
+    --c-trace: #FF3D9A;
+    --c-on-fill: #14051F;
+    --c-success: #3DF5A8;
+    --c-warn: #FFC93C;
+    --c-danger: #FF5A5A;
+    --ch1: #FFC93C;
+    --ch2: #3DE0FF;
+    --ch3: #B57CFF;
+    --ch4: #6E9BFF;
+    --grid-minor: #191236;
+    --grid-major: #241A4D;
+  }
+}
+:root[data-palette="neon"][data-theme="dark"], :root[data-palette="neon"] .ecran {
+  color-scheme: dark;
+  --c-bg: #110C26;
+  --c-surface: #18123A;
+  --c-surface2: #221A4A;
+  --c-ink: #EDE8FF;
+  --c-ink2: #B3AADB;
+  --c-ink3: #7D74AD;
+  --c-line: #2E2560;
+  --c-primary: #FF3D9A;
+  --c-trace: #FF3D9A;
+  --c-on-fill: #14051F;
+  --c-success: #3DF5A8;
+  --c-warn: #FFC93C;
+  --c-danger: #FF5A5A;
+  --ch1: #FFC93C;
+  --ch2: #3DE0FF;
+  --ch3: #B57CFF;
+  --ch4: #6E9BFF;
+  --grid-minor: #191236;
+  --grid-major: #241A4D;
 }
 
 html, body { background-color: var(--c-bg); }

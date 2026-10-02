@@ -61,9 +61,10 @@ export const GRADIENTS = {
 }
 
 // ------------------------------------------------------------
-// Apparence. Une seule identité — le laboratoire —, en clair et en sombre.
+// Apparence. Une identité — le laboratoire —, en clair et en sombre.
 // Les couleurs vivent dans index.css : choisir une apparence revient à
 // poser data-theme sur <html>, ou à le retirer pour suivre le téléphone.
+// La palette se choisit à part (voir PALETTES plus bas).
 // ------------------------------------------------------------
 export const THEMES = [
   { id: 'auto', label: 'Automatique', hint: 'Suit le réglage du téléphone' },
@@ -107,6 +108,43 @@ export function applyTheme(id) {
     root.removeAttribute('data-theme')
   }
   st.colorScheme = valeur || ''
+  return choix
+}
+
+// ------------------------------------------------------------
+// Palettes. Même papier, mêmes tracés, mêmes polices : seules les encres
+// changent. Le laboratoire est la palette d'origine ; les deux autres
+// viennent des années 80. Chaque palette est complète dans index.css, en
+// clair comme en sombre. Les pastilles montrent la palette proposée, pas
+// celle en cours : elles sont donc en couleurs littérales (clair, sombre).
+// ------------------------------------------------------------
+export const PALETTES = [
+  { id: 'labo', label: 'Laboratoire', hint: 'Vert phosphore', swatch: ['#F2F4EF', '#12804A', '#0D1411', '#5BF08F'] },
+  { id: 'ambre', label: 'Ambre 1984', hint: 'Moniteur ambre, plastique beige', swatch: ['#E8E1CF', '#B4500C', '#120D07', '#FFB000'] },
+  { id: 'neon', label: 'Néon 1986', hint: 'Survêtement, magenta et cyan', swatch: ['#ECEFF7', '#B5179E', '#110C26', '#FF3D9A'] },
+]
+export const DEFAULT_PALETTE = 'labo'
+export const PALETTE_KEY = 'renfo:palette'
+
+export function normalizePalette(id) {
+  return PALETTES.some((p) => p.id === id) ? id : DEFAULT_PALETTE
+}
+
+export function applyPalette(id) {
+  const choix = normalizePalette(id)
+  if (typeof document === 'undefined' || !document.documentElement) return choix
+  const root = document.documentElement
+  // Le laboratoire est la palette de base de la feuille de style : il
+  // suffit de retirer l'attribut pour y revenir.
+  const valeur = choix === DEFAULT_PALETTE ? null : choix
+  if (root.dataset) {
+    if (valeur) root.dataset.palette = valeur
+    else delete root.dataset.palette
+  } else if (valeur && typeof root.setAttribute === 'function') {
+    root.setAttribute('data-palette', valeur)
+  } else if (!valeur && typeof root.removeAttribute === 'function') {
+    root.removeAttribute('data-palette')
+  }
   return choix
 }
 

@@ -220,8 +220,9 @@ export const buildDb = (rawPhys, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO
   // Conditions météo par jour, pour adapter la charge et relire
   // après coup dans quelles conditions une séance a été faite.
   weatherLog: physSrc.weatherLog || {},
-  // Thème choisi, pour le retrouver d'un appareil à l'autre.
+  // Apparence et palette choisies, pour les retrouver d'un appareil à l'autre.
   theme: physSrc.theme || null,
+  palette: physSrc.palette || null,
   streak: physSrc.streak || 0,
   sessionsTotal: physSrc.sessionsTotal || 0,
   minutesTotal: physSrc.minutesTotal || 0,
