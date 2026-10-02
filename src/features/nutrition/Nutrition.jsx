@@ -670,9 +670,9 @@ export function FoodTab({ db, store }) {
     try {
       // Tesseract pèse plusieurs mégaoctets : chargé seulement ici, au
       // moment où l'on s'en sert. L'image ne quitte pas l'appareil.
-      const { default: Tesseract } = await import('tesseract.js')
+      const { lireImage } = await import('../ocr')
       url = URL.createObjectURL(file)
-      const res = await Tesseract.recognize(url, 'fra+eng', {
+      const res = await lireImage(url, {
         logger: (m) => { if (m.status === 'recognizing text') setCap((c) => ({ ...c, progress: Math.round(m.progress * 100) })) },
       })
       const parsed = parseFoodText((res && res.data && res.data.text) || '')

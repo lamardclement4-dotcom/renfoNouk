@@ -1,4 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
+// Client réduit à l'authentification et aux tables (voir supabaseClient.js).
+import { creerClient } from './supabaseClient'
 
 // --- Client Supabase ---
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -8,9 +9,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('[Supabase] Variables d\'environnement manquantes (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: { persistSession: true, autoRefreshToken: true },
-})
+export const supabase = creerClient(supabaseUrl, supabaseAnonKey)
 
 // Une base locale Dexie (IndexedDB « renfo ») était déclarée ici, avec des
 // tables profil / séances / nutrition / sommeil / tests de mobilité. Plus

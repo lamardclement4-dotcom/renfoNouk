@@ -187,9 +187,9 @@ export default function CookbookSpace({ userId, onClose }) {
     let url
     try {
       // Moteur chargé seulement ici. L'image ne quitte pas l'appareil.
-      const { default: Tesseract } = await import('tesseract.js')
+      const { lireImage } = await import('../ocr')
       url = URL.createObjectURL(file)
-      const res = await Tesseract.recognize(url, 'fra+eng', {
+      const res = await lireImage(url, {
         logger: (m) => { if (m.status === 'recognizing text') setLecture((l) => ({ ...l, progress: Math.round(m.progress * 100) })) },
       })
       const txt = (res && res.data && res.data.text) || ''

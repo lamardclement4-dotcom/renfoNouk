@@ -117,10 +117,10 @@ a(mo(1024 * 1024) === 1, 'un mega-octet s affiche 1')
 const cfg = readFileSync('../../vite.config.js', 'utf8')
 const csp = cfg.slice(cfg.indexOf('const CSP'), cfg.indexOf('cspMeta'))
 
-for (const d of ["default-src 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "worker-src 'self' blob:"]) {
+for (const d of ["default-src 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "worker-src 'self'", "style-src 'self'"]) {
   a(csp.includes(d), `la politique pose ${d}`)
 }
-for (const host of ['https://*.open-meteo.com', 'https://cdn.jsdelivr.net']) {
+for (const host of ['https://*.open-meteo.com']) {
   a(csp.includes(host), `${host} est joignable`)
 }
 
@@ -154,6 +154,12 @@ a(!/\s\*[\s"]/.test(connect), 'connect-src ne contient aucun joker general')
 const script = (csp.match(/[`"]script-src[^`"]*[`"]/) || [''])[0]
 a(!script.includes("'unsafe-inline'"), 'script-src n autorise pas le script en ligne')
 a(!script.includes("'unsafe-eval'"), "script-src n autorise pas eval() — seul 'wasm-unsafe-eval' est la, pour l OCR")
+// Le moteur OCR est servi par le site : plus aucune origine tierce ni URL
+// blob pour du code, ni style en ligne, ni websocket.
+const cspCode = csp.replace(/\/\/.*$/gm, '')
+a(!/jsdelivr/.test(cspCode) && !/script-src[^;`"]*blob:/.test(cspCode), 'aucun CDN ni blob: pour le code')
+a(!/style-src[^;`"]*unsafe-inline/.test(cspCode), 'style-src n autorise pas les styles en ligne')
+a(!/wss:/.test(cspCode), 'aucune connexion websocket autorisee')
 a(script.includes("'wasm-unsafe-eval'"), 'mais WebAssembly reste compilable, sinon la lecture des captures tombe')
 
 // Posee au build seulement : en developpement elle bloquerait le

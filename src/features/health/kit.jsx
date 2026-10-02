@@ -400,7 +400,9 @@ export function FlowSpace({ title, subtitle, onClose, action, tint, children, fi
         React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 38, height: 38, background: C.surface, border: `1px solid ${C.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: '0 0 auto', color: C.ink } },
           React.createElement(Icon, { name: 'back', size: 18 })),
         React.createElement('div', { style: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', minHeight: 38 } }, action || null)),
-      React.createElement('h1', { style: { fontFamily: C.display, fontSize: 40, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em', lineHeight: .9, margin: 0, color: tint || C.ink, textWrap: 'balance' } }, title),
+      // Les titres d'écran restent à l'encre quel que soit le module : la
+      // teinte du module vit dans ses tracés et ses boutons, pas dans le titre.
+      React.createElement('h1', { style: { fontFamily: C.display, fontSize: 40, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em', lineHeight: .9, margin: 0, color: C.ink, textWrap: 'balance' } }, title),
       subtitle && React.createElement('p', { style: { fontSize: 13.5, color: C.ink2, margin: '8px 0 0', lineHeight: 1.45, maxWidth: '60ch' } }, subtitle),
       React.createElement('div', { style: { marginTop: 18 } }, children)))
 }

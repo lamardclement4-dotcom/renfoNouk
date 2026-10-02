@@ -1,5 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 // ============================================================
 // Politique de sécurité du contenu (CSP)
@@ -13,20 +15,18 @@ import react from '@vitejs/plugin-react'
 // arrivait à s'exécuter dans la page, il n'aurait aucune adresse vers
 // laquelle envoyer quoi que ce soit.
 //
-// Les autorisations inhabituelles, et pourquoi elles sont nécessaires :
-// - `blob:` et `cdn.jsdelivr.net` : tesseract.js (lecture des captures
-//   d'écran) télécharge depuis ce CDN son worker, son cœur WebAssembly et
-//   ses données de langue, puis exécute le worker via une URL blob.
+// Aucune origine tierce n'est autorisée pour du code : tout script vient
+// du site lui-même. Le moteur de lecture des captures (tesseract.js), qui
+// venait de cdn.jsdelivr.net — un CDN qui sert n'importe quel paquet npm,
+// donc n'importe quel code —, est désormais servi depuis /ocr/ (voir
+// servirOcr plus bas).
+//
+// Les autorisations restantes, et pourquoi :
 // - `wasm-unsafe-eval` : compilation du cœur WebAssembly de l'OCR. Cette
 //   directive n'autorise que WebAssembly, pas eval() sur du JavaScript.
-// - `style-src 'unsafe-inline'` : la feuille produite par Vite est servie
-//   depuis l'origine, mais les styles en ligne des composants passent par
-//   cette directive.
-//
-// Limite connue et assumée : `cdn.jsdelivr.net` sert n'importe quel paquet
-// npm, donc un point d'injection pourrait y charger du code. La resserrer
-// par chemin casserait l'OCR au premier changement de version, sans moyen
-// de s'en apercevoir. Le vrai remède serait d'embarquer le moteur.
+// - `connect-src blob:` : l'image à lire est passée au moteur sous forme
+//   d'URL blob locale ; elle ne quitte pas l'appareil.
+// - open-meteo.com : la météo du jour, pour pondérer la charge.
 //
 // `frame-ancestors` est absent volontairement : la directive est ignorée
 // dans une balise meta, elle n'a d'effet qu'en en-tête HTTP. GitHub Pages
@@ -35,12 +35,16 @@ import react from '@vitejs/plugin-react'
 // ============================================================
 const CSP_SOURCES = (supabase) => [
   "default-src 'self'",
-  "script-src 'self' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net",
-  "worker-src 'self' blob:",
-  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'wasm-unsafe-eval'",
+  "worker-src 'self'",
+  // Pas de 'unsafe-inline' : les styles des composants sont posés par
+  // React via le CSSOM (element.style), que la politique ne bloque pas ;
+  // seuls les <style> et attributs style écrits en dur le seraient, et
+  // l'app n'en a aucun. Une injection de CSS ne peut donc rien appliquer.
+  "style-src 'self'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  `connect-src 'self' blob: ${supabase} https://*.open-meteo.com https://cdn.jsdelivr.net`,
+  `connect-src 'self' blob: ${supabase} https://*.open-meteo.com`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -58,13 +62,15 @@ function supabaseSources(url) {
   try {
     const u = new URL(url)
     if (u.protocol !== 'https:') throw new Error('origine non https')
-    return `${u.origin} wss://${u.host}`
+    // Pas de wss:// : le temps réel de Supabase n'est plus embarqué
+    // (voir src/supabaseClient.js), aucune connexion websocket n'est ouverte.
+    return u.origin
   } catch {
     // Repli, jamais souhaitable en production : sans la variable, mieux vaut
     // une politique large qu'une application qui ne joint plus sa base. Le
     // build publié dispose du secret, ce message signale le cas contraire.
     console.warn('[csp] VITE_SUPABASE_URL absente ou invalide — connect-src retombe sur le joker *.supabase.co.')
-    return 'https://*.supabase.co wss://*.supabase.co'
+    return 'https://*.supabase.co'
   }
 }
 
@@ -84,6 +90,67 @@ const cspMeta = (csp) => ({
   }),
 })
 
+// Préchargement des polices du premier écran. Sans lui, le navigateur ne
+// découvre une police qu'après avoir lu la feuille de style puis rencontré
+// un texte qui l'utilise : le titre s'affiche d'abord dans la police de
+// secours, puis saute. Seules les trois graisses visibles dès l'écran de
+// connexion sont préchargées ; les autres viennent à la demande.
+const POLICES_PRECHARGEES = ['big-shoulders-display-latin-800-normal', 'martian-mono-latin-600-normal', 'instrument-sans-latin-400-normal']
+const prechargePolices = () => {
+  let base = '/'
+  return {
+    name: 'precharge-polices',
+    apply: 'build',
+    configResolved: (config) => { base = config.base },
+    transformIndexHtml: {
+      order: 'post',
+      handler: (html, ctx) => Object.keys(ctx.bundle || {})
+        .filter((f) => f.endsWith('.woff2') && POLICES_PRECHARGEES.some((m) => f.includes(m)))
+        .map((f) => ({ tag: 'link', attrs: { rel: 'preload', as: 'font', type: 'font/woff2', crossorigin: '', href: base + f }, injectTo: 'head' })),
+    },
+  }
+}
+
+// Moteur de lecture des captures servi par le site lui-même, depuis
+// /ocr/ : worker, cœur WebAssembly (trois variantes ; le moteur choisit
+// selon ce que le téléphone sait faire, une seule est téléchargée) et
+// données de langue. Les fichiers sont pris dans node_modules, aux
+// versions fixées par package-lock : rien de binaire dans le dépôt. Un
+// fichier absent fait échouer le build, plutôt qu'une lecture qui
+// casserait en silence chez l'utilisateur.
+const nm = (...p) => join(process.cwd(), 'node_modules', ...p)
+const FICHIERS_OCR = {
+  'worker.min.js': nm('tesseract.js', 'dist', 'worker.min.js'),
+  'tesseract-core-lstm.wasm.js': nm('tesseract.js-core', 'tesseract-core-lstm.wasm.js'),
+  'tesseract-core-simd-lstm.wasm.js': nm('tesseract.js-core', 'tesseract-core-simd-lstm.wasm.js'),
+  'tesseract-core-relaxedsimd-lstm.wasm.js': nm('tesseract.js-core', 'tesseract-core-relaxedsimd-lstm.wasm.js'),
+  'fra.traineddata.gz': nm('@tesseract.js-data', 'fra', '4.0.0_best_int', 'fra.traineddata.gz'),
+  'eng.traineddata.gz': nm('@tesseract.js-data', 'eng', '4.0.0_best_int', 'eng.traineddata.gz'),
+}
+const servirOcr = () => {
+  let base = '/'
+  return {
+    name: 'ocr-local',
+    configResolved: (config) => { base = config.base },
+    // En développement, les mêmes fichiers sont servis à la même adresse.
+    configureServer: (server) => {
+      server.middlewares.use((req, res, next) => {
+        const prefixe = base + 'ocr/'
+        if (!req.url || !req.url.startsWith(prefixe)) return next()
+        const chemin = FICHIERS_OCR[decodeURIComponent(req.url.slice(prefixe.length).split('?')[0])]
+        if (!chemin) return next()
+        res.setHeader('Content-Type', chemin.endsWith('.js') ? 'text/javascript' : 'application/octet-stream')
+        res.end(readFileSync(chemin))
+      })
+    },
+    generateBundle() {
+      for (const [nom, chemin] of Object.entries(FICHIERS_OCR)) {
+        this.emitFile({ type: 'asset', fileName: 'ocr/' + nom, source: readFileSync(chemin) })
+      }
+    },
+  }
+}
+
 // https://vite.dev/config/
 // base: obligatoire pour GitHub Pages, doit correspondre au nom du repo
 // (l'app est servie depuis https://<user>.github.io/renfoNouk/, pas la racine)
@@ -91,7 +158,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const csp = CSP_SOURCES(supabaseSources(env.VITE_SUPABASE_URL))
   return {
-    plugins: [react(), cspMeta(csp)],
+    plugins: [react(), cspMeta(csp), prechargePolices(), servirOcr()],
     base: '/renfoNouk/',
   }
 })

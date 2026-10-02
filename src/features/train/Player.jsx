@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { C, Icon, Ring } from '../health/kit'
 import { CATS, getSession, sessionExercises } from './trainData'
+import { EX_DETAILS } from './exDetails'
 import { MuscleMap, muscleGroups } from './MuscleMap'
 
 const SPORT_EMOJI = { mobilite: '🤸', renfo: '🏋️', fullbody: '💪', plyo: '⚡' }
@@ -26,7 +27,9 @@ function ExerciseDetailSheet({ ex, onClose }) {
 
 export default function Player({ id, blocks: customBlocks, title: customTitle, program, routines, onClose, onFinish, pulse = true }) {
   const s = customBlocks ? null : getSession(id, program, routines)
-  const blocks = useRef(customBlocks || sessionExercises(s)).current
+  // Les fiches détaillées vivent hors du catalogue (exDetails.js) : on les
+  // rattache ici, au seul endroit qui les affiche.
+  const blocks = useRef((customBlocks || sessionExercises(s)).map((b) => (b && !b.detail && EX_DETAILS[b.key] ? { ...b, detail: EX_DETAILS[b.key] } : b))).current
   const playerTitle = customTitle || (s && s.title) || 'Séance'
   const [i, setI] = useState(0)
   const [playing, setPlaying] = useState(true)

@@ -301,6 +301,27 @@ body {
 
 input, textarea, select, button { font-family: inherit; }
 
+/* Couleurs natives remises à la palette. Sans couleur explicite, Safari sur
+   iPhone écrit le texte des boutons en bleu système, et cases à cocher,
+   curseurs, sélection de texte et curseur de saisie sont bleus partout :
+   autant d'écritures bleues étrangères à la palette choisie. */
+button, input, textarea, select, a { color: inherit; }
+:root {
+  accent-color: var(--c-primary);
+  caret-color: var(--c-primary);
+  -webkit-tap-highlight-color: transparent;
+}
+::selection { background: color-mix(in srgb, var(--c-primary) 28%, transparent); color: inherit; }
+::placeholder { color: var(--c-ink3); opacity: 1; }
+/* Champs de saisie sans style propre : fond et filet de la palette plutôt
+   que le blanc et le cadre gris du système (les styles en ligne
+   l'emportent toujours sur ces valeurs par défaut). */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), textarea, select {
+  background-color: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: 0;
+}
+
 /* Liste réglée : un filet fin entre deux lignes, aucun aux extrémités. */
 .liste > * + * { border-top: 1px solid var(--c-line) !important; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {

@@ -103,11 +103,11 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
       if (file.type.startsWith('image/')) {
         const tooBig = imageTooLarge(file)
         if (tooBig) { setError(tooBig); setPhase('idle'); return }
-        // Tesseract pèse plusieurs mégaoctets : il n'est chargé qu'ici, au
-        // moment où on s'en sert. L'image ne quitte pas l'appareil.
-        const { default: Tesseract } = await import('tesseract.js')
+        // Le moteur n'est chargé qu'ici, servi par le site (voir ocr.js).
+        // L'image ne quitte pas l'appareil.
+        const { lireImage } = await import('../ocr')
         const url = URL.createObjectURL(file)
-        const res = await Tesseract.recognize(url, 'fra+eng', {
+        const res = await lireImage(url, {
           logger: (m) => { if (m.status === 'recognizing text') setProgress(Math.round(m.progress * 100)) },
         })
         URL.revokeObjectURL(url)

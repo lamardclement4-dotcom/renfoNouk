@@ -1,12 +1,19 @@
 import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
 import { supabase } from './lib'
-import AccueilSpace from './features/home/AccueilSpace'
 import { C, SyncBanner } from './features/health/kit'
 import { useNutritionStore, resetStore } from './features/nutrition/useNutritionStore'
 
-// Accueil est le seul espace chargé d'emblée : c'est celui qu'on voit en
-// ouvrant l'application. Les trois autres onglets ne sont téléchargés qu'au
-// moment où l'on s'y rend.
+// Les onglets ne sont téléchargés qu'au moment où l'on s'y rend. L'accueil
+// fait exception à moitié : c'est le premier écran après connexion, donc
+// son téléchargement part dès l'ouverture de l'app, en parallèle de la
+// vérification de session et du profil. Il n'alourdit plus pour autant le
+// fichier principal, que l'écran de connexion doit lire en entier avant de
+// s'afficher. Si ce premier essai échoue (réseau coupé), on retente au
+// moment où l'écran est réellement demandé.
+const chargerAccueil = () => import('./features/home/AccueilSpace')
+const accueilEnCours = chargerAccueil()
+accueilEnCours.catch(() => {})
+const AccueilSpace = lazy(() => accueilEnCours.catch(() => chargerAccueil()))
 //
 // Tout partait jusqu'ici dans un seul fichier : catalogues d'exercices,
 // table CIQUAL, analyses, écrans — il fallait tout télécharger et tout lire

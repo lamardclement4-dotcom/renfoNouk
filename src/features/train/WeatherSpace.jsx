@@ -103,9 +103,9 @@ export default function WeatherSpace({ db, store, onClose }) {
     setPhase('reading'); setProgress(0); setError(null)
     let url
     try {
-      const { default: Tesseract } = await import('tesseract.js')
+      const { lireImage } = await import('../ocr')
       url = URL.createObjectURL(file)
-      const res = await Tesseract.recognize(url, 'fra+eng', {
+      const res = await lireImage(url, {
         logger: (m) => { if (m.status === 'recognizing text') setProgress(Math.round(m.progress * 100)) },
       })
       const { values, rejected: rej } = parseWeatherText((res && res.data && res.data.text) || '')
