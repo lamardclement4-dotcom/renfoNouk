@@ -205,7 +205,7 @@ export default function WeightSpace({ db, store, onClose }) {
 
     // ─── Courbe ─────────────────────────────────────────────────
     h(Card, { style: { marginBottom: 12 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 12 } }, 'Évolution'),
+      h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 12 } }, 'Évolution'),
       h(SegPills, { options: RANGES, value: range, onChange: setRange, style: { marginBottom: 14 } }),
       h(Chart, { series: windowed, trend: windowedTrend, goal }),
       windowed.length >= 2 && h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 12, fontSize: 11.5, color: C.ink3 } },
@@ -216,7 +216,7 @@ export default function WeightSpace({ db, store, onClose }) {
 
     // ─── Repères ────────────────────────────────────────────────
     hasData && h(Card, { style: { marginBottom: 12 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 12 } }, 'Repères'),
+      h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 12 } }, 'Repères'),
       h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
         [
           { lab: 'Depuis le début', val: signed(a.totalDelta) + ' kg', col: a.totalDelta < 0 ? C.success : a.totalDelta > 0 ? C.danger : C.ink },
@@ -229,12 +229,12 @@ export default function WeightSpace({ db, store, onClose }) {
       a.bmi
         ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, padding: '11px 12px', borderRadius: C.radiusSm, background: C.surface2 } },
           h('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600, flex: 1 } }, 'IMC'),
-          h('span', { style: { fontFamily: C.font, fontSize: 16, fontWeight: 800 } }, a.bmi.value),
+          h('span', { style: { fontFamily: C.mono, fontSize: 14.1, fontWeight: 600, letterSpacing: '-.03em' } }, a.bmi.value),
           h('span', { style: { fontSize: 12, color: C.ink2, fontWeight: 600 } }, a.bmi.label))
         : h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 10 } }, 'Renseigne ta taille dans le profil pour afficher l’IMC.')),
 
     // ─── Plateau ────────────────────────────────────────────────
-    plateau && h(Card, { style: { marginBottom: 12, display: 'flex', gap: 12, background: `color-mix(in srgb, ${C.warn} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.warn} 26%, ${C.line})` } },
+    plateau && h(Card, { style: { marginBottom: 12, display: 'flex', gap: 12, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.warn}` } },
       h(Icon, { name: 'alert', size: 20, color: C.warn, style: { flexShrink: 0, marginTop: 2 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { fontWeight: 700, fontSize: 14.5 } }, 'Palier depuis ', plateau.weeks, ' semaines'),
@@ -245,7 +245,7 @@ export default function WeightSpace({ db, store, onClose }) {
     // La décomposition est le vrai signal : deux kilos perdus n'ont pas
     // le même sens selon qu'ils viennent du gras ou du muscle.
     rates && h(Card, { style: { marginBottom: 12 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 4 } }, 'Ce que tu perds vraiment'),
+      h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 4 } }, 'Ce que tu perds vraiment'),
       h('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 12 } }, 'Sur ', rates.count, ' mesures de composition'),
       h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 } },
         [
@@ -258,20 +258,20 @@ export default function WeightSpace({ db, store, onClose }) {
             h('div', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', marginTop: 3, color: col } }, m.to.toFixed(1), h('span', { style: { fontSize: 11, color: C.ink3, fontWeight: 600, marginLeft: 2 } }, 'kg')),
             h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 2 } }, signed(m.to - m.from), ' kg depuis le début'))
         })),
-      h('div', { style: { display: 'flex', gap: 9, padding: '10px 12px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${VERDICT_COLOR[rates.verdict.level] || C.ink2} 10%, ${C.surface})` } },
+      h('div', { style: { display: 'flex', gap: 9, padding: '10px 12px', borderRadius: C.radiusSm, background: C.surface, borderLeft: `3px solid ${VERDICT_COLOR[rates.verdict.level] || C.ink2}` } },
         h(Icon, { name: rates.verdict.level === 'ok' ? 'check' : 'alert', size: 15, color: VERDICT_COLOR[rates.verdict.level] || C.ink2, style: { flexShrink: 0, marginTop: 1 } }),
         h('span', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } }, rates.verdict.text))),
 
     // ─── Énergie ────────────────────────────────────────────────
     hasData && (balance != null || tdee) && h(Card, { style: { marginBottom: 12 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 12 } }, 'Énergie'),
+      h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 12 } }, 'Énergie'),
       balance != null && h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: C.radiusSm, background: C.surface2, marginBottom: 8 } },
         h('span', { style: { flex: 1, fontSize: 13, color: C.ink2, fontWeight: 600 } }, 'Balance implicite'),
-        h('span', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: balance < 0 ? C.success : balance > 0 ? C.calorie : C.ink } }, signed(balance, 0)),
+        h('span', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', color: balance < 0 ? C.success : balance > 0 ? C.calorie : C.ink } }, signed(balance, 0)),
         h('span', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, 'kcal/j')),
       tdee && !tdee.insufficient
         ? h(React.Fragment, null,
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.primary} 9%, ${C.surface})` } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: C.radiusSm, background: C.surface, borderLeft: `3px solid ${C.primary}` } },
             h('span', { style: { flex: 1, fontSize: 13, color: C.ink2, fontWeight: 600 } }, 'Ta dépense réelle'),
             h('span', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', color: C.primary } }, tdee.tdee),
             h('span', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, 'kcal/j')),
@@ -295,7 +295,7 @@ export default function WeightSpace({ db, store, onClose }) {
       const shown = METRICS.filter((m) => m.key !== 'kg' && last[m.key] != null)
       return h(Card, { style: { marginBottom: 12 } },
         h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 } },
-          h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16 } }, 'Composition corporelle'),
+          h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Composition corporelle'),
           h('span', { style: { fontSize: 11.5, color: C.ink3 } }, fmtShort(last.date))),
         shown.map((m, i) => {
           const before = prev && prev[m.key] != null ? prev[m.key] : null
@@ -306,7 +306,7 @@ export default function WeightSpace({ db, store, onClose }) {
           return h('div', { key: m.key, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
             h('span', { style: { flex: 1, fontSize: 13.5, color: C.ink2 } }, m.label),
             d != null && d !== 0 && h('span', { style: { fontSize: 12, fontWeight: 700, color: better ? C.success : C.danger } }, signed(d, m.decimals)),
-            h('span', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 800 } }, last[m.key].toFixed(m.decimals),
+            h('span', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em' } }, last[m.key].toFixed(m.decimals),
               m.unit && h('span', { style: { fontSize: 11, color: C.ink3, fontWeight: 600, marginLeft: 2 } }, m.unit)))
         }))
     })(),
@@ -314,7 +314,7 @@ export default function WeightSpace({ db, store, onClose }) {
     // ─── Mensurations ───────────────────────────────────────────
     lastGirths && h(Card, { style: { marginBottom: 12 } },
       h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 } },
-        h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16 } }, 'Mensurations'),
+        h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Mensurations'),
         h('span', { style: { fontSize: 11.5, color: C.ink3 } }, fmtShort(lastGirths.date))),
       GIRTHS.filter((g) => lastGirths[g.key] != null).map((g, i) => {
         const prev = a.series.filter((e) => e[g.key] != null && e.date < lastGirths.date).pop()
@@ -322,7 +322,7 @@ export default function WeightSpace({ db, store, onClose }) {
         return h('div', { key: g.key, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
           h('span', { style: { flex: 1, fontSize: 13.5, color: C.ink2 } }, g.label),
           d != null && d !== 0 && h('span', { style: { fontSize: 12, fontWeight: 700, color: d < 0 ? C.success : C.danger } }, signed(d)),
-          h('span', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 800 } }, lastGirths[g.key].toFixed(1),
+          h('span', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em' } }, lastGirths[g.key].toFixed(1),
             h('span', { style: { fontSize: 11, color: C.ink3, fontWeight: 600, marginLeft: 2 } }, 'cm')))
       })),
 
@@ -341,7 +341,7 @@ export default function WeightSpace({ db, store, onClose }) {
 
     // ─── Historique ─────────────────────────────────────────────
     hasData && h(Card, null,
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 4 } }, 'Historique'),
+      h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 4 } }, 'Historique'),
       h('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 8 } }, 'Touche une ligne pour corriger ou supprimer.'),
       a.series.slice().reverse().slice(0, 40).map((e, i, arr) => {
         const before = arr[i + 1]
@@ -353,7 +353,7 @@ export default function WeightSpace({ db, store, onClose }) {
         },
           h('span', { style: { flex: 1, fontSize: 13.5, color: C.ink2 } }, fmtShort(e.date)),
           d != null && h('span', { style: { fontSize: 12, fontWeight: 700, color: d < 0 ? C.success : d > 0 ? C.danger : C.ink3 } }, signed(d)),
-          h('span', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 800, minWidth: 58, textAlign: 'right' } }, e.kg.toFixed(1),
+          h('span', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em', minWidth: 58, textAlign: 'right' } }, e.kg.toFixed(1),
             h('span', { style: { fontSize: 11, color: C.ink3, fontWeight: 600, marginLeft: 2 } }, 'kg')))
       })),
 

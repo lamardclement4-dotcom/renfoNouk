@@ -76,6 +76,10 @@ for (const f of fichiers) {
   if (/boxShadow: ?[`'](?!none)/.test(s)) fautes.push(court + ' : ombre')
   if (/(linear|radial)-gradient/.test(s)) fautes.push(court + ' : degrade')
   if (!/Player\.jsx|MuscleMap\.jsx/.test(court) && /['"]#fff(fff)?['"]/.test(s)) fautes.push(court + ' : blanc fixe (illisible sur un aplat vif en sombre)')
+  // Fond pastel : une teinte diluee a moins de 20 % sur la surface. Seuls les
+  // etats conditionnels (selection sans autre indice visuel) y ont droit.
+  for (const m of s.matchAll(/(\?\s*)?background: ?[`']color-mix\(in srgb, ?[^%]{1,40}? (\d+)%, ?(?:\$\{(?:C\.)?(?:surface|SURFACE)\w*\}|var\(--c-surface\w*\)|' \+ [\w.]+ \+ ')/g))
+    if (!m[1] && Number(m[2]) <= 20) fautes.push(court + ' : fond pastel ' + m[2] + ' %')
 }
 a(!fautes.length, 'aucune pilule, ombre, degrade ni blanc fixe dans les ecrans' + (fautes.length ? ' :\n   ' + fautes.join('\n   ') : ''))
 const player = readFileSync(join(SRC, 'features/train/Player.jsx'), 'utf8')

@@ -249,7 +249,7 @@ export default function ProgressSpace({ userId, onClose }) {
     }),
     weakZones.length > 0 ? h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, margin: '2px 2px 10px' } },
       h('span', { style: { fontSize: 12.5, color: C.ink3, fontWeight: 600, alignSelf: 'center' } }, 'À travailler :'),
-      weakZones.map((z, i) => h('span', { key: i, style: { fontSize: 12.5, fontWeight: 600, padding: '4px 10px', borderRadius: 'var(--r-pill)', background: 'color-mix(in srgb, var(--ch1) 14%, ' + C.surface + ')', color: 'var(--ch1)', border: '1px solid color-mix(in srgb, var(--ch1) 30%, ' + C.line + ')' } }, z))) : null)
+      weakZones.map((z, i) => h('span', { key: i, style: { fontSize: 12.5, fontWeight: 600, padding: '4px 10px', borderRadius: 'var(--r-pill)', background: 'transparent', color: 'var(--ch1)', border: `1px solid var(--ch1)` } }, z))) : null)
 
   // ── Évolution mobilité ──
   // Seul le score global était tracé. Il peut rester plat pendant qu'une
@@ -281,7 +281,7 @@ export default function ProgressSpace({ userId, onClose }) {
             : h('span', { style: { flex: '0 0 auto', width: 8 } }),
           z.stuck ? h('span', { style: { fontSize: 10, fontWeight: 700, color: 'var(--c-danger)', flex: '0 0 auto' } }, 'bloquée') : null))),
 
-      mAna.corroboration.length ? h('div', { style: { background: `color-mix(in srgb, var(--c-danger) 8%, ${C.surface})`, border: '1px solid color-mix(in srgb, var(--c-danger) 26%, ' + C.line + ')', borderRadius: C.radiusSm, padding: '14px 15px', marginBottom: 10 } },
+      mAna.corroboration.length ? h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '14px 15px', marginBottom: 10, borderLeft: `3px solid var(--c-danger)` } },
         h('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Confirmé par plusieurs sources'),
         mAna.corroboration.map((c) => h('div', { key: c.id, style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: 4 } },
           h('strong', null, c.label), ' — ', c.sources.join(', ')))) : null,
@@ -373,13 +373,13 @@ export default function ProgressSpace({ userId, onClose }) {
         sectionTitle('Records personnels', voirTout),
         h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden', marginBottom: 10 } },
           ts.perche ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderBottom: ts.records.length ? `1px solid ${C.line}` : 'none' } },
-            h('div', { style: { width: 34, height: 34, borderRadius: 0, flex: '0 0 auto', background: 'color-mix(in srgb,var(--ch4) 14%,' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'bolt', size: 17, color: 'var(--ch4)' })),
+            h('div', { style: { width: 34, height: 34, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: '1.5px solid var(--ch4)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'bolt', size: 17, color: 'var(--ch4)' })),
             h('div', { style: { flex: 1, fontSize: 14, fontWeight: 600 } }, 'Saut à la perche'),
-            h('div', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: 'var(--ch4)' } }, ts.perche, h('span', { style: { fontSize: 12, fontWeight: 600, marginLeft: 1 } }, 'm'))) : null,
+            h('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', color: 'var(--ch4)' } }, ts.perche, h('span', { style: { fontSize: 12, fontWeight: 600, marginLeft: 1 } }, 'm'))) : null,
           ts.records.map((r, i) => h('div', { key: r.name, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderTop: i || ts.perche ? `1px solid ${C.line}` : 'none' } },
-            h('div', { style: { width: 34, height: 34, borderRadius: 0, flex: '0 0 auto', background: `color-mix(in srgb,${C.primary} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'dumbbell', size: 16, color: C.primary })),
+            h('div', { style: { width: 34, height: 34, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h(Icon, { name: 'dumbbell', size: 16, color: C.primary })),
             h('div', { style: { flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, r.name),
-            h('div', { style: { fontFamily: C.font, fontSize: 16, fontWeight: 800, color: C.primary, flex: '0 0 auto' } }, r.charge, h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 1 } }, 'kg'))))))
+            h('div', { style: { fontFamily: C.mono, fontSize: 14.1, fontWeight: 600, letterSpacing: '-.03em', color: C.primary, flex: '0 0 auto' } }, r.charge, h('span', { style: { fontSize: 11.5, fontWeight: 600, marginLeft: 1 } }, 'kg'))))))
     } else {
       recordsBlock = h('div', null,
         sectionTitle('Records personnels', voirTout),
@@ -484,7 +484,7 @@ export default function ProgressSpace({ userId, onClose }) {
       sectionTitle('Tests physiques', h('button', { onClick: () => setFlow('tests'), style: { fontSize: 13, fontWeight: 600, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Voir tout')),
       tAna.profile ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
         h(Ring, { size: 62, stroke: 7, progress: tAna.profile.score / 100, color: TC },
-          h('span', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: TC } }, tAna.profile.score)),
+          h('span', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', color: TC } }, tAna.profile.score)),
         h('div', { style: { flex: 1, minWidth: 0 } },
           h('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink } }, 'Profil physique'),
           h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.45 } },
@@ -495,7 +495,7 @@ export default function ProgressSpace({ userId, onClose }) {
           const ch = it.change
           const fr = it.freshness
           return h('div', { key: it.testId, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderTop: i ? `1px solid ${C.line}` : 'none' } },
-            h('div', { style: { width: 34, height: 34, borderRadius: 0, flex: '0 0 auto', background: `color-mix(in srgb,${TC} 14%,${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+            h('div', { style: { width: 34, height: 34, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${TC}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
               h(Icon, { name: 'chart', size: 16, color: TC })),
             h('div', { style: { flex: 1, minWidth: 0 } },
               h('div', { style: { fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.label),
@@ -522,18 +522,18 @@ export default function ProgressSpace({ userId, onClose }) {
   // Le grand titre est rendu par FlowSpace : on enchaîne directement sur
   // les deux cartes de tête (volume de la semaine, série en cours).
   return h(FlowSpace, { title: 'Tes progrès', onClose, fixed: false, bg: 'progres' },
-    // Carte d'en-tête d'origine : l'anneau de série sur aplat terracotta,
-    // le compte de jours en grand et le record dessous. Le volume de la
+    // En-tête : le cadran de série sur une étiquette à filet de tracé, le
+    // compte de jours en grand et le record dessous. Le volume de la
     // semaine et l'objectif de séances restent lisibles juste en dessous,
     // sur la ligne du sélecteur de semaine.
-    h('div', { style: { position: 'relative', minHeight: 150, padding: 22, borderRadius: C.radius, background: C.primary, marginBottom: 18, boxShadow: 'none' } },
+    h('div', { style: { position: 'relative', minHeight: 150, padding: 22, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${C.primary}`, marginBottom: 18, boxShadow: 'none' } },
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 18 } },
-        h(Ring, { size: 92, stroke: 9, progress: Math.min(1, streak / 14), color: 'var(--c-on-fill)', track: 'color-mix(in srgb, var(--c-on-fill) 25%, transparent)' },
-          h(Icon, { name: 'flame', size: 30, color: 'var(--c-on-fill)' })),
+        h(Ring, { size: 92, stroke: 9, progress: Math.min(1, streak / 14), color: C.primary, track: C.surface2 },
+          h(Icon, { name: 'flame', size: 30, color: C.primary })),
         h('div', null,
-          h('div', { style: { fontFamily: C.mono, fontSize: 34, fontWeight: 600, letterSpacing: '-.03em', color: 'var(--c-on-fill)', lineHeight: 1 } }, streak),
-          h('div', { style: { color: 'color-mix(in srgb, var(--c-on-fill) 88%, transparent)', fontSize: 15, fontWeight: 600 } }, 'jours de suite 🔥'),
-          h('div', { style: { color: 'color-mix(in srgb, var(--c-on-fill) 70%, transparent)', fontSize: 13, marginTop: 2 } }, 'Record : ', db.record, ' jours')))),
+          h('div', { style: { fontFamily: C.mono, fontSize: 34, fontWeight: 600, letterSpacing: '-.03em', color: C.primary, lineHeight: 1 } }, streak),
+          h('div', { style: { color: C.ink2, fontSize: 15, fontWeight: 600 } }, 'jours de suite 🔥'),
+          h('div', { style: { color: C.ink3, fontSize: 13, marginTop: 2 } }, 'Record : ', db.record, ' jours')))),
 
     h(WeightCard, { db, onOpen: () => setFlow('weight') }),
     h(PeakHomeCard, { db, onPeak: () => setFlow('peak') }),
@@ -614,7 +614,7 @@ export default function ProgressSpace({ userId, onClose }) {
           return h('div', { key: p.id, style: { padding: '11px 14px', borderTop: `1px solid ${C.line}` } },
             h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 } },
               h('span', { style: { flex: 1, fontSize: 13, fontWeight: 700 } }, p.label),
-              h('span', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 800, color: col } }, p.value),
+              h('span', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em', color: col } }, p.value),
               p.unit ? h('span', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, p.unit) : null),
             p.detail ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 4 } }, p.detail) : null,
             h('div', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.5 } }, p.why))
@@ -624,7 +624,7 @@ export default function ProgressSpace({ userId, onClose }) {
       // n'aboutit à rien se lit une fois.
       story.takeaway && story.takeaway.text ? (() => {
         const col = story.takeaway.level === 'warn' ? C.warn : story.takeaway.level === 'ok' ? C.success : C.primary
-        return h('div', { style: { padding: '12px 14px', borderRadius: C.radiusSm, marginBottom: 14, background: `color-mix(in srgb, ${col} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${col} 28%, ${C.line})` } },
+        return h('div', { style: { padding: '12px 14px', borderRadius: C.radiusSm, marginBottom: 14, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${col}` } },
           h('div', { style: { fontFamily: C.display, fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: col, marginBottom: 5 } }, 'À retenir'),
           h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5 } }, story.takeaway.text))
       })() : null,
@@ -674,7 +674,7 @@ export default function ProgressSpace({ userId, onClose }) {
             c: story.planFit.pct == null ? C.ink3 : story.planFit.pct >= 80 ? C.success : C.warn },
           { v: String(story.consistency.rest), l: 'jours off' },
         ].map((x, i) => h('div', { key: i, style: { flex: 1, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '11px 8px', textAlign: 'center' } },
-          h('div', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800, color: x.c || C.ink } }, x.v),
+          h('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', color: x.c || C.ink } }, x.v),
           h('div', { style: { fontSize: 10, color: C.ink3, marginTop: 2, fontWeight: 600 } }, x.l)))) : null,
       h('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-end', height: 96, marginBottom: 14 } },
         selectedWeek.map((m, k) => {
@@ -721,7 +721,7 @@ export default function ProgressSpace({ userId, onClose }) {
 
     // Tendance sur 8 semaines — pour voir la progression d'un coup d'œil.
     h('div', { style: { background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, padding: 20, marginBottom: 14 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 12 } }, 'Tendance'),
+      h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 12 } }, 'Tendance'),
       h(SegPills, {
         options: [{ id: 4, label: '1 mois' }, { id: 8, label: '2 mois' }, { id: 12, label: '3 mois' }, { id: 26, label: '6 mois' }],
         value: trendRange,

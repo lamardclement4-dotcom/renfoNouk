@@ -113,7 +113,7 @@ function RoutineTab({ db, store }) {
           const active = Math.abs(idealRounded - t) < 0.05
           return React.createElement('button', { key: t, onClick: () => applyTarget(t), style: { flex: 1, padding: '9px 0', borderRadius: 0, fontWeight: 700, fontSize: 12.5, border: '1.5px solid ' + (active ? SLEEP_COL : C.line), background: active ? SLEEP_COL : C.surface, color: active ? 'var(--c-on-fill)' : C.ink2, cursor: 'pointer' } }, lab)
         }))),
-    React.createElement('div', { style: { borderRadius: 0, padding: '16px 18px', marginBottom: 14, background: `color-mix(in srgb, ${SLEEP_COL} 12%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${SLEEP_COL} 30%, ${C.line})` } },
+    React.createElement('div', { style: { borderRadius: 0, padding: '16px 18px', marginBottom: 14, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${SLEEP_COL}` } },
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Temps de sommeil idéal'),
       React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 12 } },
         React.createElement('div', { style: { fontFamily: C.mono, fontSize: 26, fontWeight: 600, letterSpacing: '-.03em', color: SLEEP_COL, lineHeight: 1 } }, Math.floor(idealRounded) + ' h' + (Math.round((idealRounded % 1) * 60) ? ' ' + Math.round((idealRounded % 1) * 60) : '')),
@@ -142,7 +142,7 @@ function AnaRow({ label, value, hint, color }) {
   return React.createElement('div', { style: { padding: '11px 0', borderBottom: `1px solid ${C.line}` } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 } },
       React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: C.ink2 } }, label),
-      React.createElement('div', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 800, color: color || C.ink, flex: '0 0 auto' } }, value)),
+      React.createElement('div', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em', color: color || C.ink, flex: '0 0 auto' } }, value)),
     hint ? React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 4, lineHeight: 1.45 } }, hint) : null)
 }
 
@@ -238,7 +238,7 @@ function HistoryTab({ db, store }) {
         })),
       React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6 } }, 'Zone foncée = dans la fenêtre recommandée (7–9 h)')),
     React.createElement('div', { style: { display: 'flex', gap: 12, marginBottom: 14 } },
-      React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: `color-mix(in srgb, ${debtColor} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${debtColor} 28%, ${C.line})` } },
+      React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${debtColor}` } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, 'Dette de sommeil'),
         React.createElement('div', { style: { fontFamily: C.mono, fontSize: 19, fontWeight: 600, letterSpacing: '-.03em', color: debtColor } }, debtLabel),
         React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3 } }, '14 j · ' + debtLevel + ' · besoin ' + need + ' h')),
@@ -247,7 +247,7 @@ function HistoryTab({ db, store }) {
         React.createElement('div', { style: { fontFamily: C.mono, fontSize: 19, fontWeight: 600, letterSpacing: '-.03em', color: C.ink } }, avgEff + ' %'),
         React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3 } }, 'Basée sur les réveils'))),
     React.createElement('div', { style: { display: 'flex', gap: 12, marginBottom: 18 } },
-      React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: `color-mix(in srgb, ${SLEEP_COL} 12%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${SLEEP_COL} 30%, ${C.line})` } },
+      React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${SLEEP_COL}` } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, 'Moyenne durée'),
         React.createElement('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', color: SLEEP_COL } }, Math.floor(avgH) + ' h' + (Math.round((avgH % 1) * 60) ? ' ' + Math.round((avgH % 1) * 60) : ''))),
       React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}` } },
@@ -262,7 +262,7 @@ function HistoryTab({ db, store }) {
           React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, fontWeight: 600, flex: 1 } }, fmtDay(d)),
           React.createElement('div', { style: { fontSize: 13, color: C.ink3, flex: '0 0 auto', marginRight: 14 } }, aw > 0 ? aw + '× réveil' + (aw > 1 ? 's' : '') : ''),
           e.quality ? React.createElement('div', { style: { fontSize: 12.5, color: SLEEP_COL, flex: '0 0 auto', marginRight: 14, fontWeight: 700 } }, '★' + e.quality) : React.createElement('div', { style: { flex: '0 0 auto', marginRight: 14 } }),
-          React.createElement('div', { style: { fontFamily: C.font, fontWeight: 800, fontSize: 16, color: C.ink, flex: '0 0 auto', minWidth: 48, textAlign: 'right' } }, hLab))
+          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 14.1, fontWeight: 600, letterSpacing: '-.03em', color: C.ink, flex: '0 0 auto', minWidth: 48, textAlign: 'right' } }, hLab))
       })),
     React.createElement('button', { onClick: () => store.set({ sleepLog: {} }), style: { width: '100%', marginTop: 16, padding: 11, borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 700, border: `1.5px solid ${C.line}`, background: 'transparent', color: C.ink3, cursor: 'pointer' } }, 'Effacer l’historique'))
 }

@@ -124,7 +124,8 @@ export const MODULE_TINTS = {
   nutrition: 'var(--c-carb)',
   hydratation: 'var(--m-hydra)',
   sommeil: 'var(--m-sleep)',
-  prevention: 'var(--c-ink2)',
+  // L'encre : un aplat gris terne se lisait comme un bouton désactivé.
+  prevention: 'var(--c-ink)',
   cycle: 'var(--m-cycle)',
   esprit: 'var(--m-mind)',
   complements: 'var(--c-warn)',
@@ -512,7 +513,7 @@ export function Choice({ tint = C.primary, value, set, options, multi }) {
       return React.createElement('button', { key: o.id, type: 'button', 'aria-pressed': active, onClick: () => set(o.id),
         style: { padding: '9px 12px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
           border: `1.5px solid ${active ? tint : C.line}`,
-          background: active ? `color-mix(in srgb, ${tint} 12%, ${C.surface})` : C.surface,
+          background: C.surface,
           color: active ? C.ink : C.ink2 } }, o.lab)
     }))
 }
@@ -548,7 +549,7 @@ export function SyncBanner({ sync, onRetry }) {
       zIndex: 90, maxWidth: 436, margin: '0 auto',
       display: 'flex', alignItems: 'center', gap: 10,
       padding: '11px 14px', borderRadius: C.radiusSm,
-      background: `color-mix(in srgb, ${tint} 14%, ${C.surface})`,
+      background: C.surface,
       border: `1px solid color-mix(in srgb, ${tint} 40%, ${C.line})`,
       borderLeft: `3px solid ${tint}`,
       fontFamily: C.font,

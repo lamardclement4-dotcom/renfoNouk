@@ -19,8 +19,8 @@ function Card({ s, idx, tagText, done, onToggle, onOpen }) {
   const cat = CATS[s.cat] || { tint: C.primary }
   const isDone = !!done
   return React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: C.radiusSm, background: C.surface, border: '1.5px solid ' + (isDone ? `color-mix(in srgb, ${C.primary} 35%, ${C.line})` : C.line) } },
-    React.createElement('button', { onClick: onToggle, 'aria-label': isDone ? 'Fait, toucher pour annuler' : 'Marquer comme fait', style: { width: 48, height: 48, borderRadius: 0, flex: '0 0 auto', background: isDone ? C.primary : `color-mix(in srgb, ${cat.tint} 15%, ${C.surface})`, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
-      isDone ? React.createElement(Icon, { name: 'check', size: 22, color: 'var(--c-on-fill)' }) : React.createElement('span', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 17, color: cat.tint } }, idx)),
+    React.createElement('button', { onClick: onToggle, 'aria-label': isDone ? 'Fait, toucher pour annuler' : 'Marquer comme fait', style: { width: 48, height: 48, borderRadius: 0, flex: '0 0 auto', background: isDone ? C.primary : 'transparent', border: `1.5px solid ${isDone ? C.primary : cat.tint}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
+      isDone ? React.createElement(Icon, { name: 'check', size: 22, color: 'var(--c-on-fill)' }) : React.createElement('span', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', color: cat.tint } }, idx)),
     React.createElement('button', { onClick: onOpen, style: { flex: 1, minWidth: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', cursor: 'pointer' } },
       React.createElement('div', { style: { flex: 1, minWidth: 0 } },
         tagText && React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: cat.tint, marginBottom: 2 } }, tagText),
@@ -37,7 +37,7 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
   if (!prog) {
     return React.createElement(FlowSpace, { bg: 'entrainer', title: 'Mon programme', onClose },
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', minHeight: '55vh' } },
-        React.createElement('div', { style: { width: 88, height: 88, borderRadius: 'var(--r-pill)', background: `color-mix(in srgb, ${C.primary} 13%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' } },
+        React.createElement('div', { style: { width: 88, height: 88, borderRadius: 0, background: 'transparent', border: `1.5px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' } },
           React.createElement(Icon, { name: 'route', size: 40, color: C.primary })),
         React.createElement('h1', { style: { fontFamily: C.display, fontSize: 26, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, 'Pas encore de programme'),
         React.createElement('p', { style: { color: C.ink2, fontSize: 14.5, lineHeight: 1.5, marginTop: 12, maxWidth: 300, marginInline: 'auto' } }, 'Fais le test de mobilité : on génère des séances ciblées sur tes points faibles.'),
@@ -68,10 +68,10 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
     action: React.createElement('button', { onClick: onMobility, 'aria-label': 'Refaire le test', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } },
       React.createElement(Icon, { name: 'target', size: 18 })),
   },
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.primary, color: 'var(--c-on-fill)', marginBottom: 18 } },
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${C.primary}`, marginBottom: 18 } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 16 } },
-        React.createElement(Ring, { size: 74, stroke: 8, progress: pct / 100, color: 'var(--c-on-fill)', track: 'color-mix(in srgb, var(--c-on-fill) 25%, transparent)' },
-          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', color: 'var(--c-on-fill)' } }, pct, '%')),
+        React.createElement(Ring, { size: 74, stroke: 8, progress: pct / 100, color: C.primary, track: C.surface2 },
+          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', color: C.primary } }, pct, '%')),
         React.createElement('div', null,
           React.createElement('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.1 } }, 'Programme mobilité'),
           React.createElement('div', { style: { fontSize: 13, opacity: 0.9, marginTop: 4 } }, doneCount, '/', total, ' séances · score mobilité ', prog.score, '/100')))),
@@ -111,7 +111,7 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
     sheet && React.createElement(Sheet, { title: 'Mon sport', sub: 'Choisis une ou plusieurs disciplines', onClose: () => setSheet(false) },
       SPORTS.map((sp) => {
         const on = sports.includes(sp.id)
-        return React.createElement('button', { key: sp.id, onClick: () => toggleSport(sp.id), style: { display: 'flex', alignItems: 'center', gap: 12, padding: '11px 13px', borderRadius: C.radiusSm, textAlign: 'left', border: '1.5px solid ' + (on ? C.primary : C.line), background: on ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : C.surface, cursor: 'pointer' } },
+        return React.createElement('button', { key: sp.id, onClick: () => toggleSport(sp.id), style: { display: 'flex', alignItems: 'center', gap: 12, padding: '11px 13px', borderRadius: C.radiusSm, textAlign: 'left', border: '1.5px solid ' + (on ? C.primary : C.line), background: C.surface, cursor: 'pointer' } },
           React.createElement(Icon, { name: sp.ic || 'bolt', size: 18, color: on ? C.primary : C.ink3, style: { flex: '0 0 auto' } }),
           React.createElement('div', { style: { flex: 1, minWidth: 0 } },
             React.createElement('div', { style: { fontWeight: 600, fontSize: 14.5, color: on ? C.primary : C.ink } }, sp.label),
@@ -123,7 +123,7 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
       RENFO_GOAL_ORDER.map((gid) => {
         const g = RENFO_GOALS[gid]
         const on = renfoGoalId === gid
-        return React.createElement('button', { key: gid, onClick: () => setRenfoGoal(gid), style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: C.radiusSm, textAlign: 'left', border: '1.5px solid ' + (on ? g.tint : C.line), background: on ? `color-mix(in srgb, ${g.tint} 10%, ${C.surface})` : C.surface, cursor: 'pointer' } },
+        return React.createElement('button', { key: gid, onClick: () => setRenfoGoal(gid), style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: C.radiusSm, textAlign: 'left', border: '1.5px solid ' + (on ? g.tint : C.line), background: C.surface, cursor: 'pointer' } },
           React.createElement(Icon, { name: g.icon, size: 18, color: on ? g.tint : C.ink3, style: { flex: '0 0 auto' } }),
           React.createElement('div', { style: { flex: 1, minWidth: 0 } },
             React.createElement('div', { style: { fontWeight: 700, fontSize: 14.5, color: on ? g.tint : C.ink } }, g.label),

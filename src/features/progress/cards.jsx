@@ -50,7 +50,7 @@ export function HealthScoreCard({ db, onAction }) {
           onClick: onAction ? () => onAction(PILLAR_ACTION[p.id] || p.id) : undefined,
           style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: onAction ? 'pointer' : 'default' },
         },
-          h('div', { style: { width: '100%', height: 36, borderRadius: 0, background: isSleep && !active ? `color-mix(in srgb, var(--ch4) 12%, ${C.surface2})` : C.surface2, position: 'relative', overflow: 'hidden', border: isSleep ? `1px solid color-mix(in srgb, var(--ch4) 30%, ${C.line})` : 'none' } },
+          h('div', { style: { width: '100%', height: 36, borderRadius: 0, background: C.surface2, position: 'relative', overflow: 'hidden', border: isSleep ? `1px solid color-mix(in srgb, var(--ch4) 30%, ${C.line})` : 'none' } },
             h('div', { style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: pct + '%', background: active ? `color-mix(in srgb, ${col} 80%, transparent)` : C.surface2, borderRadius: 0, transition: 'height .4s ease' } }),
             isSleep && !active && h('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: 'var(--ch4)', fontWeight: 700 } }, '+')),
           h(Icon, { name: PILLAR_IC[p.id] || 'target', size: 13, color: isSleep && !active ? 'var(--ch4)' : (active ? col : C.ink3) }),
@@ -64,7 +64,7 @@ export function HealthScoreCard({ db, onAction }) {
         return h(clickable ? 'button' : 'div', {
           key: i,
           onClick: clickable ? () => onAction(r.action) : undefined,
-          style: { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', borderRadius: C.radiusXs, background: `color-mix(in srgb, ${col} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${col} 25%, ${C.line})`, width: '100%', textAlign: 'left', cursor: clickable ? 'pointer' : 'default' },
+          style: { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 11px', borderRadius: C.radiusXs, background: C.surface, border: `1px solid ${C.line}`, width: '100%', textAlign: 'left', cursor: clickable ? 'pointer' : 'default', borderLeft: `3px solid ${col}` },
         },
           h(Icon, { name: r.icon || 'target', size: 14, color: col, style: { flexShrink: 0, marginTop: 1 } }),
           h('span', { style: { fontSize: 12.5, color: C.ink, lineHeight: 1.4, flex: 1 } }, r.text),
@@ -85,7 +85,7 @@ export function PeakHomeCard({ db, onPeak }) {
 
   return h('button', {
     onClick: onPeak,
-    style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: C.radiusSm, marginBottom: 16, cursor: 'pointer', background: `color-mix(in srgb, ${tint} 10%, ${C.surface})`, border: `1.5px solid color-mix(in srgb, ${tint} 28%, ${C.line})` },
+    style: { display: 'flex', alignItems: 'center', gap: 13, width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: C.radiusSm, marginBottom: 16, cursor: 'pointer', background: C.surface, border: `1.5px solid color-mix(in srgb, ${tint} 28%, ${C.line})`, borderLeft: `3px solid ${tint}` },
   },
     h('div', { style: { width: 46, height: 46, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${tint}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
       h('div', { style: { fontSize: 12.5, fontWeight: 800, color: tint } }, countdown)),

@@ -34,9 +34,9 @@ export default function MobilityCatalog({ onClose, onOpenSession }) {
   }
 
   return React.createElement(FlowSpace, { bg: 'entrainer', title: 'Mobilité & étirements', onClose },
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: 'var(--ch2)', color: 'var(--c-on-fill)', marginBottom: 16 } },
-      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
-        React.createElement(Icon, { name: 'wave', size: 24, color: 'var(--c-on-fill)' })),
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid var(--ch2)`, marginBottom: 16 } },
+      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'transparent', border: `1.5px solid var(--ch2)`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
+        React.createElement(Icon, { name: 'wave', size: 24, color: 'var(--ch2)' })),
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 22, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.1 } }, 'Bouge mieux, sans douleur'),
       React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, all.length + ' routines groupées par zone du corps.')),
 
@@ -61,7 +61,7 @@ export default function MobilityCatalog({ onClose, onOpenSession }) {
               React.createElement('div', { style: { flex: 1, textAlign: 'left', minWidth: 0 } },
                 React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
                   React.createElement('div', { style: { fontFamily: C.font, fontWeight: 600, fontSize: 15 } }, s.title),
-                  isEtir && React.createElement('span', { style: { fontFamily: C.display, fontSize: 12.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'color-mix(in srgb, var(--c-success) 14%, ' + C.surface + ')', color: C.success } }, 'Étir.')),
+                  isEtir && React.createElement('span', { style: { fontFamily: C.display, fontSize: 12.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'transparent', color: C.success, border: `1px solid var(--c-success)` } }, 'Étir.')),
                 React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 4 } }, mins, ' min · ', nbMvts, ' mvts · ', s.level)),
               React.createElement(Icon, { name: 'arrow', size: 16, color: C.ink3, style: { flexShrink: 0, marginTop: 4 } }))
           })))

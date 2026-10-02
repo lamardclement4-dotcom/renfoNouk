@@ -90,7 +90,7 @@ export default function ScaleImport({ onSave, onClose, defaultDate }) {
       h('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center' } }, 'Importer une capture'),
       h('p', { style: { fontSize: 13.5, color: C.ink2, textAlign: 'center', margin: '8px 0 18px', lineHeight: 1.5 } },
         'Choisis la capture d’écran de ton application de balance. La lecture se fait sur ton téléphone : l’image n’est envoyée nulle part.'),
-      error && h('div', { style: { display: 'flex', gap: 9, padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.danger} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.danger} 28%, ${C.line})`, marginBottom: 14 } },
+      error && h('div', { style: { display: 'flex', gap: 9, padding: '11px 13px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, marginBottom: 14, borderLeft: `3px solid ${C.danger}` } },
         h(Icon, { name: 'alert', size: 16, color: C.danger, style: { flexShrink: 0, marginTop: 1 } }),
         h('span', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } }, error)),
       h('label', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '26px 18px', borderRadius: C.radius, border: `1.5px dashed ${C.line}`, background: C.surface2, cursor: 'pointer' } },
@@ -119,7 +119,7 @@ export default function ScaleImport({ onSave, onClose, defaultDate }) {
 
     error && h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45, padding: '11px 13px', borderRadius: C.radiusSm, background: C.surface2, marginBottom: 14 } }, error),
 
-    warns.map((w, i) => h('div', { key: i, style: { display: 'flex', gap: 9, padding: '10px 12px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.warn} 12%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.warn} 30%, ${C.line})`, marginBottom: 8 } },
+    warns.map((w, i) => h('div', { key: i, style: { display: 'flex', gap: 9, padding: '10px 12px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, marginBottom: 8, borderLeft: `3px solid ${C.warn}` } },
       h(Icon, { name: 'alert', size: 15, color: C.warn, style: { flexShrink: 0, marginTop: 1 } }),
       h('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.4 } }, w))),
 

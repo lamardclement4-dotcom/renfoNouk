@@ -327,8 +327,8 @@ function countdownLabel(days) {
 
 function PhaseBadge(phase) {
   return React.createElement('span', { style: {
-    fontSize: 11.5, fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--r-pill)',
-    background: 'color-mix(in srgb, ' + PHASE_COLORS[phase] + ` 14%, ${C.surface})`,
+    fontFamily: C.mono, fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase', padding: '3px 7px', borderRadius: 0,
+    background: 'transparent', border: '1px solid ' + PHASE_COLORS[phase],
     color: PHASE_COLORS[phase]
   } }, PHASE_LABELS[phase]);
 }
@@ -437,8 +437,8 @@ function GoalForm({ initial, onSave, onClose }) {
       ], setPriority),
 
       React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 6 } },
-        React.createElement('button', { onClick: onClose, style: { flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: `${C.surface}`,
-          border: `1px solid ${C.line}`, color: `${C.ink}`, fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Annuler'),
+        React.createElement('button', { onClick: onClose, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: `${C.surface}`,
+          border: `1px solid ${C.line}`, color: `${C.ink}`, cursor: 'pointer' } }, 'Annuler'),
         React.createElement('button', { disabled: !canSave, onClick: function() {
           onSave({ label: label.trim(), sport: sport, eventDate: eventDate, effortType: effortType, priority: priority });
         }, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: PEAK_COLOR, border: 'none',
@@ -526,7 +526,7 @@ function SignalsBlock(db, plan) {
             React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: `${C.ink}` } }, r.label),
             React.createElement('div', { style: { fontSize: 11, color: `${C.ink3}`, marginTop: 1 } }, r.sub)
           ),
-          React.createElement('div', { className: 'num-display', style: { fontSize: 15, fontWeight: 800, color: `${C.primary}` } }, r.value)
+          React.createElement('div', { className: 'num-display', style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em', color: `${C.primary}` } }, r.value)
         );
       })
     ),
@@ -613,10 +613,10 @@ function GoalDetail({ goal, db, store, onEdit, onDelete, onBack, onNutrition, on
         )
       ),
 
-      React.createElement('div', { style: { padding: 20, borderRadius: `${C.radius}`, background: PEAK_COLOR, color: 'var(--c-on-fill)', marginBottom: 18 } },
+      React.createElement('div', { style: { padding: 20, borderRadius: `${C.radius}`, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${PEAK_COLOR}`, marginBottom: 18 } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', opacity: .85, marginBottom: 6 } },
           sportLabel ? sportLabel.label : 'Objectif', goal.priority === 'secondaire' ? ' \u00B7 secondaire' : ''),
-        React.createElement('div', { style: { fontFamily: `${C.font}`, fontWeight: 700, fontSize: 21, lineHeight: 1.2 } }, goal.label),
+        React.createElement('div', { style: { fontFamily: C.display, fontWeight: 800, fontSize: 25, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, goal.label),
         React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 10 } },
           React.createElement('span', { className: 'num-display', style: { fontFamily: C.mono, fontSize: 26, fontWeight: 600, letterSpacing: '-.03em' } }, countdownLabel(plan.daysRemaining)),
           React.createElement('span', { style: { fontSize: 13.5, opacity: .9 } }, fmtDate(goal.eventDate))
@@ -633,7 +633,7 @@ function GoalDetail({ goal, db, store, onEdit, onDelete, onBack, onNutrition, on
 
       plan.phase === 'past' ? React.createElement('div', { style: { padding: 16, borderRadius: `${C.radiusSm}`, background: `${C.surface}`, border: `1px solid ${C.line}`, color: `${C.ink2}`, fontSize: 14, marginBottom: 16 } },
         'Cet objectif est passé. Tu peux modifier la date ou le supprimer.')
-      : plan.phase === 'today' ? React.createElement('div', { style: { padding: 16, borderRadius: `${C.radiusSm}`, background: 'color-mix(in srgb, ' + PHASE_COLORS.today + ` 10%, ${C.surface})`, border: '1px solid color-mix(in srgb, ' + PHASE_COLORS.today + ` 30%, ${C.line})`, color: `${C.ink}`, fontSize: 14, lineHeight: 1.5, marginBottom: 16 } },
+      : plan.phase === 'today' ? React.createElement('div', { style: { padding: 16, borderRadius: `${C.radiusSm}`, background: C.surface, border: `1px solid ${C.line}`, borderLeft: '3px solid ' + PHASE_COLORS.today, color: `${C.ink}`, fontSize: 14, lineHeight: 1.5, marginBottom: 16 } },
         'C\u2019est le jour J. Garde ton échauffement habituel, hydrate-toi normalement et fais confiance au travail effectué.')
       : React.createElement(React.Fragment, null,
           PhaseTimeline(plan),
@@ -645,7 +645,7 @@ function GoalDetail({ goal, db, store, onEdit, onDelete, onBack, onNutrition, on
             ),
             PhaseDetailRows(plan.phase),
             PhasePrescriptionBlock(goal.effortType, plan.phase),
-            plan.phase === 'taper' && React.createElement('div', { style: { marginTop: 12, padding: '12px 14px', borderRadius: `${C.radiusXs}`, background: 'color-mix(in srgb, ' + PHASE_COLORS.taper + ` 8%, ${C.surface})` } },
+            plan.phase === 'taper' && React.createElement('div', { style: { marginTop: 12, padding: '12px 14px', borderRadius: `${C.radiusXs}`, background: C.surface, border: `1px solid ${C.line}`, borderLeft: '3px solid ' + PHASE_COLORS.taper } },
               React.createElement('p', { style: { fontSize: 13, color: `${C.ink}`, lineHeight: 1.5, fontWeight: 600 } }, plan.profile.note))
           ),
 
@@ -786,9 +786,9 @@ function GoalCard({ goal, onOpen }) {
     textAlign: 'left', padding: 15, borderRadius: `${C.radiusSm}`, background: `${C.surface}`,
     border: `1px solid ${C.line}`, marginBottom: 10, cursor: 'pointer' } },
     React.createElement('div', { style: { width: 50, height: 50, borderRadius: 0, flex: '0 0 auto',
-      background: 'color-mix(in srgb, ' + PHASE_COLORS[plan.phase] + ` 14%, ${C.surface})`,
+      background: 'transparent', border: `1.5px solid ${PHASE_COLORS[plan.phase]}`,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
-      React.createElement('div', { className: 'num-display', style: { fontSize: 13, fontWeight: 800, color: PHASE_COLORS[plan.phase] } },
+      React.createElement('div', { className: 'num-display', style: { fontFamily: C.mono, fontSize: 11.5, fontWeight: 600, letterSpacing: '-.03em', color: PHASE_COLORS[plan.phase] } },
         countdownLabel(plan.daysRemaining))
     ),
     React.createElement('div', { style: { flex: 1, minWidth: 0 } },
@@ -850,11 +850,11 @@ function PeakSpace({ db, store, onClose, onNutrition, onRecovery, onMobility, on
           'Programme un objectif dat\u00e9 (comp\u00e9tition, remise en forme...) : l\u2019app calcule automatiquement ta phase actuelle et te guide jusqu\u2019au jour J.'),
 
         sorted.length === 0 ? React.createElement('div', { style: { textAlign: 'center', padding: '40px 10px' } },
-          React.createElement('div', { style: { width: 72, height: 72, borderRadius: 'var(--r-pill)', background: 'color-mix(in srgb, ' + PEAK_COLOR + ` 14%, ${C.surface})`,
+          React.createElement('div', { style: { width: 72, height: 72, borderRadius: 0, background: 'transparent', border: '1.5px solid ' + PEAK_COLOR,
             display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' } },
             React.createElement(Icon, { name: 'target', size: 32, color: PEAK_COLOR })
           ),
-          React.createElement('div', { style: { fontFamily: `${C.font}`, fontWeight: 700, fontSize: 17, marginBottom: 8 } }, 'Aucun objectif programmé'),
+          React.createElement('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Aucun objectif programmé'),
           React.createElement('p', { style: { fontSize: 13.5, color: `${C.ink3}`, lineHeight: 1.5, maxWidth: 260, margin: '0 auto' } },
             'Ajoute une date cible pour obtenir un plan d\u2019affûtage basé sur les données scientifiques.')
         ) : sorted.map(function(g) { return React.createElement(GoalCard, { key: g.id, goal: g, onOpen: function(){ setSelId(g.id); } }); }),

@@ -26,10 +26,8 @@ const champ = {
   width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 0,
   border: `1px solid ${C.line}`, background: C.surface, color: C.ink, fontSize: 15, fontFamily: 'inherit',
 }
-const btnPlein = {
-  width: '100%', padding: '13px 18px', borderRadius: C.radiusSm, border: 'none', background: TINT,
-  color: 'var(--c-on-fill)', fontWeight: 700, fontSize: 14.5, cursor: 'pointer', fontFamily: 'inherit',
-}
+const btnPlein = { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: '13px 18px', borderRadius: C.radiusSm, border: 'none', background: TINT,
+  color: 'var(--c-on-fill)', cursor: 'pointer', }
 const btnContour = {
   width: '100%', padding: '12px 16px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`,
   background: 'transparent', color: C.ink, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
@@ -237,7 +235,7 @@ export default function CookbookSpace({ userId, onClose }) {
           minuteurs.map((m) => {
             const reste = (m.fin - maintenant) / 1000
             const fini = m.sonne || reste <= 0
-            return h('div', { key: m.id, role: fini ? 'alert' : undefined, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: C.radiusSm, background: fini ? `color-mix(in srgb, ${C.danger} 14%, ${C.surface})` : C.surface, border: `1.5px solid ${fini ? C.danger : C.line}` } },
+            return h('div', { key: m.id, role: fini ? 'alert' : undefined, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1.5px solid ${fini ? C.danger : C.line}` } },
               h('div', { style: { flex: 1, minWidth: 0 } },
                 h('div', { style: { fontSize: 12, color: C.ink3 } }, 'Étape ', m.etape + 1, ' · ', m.label),
                 h('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums', color: fini ? C.danger : C.ink } }, fini ? 'Terminé' : mmss(reste))),

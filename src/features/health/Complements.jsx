@@ -172,10 +172,10 @@ function ComplementsTab({ db, store }) {
                 },
               }, w.future ? '' : w.count)))),
 
-          React.createElement('div', { style: { padding: '15px 16px', borderRadius: C.radius, background: `color-mix(in srgb, ${SUPP} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${SUPP} 28%, ${C.line})`, marginBottom: 18 } },
+          React.createElement('div', { style: { padding: '15px 16px', borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, marginBottom: 18, borderLeft: `3px solid ${SUPP}` } },
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 9, marginBottom: planItems.length ? 12 : 0 } },
               React.createElement(Icon, { name: 'calendar', size: 20, color: SUPP }),
-              React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16 } }, 'Mon plan de prise'),
+              React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Mon plan de prise'),
               planItems.length > 0 && React.createElement('span', { style: { marginLeft: 'auto' } }, React.createElement(Pill, { tint: SUPP }, taken.length + '/' + planItems.length))),
             planItems.length === 0
               ? React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 8, lineHeight: 1.5 } }, 'Coche « Ajouter au plan » sur les compléments que tu prends : ils se rangent ici avec une coche de prise, jour par jour.')
@@ -216,7 +216,7 @@ function ComplementsTab({ db, store }) {
                 const both = sameSlot.has(i.a + '|' + i.b)
                 const na = (COMP_BY_ID[i.a] || {}).n || i.a
                 const nb = (COMP_BY_ID[i.b] || {}).n || i.b
-                return React.createElement('div', { key: k, style: { display: 'flex', gap: 10, padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${col} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${col} 26%, ${C.line})` } },
+                return React.createElement('div', { key: k, style: { display: 'flex', gap: 10, padding: '11px 13px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${col}` } },
                   React.createElement(Icon, { name: i.kind === 'synergy' ? 'check' : 'alert', size: 16, color: col, style: { flexShrink: 0, marginTop: 2 } }),
                   React.createElement('div', { style: { flex: 1, minWidth: 0 } },
                     React.createElement('div', { style: { fontSize: 13, fontWeight: 700, marginBottom: 3 } }, na, ' + ', nb,
@@ -243,7 +243,7 @@ function ComplementsTab({ db, store }) {
                   React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
                     React.createElement('span', { style: { flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.n),
                     React.createElement('span', { style: { fontSize: 11.5, color: C.ink3 } }, r.taken, '/', r.days, ' j'),
-                    React.createElement('span', { style: { fontFamily: C.font, fontSize: 14.5, fontWeight: 800, color: col, minWidth: 42, textAlign: 'right' } }, r.pct, ' %')),
+                    React.createElement('span', { style: { fontFamily: C.mono, fontSize: 12.8, fontWeight: 600, letterSpacing: '-.03em', color: col, minWidth: 42, textAlign: 'right' } }, r.pct, ' %')),
                   React.createElement('div', { style: { width: '100%', height: 5, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden', marginTop: 6 } },
                     React.createElement('div', { style: { width: r.pct + '%', height: '100%', borderRadius: 'var(--r-pill)', background: col } })),
                   cure && cure.flag && React.createElement('div', { style: { fontSize: 11.5, color: cure.flag.level === 'warn' ? C.warn : C.ink3, marginTop: 5, lineHeight: 1.4 } }, cure.flag.text))

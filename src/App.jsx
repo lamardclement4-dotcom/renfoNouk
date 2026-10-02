@@ -605,7 +605,7 @@ const styles = {
   chip: { padding: '8px 14px', borderRadius: 'var(--r-pill)', border: `1px solid ${C.line}`, background: C.surface, color: C.ink2, fontSize: 14, cursor: 'pointer' },
   chipActive: { padding: '8px 14px', borderRadius: 'var(--r-pill)', border: `1px solid ${C.primary}`, background: C.primary, color: 'var(--c-on-fill)', fontSize: 14, cursor: 'pointer' },
   optBtn: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', borderRadius: C.radiusXs, border: `1.5px solid ${C.line}`, background: C.surface, color: C.ink, cursor: 'pointer', textAlign: 'left' },
-  optBtnActive: { border: `1.5px solid ${C.primary}`, background: `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` },
+  optBtnActive: { border: `1.5px solid ${C.primary}`, borderLeft: `4px solid ${C.primary}`, background: C.surface },
   optCheck: { width: 22, height: 22, borderRadius: 'var(--r-pill)', border: `2px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: C.primary, flex: '0 0 auto' },
   optCheckActive: { border: `2px solid ${C.primary}` },
   statCard: { flex: 1, padding: '16px 12px', borderRadius: C.radiusXs, background: C.surface2, border: `1px solid ${C.line}`, textAlign: 'center' },

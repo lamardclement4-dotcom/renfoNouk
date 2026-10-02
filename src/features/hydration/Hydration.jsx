@@ -59,7 +59,7 @@ const QUICK = [
 function chipBtn(active, color) {
   return { padding: '7px 13px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer',
     border: '1.5px solid ' + (active ? color : LINE),
-    background: active ? `color-mix(in srgb, ${color} 12%, ${SURFACE})` : SURFACE,
+    background: SURFACE,
     color: active ? color : INK2, transition: 'all .15s ease' }
 }
 const ST = {
@@ -67,15 +67,15 @@ const ST = {
   card: { background: SURFACE, border: `1px solid ${LINE}`, borderRadius: RADIUS_SM, padding: 14, marginBottom: 10 },
   logEntry: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: SURFACE, border: `1px solid ${LINE}`, borderRadius: RADIUS_SM, marginBottom: 8 },
   delBtn: { width: 30, height: 30, borderRadius: 0, background: SURFACE2, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 'auto', cursor: 'pointer', border: 'none' },
-  primaryBtn: (col) => ({ width: '100%', padding: 13, borderRadius: 'var(--r-pill)', fontSize: 15, fontWeight: 800, border: 'none', color: 'var(--c-on-fill)', background: col, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }),
-  noteBox: (col) => ({ display: 'flex', gap: 10, padding: '12px 13px', borderRadius: RADIUS_SM, fontSize: 12.5, color: INK2, lineHeight: 1.5, marginTop: 14, background: `color-mix(in srgb, ${col} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${col} 22%, ${LINE})` }),
+  primaryBtn: (col) => ({ fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 13, borderRadius: 'var(--r-pill)', border: 'none', color: 'var(--c-on-fill)', background: col, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }),
+  noteBox: (col) => ({ display: 'flex', gap: 10, padding: '12px 13px', borderRadius: RADIUS_SM, fontSize: 12.5, color: INK2, lineHeight: 1.5, marginTop: 14, background: SURFACE, border: `1px solid ${LINE}`, borderLeft: `3px solid ${col}` }),
   fieldInput: { width: '100%', padding: '10px 13px', border: `1.5px solid ${LINE}`, borderRadius: RADIUS_XS, fontSize: 14, background: SURFACE2, color: INK, outline: 'none', boxSizing: 'border-box' },
 }
 
 function Alert({ type, children }) {
   const colors = { danger: C.danger, warn: C.warn, info: COL_EAU, check: C.carb }
   const col = colors[type] || colors.info
-  return React.createElement('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', padding: '11px 13px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${col} 10%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${col} 30%, ${LINE})`, color: col, fontWeight: 600, fontSize: 13, marginBottom: 10 } },
+  return React.createElement('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', padding: '11px 13px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, color: col, fontWeight: 600, fontSize: 13, marginBottom: 10, borderLeft: `3px solid ${col}` } },
     React.createElement(Icon, { name: type === 'check' ? 'check' : 'spark', size: 16, color: col }),
     children)
 }
@@ -179,7 +179,7 @@ function TodayTab({ db, store }) {
     React.createElement('div', { style: ST.secLab }, 'Ajout rapide — eau'),
     React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 6 } },
       QUICK.map((q, i) => React.createElement('button', { key: i, onClick: () => addEntry(q.n, 'eaux', q.ml, 0, 0),
-        style: { flex: 1, padding: '11px 4px', borderRadius: 0, border: `1.5px solid color-mix(in srgb, ${COL_EAU} 30%, ${LINE})`, background: `color-mix(in srgb, ${COL_EAU} 6%, ${SURFACE})`, fontWeight: 700, fontSize: 12, color: COL_EAU, textAlign: 'center', cursor: 'pointer' } },
+        style: { flex: 1, padding: '11px 4px', borderRadius: 0, border: `1.5px solid color-mix(in srgb, ${COL_EAU} 30%, ${LINE})`, background: SURFACE, fontWeight: 700, fontSize: 12, color: COL_EAU, textAlign: 'center', cursor: 'pointer', borderLeft: `3px solid ${COL_EAU}` } },
         React.createElement(Icon, { name: q.ic, size: 18, color: COL_EAU }),
         React.createElement('div', { style: { fontSize: 11, color: INK3, marginTop: 3 } }, q.ml + ' ml')))),
 

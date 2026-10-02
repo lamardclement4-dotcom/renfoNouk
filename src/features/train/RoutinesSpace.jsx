@@ -26,7 +26,7 @@ function MovePicker({ kind, selected, onToggle, onClose }) {
   return h('div', { style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 60, display: 'flex', alignItems: 'flex-end' }, onClick: onClose },
     h('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxHeight: '84vh', overflowY: 'auto', background: C.surface, borderRadius: `${C.radius}px ${C.radius}px 0 0`, padding: 16 } },
       h('div', { style: { width: 38, height: 4, borderRadius: 'var(--r-pill)', background: C.line, margin: '0 auto 14px' } }),
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 4 } }, 'Choisis tes mouvements'),
+      h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 4 } }, 'Choisis tes mouvements'),
       h('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 10 } }, all.length, ' mouvements de ', kindOf(kind).label.toLowerCase(), ' · ', selected.length, ' retenu', selected.length > 1 ? 's' : ''),
       h('input', {
         type: 'text', value: q, placeholder: 'Chercher…', onChange: (e) => setQ(e.target.value),
@@ -36,7 +36,7 @@ function MovePicker({ kind, selected, onToggle, onClose }) {
         const on = selected.includes(m.key)
         return h('button', {
           key: m.key, onClick: () => onToggle(m.key),
-          style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 6, borderRadius: C.radiusXs, border: `1px solid ${on ? C.primary : C.line}`, background: on ? `color-mix(in srgb, ${C.primary} 10%, ${C.surface})` : 'transparent', cursor: 'pointer' },
+          style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 6, borderRadius: C.radiusXs, border: `1px solid ${on ? C.primary : C.line}`, background: on ? C.surface : 'transparent', cursor: 'pointer' },
         },
           h('div', { style: { width: 20, height: 20, borderRadius: 0, flex: '0 0 auto', border: `1.5px solid ${on ? C.primary : C.line}`, background: on ? C.primary : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
             on ? h(Icon, { name: 'check', size: 12, color: 'var(--c-on-fill)' }) : null),

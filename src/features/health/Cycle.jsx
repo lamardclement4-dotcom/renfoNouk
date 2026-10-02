@@ -36,7 +36,7 @@ function CycleSetup({ cycle, onSave, onClose }) {
       field('Durée du cycle (jours)', numInput(cycleLen, setCycleLen, 20, 45)),
       field('Durée des règles (jours)', numInput(periodLen, setPeriodLen, 1, 10)),
       React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 6 } },
-        React.createElement('button', { onClick: onClose, style: { flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Annuler'),
+        React.createElement('button', { onClick: onClose, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, cursor: 'pointer' } }, 'Annuler'),
         React.createElement('button', { onClick: () => onSave({ enabled: true, startDate, cycleLen, periodLen }), style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: 15, borderRadius: 'var(--r-pill)', background: CYC, border: 'none', color: 'var(--c-on-fill)', cursor: 'pointer' } }, 'Enregistrer')))
   )
 }
@@ -85,9 +85,9 @@ function TodayTab({ cycle, store }) {
   }
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: ph.tint, color: 'var(--c-on-fill)' } },
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${ph.tint}` } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 14 } },
-        React.createElement(Ring, { size: 80, stroke: 8, progress: info.day / info.len, color: 'var(--c-on-fill)', track: 'color-mix(in srgb, var(--c-on-fill) 28%, transparent)' }, React.createElement(Icon, { name: ph.icon, size: 26, color: 'var(--c-on-fill)' })),
+        React.createElement(Ring, { size: 80, stroke: 8, progress: info.day / info.len, color: ph.tint, track: C.surface2 }, React.createElement(Icon, { name: ph.icon, size: 26, color: ph.tint })),
         React.createElement('div', null,
           React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', opacity: .85 } }, 'Jour ' + info.day + ' / ' + info.len),
           React.createElement('div', { style: { fontFamily: C.display, fontSize: 27, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.05 } }, 'Phase ' + ph.label.toLowerCase()),
@@ -95,7 +95,7 @@ function TodayTab({ cycle, store }) {
           React.createElement('div', { style: { fontSize: 11.5, opacity: .8, marginTop: 4 } }, '⚡ ' + it.rpe + ' RPE · ' + it.fc))),
       React.createElement('div', { style: { marginTop: 14, fontSize: 13.5, lineHeight: 1.5, opacity: .95 } }, ph.advice)),
 
-    React.createElement('div', { style: { padding: '12px 14px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${ph.tint} 6%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${ph.tint} 20%, ${C.line})` } },
+    React.createElement('div', { style: { padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${ph.tint}` } },
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: ph.tint, marginBottom: 8 } }, '⚡ Paramètres d’entraînement — phase ' + ph.label.toLowerCase()),
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' } },
         [['RPE cible', it.rpe], ['FC cible', it.fc], ['Charge', it.charge], ['Volume', it.volume], ['Cardio', it.cardio]].map(([l, v]) =>
@@ -108,7 +108,7 @@ function TodayTab({ cycle, store }) {
         React.createElement('div', { style: { fontSize: 12, color: C.ink3 } }, info.nextDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }))),
       React.createElement('div', { style: { flex: 1, padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}` } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Prochaine ovulation'),
-        React.createElement('div', { style: { fontSize: 15, fontWeight: 700, marginTop: 4 } }, info.ovDate > new Date() ? 'J+' + Math.ceil((info.ovDate - new Date()) / 864e5) : 'Passée'),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em', marginTop: 4 } }, info.ovDate > new Date() ? 'J+' + Math.ceil((info.ovDate - new Date()) / 864e5) : 'Passée'),
         React.createElement('div', { style: { fontSize: 12, color: C.ink3 } }, info.ovDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })))),
 
     React.createElement('button', {
@@ -134,11 +134,11 @@ function TodayTab({ cycle, store }) {
       React.createElement('div', { style: { marginTop: 16 } },
         React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, marginBottom: 8 } }, 'Flux'),
         React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-          FLUX.map((fl, i) => React.createElement('button', { key: fl, onClick: () => setTrack({ flux: tTod.flux === i + 1 ? 0 : i + 1 }), style: { padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (tTod.flux === i + 1 ? CYC : C.line), background: tTod.flux === i + 1 ? `color-mix(in srgb, ${CYC} 12%, ${C.surface})` : C.surface, color: tTod.flux === i + 1 ? CYC : C.ink2 } }, fl)))),
+          FLUX.map((fl, i) => React.createElement('button', { key: fl, onClick: () => setTrack({ flux: tTod.flux === i + 1 ? 0 : i + 1 }), style: { padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (tTod.flux === i + 1 ? CYC : C.line), background: C.surface, color: tTod.flux === i + 1 ? CYC : C.ink2 } }, fl)))),
       React.createElement('div', { style: { marginTop: 16 } },
         React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, marginBottom: 8 } }, 'Humeur'),
         React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-          HUMEURS.map((h, i) => React.createElement('button', { key: h, onClick: () => setTrack({ mood: tTod.mood === i + 1 ? 0 : i + 1 }), style: { padding: '7px 11px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (tTod.mood === i + 1 ? CYC : C.line), background: tTod.mood === i + 1 ? `color-mix(in srgb, ${CYC} 12%, ${C.surface})` : C.surface, color: tTod.mood === i + 1 ? CYC : C.ink2 } }, h)))),
+          HUMEURS.map((h, i) => React.createElement('button', { key: h, onClick: () => setTrack({ mood: tTod.mood === i + 1 ? 0 : i + 1 }), style: { padding: '7px 11px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (tTod.mood === i + 1 ? CYC : C.line), background: C.surface, color: tTod.mood === i + 1 ? CYC : C.ink2 } }, h)))),
       React.createElement('div', { style: { marginTop: 16 } },
         React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: C.ink3, marginBottom: 8 } }, 'Symptômes'),
         React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
@@ -176,7 +176,7 @@ function PhasesTab() {
             section('Nutrition', p.nutrition),
             p.aliments_cles && React.createElement('div', { style: { marginTop: 10 } },
               React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Aliments clés'),
-              React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, p.aliments_cles.map((a, i) => React.createElement('span', { key: i, style: { padding: '4px 10px', borderRadius: 'var(--r-pill)', fontSize: 12, fontWeight: 600, color: p.tint, background: `color-mix(in srgb, ${p.tint} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${p.tint} 25%, ${C.line})` } }, a)))),
+              React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, p.aliments_cles.map((a, i) => React.createElement('span', { key: i, style: { padding: '4px 10px', borderRadius: 'var(--r-pill)', fontSize: 12, fontWeight: 600, color: p.tint, background: 'transparent', border: `1px solid ${p.tint}` } }, a)))),
             p.micronutriments && React.createElement('div', { style: { marginTop: 12 } },
               React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Micronutriments'),
               React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
@@ -254,7 +254,7 @@ function AnalyseTab({ cycle }) {
           ? `Tu notes ${String(ana.pms.symptomsWin).replace('.', ',')} symptôme(s) par jour sur cette fenêtre, contre ${String(ana.pms.symptomsOther).replace('.', ',')} le reste du cycle.`
           : `Rien ne distingue nettement cette fenêtre du reste de ton cycle (${String(ana.pms.symptomsWin).replace('.', ',')} contre ${String(ana.pms.symptomsOther).replace('.', ',')} symptôme(s) par jour).`),
       ana.pms.topSymptoms.length ? React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 } },
-        ana.pms.topSymptoms.map((s) => React.createElement('span', { key: s.symptom, style: { padding: '5px 10px', borderRadius: 'var(--r-pill)', fontSize: 11.5, fontWeight: 700, background: `color-mix(in srgb, ${CYC} 14%, ${C.surface})`, color: CYC } }, s.symptom + ' · ' + s.pct + ' %'))) : null,
+        ana.pms.topSymptoms.map((s) => React.createElement('span', { key: s.symptom, style: { padding: '5px 10px', borderRadius: 'var(--r-pill)', fontSize: 11.5, fontWeight: 700, background: 'transparent', color: CYC, border: `1px solid ${CYC}` } }, s.symptom + ' · ' + s.pct + ' %'))) : null,
       React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 9 } }, ana.pms.windowDays + ' jours suivis dans la fenêtre, ' + ana.pms.otherDays + ' hors fenêtre')) : null,
 
     ana.symptoms.length ? React.createElement('div', { style: { padding: '15px 16px', borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}` } },
@@ -295,7 +295,7 @@ export default function CycleSpace({ userId, onClose }) {
   if (!enabled) {
     return React.createElement(FlowSpace, { bg: 'sante', title: 'Espace Cycle', onClose, tint: CYC },
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', minHeight: '70vh' } },
-        React.createElement('div', { style: { width: 96, height: 96, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, borderTop: `3px solid ${CYC}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' } }, React.createElement(Icon, { name: 'moon', size: 42, color: CYC })),
+        React.createElement('div', { style: { width: 96, height: 96, borderRadius: 0, background: 'transparent', border: `1.5px solid ${CYC}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' } }, React.createElement(Icon, { name: 'moon', size: 42, color: CYC })),
         React.createElement('h1', { style: { fontFamily: C.display, fontSize: 30, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, 'Bouge avec ton cycle'),
         React.createElement('p', { style: { color: C.ink2, fontSize: 15.5, lineHeight: 1.55, marginTop: 12, maxWidth: 330, marginInline: 'auto' } }, 'Adapte tes séances à chaque phase, suis ton énergie, tes symptômes et la nutrition idéale pour chaque moment du mois.'),
         React.createElement('button', { onClick: () => setSetupOpen(true), style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 28, maxWidth: 300, marginInline: 'auto', width: '100%', padding: 16, borderRadius: 'var(--r-pill)', border: 'none', color: 'var(--c-on-fill)', cursor: 'pointer', background: CYC, boxShadow: 'none' } }, 'Configurer mon cycle')),

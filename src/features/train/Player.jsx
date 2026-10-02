@@ -65,7 +65,7 @@ export default function Player({ id, blocks: customBlocks, title: customTitle, p
         React.createElement(Icon, { name: 'close', size: 20, color: '#fff' })),
       React.createElement('div', { style: { textAlign: 'center' } },
         React.createElement('div', { style: { fontSize: 12.5, color: 'rgba(255,255,255,.55)', fontWeight: 600 } }, playerTitle),
-        React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 14, color: '#fff' } }, i + 1, ' / ', blocks.length)),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 12.3, fontWeight: 600, letterSpacing: '-.03em', color: '#fff' } }, i + 1, ' / ', blocks.length)),
       React.createElement('div', { style: { width: 40 } })),
 
     prep > 0

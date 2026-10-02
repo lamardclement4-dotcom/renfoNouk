@@ -50,9 +50,9 @@ function FlowHeader({ title, onClose }) {
 // Composants partagés (portés de l'ancienne app)
 // ============================================================
 function SpaceBanner({ ic, tint, title, text }) {
-  return React.createElement('div', { style: { padding: 20, borderRadius: RADIUS, background: tint, color: 'var(--c-on-fill)', marginBottom: 18 } },
-    React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
-      React.createElement(Icon, { name: ic, size: 24, color: 'var(--c-on-fill)' })),
+  return React.createElement('div', { style: { padding: 20, borderRadius: RADIUS, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${tint}`, marginBottom: 18 } },
+    React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'transparent', border: `1.5px solid ${tint}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
+      React.createElement(Icon, { name: ic, size: 24, color: tint })),
     React.createElement('div', { style: { fontFamily: C.display, fontSize: 26, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.1 } }, title),
     React.createElement('p', { style: { fontSize: 14.5, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, text))
 }
@@ -60,7 +60,7 @@ function SecLab({ children, style }) {
   return React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3, margin: '16px 2px 8px', ...style } }, children)
 }
 function NoteBox({ tint, children }) {
-  return React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${tint} 9%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${tint} 25%, ${LINE})`, fontSize: 12.5, color: INK2, lineHeight: 1.5, marginTop: 14 } },
+  return React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, fontSize: 12.5, color: INK2, lineHeight: 1.5, marginTop: 14, borderLeft: `3px solid ${tint}` } },
     React.createElement('span', { style: { color: tint, fontWeight: 800, flex: '0 0 auto' } }, '!'),
     React.createElement('span', null, children))
 }
@@ -81,19 +81,19 @@ function Choice({ tint, value, set, options, multi }) {
         key: o.id, type: 'button', onClick: () => set(o.id),
         style: { padding: '10px 14px', borderRadius: 'var(--r-pill)', fontSize: 13.5, fontWeight: 600,
           border: '1.5px solid ' + (active ? tint : 'var(--c-line)'),
-          background: active ? `color-mix(in srgb, ${tint} 12%, ${SURFACE})` : SURFACE,
+          background: SURFACE,
           color: active ? tint : INK2, cursor: 'pointer' },
       }, o.lab)
     }))
 }
 function ResultCard({ label, value, sub, tint, big }) {
-  return React.createElement('div', { style: { flex: 1, padding: big ? '18px 14px' : '14px 12px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${tint} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${tint} 22%, ${LINE})`, textAlign: 'center' } },
+  return React.createElement('div', { style: { flex: 1, padding: big ? '18px 14px' : '14px 12px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, textAlign: 'center', borderLeft: `3px solid ${tint}` } },
     React.createElement('div', { style: { fontSize: big ? 22 : 17, fontWeight: 800, color: tint, fontFamily: FONT } }, value),
     React.createElement('div', { style: { fontSize: 11, color: INK3, marginTop: 3 } }, label),
     sub && React.createElement('div', { style: { fontSize: 10.5, color: INK3, marginTop: 1 } }, sub))
 }
 function Pill({ tint, children }) {
-  return React.createElement('span', { style: { display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: 'var(--r-pill)', fontSize: 12, fontWeight: 600, color: tint, background: `color-mix(in srgb, ${tint} 12%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${tint} 30%, ${LINE})` } }, children)
+  return React.createElement('span', { style: { display: 'inline-flex', alignItems: 'center', padding: '5px 10px', borderRadius: 'var(--r-pill)', fontSize: 12, fontWeight: 600, color: tint, background: 'transparent', border: `1px solid ${tint}` } }, children)
 }
 function Bar({ lab, val, target, unit, tint }) {
   const pct = target > 0 ? Math.min(1, val / target) : 0
@@ -107,7 +107,7 @@ function Bar({ lab, val, target, unit, tint }) {
       React.createElement('div', { style: { height: '100%', width: pct * 100 + '%', background: over ? 'var(--c-danger)' : tint, borderRadius: 'var(--r-pill)', transition: 'width .3s ease' } })))
 }
 function chipBtn(active) {
-  return { padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 600, border: '1.5px solid ' + (active ? NUTRI : 'var(--c-line)'), background: active ? `color-mix(in srgb, ${NUTRI} 12%, ${SURFACE})` : SURFACE, color: active ? NUTRI : INK2, cursor: 'pointer' }
+  return { padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 600, border: '1.5px solid ' + (active ? NUTRI : 'var(--c-line)'), background: SURFACE, color: active ? NUTRI : INK2, cursor: 'pointer' }
 }
 
 // ============================================================
@@ -258,7 +258,7 @@ export function MacrosTab({ body, setBody, db, store }) {
   return React.createElement('div', null,
     React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
       React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: saved ? 10 : 6 } },
-        React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16 } }, 'Mes objectifs'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Mes objectifs'),
         saved ? React.createElement('button', { onClick: () => setSheet(true), style: { fontSize: 12.5, fontWeight: 700, color: NUTRI, background: 'transparent', border: 'none', cursor: 'pointer' } }, 'Modifier') : null),
       saved
         ? React.createElement('div', null,
@@ -281,7 +281,7 @@ export function MacrosTab({ body, setBody, db, store }) {
     }) : null,
 
     deep.pacing ? React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
-      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16, marginBottom: 3 } }, 'Répartition de tes protéines'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 3 } }, 'Répartition de tes protéines'),
       React.createElement('div', { style: { fontSize: 12, color: INK3, marginBottom: 12, lineHeight: 1.45 } },
         'Sur ', deep.pacing.days, ' journée', deep.pacing.days > 1 ? 's' : '', ' notée', deep.pacing.days > 1 ? 's' : '',
         deep.pacing.threshold ? `. Le seuil qui déclenche la synthèse est d’environ ${String(deep.pacing.threshold).replace('.', ',')} g par prise.` : '.'),
@@ -294,16 +294,16 @@ export function MacrosTab({ body, setBody, db, store }) {
       deep.pacing.text ? React.createElement('div', { style: { fontSize: 12, color: INK2, marginTop: 10, lineHeight: 1.5 } }, deep.pacing.text) : null) : null,
 
     deep.carbs && deep.carbs.available ? React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
-      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16, marginBottom: 8 } }, 'Glucides et charge'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Glucides et charge'),
       React.createElement('div', { style: { fontSize: 12.5, color: INK2, lineHeight: 1.55 } }, deep.carbs.text),
       deep.fuel && deep.fuel.text ? React.createElement('div', { style: { fontSize: 12.5, color: INK2, marginTop: 10, lineHeight: 1.55, paddingTop: 10, borderTop: `1px solid ${LINE}` } }, deep.fuel.text) : null) : null,
 
     deep.drifts.length ? React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
-      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16, marginBottom: 8 } }, 'Ce qui a bougé ce mois-ci'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 8 } }, 'Ce qui a bougé ce mois-ci'),
       deep.drifts.map((d, i3) => React.createElement('div', { key: d.key, style: { fontSize: 12.5, color: INK2, lineHeight: 1.55, marginTop: i3 ? 8 : 0 } }, d.text))) : null,
 
     fam ? React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
-      React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16, marginBottom: 3 } }, 'D’où viennent tes calories'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 3 } }, 'D’où viennent tes calories'),
       React.createElement('div', { style: { fontSize: 12, color: INK3, marginBottom: 12, lineHeight: 1.45 } },
         'Sur ', fam.days, ' journée', fam.days > 1 ? 's' : '', ' notée', fam.days > 1 ? 's' : '',
         ', soit ', fam.kcalJour, ' kcal par jour. La barre claire marque la part habituellement conseillée.'),
@@ -562,7 +562,7 @@ function TargetSheet({ targets, body, onSave, onClose }) {
         React.createElement(NumField, { label: 'Glucides', unit: '%', value: vw.gluc.pct || 0, set: setPct('gluc'), min: 0, max: 80 }),
         React.createElement(NumField, { label: 'Lipides', unit: '%', value: vw.lip.pct || 0, set: setPct('lip'), min: 0, max: 70 })) : null,
 
-      coh ? React.createElement('div', { style: { marginTop: 14, padding: '11px 13px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${cohColor} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${cohColor} 28%, ${LINE})` } },
+      coh ? React.createElement('div', { style: { marginTop: 14, padding: '11px 13px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, borderLeft: `3px solid ${cohColor}` } },
         React.createElement('div', { style: { fontSize: 12.5, color: INK2, lineHeight: 1.45 } }, coh.text),
         coh.level !== 'ok' ? React.createElement('button', { onClick: rebalance, style: { marginTop: 8, padding: '7px 12px', borderRadius: 'var(--r-pill)', border: 'none', background: cohColor, color: 'var(--c-on-fill)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } },
           'Aligner les calories sur ', coh.derived, ' kcal') : null) : null,
@@ -1039,9 +1039,9 @@ export function FoodTab({ db, store }) {
       React.createElement(Bar, { lab: 'Glucides', val: tot.g, target: targets.gluc, unit: 'g', tint: 'var(--ch1)' }),
       React.createElement(Bar, { lab: 'Lipides', val: tot.l, target: targets.lip, unit: 'g', tint: 'var(--ch3)' }),
       React.createElement(Bar, { lab: 'Fibres', val: tot.fib, target: targets.fib || 30, unit: 'g', tint: 'var(--c-success)' }))
-      : React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: `color-mix(in srgb, ${NUTRI} 10%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${NUTRI} 28%, ${LINE})`, marginBottom: 16 } },
+      : React.createElement('div', { style: { padding: 16, borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16, borderLeft: `3px solid ${NUTRI}` } },
         React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' } },
-          React.createElement('div', { style: { fontFamily: FONT, fontWeight: 700, fontSize: 16 } }, 'Total du jour'),
+          React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Total du jour'),
           React.createElement('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', color: NUTRI } }, Math.round(tot.k), ' kcal')),
         React.createElement('div', { style: { fontSize: 13, color: INK2, marginTop: 4, lineHeight: 1.5 } }, 'Définis des objectifs pour suivre tes apports vs une cible.'),
         React.createElement('button', { onClick: () => setTgtSheet(true), style: { ...xst.primaryBtn, background: NUTRI, boxShadow: 'none', marginTop: 12 } }, 'Régler mes objectifs')),
@@ -1262,7 +1262,7 @@ function DiagTab({ db, store, onGoToJournal }) {
     return React.createElement('button', {
       onClick: () => onSelect(opt.id),
       style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 0, marginBottom: 8,
-        border: '1.5px solid ' + (selected ? NUTRI : LINE), background: selected ? `color-mix(in srgb, ${NUTRI} 11%, ${SURFACE})` : SURFACE,
+        border: '1.5px solid ' + (selected ? NUTRI : LINE), background: SURFACE,
         color: selected ? NUTRI : INK, fontWeight: selected ? 700 : 500, fontSize: 13.5, cursor: 'pointer' },
     },
       React.createElement('span', { style: { fontSize: 19, flex: '0 0 auto', width: 26, textAlign: 'center' } }, opt.emoji),
@@ -1270,13 +1270,13 @@ function DiagTab({ db, store, onGoToJournal }) {
       React.createElement('span', { style: { marginLeft: 'auto', fontSize: 10, fontWeight: 800, flex: '0 0 auto', color: selected ? NUTRI : INK3, background: selected ? `color-mix(in srgb, ${NUTRI} 12%, ${SURFACE})` : LINE, padding: '2px 6px', borderRadius: 'var(--r-pill)' } }, opt.score + '/10'))
   }
   function Card({ c }) {
-    return React.createElement('div', { style: { padding: '13px 14px', borderRadius: RADIUS_SM, marginBottom: 10, background: `color-mix(in srgb, ${c.col} 9%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${c.col} 28%, ${LINE})` } },
+    return React.createElement('div', { style: { padding: '13px 14px', borderRadius: RADIUS_SM, marginBottom: 10, background: SURFACE, border: `1px solid ${LINE}`, borderLeft: `3px solid ${c.col}` } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 } },
         React.createElement(Icon, { name: c.ic, size: 16, color: c.col }),
         React.createElement('span', { style: { fontWeight: 700, fontSize: 14, color: c.col, flex: 1 } }, c.title),
         c.niveauPreuve && React.createElement('span', { style: { fontSize: 10, color: c.col, fontWeight: 700, background: SURFACE, border: `1px solid ${C.line}`, borderTop: `3px solid ${c.col}`, padding: '2px 6px', borderRadius: 'var(--r-pill)' } }, c.niveauPreuve)),
       React.createElement('div', { style: { fontSize: 13, color: INK2, lineHeight: 1.55 } }, c.text),
-      (c.conseil || c.menu) && React.createElement('div', { style: { marginTop: 8, padding: '9px 11px', borderRadius: 0, background: `color-mix(in srgb, ${c.col} 6%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${c.col} 16%, ${LINE})` } },
+      (c.conseil || c.menu) && React.createElement('div', { style: { marginTop: 8, padding: '9px 11px', borderRadius: 0, background: SURFACE, border: `1px solid ${LINE}`, borderLeft: `3px solid ${c.col}` } },
         c.conseil && React.createElement('div', { style: { fontSize: 12.5, color: INK2, lineHeight: 1.5, marginBottom: c.menu ? 5 : 0 } }, React.createElement('span', { style: { fontWeight: 700, color: c.col } }, 'A faire : '), c.conseil),
         c.menu && React.createElement('div', { style: { fontSize: 12, color: INK2, lineHeight: 1.5, paddingTop: c.conseil ? 5 : 0, borderTop: c.conseil ? `1px solid color-mix(in srgb, ${c.col} 15%, ${LINE})` : 'none' } }, React.createElement('span', { style: { fontWeight: 700, color: c.col } }, 'Exemple : '), c.menu)),
       c.source && React.createElement('div', { style: { fontSize: 10.5, color: INK3, marginTop: 5, fontStyle: 'italic' } }, c.source))
@@ -1294,7 +1294,7 @@ function DiagTab({ db, store, onGoToJournal }) {
   if (step === 0) {
     return React.createElement('div', null,
       React.createElement(SpaceBanner, { ic: 'search', tint: NUTRI, title: 'Diagnostic nutrition complet', text: '22 questions — énergie, alimentation, hydratation, récupération, comportement. Résultats par pilier + plan d’action personnalisé.' }),
-      lastScore && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${NUTRI} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${NUTRI} 20%, ${LINE})`, marginBottom: 12 } },
+      lastScore && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 12, borderLeft: `3px solid ${NUTRI}` } },
         React.createElement('div', null,
           React.createElement('div', { style: { fontSize: 10.5, color: INK3 } }, 'Dernier diagnostic (' + lastScore.date + ')'),
           React.createElement('div', { style: { fontSize: 12.5, fontWeight: 600, color: INK2, marginTop: 1 } }, 'Score : ' + lastScore.score + '/100')),
@@ -1303,15 +1303,15 @@ function DiagTab({ db, store, onGoToJournal }) {
         PILIERS.map((p) => {
           const qCount = DIAG_QUESTIONS.filter((q) => q.pilier === p.id).length
           const lastPilierScore = lastScore && lastScore.piliers ? lastScore.piliers[p.id] : -1
-          return React.createElement('div', { key: p.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${p.col} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${p.col} 20%, ${LINE})` } },
+          return React.createElement('div', { key: p.id, style: { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, borderLeft: `3px solid ${p.col}` } },
             React.createElement('div', { style: { width: 30, height: 30, borderRadius: 0, flex: '0 0 auto', background: p.col, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: p.ic, size: 14, color: 'var(--c-on-fill)' })),
             React.createElement('div', null,
               React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: p.col } }, p.label),
               React.createElement('div', { style: { fontSize: 10.5, color: INK3 } }, qCount + ' Q' + (lastPilierScore >= 0 ? ' · ' + lastPilierScore + '/100' : ''))))
         })),
       React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 14 } },
-        React.createElement('div', { style: { flex: 1, display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${NUTRI} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${NUTRI} 20%, ${LINE})`, fontSize: 12.5, color: INK2 } }, React.createElement(Icon, { name: 'clock', size: 13, color: NUTRI }), React.createElement('span', null, ' 4-5 min')),
-        React.createElement('div', { style: { flex: 1, display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${NUTRI} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${NUTRI} 20%, ${LINE})`, fontSize: 12.5, color: INK2 } }, React.createElement(Icon, { name: 'layers', size: 13, color: NUTRI }), React.createElement('span', null, ' ' + TOTAL + ' questions'))),
+        React.createElement('div', { style: { flex: 1, display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, fontSize: 12.5, color: INK2, borderLeft: `3px solid ${NUTRI}` } }, React.createElement(Icon, { name: 'clock', size: 13, color: NUTRI }), React.createElement('span', null, ' 4-5 min')),
+        React.createElement('div', { style: { flex: 1, display: 'flex', alignItems: 'center', gap: 6, padding: '9px 12px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, fontSize: 12.5, color: INK2, borderLeft: `3px solid ${NUTRI}` } }, React.createElement(Icon, { name: 'layers', size: 13, color: NUTRI }), React.createElement('span', null, ' ' + TOTAL + ' questions'))),
       React.createElement('button', { onClick: () => setStep(1), style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: '15px', borderRadius: RADIUS_SM, background: NUTRI, color: 'var(--c-on-fill)', boxShadow: 'none', marginBottom: 10, border: 'none', cursor: 'pointer' } }, 'Démarrer le diagnostic →'),
       React.createElement(NoteBox, { tint: NUTRI }, 'Repères indicatifs — ISSN, EFSA, OMS. Pas un avis médical ou diététique.'))
   }
@@ -1323,7 +1323,7 @@ function DiagTab({ db, store, onGoToJournal }) {
     const pilier = PILIERS.find((p) => p.id === q.pilier)
     return React.createElement('div', null,
       React.createElement(ProgBar, null),
-      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '13px 14px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${NUTRI} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${NUTRI} 20%, ${LINE})` } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '13px 14px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, borderLeft: `3px solid ${NUTRI}` } },
         React.createElement('div', { style: { width: 42, height: 42, borderRadius: 0, flex: '0 0 auto', background: NUTRI, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: q.ic, size: 20, color: 'var(--c-on-fill)' })),
         React.createElement('div', null,
           pilier && React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: pilier.col, marginBottom: 3 } }, pilier.label),
@@ -1354,7 +1354,7 @@ function DiagTab({ db, store, onGoToJournal }) {
   const prevDiff = priorLast ? (score - priorLast.score) : null
 
   return React.createElement('div', null,
-    React.createElement('div', { style: { padding: '18px 14px 14px', borderRadius: RADIUS, marginBottom: 12, background: `color-mix(in srgb, ${sCol} 9%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${sCol} 28%, ${LINE})` } },
+    React.createElement('div', { style: { padding: '18px 14px 14px', borderRadius: RADIUS, marginBottom: 12, background: SURFACE, border: `1px solid ${LINE}`, borderLeft: `3px solid ${sCol}` } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 } },
         React.createElement('div', { style: { width: 70, height: 70, borderRadius: 0, flex: '0 0 auto', background: sCol, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
           React.createElement('div', { style: { fontFamily: C.mono, fontSize: 22, fontWeight: 600, letterSpacing: '-.03em', color: 'var(--c-on-fill)', lineHeight: 1 } }, score),
@@ -1370,7 +1370,7 @@ function DiagTab({ db, store, onGoToJournal }) {
     urgent.length > 0 && React.createElement('div', null,
       React.createElement(SecLab, null, "Plan d'action — " + urgent.length + ' priorité(s) immédiate(s)'),
       React.createElement('div', { style: { borderRadius: RADIUS_SM, overflow: 'hidden', border: `1px solid color-mix(in srgb, var(--c-danger) 28%, ${LINE})`, marginBottom: 12 } },
-        urgent.map((c, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'flex-start', gap: 12, padding: '13px 14px', borderTop: i === 0 ? 'none' : `1px solid ${LINE}`, background: `color-mix(in srgb, var(--c-danger) 5%, ${SURFACE})` } },
+        urgent.map((c, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'flex-start', gap: 12, padding: '13px 14px', borderTop: i === 0 ? 'none' : `1px solid ${LINE}`, background: SURFACE, borderLeft: `3px solid var(--c-danger)` } },
           React.createElement('div', { style: { width: 24, height: 24, borderRadius: 'var(--r-pill)', flex: '0 0 auto', background: 'var(--c-danger)', color: 'var(--c-on-fill)', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, '' + (i + 1)),
           React.createElement('div', null,
             React.createElement('div', { style: { fontWeight: 700, fontSize: 13.5, color: INK } }, ' ' + c.title),
@@ -1380,7 +1380,7 @@ function DiagTab({ db, store, onGoToJournal }) {
     positifs.length > 0 && React.createElement('div', null,
       React.createElement(SecLab, null, 'Tes points forts (' + positifs.length + ')'),
       React.createElement('div', { style: { borderRadius: RADIUS_SM, border: `1px solid color-mix(in srgb, var(--c-success) 25%, ${LINE})`, overflow: 'hidden', marginBottom: 10 } },
-        positifs.map((c, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: i === 0 ? 'none' : `1px solid ${LINE}`, background: `color-mix(in srgb, var(--c-success) 5%, ${SURFACE})` } },
+        positifs.map((c, i) => React.createElement('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: i === 0 ? 'none' : `1px solid ${LINE}`, background: SURFACE, borderLeft: `3px solid var(--c-success)` } },
           React.createElement(Icon, { name: 'check', size: 14, color: 'var(--c-carb)' }),
           React.createElement('span', { style: { fontSize: 13.5, fontWeight: 600, color: INK } }, ' ' + c.title))))),
     React.createElement(SecLab, null, 'Tes ' + TOTAL + ' réponses'),
@@ -1397,7 +1397,7 @@ function DiagTab({ db, store, onGoToJournal }) {
             sc !== null && React.createElement('span', { style: { fontSize: 9, fontWeight: 800, color: scCol } }, sc + '/10')),
           React.createElement('div', { style: { fontSize: 11.5, fontWeight: 600, marginTop: 2, lineHeight: 1.3 } }, opt ? (opt.emoji + ' ' + opt.lab.slice(0, 30) + (opt.lab.length > 30 ? '...' : '')) : '—'))
       })),
-    hasLog && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: RADIUS_SM, background: `color-mix(in srgb, ${NUTRI} 8%, ${SURFACE})`, border: `1px solid color-mix(in srgb, ${NUTRI} 20%, ${LINE})`, marginBottom: 10 } },
+    hasLog && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 10, borderLeft: `3px solid ${NUTRI}` } },
       React.createElement(Icon, { name: 'apple', size: 16, color: NUTRI }),
       React.createElement('div', { style: { flex: 1 } },
         React.createElement('div', { style: { fontWeight: 700, fontSize: 13 } }, ' Journal — ' + days7.length + ' jours enregistrés'),
@@ -1458,10 +1458,10 @@ export default function NutritionSpace({ userId, onClose }) {
             key: it.id, onClick: () => setTab(it.id),
             style: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 13px', borderRadius: 0,
               border: '1.5px solid ' + (active ? NUTRI : LINE),
-              background: active ? `color-mix(in srgb, ${NUTRI} 11%, ${SURFACE})` : SURFACE,
+              background: SURFACE,
               color: active ? NUTRI : INK, fontWeight: 700, fontSize: 13.5, textAlign: 'left', cursor: 'pointer' },
           },
-            React.createElement('span', { style: { width: 30, height: 30, borderRadius: 0, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? NUTRI : `color-mix(in srgb, ${NUTRI} 13%, ${SURFACE})`, color: active ? 'var(--c-on-fill)' : NUTRI } },
+            React.createElement('span', { style: { width: 30, height: 30, borderRadius: 0, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? NUTRI : 'transparent', border: `1.5px solid ${NUTRI}`, color: active ? 'var(--c-on-fill)' : NUTRI } },
               React.createElement(Icon, { name: it.ic, size: 16 })),
             it.lab)
         })),

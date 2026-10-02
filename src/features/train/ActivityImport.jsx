@@ -173,13 +173,13 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
         'Le fichier exporté est plus fiable qu’une capture : il porte la trace complète, donc la distance réelle et le dénivelé. La capture dépanne quand l’export n’est pas à portée.'),
     ) : null,
 
-    error ? h('div', { style: { display: 'flex', gap: 9, padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.danger} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.danger} 25%, ${C.line})`, marginBottom: 12 } },
+    error ? h('div', { style: { display: 'flex', gap: 9, padding: '11px 13px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, marginBottom: 12, borderLeft: `3px solid ${C.danger}` } },
       h(Icon, { name: 'alert', size: 16, color: C.danger, style: { flexShrink: 0, marginTop: 1 } }),
       h('span', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } }, error)) : null,
 
     phase === 'health' && health ? h('div', null,
       h(Card, { style: { marginBottom: 12 } },
-        h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 2 } }, 'Ce qui a été lu'),
+        h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 2 } }, 'Ce qui a été lu'),
         h('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 12 } },
           health.summary.records.toLocaleString('fr-FR'), ' enregistrements parcourus'),
         [
@@ -190,7 +190,7 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
           ['Journées de pas et de fréquence au repos', health.summary.vitalsAdded],
         ].map(([lab, v], i) => h('div', { key: lab, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
           h('span', { style: { flex: 1, fontSize: 13.5, fontWeight: 600, color: v ? C.ink : C.ink3 } }, lab),
-          h('span', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 700, color: v ? C.ink : C.ink3 } }, v))),
+          h('span', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em', color: v ? C.ink : C.ink3 } }, v))),
         health.summary.unknownSport ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 10, lineHeight: 1.45 } },
           health.summary.unknownSport, ' séance·s d’un sport que l’application ne couvre pas : laissées de côté plutôt que rangées au hasard.') : null,
         health.summary.sleepFromBed ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 8, lineHeight: 1.45 } },
@@ -212,7 +212,7 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
 
     phase === 'preview' && draft ? h('div', null,
       h(Card, { style: { marginBottom: 12 } },
-        h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 2 } }, 'Ce qui a été lu'),
+        h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 2 } }, 'Ce qui a été lu'),
         h('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 12 } },
           'D’après ', SOURCE_LABEL[draft.source] || 'ce fichier', ' · ',
           new Date(draft.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
@@ -222,7 +222,7 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
           if (v == null) return null
           return h('div', { key: r.k, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
             h('span', { style: { flex: 1, fontSize: 13.5, fontWeight: 600 } }, r.lab),
-            h('span', { style: { fontFamily: C.font, fontSize: 15, fontWeight: 700 } }, String(v).replace('.', ',')),
+            h('span', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em' } }, String(v).replace('.', ',')),
             h('span', { style: { width: 34, fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, r.unit))
         }),
         h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 10, lineHeight: 1.45 } },

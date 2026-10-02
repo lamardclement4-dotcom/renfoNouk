@@ -10,7 +10,7 @@ const MOB_Q = ZONE_ORDER.map((id) => {
 
 const optBtnStyle = (active) => ({
   display: 'flex', alignItems: 'center', gap: 13, padding: 16, borderRadius: C.radiusSm,
-  background: active ? `color-mix(in srgb, ${C.primary} 8%, ${C.surface})` : C.surface,
+  background: C.surface,
   border: '1.5px solid ' + (active ? C.primary : C.line), width: '100%', cursor: 'pointer',
 })
 
@@ -56,7 +56,7 @@ export default function MobilityTest({ store, onClose, onProgram }) {
       React.createElement('div', { style: { width: 40 } })),
 
     step === -1 && React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' } },
-      React.createElement('div', { style: { width: 96, height: 96, borderRadius: 'var(--r-pill)', background: `color-mix(in srgb, ${C.primary} 14%, ${C.surface})`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' } },
+      React.createElement('div', { style: { width: 96, height: 96, borderRadius: 0, background: 'transparent', border: `1.5px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' } },
         React.createElement(Icon, { name: 'target', size: 44, color: C.primary })),
       React.createElement('h1', { style: { fontFamily: C.display, fontSize: 29, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, 'Évalue ta mobilité'),
       React.createElement('p', { style: { color: C.ink2, fontSize: 15, lineHeight: 1.55, marginTop: 12, maxWidth: 320, marginInline: 'auto' } },
@@ -93,14 +93,14 @@ export default function MobilityTest({ store, onClose, onProgram }) {
               [1, 2, 3].map((sIdx) => React.createElement('div', { key: sIdx, style: { flex: 1, height: 8, borderRadius: 'var(--r-pill)', background: z.val >= sIdx ? (weakHit ? C.primary : C.ink) : C.surface2 } }))))
         })),
 
-      React.createElement('div', { style: { marginTop: 24, padding: 18, borderRadius: C.radiusSm, background: C.primary, color: 'var(--c-on-fill)' } },
+      React.createElement('div', { style: { marginTop: 24, padding: 18, borderRadius: C.radiusSm, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${C.primary}` } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', opacity: 0.85, marginBottom: 6 } }, 'Ton programme sur-mesure'),
-        React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 18, lineHeight: 1.2 } }, '3 séances ciblées sur tes zones les plus raides'),
+        React.createElement('div', { style: { fontFamily: C.display, fontWeight: 800, fontSize: 22, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, '3 séances ciblées sur tes zones les plus raides'),
         React.createElement('div', { style: { fontSize: 13.5, opacity: 0.9, marginTop: 6 } }, weak.map((w) => w.label).join(' · ')),
-        React.createElement('button', { onClick: buildProgram, style: { marginTop: 16, width: '100%', padding: 15, borderRadius: 'var(--r-pill)', background: C.surface, color: C.primary, fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 } },
-          React.createElement(Icon, { name: 'route', size: 18, color: C.primary }), ' Créer mon programme')),
+        React.createElement('button', { onClick: buildProgram, style: { marginTop: 16, width: '100%', padding: 15, borderRadius: 0, background: C.primary, color: C.onFill, fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 } },
+          React.createElement(Icon, { name: 'route', size: 18, color: C.onFill }), ' Créer mon programme')),
 
       React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 18, paddingBottom: 10 } },
-        React.createElement('button', { onClick: () => { setAns([]); setStep(-1) }, style: { flex: 1, padding: 16, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Refaire'),
-        React.createElement('button', { onClick: finish, style: { flex: 1, padding: 16, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 700, cursor: 'pointer' } }, 'Enregistrer'))))
+        React.createElement('button', { onClick: () => { setAns([]); setStep(-1) }, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', flex: 1, padding: 16, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, cursor: 'pointer' } }, 'Refaire'),
+        React.createElement('button', { onClick: finish, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', flex: 1, padding: 16, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, cursor: 'pointer' } }, 'Enregistrer'))))
 }

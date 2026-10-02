@@ -199,7 +199,7 @@ export default function WeatherSpace({ db, store, onClose }) {
     // Premier choix de l'écran : il commande les champs pertinents et le
     // ton des conseils.
     h(Card, { style: { marginBottom: 12 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 10 } }, 'Où t’entraînes-tu ?'),
+      h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10 } }, 'Où t’entraînes-tu ?'),
       h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
         ENVIRONMENTS.map((e) => {
           const on = e.id === environment
@@ -226,7 +226,7 @@ export default function WeatherSpace({ db, store, onClose }) {
             h('div', { style: { fontSize: 12, color: C.ink3, marginTop: 2, lineHeight: 1.4 } }, 'Lecture sur ton téléphone, l’image n’est envoyée nulle part.')),
           h('input', { type: 'file', accept: 'image/*', onChange: (e) => handleFile(e.target.files && e.target.files[0]), style: { display: 'none' } }))),
 
-    error && h('div', { style: { display: 'flex', gap: 9, padding: '11px 13px', borderRadius: C.radiusSm, background: `color-mix(in srgb, ${C.danger} 10%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${C.danger} 26%, ${C.line})`, marginBottom: 12 } },
+    error && h('div', { style: { display: 'flex', gap: 9, padding: '11px 13px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, marginBottom: 12, borderLeft: `3px solid ${C.danger}` } },
       h(Icon, { name: 'alert', size: 16, color: C.danger, style: { flexShrink: 0, marginTop: 1 } }),
       h('span', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } }, error)),
 
@@ -235,7 +235,7 @@ export default function WeatherSpace({ db, store, onClose }) {
 
     // ─── Saisie ─────────────────────────────────────────────────
     h(Card, { style: { marginBottom: 12 } },
-      h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 6 } }, 'Conditions'),
+      h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 6 } }, 'Conditions'),
 
       // ─── Relevé par ville, au-dessus des champs qu'il remplit ───
       // Affiché en toutes circonstances. Il ne l'était qu'en extérieur, au
@@ -306,7 +306,7 @@ export default function WeatherSpace({ db, store, onClose }) {
     // ─── Adaptation ─────────────────────────────────────────────
     advice
       ? h(React.Fragment, null,
-        h(Card, { style: { marginBottom: 12, background: `color-mix(in srgb, ${riskCol} 8%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${riskCol} 26%, ${C.line})` } },
+        h(Card, { style: { marginBottom: 12, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${riskCol}` } },
           h('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 } },
             h('div', { style: { width: 46, height: 46, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${riskCol}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
               h(Icon, { name: advice.risk.level === 'ok' ? 'check' : 'alert', size: 22, color: riskCol })),
@@ -321,7 +321,7 @@ export default function WeatherSpace({ db, store, onClose }) {
               { lab: 'Volume', val: advice.volumeCut > 0 ? '−' + advice.volumeCut + ' %' : '—' },
               { lab: 'Boisson', val: advice.hydration > 0 ? '+' + advice.hydration + ' ml' : '—' },
             ].map((s, i) => h('div', { key: i, style: { padding: '10px 8px', borderRadius: C.radiusSm, background: C.surface, textAlign: 'center' } },
-              h('div', { style: { fontFamily: C.font, fontSize: 17, fontWeight: 800 } }, s.val),
+              h('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em' } }, s.val),
               h('div', { style: { fontSize: 10.5, color: C.ink3, fontWeight: 600, marginTop: 2 } }, s.lab))))),
 
         // Durée de la séance : l'hydratation en dépend directement.
@@ -338,7 +338,7 @@ export default function WeatherSpace({ db, store, onClose }) {
             h('strong', { style: { color: riskCol } }, fmtPace(adjusted), '/km'), ' dans ces conditions, à effort ressenti identique.')),
 
         h(Card, { style: { marginBottom: 14 } },
-          h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 10 } }, 'Ce que ça change'),
+          h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 10 } }, 'Ce que ça change'),
           advice.tips.map((t, i) => h('div', { key: i, style: { display: 'flex', gap: 9, padding: '8px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
             h('span', { style: { width: 5, height: 5, borderRadius: 'var(--r-pill)', background: riskCol, flexShrink: 0, marginTop: 7 } }),
             h('span', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.5 } }, t))),
@@ -361,7 +361,7 @@ export default function WeatherSpace({ db, store, onClose }) {
         .slice(0, 20)
       if (!entries.length) return null
       return h(Card, { style: { marginTop: 14 } },
-        h('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16, marginBottom: 4 } }, 'Historique'),
+        h('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 4 } }, 'Historique'),
         h('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 8 } }, 'Touche une ligne pour la reprendre.'),
         entries.map((c, i) => {
           const f = effectiveTemp(c)

@@ -30,9 +30,9 @@ export default function RenfoCatalog({ onClose, onOpenSession }) {
   }
 
   return React.createElement(FlowSpace, { bg: 'entrainer', title: 'Renforcement', onClose },
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: 'var(--ch1)', color: 'var(--c-on-fill)', marginBottom: 16 } },
-      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
-        React.createElement(Icon, { name: 'dumbbell', size: 24, color: 'var(--c-on-fill)' })),
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid var(--ch1)`, marginBottom: 16 } },
+      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'transparent', border: `1.5px solid var(--ch1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
+        React.createElement(Icon, { name: 'dumbbell', size: 24, color: 'var(--ch1)' })),
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 22, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.1 } }, 'Renforce-toi, sans matériel ou presque'),
       React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, all.length + ' séances groupées par zone du corps.')),
 

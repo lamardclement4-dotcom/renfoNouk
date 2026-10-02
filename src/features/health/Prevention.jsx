@@ -96,7 +96,7 @@ function painAdvice(k) {
 }
 
 const btnStyle = { display: 'flex', alignItems: 'center', gap: 13, padding: 16, borderRadius: C.radiusSm, background: C.surface, width: '100%', cursor: 'pointer' }
-const primaryBtn = { width: '100%', padding: 16, borderRadius: 'var(--r-pill)', border: 'none', color: 'var(--c-on-fill)', fontSize: 15.5, fontWeight: 700, cursor: 'pointer', background: PREV, boxShadow: 'none' }
+const primaryBtn = { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 16, borderRadius: 'var(--r-pill)', border: 'none', color: 'var(--c-on-fill)', cursor: 'pointer', background: PREV, boxShadow: 'none' }
 const ghostBtn = { width: '100%', padding: 16, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, color: C.ink, fontSize: 15, fontWeight: 700, cursor: 'pointer' }
 
 function BilanTab({ db, store }) {
@@ -202,9 +202,9 @@ function BilanTab({ db, store }) {
     return React.createElement('div', null,
       adv && adv.urgent && React.createElement('div', { style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', padding: '14px 16px', borderRadius: C.radiusSm, background: 'var(--c-danger)', color: 'var(--c-on-fill)', marginBottom: 14, lineHeight: 1.5 } }, "Signes à ne pas négliger : stoppe les impacts et demande l'avis d'un professionnel de santé sans tarder."),
       flag && !(adv && adv.urgent) && React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: 'var(--c-danger)', color: 'var(--c-on-fill)', marginBottom: 14, fontSize: 14, lineHeight: 1.5, fontWeight: 600 } }, "Repos et avis d'un professionnel de santé recommandés — surtout en cas de douleur au repos, la nuit, sur un point précis ou sur l'os."),
-      React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: level.t, color: 'var(--c-on-fill)', marginBottom: 16, textAlign: 'center' } },
+      React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${level.t}`, marginBottom: 16, textAlign: 'center' } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', opacity: 0.9 } }, 'Risque global'),
-        React.createElement('div', { style: { fontFamily: C.display, fontSize: 34, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, marginTop: 4 } }, level.l),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 34, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, marginTop: 4, color: level.t } }, level.l),
         React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 8, lineHeight: 1.5 } }, level.d)),
       hasPain && painParts.length > 0 && React.createElement('div', { style: { padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, marginBottom: 14 } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Profil de ta douleur'),
@@ -244,7 +244,7 @@ function BilanTab({ db, store }) {
       qq.opts.map((o, i) => {
         const active = ans[step] === i
         return React.createElement('button', { key: i, onClick: () => { const na = { ...ans, [step]: i }; setAns(na); setTimeout(() => advance(step, na), 140) },
-          style: { ...btnStyle, border: '1.5px solid ' + (active ? PREV : C.line), ...(active ? { background: `color-mix(in srgb, ${PREV} 8%, ${C.surface})` } : {}) } },
+          style: { ...btnStyle, border: '1.5px solid ' + (active ? PREV : C.line), ...(active ? { background: C.surface, borderLeft: `4px solid ${PREV}` } : {}) } },
           React.createElement('span', { style: { width: 22, height: 22, borderRadius: 'var(--r-pill)', flex: '0 0 auto', border: '2px solid ' + (active ? PREV : C.line), background: active ? PREV : 'transparent' } }),
           React.createElement('span', { style: { fontWeight: 600, fontSize: 15.5 } }, o[0]))
       })),
@@ -278,8 +278,8 @@ function BlessuresTab() {
       feux.map(([col, l, d], i) => React.createElement('div', { key: i, style: { display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}` } },
         React.createElement('span', { style: { width: 14, height: 14, borderRadius: 'var(--r-pill)', background: col, flex: '0 0 auto', marginTop: 3 } }),
         React.createElement('div', null, React.createElement('span', { style: { fontWeight: 700, fontSize: 14.5 } }, l), React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 1, lineHeight: 1.45 } }, d))))),
-    React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: `color-mix(in srgb, var(--c-danger) 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, var(--c-danger) 25%, ${C.line})`, marginBottom: 18 } },
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15.5, color: 'var(--c-danger)' } }, 'Fracture de fatigue — à ne pas manquer'),
+    React.createElement('div', { style: { padding: '14px 16px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, marginBottom: 18, borderLeft: `3px solid var(--c-danger)` } },
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--c-danger)' } }, 'Fracture de fatigue — à ne pas manquer'),
       React.createElement('div', { style: { fontSize: 13, color: C.ink2, marginTop: 5, lineHeight: 1.5 } }, "Douleur à l'impact du pied, point précis au toucher, qui revient à la reprise. Facteurs : hausse de charge, < 7 h de sommeil, déficit énergétique, manque de vitamine D. Dès la suspicion → consulte.")),
     React.createElement(SecLab, null, 'Fiches par blessure'),
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },

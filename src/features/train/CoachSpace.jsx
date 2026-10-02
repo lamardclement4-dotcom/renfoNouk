@@ -31,17 +31,17 @@ function AdviceTab({ db, onAction }) {
   const [showAll, setShowAll] = useState(false)
   const recos = showAll ? ranked.top.concat(ranked.rest) : ranked.top
   return React.createElement(React.Fragment, null,
-    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: COACH, color: 'var(--c-on-fill)', marginBottom: 18 } },
-      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'color-mix(in srgb, var(--c-on-fill) 18%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
-        React.createElement(Icon, { name: 'target', size: 24, color: 'var(--c-on-fill)' })),
+    React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${COACH}`, marginBottom: 18 } },
+      React.createElement('div', { style: { width: 46, height: 46, borderRadius: 0, background: 'transparent', border: `1.5px solid ${COACH}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 } },
+        React.createElement(Icon, { name: 'target', size: 24, color: COACH })),
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.15 } }, 'Tes recommandations'),
       React.createElement('p', { style: { fontSize: 14, opacity: 0.92, marginTop: 7, lineHeight: 1.5 } }, 'Générées à partir de tes données réelles (charge, sommeil, nutrition, mobilité, tests). Touche une carte pour ouvrir le module concerné — ou passe sur « Discuter » pour me poser une question.')),
 
     recos.length === 0
       ? React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 20px', gap: 12 } },
-        React.createElement('div', { style: { width: 56, height: 56, borderRadius: 'var(--r-pill)', background: 'color-mix(in srgb, var(--c-success) 16%, ' + C.surface + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+        React.createElement('div', { style: { width: 56, height: 56, borderRadius: 0, background: 'transparent', border: '1.5px solid var(--c-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
           React.createElement(Icon, { name: 'check', size: 26, color: C.success })),
-        React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 16 } }, 'Rien à signaler'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Rien à signaler'),
         React.createElement('p', { style: { fontSize: 13, color: C.ink3, maxWidth: 280, lineHeight: 1.4 } }, 'Aucune recommandation active selon tes données actuelles. Reviens après avoir renseigné plus d\'informations (sommeil, séances, tests) pour des conseils plus précis.'))
       : GROUPS.map((g) => {
         const items = recos.filter((r) => r.level === g.level)
@@ -55,9 +55,8 @@ function AdviceTab({ db, onAction }) {
               onClick: clickable ? () => onAction(r.action) : undefined,
               style: {
                 display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: C.radiusSm, marginBottom: 8,
-                background: `color-mix(in srgb, ${g.color} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${g.color} 25%, ${C.line})`,
-                width: '100%', textAlign: 'left', cursor: clickable ? 'pointer' : 'default',
-              },
+                background: C.surface, border: `1px solid ${C.line}`,
+                width: '100%', textAlign: 'left', cursor: clickable ? 'pointer' : 'default', borderLeft: `3px solid ${g.color}` },
             },
               React.createElement(Icon, { name: r.icon || 'target', size: 16, color: g.color, style: { flex: '0 0 auto', marginTop: 1 } }),
               React.createElement('div', { style: { flex: 1, minWidth: 0 } },
@@ -78,7 +77,7 @@ function AdviceTab({ db, onAction }) {
       ? 'Revenir à l’essentiel'
       : `Voir les ${ranked.rest.length} autres recommandations`) : null,
 
-    React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, marginTop: 8, background: `color-mix(in srgb, ${COACH} 9%, ${C.surface})`, border: `1px solid color-mix(in srgb, ${COACH} 22%, ${C.line})` } },
+    React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: C.radiusSm, marginTop: 8, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${COACH}` } },
       React.createElement(Icon, { name: 'search', size: 16, color: COACH, style: { flex: '0 0 auto', marginTop: 2 } }),
       React.createElement('p', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.45 } }, 'Système de règles déterministe (pas un modèle de langage) : transparent et basé sur des seuils documentés.')))
 }
@@ -122,7 +121,7 @@ function ChatTab({ db, onAction }) {
           } }, m.text),
           coach && m.action && onAction && React.createElement('button', {
             onClick: () => onAction(m.action),
-            style: { marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 700, color: COACH, background: `color-mix(in srgb, ${COACH} 10%, ${C.surface})`, border: `1.5px solid color-mix(in srgb, ${COACH} 35%, ${C.line})`, cursor: 'pointer' },
+            style: { marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 700, color: COACH, background: C.surface, border: `1.5px solid color-mix(in srgb, ${COACH} 35%, ${C.line})`, cursor: 'pointer', borderLeft: `3px solid ${COACH}` },
           }, m.actionLabel || 'Ouvrir', React.createElement(Icon, { name: 'arrow', size: 14, color: COACH })))
       }),
       typing && React.createElement('div', { style: { alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 0, background: C.surface, border: `1px solid ${C.line}`, color: C.ink3, fontSize: 14 } }, '…')),
@@ -147,7 +146,7 @@ export default function CoachSpace({ db, onClose, onAction }) {
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 8px', flexShrink: 0 } },
       React.createElement('button', { onClick: onClose, 'aria-label': 'Fermer', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: 'none' } },
         React.createElement(Icon, { name: 'back', size: 20 })),
-      React.createElement('div', { style: { fontFamily: C.font, fontWeight: 700, fontSize: 15 } }, 'Coach'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Coach'),
       React.createElement('div', { style: { width: 40 } })),
     React.createElement('div', { style: { padding: '4px 18px 0', flexShrink: 0 } },
       React.createElement(SegTabs, { tabs: [{ id: 'chat', lab: 'Discuter' }, { id: 'conseils', lab: 'Conseils' }], value: tab, onChange: setTab, tint: COACH })),
