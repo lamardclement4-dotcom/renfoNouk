@@ -1,5 +1,5 @@
 // Client réduit à l'authentification et aux tables (voir supabaseClient.js).
-import { creerClient } from './supabaseClient'
+import { creerClient, lireSessionLocale } from './supabaseClient'
 
 // --- Client Supabase ---
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -10,6 +10,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = creerClient(supabaseUrl, supabaseAnonKey)
+
+// Session conservée sur l'appareil, pour ouvrir l'app hors ligne.
+export const sessionLocale = () => lireSessionLocale(supabaseUrl)
 
 // Une base locale Dexie (IndexedDB « renfo ») était déclarée ici, avec des
 // tables profil / séances / nutrition / sommeil / tests de mobilité. Plus

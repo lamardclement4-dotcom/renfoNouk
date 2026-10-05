@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib'
-import { createSyncQueue, clearAllStoredQueues } from './syncQueue'
+import { createSyncQueue, clearAllStoredQueues, STORAGE_PREFIX } from './syncQueue'
 
 // Fenêtre de journal chargée au montage. Elle valait 10 jours, ce qui
 // suffisait aux graphes de sept jours mais tronquait silencieusement toutes
@@ -105,7 +105,11 @@ function getInstance(userId) {
       // Toute écriture passe par la file : elle réessaie, survit à un
       // rechargement, et rend visible ce qui n'est pas encore parti.
       queue: null, sync: { status: 'idle', pending: 0, lastError: null },
-      notify() { for (const l of this.listeners) l() },
+      notify() {
+        for (const l of this.listeners) l()
+        // Chaque changement d'état met à jour la copie hors ligne.
+        if (!this.loading) planifierInstantane(this, userId)
+      },
     }
     inst.queue = createSyncQueue({ userId })
     inst.queue.setHandlers({
@@ -140,6 +144,10 @@ function getInstance(userId) {
 export function resetStore() {
   for (const inst of instances.values()) {
     clearTimeout(inst.relance)
+    // Une copie hors ligne planifiée ne doit pas se réécrire après
+    // l'effacement de la déconnexion.
+    clearTimeout(inst.minuteurCopie)
+    inst.loading = true
     try { inst.queue.clear() } catch { /* file déjà inutilisable */ }
     inst.listeners.clear()
   }
@@ -240,6 +248,76 @@ export const buildDb = (rawPhys, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO
   }
 }
 
+// Écritures d'une session précédente jamais parties (onglet fermé pendant
+// une coupure). Elles décrivent l'état local le plus récent : elles doivent
+// primer sur l'instantané serveur ou la copie hors ligne, sinon la personne
+// verrait sa saisie « disparaître » avant de la voir revenir une fois la
+// file vidée. Renvoie les journées à jour.
+function appliquerEnAttente(inst, rows) {
+  const pending = inst.queue.restorePending()
+  for (const [target, payload] of Object.entries(pending)) {
+    if (target === 'phys') inst.phys = payload
+    else if (target === 'cycle') inst.cycle = payload
+    else if (target === 'goals') inst.goals = payload
+    else if (target === 'zones') inst.sensitiveZones = payload
+    else if (target.startsWith('day:')) rows[target.slice(4)] = { food: payload.food || [], hydration: payload.hydration || [] }
+    inst.queue.enqueue(target, payload)
+  }
+  return rows
+}
+
+// ------------------------------------------------------------
+// Copie hors ligne. La dernière version connue des données d'un compte,
+// gardée sur l'appareil pour ouvrir l'app sans réseau. Elle porte le même
+// préfixe que la file d'écritures : la déconnexion l'efface avec elle
+// (clearAllStoredQueues), un téléphone prêté ne garde rien.
+// ------------------------------------------------------------
+export const cleInstantane = (userId) => STORAGE_PREFIX + 'copie:' + userId
+const TAILLE_MAX_COPIE = 2_000_000
+
+function stockage() {
+  try { return typeof localStorage !== 'undefined' ? localStorage : null } catch { return null }
+}
+
+function planifierInstantane(inst, userId) {
+  if (!userId) return
+  clearTimeout(inst.minuteurCopie)
+  inst.minuteurCopie = setTimeout(() => sauverInstantane(inst, userId), 400)
+}
+
+export function sauverInstantane(inst, userId) {
+  const st = stockage()
+  if (!st || !userId || inst.loading) return false
+  try {
+    const texte = JSON.stringify({ v: 1, savedAt: inst.horsLigne || new Date().toISOString(), userId,
+      phys: inst.phys, cycle: inst.cycle, goals: inst.goals, sensitiveZones: inst.sensitiveZones, dayRows: inst.dayRows, rowIds: inst.rowIds })
+    // Trop grosse pour le stockage du navigateur : on renonce à la copie
+    // plutôt que d'évincer la file d'écritures, plus précieuse.
+    if (texte.length > TAILLE_MAX_COPIE) return false
+    st.setItem(cleInstantane(userId), texte)
+    return true
+  } catch { return false }
+}
+
+export function lireInstantane(userId) {
+  const st = stockage()
+  if (!st || !userId) return null
+  try {
+    const c = JSON.parse(st.getItem(cleInstantane(userId)) || 'null')
+    const objet = (x) => x && typeof x === 'object' && !Array.isArray(x)
+    if (!c || c.v !== 1 || c.userId !== userId || !objet(c.phys) || !objet(c.dayRows)) return null
+    return { savedAt: c.savedAt || null, phys: c.phys, cycle: objet(c.cycle) ? c.cycle : {}, goals: objet(c.goals) ? c.goals : {},
+      sensitiveZones: Array.isArray(c.sensitiveZones) ? c.sensitiveZones : [], dayRows: c.dayRows, rowIds: objet(c.rowIds) ? c.rowIds : {} }
+  } catch { return null }
+}
+
+// Panne réseau : la requête n'a pas atteint le serveur.
+export function estPanneReseau(erreur) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return true
+  const m = String((erreur && (erreur.message || erreur.details || erreur)) || '')
+  return /failed to fetch|networkerror|network request failed|load failed|fetch failed|internet connection appears to be offline/i.test(m)
+}
+
 // Chargement initial d'un compte : profil et journées récentes, en une
 // seule fois. Lancé au plus tôt — dès que la session est connue, en
 // parallèle de la lecture du profil par l'authentification (voir
@@ -269,6 +347,20 @@ function demarrerChargement(inst, userId) {
     if (erreur) {
       inst.loadError = (erreur && erreur.message) || String(erreur)
       inst.started = false
+      // Hors ligne : on ouvre sur la dernière copie connue de CE compte,
+      // gardée sur l'appareil. Seulement pour une panne réseau : une autre
+      // erreur (serveur, droits) garde le blocage d'écriture, car composer
+      // sur une copie peut-être périmée écraserait des données plus récentes.
+      if (inst.loading && estPanneReseau(erreur)) {
+        const copie = lireInstantane(userId)
+        if (copie) {
+          inst.phys = copie.phys; inst.cycle = copie.cycle; inst.goals = copie.goals
+          inst.sensitiveZones = copie.sensitiveZones; inst.rowIds = copie.rowIds
+          inst.dayRows = appliquerEnAttente(inst, { ...copie.dayRows })
+          inst.horsLigne = copie.savedAt
+          inst.loading = false
+        }
+      }
       const attente = ATTENTES_RELANCE[Math.min(inst.essais || 0, ATTENTES_RELANCE.length - 1)]
       inst.essais = (inst.essais || 0) + 1
       clearTimeout(inst.relance)
@@ -278,6 +370,7 @@ function demarrerChargement(inst, userId) {
     }
     inst.loadError = null
     inst.essais = 0
+    inst.horsLigne = null
     const profileRow = profil.data
     const logRows = journal.data
     inst.phys = profileRow?.phys || {}
@@ -294,16 +387,7 @@ function demarrerChargement(inst, userId) {
     // elles doivent primer sur l'instantané serveur, sinon la personne
     // verrait sa saisie « disparaître » au rechargement avant de la voir
     // revenir une fois la file vidée.
-    const pending = inst.queue.restorePending()
-    for (const [target, payload] of Object.entries(pending)) {
-      if (target === 'phys') inst.phys = payload
-      else if (target === 'cycle') inst.cycle = payload
-      else if (target === 'goals') inst.goals = payload
-      else if (target === 'zones') inst.sensitiveZones = payload
-      else if (target.startsWith('day:')) rows[target.slice(4)] = { food: payload.food || [], hydration: payload.hydration || [] }
-      inst.queue.enqueue(target, payload)
-    }
-    inst.dayRows = rows
+    inst.dayRows = appliquerEnAttente(inst, rows)
     inst.loading = false
     inst.notify()
   }
@@ -318,7 +402,9 @@ export function prechargerStore(userId) {
 // Nouvel essai immédiat (bouton « Réessayer », retour du réseau).
 export function relancerChargement(userId) {
   const inst = userId && instances.get(userId)
-  if (!inst || !inst.loading || inst.started) return
+  // En chargement, ou ouvert sur la copie hors ligne : dans les deux cas
+  // le serveur n'a pas encore répondu.
+  if (!inst || inst.started || (!inst.loading && !inst.loadError)) return
   clearTimeout(inst.relance)
   demarrerChargement(inst, userId)
 }
@@ -327,10 +413,29 @@ export function relancerChargement(userId) {
 // pour ne pas marteler un serveur en difficulté.
 const ATTENTES_RELANCE = [2000, 5000, 10000, 20000, 30000]
 
-// Le réseau revient : on relance tout chargement resté en échec.
+// Renvoie les saisies restées en file. Hors ligne, la file se contente de
+// les garder ; rien ne la relançait ensuite avant l'action suivante : une
+// saisie faite dans le métro pouvait attendre des heures. Elle est donc
+// relancée au retour du réseau, au retour dans l'app, et après un
+// rafraîchissement de session (une écriture refusée faute de session
+// redevient alors possible).
+export function relancerFiles() {
+  for (const inst of instances.values()) {
+    try { if (inst.queue.pendingCount()) inst.queue.retryNow() } catch { /* file indisponible */ }
+  }
+}
+
+// Le réseau revient : on relance tout chargement resté en échec, puis les
+// écritures en attente.
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('online', () => {
     for (const [uid, inst] of instances) if (inst.loadError) relancerChargement(uid)
+    relancerFiles()
+  })
+}
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && (typeof navigator === 'undefined' || navigator.onLine !== false)) relancerFiles()
   })
 }
 
@@ -563,6 +668,7 @@ export function useNutritionStore(userId) {
   const retrySync = () => { if (inst) inst.queue.retryNow() }
 
   const loadError = inst ? inst.loadError || null : null
+  const horsLigne = inst ? inst.horsLigne || null : null
   const retryLoad = () => relancerChargement(userId)
-  return { db, store, loading, sync, retrySync, loadError, retryLoad }
+  return { db, store, loading, sync, retrySync, loadError, retryLoad, horsLigne }
 }

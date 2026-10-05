@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { createHash } from 'node:crypto'
 
 // ============================================================
 // Politique de sécurité du contenu (CSP)
@@ -151,6 +152,32 @@ const servirOcr = () => {
   }
 }
 
+// Service worker (src/sw/sw-modele.js) : complété ici avec la liste des
+// fichiers de l'app et une version tirée de leurs noms — qui changent avec
+// leur contenu —, puis publié en /sw.js. Les anciennes polices .woff ne
+// sont pas gardées : tous les navigateurs actuels lisent le .woff2.
+const versionPaquet = (...p) => JSON.parse(readFileSync(nm(...p, 'package.json'), 'utf8')).version
+const serviceWorker = () => {
+  let base = '/'
+  return {
+    name: 'service-worker',
+    apply: 'build',
+    configResolved: (config) => { base = config.base },
+    generateBundle(_, bundle) {
+      const fichiers = Object.keys(bundle).filter((f) => f.startsWith('assets/') && !f.endsWith('.map') && !f.endsWith('.woff')).sort()
+      const version = createHash('sha256').update(fichiers.join('\n')).digest('hex').slice(0, 12)
+      const ocr = [versionPaquet('tesseract.js'), versionPaquet('tesseract.js-core'), versionPaquet('@tesseract.js-data', 'fra'), versionPaquet('@tesseract.js-data', 'eng')].join('-')
+      const source = readFileSync('src/sw/sw-modele.js', 'utf8')
+        .replace("'__VERSION__'", JSON.stringify(version))
+        .replace("'__BASE__'", JSON.stringify(base))
+        .replace("JSON.parse('__FICHIERS__')", JSON.stringify(fichiers))
+        .replace('__OCR__', ocr)
+      if (/__[A-Z]+__/.test(source)) throw new Error('service worker : un marqueur du modèle n’a pas été rempli')
+      this.emitFile({ type: 'asset', fileName: 'sw.js', source })
+    },
+  }
+}
+
 // https://vite.dev/config/
 // base: obligatoire pour GitHub Pages, doit correspondre au nom du repo
 // (l'app est servie depuis https://<user>.github.io/renfoNouk/, pas la racine)
@@ -158,7 +185,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const csp = CSP_SOURCES(supabaseSources(env.VITE_SUPABASE_URL))
   return {
-    plugins: [react(), cspMeta(csp), prechargePolices(), servirOcr()],
+    plugins: [react(), cspMeta(csp), prechargePolices(), servirOcr(), serviceWorker()],
     base: '/renfoNouk/',
   }
 })

@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
-import { supabase } from './lib'
+import { supabase, sessionLocale } from './lib'
 import { C, SyncBanner } from './features/health/kit'
 import { GardeEcran } from './GardeEcran'
-import { useNutritionStore, resetStore, prechargerStore } from './features/nutrition/useNutritionStore'
+import { useNutritionStore, resetStore, prechargerStore, relancerFiles, estPanneReseau } from './features/nutrition/useNutritionStore'
+import { STORAGE_PREFIX } from './features/nutrition/syncQueue'
 
 // Les onglets ne sont téléchargés qu'au moment où l'on s'y rend. L'accueil
 // fait exception à moitié : c'est le premier écran après connexion, donc
@@ -28,6 +29,24 @@ const ProfilSpace = lazy(() => import('./features/profil/ProfilSpace'))
 // ============================================================
 // Hook d'authentification
 // ============================================================
+// Profil gardé sur l'appareil pour ouvrir l'app hors ligne : seulement ce
+// qu'il faut pour choisir l'écran (statut, prénom, onboarding). Même
+// préfixe que la file d'écritures : effacé à la déconnexion.
+const cleProfil = (userId) => STORAGE_PREFIX + 'profil:' + userId
+function garderProfil(p) {
+  try {
+    if (!p || !p.id) return
+    const { id, first_name, last_name, status, role } = p
+    localStorage.setItem(cleProfil(p.id), JSON.stringify({ id, first_name, last_name, status, role, phys: { onboardingDone: !!(p.phys && p.phys.onboardingDone) } }))
+  } catch { /* stockage indisponible */ }
+}
+function profilGarde(userId) {
+  try {
+    const p = JSON.parse(localStorage.getItem(cleProfil(userId)) || 'null')
+    return p && p.id === userId ? { ...p, horsLigne: true } : null
+  } catch { return null }
+}
+
 function useAuth() {
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState(null)
@@ -55,8 +74,13 @@ function useAuth() {
       const message = (res.error && res.error.message) || 'profil introuvable'
       console.error('[useAuth] Erreur chargement profil :', message)
       // Un rafraîchissement raté garde le profil déjà connu plutôt que de
-      // renvoyer l'utilisateur vers un écran vide.
+      // renvoyer l'utilisateur vers un écran vide ; hors ligne, on ouvre
+      // sur le dernier profil gardé sur l'appareil.
       setProfileError(message)
+      if (estPanneReseau(res.error)) {
+        const garde = profilGarde(userId)
+        if (garde) setProfile((p) => p || garde)
+      }
       const attente = [2000, 5000, 10000, 20000, 30000][Math.min(essais.current, 4)]
       essais.current += 1
       relance.current = setTimeout(() => loadProfile(userId), attente)
@@ -65,6 +89,7 @@ function useAuth() {
     essais.current = 0
     setProfileError(null)
     setProfile(res.data)
+    garderProfil(res.data)
   }, [])
 
   const retryProfile = useCallback(() => {
@@ -85,14 +110,23 @@ function useAuth() {
 
   useEffect(() => {
     let active = true
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!active) return
-      setSession(session)
-      loadProfile(session?.user?.id).finally(() => { if (active) setLoading(false) })
+      // Jeton expiré pendant une coupure : le client répond sans session
+      // mais la garde ; on ouvre hors ligne sur l'utilisateur gardé.
+      const s = session || (error || (typeof navigator !== 'undefined' && navigator.onLine === false) ? sessionLocale() : null)
+      setSession(s)
+      loadProfile(s?.user?.id).finally(() => { if (active) setLoading(false) })
     })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      loadProfile(session?.user?.id)
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // Sans session mais pas déconnecté : session gardée sur l'appareil,
+      // non rafraîchie faute de réseau (effacée sinon par le client).
+      const s = session || (event !== 'SIGNED_OUT' ? sessionLocale() : null)
+      setSession(s)
+      loadProfile(s?.user?.id)
+      // Session retrouvée ou rafraîchie : les saisies refusées faute de
+      // session peuvent repartir.
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') relancerFiles()
     })
     return () => { active = false; listener.subscription.unsubscribe() }
   }, [loadProfile])
@@ -742,11 +776,11 @@ function Home({ profile, signOut, refreshProfile }) {
   // Le hook partage son état par utilisateur : cet appel ne crée pas de
   // copie supplémentaire, il s'abonne simplement pour connaître l'état
   // d'enregistrement et pouvoir l'afficher où que l'on soit dans l'app.
-  const { sync, retrySync, loadError, retryLoad } = useNutritionStore(userId)
+  const { sync, retrySync, loadError, retryLoad, horsLigne } = useNutritionStore(userId)
 
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
-      <SyncBanner sync={sync} onRetry={retrySync} loadError={loadError} onRetryLoad={retryLoad} />
+      <SyncBanner sync={sync} onRetry={retrySync} loadError={loadError} onRetryLoad={retryLoad} horsLigne={horsLigne} />
       {/* Une seule frontière d'attente, posée ici : elle couvre aussi les
           écrans que ces espaces ouvrent à leur tour (Entraîner depuis
           l'accueil, Poids ou Records depuis Progrès…). La barre de

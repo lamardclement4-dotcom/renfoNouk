@@ -43,6 +43,14 @@ if (estEncadree()) {
   lien.textContent = 'Ouvrir Renfo dans sa propre fenêtre'
   racine.replaceChildren(lien)
 } else {
+  // Service worker : l'app s'ouvre sans réseau (voir src/sw/sw-modele.js).
+  // En production seulement : en développement, il servirait des fichiers
+  // périmés au lieu des modifications en cours.
+  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js', { scope: import.meta.env.BASE_URL }).catch((e) => console.warn('[sw] enregistrement impossible :', e))
+    })
+  }
   // Fichier d'écran introuvable après une mise en ligne (voir GardeEcran) :
   // Vite le signale ici avant même l'erreur ; un rechargement suffit.
   window.addEventListener('vite:preloadError', (e) => { if (rechargerUneFois()) e.preventDefault() })

@@ -578,7 +578,20 @@ export function fmtDate(iso) {
 // Une écriture qui échouait finissait dans un console.error : l'écran
 // affichait la saisie, elle n'était jamais partie, et personne ne le
 // savait. Ce bandeau n'apparaît que lorsqu'il y a quelque chose à dire.
-export function SyncBanner({ sync, onRetry, loadError, onRetryLoad }) {
+export function SyncBanner({ sync, onRetry, loadError, onRetryLoad, horsLigne }) {
+  // Ouvert hors ligne sur la copie gardée : on le dit, avec l'heure des
+  // données, et les saisies continuent de s'empiler dans la file.
+  if (horsLigne) {
+    const d = new Date(horsLigne)
+    const p2 = (x) => String(x).padStart(2, '0')
+    const quand = isNaN(d) ? '' : ` du ${p2(d.getDate())}/${p2(d.getMonth() + 1)} à ${p2(d.getHours())}:${p2(d.getMinutes())}`
+    const enAttente = sync && sync.pending ? ` · ${sync.pending} saisie${sync.pending > 1 ? 's' : ''} en attente` : ''
+    return React.createElement('div', { role: 'status', style: { position: 'fixed', left: 12, right: 12, bottom: 'calc(76px + env(safe-area-inset-bottom))', zIndex: 90, maxWidth: 436, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.warn}`, fontFamily: C.font } },
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase', color: C.warn } }, 'Hors ligne' + enAttente),
+        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.4 } }, `Dernières données${quand}. Tes saisies partiront au retour du réseau.`)),
+      onRetryLoad ? React.createElement('button', { onClick: onRetryLoad, 'aria-label': 'Réessayer la connexion', style: { flex: '0 0 auto', padding: '7px 10px', border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontFamily: C.mono, fontSize: 11, textTransform: 'uppercase', cursor: 'pointer' } }, '↻') : null)
+  }
   // Chargement initial en échec : rien n'est affiché ni enregistré tant que
   // les vraies données ne sont pas arrivées (voir useNutritionStore).
   if (loadError) {

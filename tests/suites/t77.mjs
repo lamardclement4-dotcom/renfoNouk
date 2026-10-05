@@ -4,7 +4,7 @@
 // deconnexion. Les deux tournent ici cote a cote sur un faux reseau et un
 // faux stockage : aucune requete ne sort de la machine.
 import { createClient } from '@supabase/supabase-js'
-import { creerClient, cleDeSession } from '../../src/supabaseClient.js'
+import { creerClient, cleDeSession, lireSessionLocale } from '../../src/supabaseClient.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
 
 const URL_ = 'https://abcdefghijklmnop.supabase.co'
@@ -91,6 +91,17 @@ const cle = cleDeSession(URL_)
   a(memes(p.ro.appels.at(-1), p.rm.appels.at(-1)) && p.rm.appels.at(-1).entetes.authorization === 'Bearer ' + CLE, 'sans session : la cle publique, comme le client complet')
 }
 
+// ─── ecriture sans session : refusee, jamais envoyee ───
+{
+  const p = paire()
+  const avant = p.rm.appels.length
+  const r = await p.reduit.from('profiles').update({ phys: { poids: 72 } }).eq('id', 'u1')
+  a(r.error && /JWT/.test(r.error.message || ''), 'sans session, une ecriture est refusee avec une erreur explicite')
+  a(p.rm.appels.length === avant, 'et rien ne part sur le reseau : la base l aurait ignoree en silence')
+  const { isRetryable } = await import('../../src/features/nutrition/syncQueue.js')
+  a(isRetryable(r.error) === false, 'la file garde la saisie au lieu de la croire envoyee ou de boucler')
+}
+
 // ─── connexion et deconnexion ───
 {
   const p = paire()
@@ -101,11 +112,14 @@ const cle = cleDeSession(URL_)
   a(!ro.error && !rm.error && rm.data.session && rm.data.session.access_token === JETON, 'la session recue est la meme')
   a(p.so.getItem(cle) && p.sm.getItem(cle) && JSON.parse(p.sm.getItem(cle)).access_token === JSON.parse(p.so.getItem(cle)).access_token, 'et elle est rangee au meme endroit, sous la meme forme')
 
+  const locale = lireSessionLocale(URL_, p.sm)
+  a(locale && locale.user.id === 'u1' && locale.horsLigne === true, 'hors ligne, la session gardee sur l appareil dit qui est connecte')
   await p.officiel.auth.signOut()
   await p.reduit.auth.signOut()
   const lo = p.ro.appels.find((c) => c.url.includes('/auth/v1/logout')), lm = p.rm.appels.find((c) => c.url.includes('/auth/v1/logout'))
   a(lo && lm && memes(lo, lm), 'deconnexion : meme appel au serveur')
   a(p.so.getItem(cle) === null && p.sm.getItem(cle) === null, 'et la session est effacee de l appareil')
+  a(lireSessionLocale(URL_, p.sm) === null, 'apres deconnexion, plus aucune session lisible hors ligne')
 }
 
 // ─── entrees invalides ───
