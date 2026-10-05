@@ -139,6 +139,7 @@ function getInstance(userId) {
 // monté sur un utilisateur.
 export function resetStore() {
   for (const inst of instances.values()) {
+    clearTimeout(inst.relance)
     try { inst.queue.clear() } catch { /* file déjà inutilisable */ }
     inst.listeners.clear()
   }
@@ -250,10 +251,35 @@ function demarrerChargement(inst, userId) {
   inst.started = true
   async function load() {
     const since = isoDaysAgo(DAYS_HISTORY)
-    const [{ data: profileRow }, { data: logRows }] = await Promise.all([
-      supabase.from('profiles').select('phys,cycle,sensitive_zones,goals').eq('id', userId).single(),
-      supabase.from('nutrition_logs').select('id,date,data').eq('user_id', userId).gte('date', since),
-    ])
+    let profil, journal
+    try {
+      ;[profil, journal] = await Promise.all([
+        supabase.from('profiles').select('phys,cycle,sensitive_zones,goals').eq('id', userId).single(),
+        supabase.from('nutrition_logs').select('id,date,data').eq('user_id', userId).gte('date', since),
+      ])
+    } catch (e) {
+      profil = { data: null, error: e }
+    }
+    // Une lecture ratée (réseau coupé à l'ouverture, serveur indisponible)
+    // ne doit JAMAIS passer pour un profil vide. Chaque écriture renvoie la
+    // colonne phys entière : un profil pris pour vide puis complété d'une
+    // seule saisie aurait effacé tout l'historique en base. On reste donc
+    // « en chargement », on n'écrit rien, et on réessaie.
+    const erreur = (profil && profil.error) || (journal && journal.error) || (!profil || !profil.data ? new Error('profil introuvable') : null)
+    if (erreur) {
+      inst.loadError = (erreur && erreur.message) || String(erreur)
+      inst.started = false
+      const attente = ATTENTES_RELANCE[Math.min(inst.essais || 0, ATTENTES_RELANCE.length - 1)]
+      inst.essais = (inst.essais || 0) + 1
+      clearTimeout(inst.relance)
+      inst.relance = setTimeout(() => demarrerChargement(inst, userId), attente)
+      inst.notify()
+      return
+    }
+    inst.loadError = null
+    inst.essais = 0
+    const profileRow = profil.data
+    const logRows = journal.data
     inst.phys = profileRow?.phys || {}
     inst.cycle = profileRow?.cycle || {}
     inst.goals = profileRow?.goals || {}
@@ -287,6 +313,25 @@ function demarrerChargement(inst, userId) {
 export function prechargerStore(userId) {
   if (!userId) return
   demarrerChargement(getInstance(userId), userId)
+}
+
+// Nouvel essai immédiat (bouton « Réessayer », retour du réseau).
+export function relancerChargement(userId) {
+  const inst = userId && instances.get(userId)
+  if (!inst || !inst.loading || inst.started) return
+  clearTimeout(inst.relance)
+  demarrerChargement(inst, userId)
+}
+
+// Délais entre deux essais de chargement : vite au début, puis on espace
+// pour ne pas marteler un serveur en difficulté.
+const ATTENTES_RELANCE = [2000, 5000, 10000, 20000, 30000]
+
+// Le réseau revient : on relance tout chargement resté en échec.
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('online', () => {
+    for (const [uid, inst] of instances) if (inst.loadError) relancerChargement(uid)
+  })
 }
 
 export function useNutritionStore(userId) {
@@ -400,6 +445,12 @@ export function useNutritionStore(userId) {
     get: () => db,
     ensureDay,
     set: (patchOrFn) => {
+      // Rien ne s'écrit tant que les vraies données ne sont pas arrivées :
+      // composer une écriture sur un état inconnu écraserait la base.
+      if (!inst || inst.loading) {
+        console.warn('[store] écriture ignorée : données pas encore chargées')
+        return
+      }
       // La forme fonction reçoit l'état à jour, pas celui du dernier rendu :
       // deux `set` dans le même tick composaient sinon sur la même base
       // périmée, et le premier était perdu.
@@ -511,5 +562,7 @@ export function useNutritionStore(userId) {
   const sync = inst ? inst.sync : { status: 'idle', pending: 0, lastError: null }
   const retrySync = () => { if (inst) inst.queue.retryNow() }
 
-  return { db, store, loading, sync, retrySync }
+  const loadError = inst ? inst.loadError || null : null
+  const retryLoad = () => relancerChargement(userId)
+  return { db, store, loading, sync, retrySync, loadError, retryLoad }
 }

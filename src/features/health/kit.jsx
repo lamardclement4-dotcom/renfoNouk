@@ -578,7 +578,17 @@ export function fmtDate(iso) {
 // Une écriture qui échouait finissait dans un console.error : l'écran
 // affichait la saisie, elle n'était jamais partie, et personne ne le
 // savait. Ce bandeau n'apparaît que lorsqu'il y a quelque chose à dire.
-export function SyncBanner({ sync, onRetry }) {
+export function SyncBanner({ sync, onRetry, loadError, onRetryLoad }) {
+  // Chargement initial en échec : rien n'est affiché ni enregistré tant que
+  // les vraies données ne sont pas arrivées (voir useNutritionStore).
+  if (loadError) {
+    return React.createElement('div', { role: 'status', style: { position: 'fixed', left: 12, right: 12, bottom: 'calc(76px + env(safe-area-inset-bottom))', zIndex: 90, maxWidth: 436, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.danger}`, fontFamily: C.font } },
+      React.createElement(Icon, { name: 'shield', size: 16, color: C.danger, style: { flex: '0 0 auto' } }),
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink, lineHeight: 1.35 } }, 'Données pas encore chargées'),
+        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2, lineHeight: 1.4 } }, 'Le serveur ne répond pas. Nouvel essai automatique ; rien n’est enregistré ni effacé en attendant.')),
+      onRetryLoad ? React.createElement('button', { onClick: onRetryLoad, style: { flex: '0 0 auto', padding: '7px 12px', border: 'none', background: C.danger, color: C.onFill, fontFamily: C.mono, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', cursor: 'pointer' } }, 'Réessayer') : null)
+  }
   if (!sync || sync.status === 'idle' || sync.status === 'saving') return null
   const isError = sync.status === 'error'
   const tint = isError ? 'var(--c-danger)' : C.warn

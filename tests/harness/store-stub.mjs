@@ -4,12 +4,22 @@ export const calls = { phys: [], cycle: [], goals: [], zones: [], days: [], inse
 export function reset() { for (const k of Object.keys(calls)) calls[k] = [] }
 
 const ok = (data) => Promise.resolve({ data, error: null })
+// Pannes simulees : nombre de lectures du profil qui echoueront encore, et
+// la facon d echouer (erreur renvoyee par Supabase, ou exception levee).
+export const pannes = { lecture: 0, jette: false, profil: null }
+const lireProfil = () => {
+  if (pannes.lecture > 0) {
+    pannes.lecture--
+    if (pannes.jette) return Promise.reject(new TypeError('Failed to fetch'))
+    return Promise.resolve({ data: null, error: { message: 'Failed to fetch' } })
+  }
+}
 
 export const supabase = {
   from: (table) => ({
     select: () => ({
       eq: () => ({
-        single: () => ok({ phys: {}, cycle: {}, goals: {}, sensitive_zones: [] }),
+        single: () => (pannes.lecture > 0 ? lireProfil() : ok(pannes.profil || { phys: {}, cycle: {}, goals: {}, sensitive_zones: [] })),
         maybeSingle: () => ok(null),
         gte: () => ok([]),
         eq: () => ({ maybeSingle: () => ok(null) }),

@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
 import { supabase } from './lib'
 import { C, SyncBanner } from './features/health/kit'
+import { GardeEcran } from './GardeEcran'
 import { useNutritionStore, resetStore, prechargerStore } from './features/nutrition/useNutritionStore'
 
 // Les onglets ne sont téléchargés qu'au moment où l'on s'y rend. L'accueil
@@ -32,15 +33,51 @@ function useAuth() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
 
+  // Lecture du profil ratée : on l'affiche et on réessaie, de plus en plus
+  // espacé. Avant, l'échec laissait un écran blanc définitif — session
+  // valide mais profil absent, aucun écran ne correspondait.
+  const [profileError, setProfileError] = useState(null)
+  const essais = useRef(0)
+  const relance = useRef(null)
+  const dernierUtilisateur = useRef(null)
+
   const loadProfile = useCallback(async (userId) => {
-    if (!userId) { setProfile(null); return }
+    clearTimeout(relance.current)
+    dernierUtilisateur.current = userId || null
+    if (!userId) { setProfile(null); setProfileError(null); essais.current = 0; return }
     // Les données de l'accueil partent en même temps que le profil, au lieu
     // d'attendre qu'il soit arrivé et que l'accueil soit monté.
     prechargerStore(userId)
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
-    if (error) { console.error('[useAuth] Erreur chargement profil :', error.message); setProfile(null); return }
-    setProfile(data)
+    let res
+    try { res = await supabase.from('profiles').select('*').eq('id', userId).single() } catch (e) { res = { data: null, error: e } }
+    if (dernierUtilisateur.current !== userId) return
+    if (res.error || !res.data) {
+      const message = (res.error && res.error.message) || 'profil introuvable'
+      console.error('[useAuth] Erreur chargement profil :', message)
+      // Un rafraîchissement raté garde le profil déjà connu plutôt que de
+      // renvoyer l'utilisateur vers un écran vide.
+      setProfileError(message)
+      const attente = [2000, 5000, 10000, 20000, 30000][Math.min(essais.current, 4)]
+      essais.current += 1
+      relance.current = setTimeout(() => loadProfile(userId), attente)
+      return
+    }
+    essais.current = 0
+    setProfileError(null)
+    setProfile(res.data)
   }, [])
+
+  const retryProfile = useCallback(() => {
+    if (dernierUtilisateur.current) { essais.current = 0; loadProfile(dernierUtilisateur.current) }
+  }, [loadProfile])
+
+  // Le réseau revient : nouvel essai immédiat si le profil manque.
+  useEffect(() => {
+    const auRetour = () => { if (dernierUtilisateur.current && profileError) retryProfile() }
+    window.addEventListener('online', auRetour)
+    return () => window.removeEventListener('online', auRetour)
+  }, [profileError, retryProfile])
+  useEffect(() => () => clearTimeout(relance.current), [])
 
   const refreshProfile = useCallback(() => {
     if (session?.user?.id) loadProfile(session.user.id)
@@ -79,7 +116,7 @@ function useAuth() {
   }, [])
 
   return {
-    loading, session, profile, refreshProfile,
+    loading, session, profile, refreshProfile, profileError, retryProfile,
     isAuthenticated: !!session,
     isApproved: profile?.status === 'approved',
     isPending: profile?.status === 'pending',
@@ -626,29 +663,50 @@ const styles = {
 // ============================================================
 // App racine
 // ============================================================
-function App() {
-  const { loading, isAuthenticated, isApproved, isPending, isRejected, signIn, signUp, signOut, profile, refreshProfile } = useAuth()
+// Écran d'état (chargement, compte en attente, refus, réseau) : la même
+// étiquette sur papier que l'écran de connexion.
+function Panneau({ titre, texte, children }) {
+  return (
+    <div style={styles.wrapper}>
+      <div style={styles.card} role="status">
+        <h1 style={{ ...styles.title, fontSize: 34, marginBottom: 10 }}>{titre}</h1>
+        {texte && <p style={styles.subtitle}>{texte}</p>}
+        {children && <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>}
+      </div>
+    </div>
+  )
+}
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.ink2 }}>Chargement...</div>
+function App() {
+  const { loading, isAuthenticated, isApproved, isPending, isRejected, signIn, signUp, signOut, profile, refreshProfile, profileError, retryProfile } = useAuth()
+
+  if (loading && !profileError) return <Panneau titre="Renfo" texte="Chargement…" />
   if (!isAuthenticated) return <Login signIn={signIn} signUp={signUp} />
+
+  // Session valide mais profil illisible (réseau, serveur) : on le dit,
+  // on réessaie tout seul, et on laisse la main.
+  if (!profile && profileError) {
+    return (
+      <Panneau titre="Hors connexion" texte="Impossible de joindre le serveur pour lire ton profil. Nouvel essai automatique ; rien n'est enregistré ni effacé en attendant.">
+        <button onClick={retryProfile} style={styles.button}>Réessayer</button>
+        <button onClick={signOut} style={styles.buttonSecondary}>Se déconnecter</button>
+      </Panneau>
+    )
+  }
 
   if (isPending) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', maxWidth: 420, margin: '0 auto' }}>
-        <h2>Compte en attente</h2>
-        <p style={{ color: C.ink2, marginTop: 12 }}>Ton inscription a bien été reçue. L'accès sera activé après validation manuelle.</p>
-        <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
-      </div>
+      <Panneau titre="Compte en attente" texte="Ton inscription a bien été reçue. L'accès sera activé après validation manuelle.">
+        <button onClick={signOut} style={styles.buttonSecondary}>Se déconnecter</button>
+      </Panneau>
     )
   }
 
   if (isRejected) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', maxWidth: 420, margin: '0 auto' }}>
-        <h2>Accès refusé</h2>
-        <p style={{ color: C.ink2, marginTop: 12 }}>Contacte l'administrateur pour plus d'informations.</p>
-        <button onClick={signOut} style={{ marginTop: 20 }}>Se déconnecter</button>
-      </div>
+      <Panneau titre="Accès refusé" texte="Contacte l'administrateur pour plus d'informations.">
+        <button onClick={signOut} style={styles.buttonSecondary}>Se déconnecter</button>
+      </Panneau>
     )
   }
 
@@ -660,7 +718,8 @@ function App() {
     return <Home profile={profile} signOut={signOut} refreshProfile={refreshProfile} />
   }
 
-  return null
+  // Profil en route (juste après la connexion) : jamais d'écran vide.
+  return <Panneau titre="Renfo" texte="Chargement…" />
 }
 
 // Barre de navigation basse persistante à 5 onglets, fidèle à la NAV de
@@ -683,23 +742,27 @@ function Home({ profile, signOut, refreshProfile }) {
   // Le hook partage son état par utilisateur : cet appel ne crée pas de
   // copie supplémentaire, il s'abonne simplement pour connaître l'état
   // d'enregistrement et pouvoir l'afficher où que l'on soit dans l'app.
-  const { sync, retrySync } = useNutritionStore(userId)
+  const { sync, retrySync, loadError, retryLoad } = useNutritionStore(userId)
 
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
-      <SyncBanner sync={sync} onRetry={retrySync} />
+      <SyncBanner sync={sync} onRetry={retrySync} loadError={loadError} onRetryLoad={retryLoad} />
       {/* Une seule frontière d'attente, posée ici : elle couvre aussi les
           écrans que ces espaces ouvrent à leur tour (Entraîner depuis
           l'accueil, Poids ou Records depuis Progrès…). La barre de
           navigation reste en dehors, pour qu'elle ne disparaisse pas
           pendant qu'un onglet se charge. */}
-      <Suspense fallback={<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.font }}>Chargement...</div>}>
+      {/* La garde est réinitialisée à chaque changement d'onglet (key) : un
+          écran en panne n'empêche pas d'aller sur les autres. */}
+      <GardeEcran key={space}>
+      <Suspense fallback={<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.mono, fontSize: 12, textTransform: 'uppercase' }}>Chargement…</div>}>
         {space === 'accueil' && <AccueilSpace userId={userId} profile={profile} onProfil={() => setSpace('profil')} />}
         {space === 'entrainer' && <TrainSpace userId={userId} onClose={() => setSpace('accueil')} />}
         {space === 'sante' && <HealthHome userId={userId} onClose={() => setSpace('accueil')} />}
         {space === 'progres' && <ProgressSpace userId={userId} onClose={() => setSpace('accueil')} />}
         {space === 'profil' && <ProfilSpace userId={userId} profile={profile} refreshProfile={refreshProfile} signOut={signOut} onClose={() => setSpace('accueil')} />}
       </Suspense>
+      </GardeEcran>
       {/* Barre de navigation : des libellés seuls, en capitales étroites,
           comme les touches d'un appareil. L'onglet actif est marqué par un
           trait de tracé au-dessus de son nom, posé sur le filet de la barre. */}

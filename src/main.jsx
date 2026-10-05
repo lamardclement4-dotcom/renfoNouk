@@ -15,6 +15,8 @@ import '@fontsource/instrument-sans/latin-700'
 import './index.css'
 import App from './App.jsx'
 import { applyTheme, THEME_KEY, applyPalette, PALETTE_KEY } from './features/health/kit'
+import { GardeEcran } from './GardeEcran'
+import { rechargerUneFois } from './rechargement'
 
 // L'apparence et la palette sont posées avant le premier rendu, depuis le stockage local :
 // le profil arrive de façon asynchrone et attendre le réseau ferait
@@ -41,9 +43,14 @@ if (estEncadree()) {
   lien.textContent = 'Ouvrir Renfo dans sa propre fenêtre'
   racine.replaceChildren(lien)
 } else {
+  // Fichier d'écran introuvable après une mise en ligne (voir GardeEcran) :
+  // Vite le signale ici avant même l'erreur ; un rechargement suffit.
+  window.addEventListener('vite:preloadError', (e) => { if (rechargerUneFois()) e.preventDefault() })
   createRoot(document.getElementById('root')).render(
     <StrictMode>
-      <App />
+      <GardeEcran>
+        <App />
+      </GardeEcran>
     </StrictMode>,
   )
 }
