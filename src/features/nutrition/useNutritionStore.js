@@ -239,6 +239,56 @@ export const buildDb = (rawPhys, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO
   }
 }
 
+// Chargement initial d'un compte : profil et journées récentes, en une
+// seule fois. Lancé au plus tôt — dès que la session est connue, en
+// parallèle de la lecture du profil par l'authentification (voir
+// prechargerStore) — plutôt qu'au montage de l'accueil, qui n'arrive
+// qu'après : c'était un aller-retour réseau de plus, en série, à chaque
+// ouverture de l'app.
+function demarrerChargement(inst, userId) {
+  if (!userId || !inst || inst.started) return
+  inst.started = true
+  async function load() {
+    const since = isoDaysAgo(DAYS_HISTORY)
+    const [{ data: profileRow }, { data: logRows }] = await Promise.all([
+      supabase.from('profiles').select('phys,cycle,sensitive_zones,goals').eq('id', userId).single(),
+      supabase.from('nutrition_logs').select('id,date,data').eq('user_id', userId).gte('date', since),
+    ])
+    inst.phys = profileRow?.phys || {}
+    inst.cycle = profileRow?.cycle || {}
+    inst.goals = profileRow?.goals || {}
+    inst.sensitiveZones = profileRow?.sensitive_zones || []
+    const rows = {}
+    for (const r of logRows || []) {
+      rows[r.date] = { food: r.data?.food || [], hydration: r.data?.hydration || [] }
+      inst.rowIds[r.date] = r.id
+    }
+    // Écritures d'une session précédente jamais parties (onglet fermé
+    // pendant une coupure). Elles décrivent l'état local le plus récent :
+    // elles doivent primer sur l'instantané serveur, sinon la personne
+    // verrait sa saisie « disparaître » au rechargement avant de la voir
+    // revenir une fois la file vidée.
+    const pending = inst.queue.restorePending()
+    for (const [target, payload] of Object.entries(pending)) {
+      if (target === 'phys') inst.phys = payload
+      else if (target === 'cycle') inst.cycle = payload
+      else if (target === 'goals') inst.goals = payload
+      else if (target === 'zones') inst.sensitiveZones = payload
+      else if (target.startsWith('day:')) rows[target.slice(4)] = { food: payload.food || [], hydration: payload.hydration || [] }
+      inst.queue.enqueue(target, payload)
+    }
+    inst.dayRows = rows
+    inst.loading = false
+    inst.notify()
+  }
+  load()
+}
+
+export function prechargerStore(userId) {
+  if (!userId) return
+  demarrerChargement(getInstance(userId), userId)
+}
+
 export function useNutritionStore(userId) {
   const inst = userId ? getInstance(userId) : null
   const [, bump] = useState(0)
@@ -251,43 +301,7 @@ export function useNutritionStore(userId) {
   }, [inst])
 
   useEffect(() => {
-    if (!userId || !inst || inst.started) return
-    inst.started = true
-    async function load() {
-      const since = isoDaysAgo(DAYS_HISTORY)
-      const [{ data: profileRow }, { data: logRows }] = await Promise.all([
-        supabase.from('profiles').select('phys,cycle,sensitive_zones,goals').eq('id', userId).single(),
-        supabase.from('nutrition_logs').select('id,date,data').eq('user_id', userId).gte('date', since),
-      ])
-      inst.phys = profileRow?.phys || {}
-      inst.cycle = profileRow?.cycle || {}
-      inst.goals = profileRow?.goals || {}
-      inst.sensitiveZones = profileRow?.sensitive_zones || []
-      const rows = {}
-      for (const r of logRows || []) {
-        rows[r.date] = { food: r.data?.food || [], hydration: r.data?.hydration || [] }
-        inst.rowIds[r.date] = r.id
-      }
-      // Écritures d'une session précédente jamais parties (onglet fermé
-      // pendant une coupure). Elles décrivent l'état local le plus récent :
-      // elles doivent primer sur l'instantané serveur, sinon la personne
-      // verrait sa saisie « disparaître » au rechargement avant de la voir
-      // revenir une fois la file vidée.
-      const pending = inst.queue.restorePending()
-      for (const [target, payload] of Object.entries(pending)) {
-        if (target === 'phys') inst.phys = payload
-        else if (target === 'cycle') inst.cycle = payload
-        else if (target === 'goals') inst.goals = payload
-        else if (target === 'zones') inst.sensitiveZones = payload
-        else if (target.startsWith('day:')) rows[target.slice(4)] = { food: payload.food || [], hydration: payload.hydration || [] }
-        inst.queue.enqueue(target, payload)
-      }
-      inst.dayRows = rows
-      inst.loading = false
-      inst.notify()
-    }
-    load()
-    return undefined
+    demarrerChargement(inst, userId)
   }, [userId, inst])
 
   // Vues stables sur l'état partagé, pour que le reste du fichier garde sa

@@ -200,4 +200,11 @@ for (const fn of ['is_admin', 'handle_new_user', 'prevent_self_privilege_escalat
   a(m4.includes(fn), `${fn} est du lot`)
 }
 
+// ─── protections posees dans la page faute d en-tetes HTTP ───
+const coquille = readFileSync('../../index.html', 'utf8')
+a(/<meta name="referrer" content="no-referrer"/.test(coquille), 'aucune adresse de page envoyee aux services appeles')
+const entree = readFileSync('../../src/main.jsx', 'utf8')
+a(/window\.top !== window\.self/.test(entree) && /if \(estEncadree\(\)\)/.test(entree), 'l app refuse de s afficher dans un cadre tiers')
+a(entree.indexOf('estEncadree()') < entree.indexOf('createRoot(document'), 'et le controle precede le rendu')
+
 console.log('\nALL PASS')

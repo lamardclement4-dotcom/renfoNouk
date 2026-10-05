@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- iOS transforme sinon nombres, dates et adresses en liens bleus. -->
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    <!-- Aucune adresse de page envoyée aux services appelés (Supabase,
+         météo) : ils n'en ont pas besoin. -->
+    <meta name="referrer" content="no-referrer" />
     <!-- La politique de sécurité du contenu est injectée au build par le
          plugin `csp-meta` de vite.config.js : en développement, elle
          bloquerait le rechargement à chaud. -->

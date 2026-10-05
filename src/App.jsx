@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
 import { supabase } from './lib'
 import { C, SyncBanner } from './features/health/kit'
-import { useNutritionStore, resetStore } from './features/nutrition/useNutritionStore'
+import { useNutritionStore, resetStore, prechargerStore } from './features/nutrition/useNutritionStore'
 
 // Les onglets ne sont téléchargés qu'au moment où l'on s'y rend. L'accueil
 // fait exception à moitié : c'est le premier écran après connexion, donc
@@ -34,6 +34,9 @@ function useAuth() {
 
   const loadProfile = useCallback(async (userId) => {
     if (!userId) { setProfile(null); return }
+    // Les données de l'accueil partent en même temps que le profil, au lieu
+    // d'attendre qu'il soit arrivé et que l'accueil soit monté.
+    prechargerStore(userId)
     const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
     if (error) { console.error('[useAuth] Erreur chargement profil :', error.message); setProfile(null); return }
     setProfile(data)

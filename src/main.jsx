@@ -22,8 +22,28 @@ import { applyTheme, THEME_KEY, applyPalette, PALETTE_KEY } from './features/hea
 applyTheme(localStorage.getItem(THEME_KEY))
 applyPalette(localStorage.getItem(PALETTE_KEY))
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Anti-encadrement. Un site tiers pourrait afficher l'app dans un cadre
+// invisible et faire cliquer l'utilisateur à son insu (« clickjacking »).
+// La parade normale (en-tête frame-ancestors) est impossible : GitHub Pages
+// ne permet pas de poser d'en-tête, et la directive est ignorée dans une
+// balise meta. L'app refuse donc simplement de s'afficher dans un cadre, et
+// propose de s'ouvrir dans sa propre fenêtre.
+function estEncadree() {
+  try { return window.top !== window.self } catch { return true }
+}
+
+if (estEncadree()) {
+  const racine = document.getElementById('root')
+  const lien = document.createElement('a')
+  lien.href = window.location.href
+  lien.target = '_blank'
+  lien.rel = 'noopener noreferrer'
+  lien.textContent = 'Ouvrir Renfo dans sa propre fenêtre'
+  racine.replaceChildren(lien)
+} else {
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+}
