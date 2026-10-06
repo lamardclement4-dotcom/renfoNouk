@@ -6,6 +6,7 @@ import { inferUserLevel, trainingTotals } from '../train/renfoIntel'
 import { SPORTS } from '../train/trainData'
 import TrainSpace from '../train/TrainSpace'
 import WeightSpace from './WeightSpace'
+import { exporterDonnees } from './exportDonnees'
 
 const h = React.createElement
 
@@ -99,7 +100,21 @@ function LinkRow(ic, label, value, onClick, key) {
 // rendu) et dans le profil (pour suivre d'un appareil à l'autre).
 // ============================================================
 export default function ProfilSpace({ userId, profile, refreshProfile, signOut, onClose }) {
-  const { db, store, loading } = useNutritionStore(userId)
+  const { db, store, loading, etatBrut } = useNutritionStore(userId)
+  // Export : null, 'encours', ou le résultat affiché sous le bouton.
+  const [exportEtat, setExportEtat] = useState(null)
+  async function lancerExport() {
+    const etat = etatBrut()
+    if (!etat) return
+    setExportEtat('encours')
+    try {
+      const r = await exporterDonnees({ supabase, userId, profil: profile, etat, journeesLocales: etat.dayRows })
+      const j = `${r.journees} journée${r.journees > 1 ? 's' : ''}`
+      setExportEtat(r.complet ? `Fichier enregistré : ${j}, historique complet.` : `Fichier enregistré hors ligne : ${j} récente${r.journees > 1 ? 's' : ''} seulement.`)
+    } catch {
+      setExportEtat('Export impossible sur cet appareil.')
+    }
+  }
   const [sheet, setSheet] = useState(null)
   const [editGoal, setEditGoal] = useState(null)
   const [sportOpen, setSportOpen] = useState(false)
@@ -300,6 +315,14 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
             h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4 } }, p.hint)),
           on ? h(Icon, { name: 'check', size: 16, color: C.primary }) : null)
       })),
+
+    SecTitle('Mes données'),
+    // La sauvegarde qu'on garde soi-même : tout le profil et toutes les
+    // journées, dans un fichier lisible (JSON).
+    h('button', { onClick: lancerExport, disabled: exportEtat === 'encours', style: { width: '100%', padding: 13, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.primary}`, color: C.ink, fontFamily: C.display, fontWeight: 800, fontSize: 16, textTransform: 'uppercase', letterSpacing: '.04em', textAlign: 'left', cursor: exportEtat === 'encours' ? 'default' : 'pointer' } },
+      exportEtat === 'encours' ? 'Export en cours…' : 'Exporter mes données'),
+    h('div', { role: 'status', style: { fontSize: 11.5, color: C.ink3, marginTop: 6, lineHeight: 1.45 } },
+      exportEtat && exportEtat !== 'encours' ? exportEtat : 'Profil, historique et journées dans un fichier que tu gardes. Aucun mot de passe ni accès au compte dedans.'),
 
     h('button', { onClick: signOut, style: { width: '100%', marginTop: 28, padding: 13, background: 'transparent', border: `1px solid ${C.ink3}`, color: C.ink2, fontFamily: C.display, fontWeight: 800, fontSize: 16, textTransform: 'uppercase', letterSpacing: '.06em', cursor: 'pointer' } }, 'Se déconnecter'),
 

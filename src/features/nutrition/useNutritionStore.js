@@ -754,5 +754,7 @@ export function useNutritionStore(userId) {
   const conflits = inst ? inst.conflits || 0 : 0
   const retryLoad = () => relancerChargement(userId)
   const effacerConflits = () => { if (inst) { inst.conflits = 0; inst.notify() } }
-  return { db, store, loading, sync, retrySync, loadError, retryLoad, horsLigne, miseAJour, conflits, effacerConflits }
+  // État brut, pour l'export des données (pas de copie : lecture seule).
+  const etatBrut = () => (inst ? { phys: inst.phys, cycle: inst.cycle, goals: inst.goals, sensitiveZones: inst.sensitiveZones, dayRows: inst.dayRows } : null)
+  return { db, store, loading, sync, retrySync, loadError, retryLoad, horsLigne, miseAJour, conflits, effacerConflits, etatBrut }
 }
