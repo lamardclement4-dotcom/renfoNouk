@@ -1,3 +1,5 @@
+// En premier : la politique Trusted Types doit exister avant tout autre code.
+import './typesDeConfiance'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 // Polices embarquées plutôt que chargées depuis Google : la politique de

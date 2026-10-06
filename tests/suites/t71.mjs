@@ -120,8 +120,8 @@ const csp = cfg.slice(cfg.indexOf('const CSP'), cfg.indexOf('cspMeta'))
 for (const d of ["default-src 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'self'", "worker-src 'self'", "style-src 'self'"]) {
   a(csp.includes(d), `la politique pose ${d}`)
 }
-for (const host of ['https://*.open-meteo.com']) {
-  a(csp.includes(host), `${host} est joignable`)
+for (const host of ['https://api.open-meteo.com', 'https://geocoding-api.open-meteo.com', 'https://air-quality-api.open-meteo.com', 'https://archive-api.open-meteo.com']) {
+  a(cfg.includes(host), `${host} est joignable`)
 }
 
 // L origine Supabase est epinglee sur le projet reel, lue au build. Un joker
@@ -160,6 +160,10 @@ const cspCode = csp.replace(/\/\/.*$/gm, '')
 a(!/jsdelivr/.test(cspCode) && !/script-src[^;`"]*blob:/.test(cspCode), 'aucun CDN ni blob: pour le code')
 a(!/style-src[^;`"]*unsafe-inline/.test(cspCode), 'style-src n autorise pas les styles en ligne')
 a(!/wss:/.test(cspCode), 'aucune connexion websocket autorisee')
+a(/require-trusted-types-for 'script'/.test(cspCode) && /trusted-types default/.test(cspCode), 'Trusted Types exige : aucune injection de HTML ou de script par chaine')
+a(!/data:/.test(cspCode), 'aucune source data: (ni image, ni police : rien ne s en sert)')
+a(/frame-src 'none'/.test(cspCode) && /media-src 'none'/.test(cspCode), 'ni cadre ni media charges')
+a(!/\*\.open-meteo/.test(cspCode) && /api\.open-meteo\.com/.test(cfg), 'la meteo est epinglee sur ses quatre services, sans joker')
 a(script.includes("'wasm-unsafe-eval'"), 'mais WebAssembly reste compilable, sinon la lecture des captures tombe')
 
 // Posee au build seulement : en developpement elle bloquerait le

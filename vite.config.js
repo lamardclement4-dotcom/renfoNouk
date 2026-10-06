@@ -27,25 +27,40 @@ import { createHash } from 'node:crypto'
 //   directive n'autorise que WebAssembly, pas eval() sur du JavaScript.
 // - `connect-src blob:` : l'image à lire est passée au moteur sous forme
 //   d'URL blob locale ; elle ne quitte pas l'appareil.
-// - open-meteo.com : la météo du jour, pour pondérer la charge.
+// - open-meteo.com (quatre services nommés) : la météo du jour, pour
+//   pondérer la charge.
 //
 // `frame-ancestors` est absent volontairement : la directive est ignorée
 // dans une balise meta, elle n'a d'effet qu'en en-tête HTTP. GitHub Pages
 // ne permettant pas d'en poser, la protection contre l'encadrement de la
 // page par un site tiers n'est pas atteignable ici.
 // ============================================================
+// Les quatre services météo réellement appelés (src/features/train/weatherApi.js),
+// plutôt qu'un joker sur tout le domaine.
+const METEO = ['https://api.open-meteo.com', 'https://geocoding-api.open-meteo.com', 'https://air-quality-api.open-meteo.com', 'https://archive-api.open-meteo.com']
+
 const CSP_SOURCES = (supabase) => [
   "default-src 'self'",
   "script-src 'self' 'wasm-unsafe-eval'",
   "worker-src 'self'",
+  // Trusted Types : le navigateur refuse toute injection de HTML ou de
+  // script par chaîne (innerHTML, script.src…), la porte d'entrée des
+  // failles XSS côté page. Une seule politique, « default », définie au
+  // démarrage (src/typesDeConfiance.js) : elle n'autorise que le service
+  // worker et le moteur OCR du site, et refuse tout HTML injecté.
+  "require-trusted-types-for 'script'",
+  "trusted-types default",
   // Pas de 'unsafe-inline' : les styles des composants sont posés par
   // React via le CSSOM (element.style), que la politique ne bloque pas ;
   // seuls les <style> et attributs style écrits en dur le seraient, et
   // l'app n'en a aucun. Une injection de CSS ne peut donc rien appliquer.
   "style-src 'self'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  `connect-src 'self' blob: ${supabase} https://*.open-meteo.com`,
+  "img-src 'self' blob:",
+  "font-src 'self'",
+  `connect-src 'self' blob: ${supabase} ${METEO.join(' ')}`,
+  "frame-src 'none'",
+  "manifest-src 'self'",
+  "media-src 'none'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

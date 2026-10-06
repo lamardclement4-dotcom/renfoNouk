@@ -27,6 +27,8 @@ export async function lireImage(image, { logger } = {}) {
     // Worker chargé depuis son fichier plutôt que recopié dans une URL
     // blob : la politique n'a plus à autoriser blob: pour les scripts.
     workerBlobURL: false,
-    logger,
+    // Passé seulement s'il existe : un « logger » vide remplaçait celui du
+    // moteur et le faisait lever à chaque étape.
+    ...(typeof logger === 'function' ? { logger } : {}),
   })
 }
