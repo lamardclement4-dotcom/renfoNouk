@@ -11,6 +11,17 @@
     <!-- La politique de sécurité du contenu est injectée au build par le
          plugin `csp-meta` de vite.config.js : en développement, elle
          bloquerait le rechargement à chaud. -->
+    <!-- Icône et installation sur l'écran d'accueil : l'app s'ouvre alors
+         en plein écran, sans la barre du navigateur. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icone-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Renfo" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#F2F4EF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0D1411" media="(prefers-color-scheme: dark)" />
     <title>Renfo</title>
   </head>
   <body>
