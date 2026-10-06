@@ -602,7 +602,7 @@ function GoalDetail({ goal, db, store, onEdit, onDelete, onBack, onNutrition, on
   return React.createElement('div', { style: FLOW_STYLE },
     React.createElement('div', { style: SCROLL_STYLE },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 } },
-        React.createElement('button', { onClick: onBack, style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', cursor: 'pointer',
+        React.createElement('button', { onClick: onBack, 'aria-label': 'Retour', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', cursor: 'pointer',
           background: `${C.surface}`, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
           React.createElement(Icon, { name: 'back', size: 18 })
         ),
@@ -818,7 +818,7 @@ function PeakSpace({ db, store, onClose, onNutrition, onRecovery, onMobility, on
     setFormMode(null);
   }
   function deleteGoal(id) {
-    store.removePeakGoal(id);
+    store.annulable('Objectif supprimé', () => store.removePeakGoal(id));
     setSelId(null);
   }
 

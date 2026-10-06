@@ -12,7 +12,7 @@
 // ressenti des séances, cycle, Pic de forme), puis va plus loin avec des
 // règles inédites, rendues possibles par nos données réelles persistées :
 // croisement sport pratiqué × zone de mobilité faible (SPORTS[].focus),
-// tendance semaine vs semaine précédente (comble le trou avant que l'ACWR
+// tendance semaine par rapport à la semaine précédente (comble le trou avant que l'ACWR
 // ait 14 jours d'historique), régression de charge sur un exercice suivi
 // (db.exerciseHistory) et déséquilibre entre sports pratiqués.
 // ============================================================
@@ -344,7 +344,7 @@ export function mondayRetro(db) {
     const deltaPct = trainingPrev.total ? Math.round((training.total - trainingPrev.total) / trainingPrev.total * 100) : null
     const top = training.bySport[0]
     let s = `Semaine du ${weekLabel} : ${training.count} séance${training.count > 1 ? 's' : ''}, ${training.total} min`
-    if (deltaPct != null) s += ` (${deltaPct >= 0 ? '+' : ''}${deltaPct}% vs la semaine d'avant)`
+    if (deltaPct != null) s += ` (${deltaPct >= 0 ? '+' : ''}${deltaPct}% par rapport à la semaine d'avant)`
     if (top) s += `, principalement en ${top.label.toLowerCase()} (${top.pct}%)`
     lines.push(s + '.')
   } else {
@@ -719,7 +719,7 @@ export function peakReadiness(db, plan) {
         flags.push({ level: 'warn', text: `Volume cette semaine à ${actualPct}% de ta charge habituelle (${thisWeek} / ~${round(refAvg)} min), alors que l'affûtage recommande de viser ${plan.targetVolumePct}% — réduis encore pour arriver frais.` })
         score -= 25
       } else if (gap < -40) {
-        flags.push({ level: 'info', text: `Volume déjà très réduit (${actualPct}% vs ${plan.targetVolumePct}% recommandé) — pas la peine de couper davantage, garde un minimum d'activité pour rester affûté.` })
+        flags.push({ level: 'info', text: `Volume déjà très réduit (${actualPct}% au lieu de ${plan.targetVolumePct}% recommandés) — pas la peine de couper davantage, garde un minimum d'activité pour rester affûté.` })
         score -= 5
       }
     }
@@ -1282,7 +1282,7 @@ export function recommendations(db) {
 
   const sessions = asList(db && db.planningSessions)
 
-  // --- Tendance semaine vs semaine précédente (nouveau) : ne se déclenche
+  // --- Tendance semaine par rapport à la semaine précédente (nouveau) : ne se déclenche
   // que quand l'ACWR n'est pas encore disponible (< 14 jours d'historique),
   // pour donner un premier repère de charge aux nouveaux utilisateurs sans
   // dupliquer le signal ACWR une fois qu'il devient fiable.
@@ -1304,7 +1304,7 @@ export function recommendations(db) {
     if (lastWeekMin >= 60 && thisWeekMin > 0) {
       const change = (thisWeekMin - lastWeekMin) / lastWeekMin
       if (change > 0.5) {
-        push('info', 'chart', `Volume en hausse de ${Math.round(change * 100)}% par rapport à la semaine dernière (${thisWeekMin} vs ${lastWeekMin} min) — progression rapide, veille à bien récupérer entre les séances.`, 'planner')
+        push('info', 'chart', `Volume en hausse de ${Math.round(change * 100)}% par rapport à la semaine dernière (${thisWeekMin} contre ${lastWeekMin} min) — progression rapide, veille à bien récupérer entre les séances.`, 'planner')
       }
     }
   }

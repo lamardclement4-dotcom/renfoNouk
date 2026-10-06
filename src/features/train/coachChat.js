@@ -326,7 +326,7 @@ function loadReply(db) {
   const consec = consecutiveDaysBefore(db, todayISO())
   const streakNote = consec >= 5 ? ` Tu en es à ${consec} jours d'entraînement consécutifs sans repos — surveille ça.` : ''
   if (acwr.available) {
-    return { text: `Charge : « ${acwr.level} » (ratio ${acwr.ratio} — ${acwr.acuteMin} min sur 7 jours vs ${acwr.chronicAvgWeek} min/sem en moyenne sur 4 semaines, seuils adaptés à ton profil ${acwr.userLevel.label.toLowerCase()}). ${acwr.advice}${streakNote}`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Je me sens fatigué', "Quelle séance aujourd'hui ?"] }
+    return { text: `Charge : « ${acwr.level} » (ratio ${acwr.ratio} — ${acwr.acuteMin} min sur 7 jours contre ${acwr.chronicAvgWeek} min/sem en moyenne sur 4 semaines, seuils adaptés à ton profil ${acwr.userLevel.label.toLowerCase()}). ${acwr.advice}${streakNote}`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Je me sens fatigué', "Quelle séance aujourd'hui ?"] }
   }
   const load = pillarLoad(db)
   const base = load.status === 'ok' ? `Cette semaine : ${load.extra.weekMin} / ${load.extra.targetMin} min par rapport à ton objectif.` : 'Aucune séance enregistrée cette semaine.'

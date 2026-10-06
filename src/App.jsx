@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
 import { supabase, sessionLocale } from './lib'
-import { C, SyncBanner } from './features/health/kit'
+import { C, SyncBanner, Annonces } from './features/health/kit'
 import { GardeEcran } from './GardeEcran'
 import { useNutritionStore, resetStore, prechargerStore, relancerFiles, estPanneReseau } from './features/nutrition/useNutritionStore'
 import { STORAGE_PREFIX } from './features/nutrition/syncQueue'
@@ -786,6 +786,7 @@ function Home({ profile, signOut, refreshProfile }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
+      <Annonces />
       <SyncBanner sync={sync} onRetry={retrySync} loadError={loadError} onRetryLoad={retryLoad} horsLigne={horsLigne} conflits={conflits} onConflitsVus={effacerConflits} />
       {/* Une seule frontière d'attente, posée ici : elle couvre aussi les
           écrans que ces espaces ouvrent à leur tour (Entraîner depuis

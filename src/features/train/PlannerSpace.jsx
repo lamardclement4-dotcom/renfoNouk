@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, FlowSpace, SegTabs, fmtDate } from '../health/kit'
+import { C, Icon, FlowSpace, SegTabs, fmtDate, Aide } from '../health/kit'
 import { SPORTS } from './trainData'
 import ActivityImport from './ActivityImport'
 import { WARMUP_KINDS, WARMUP_MINUTES, drillsFor, buildWarmup } from './drillsData'
@@ -493,7 +493,7 @@ function GenericSportFields({ sportId, data, setData }) {
         if (f.t === 'auto-allure') {
           const pace = computeAllure(data.distance, data.temps)
           return React.createElement('div', { key: f.k, style: { gridColumn: '1 / -1' } },
-            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab),
+            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab, f.k === 'rpe' ? React.createElement(Aide, { terme: 'rpe' }) : null),
             React.createElement('input', {
               type: 'text', readOnly: true, value: pace || '',
               placeholder: 'Renseigne distance et temps',
@@ -505,21 +505,21 @@ function GenericSportFields({ sportId, data, setData }) {
         }
         if (f.t === 'select1') {
           return React.createElement('div', { key: f.k, style: { gridColumn: '1 / -1' } },
-            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab),
+            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab, f.k === 'rpe' ? React.createElement(Aide, { terme: 'rpe' }) : null),
             React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7 } },
               f.opts.map((o) => React.createElement('button', { key: o, onClick: () => setData({ ...data, [f.k]: o }), style: pillStyle(val === o) }, o))))
         }
         if (f.t === 'pills') {
           const cur = Array.isArray(val) ? val : []
           return React.createElement('div', { key: f.k, style: { gridColumn: '1 / -1' } },
-            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab),
+            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab, f.k === 'rpe' ? React.createElement(Aide, { terme: 'rpe' }) : null),
             React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7 } },
               f.opts.map((o) => { const on = cur.includes(o); return React.createElement('button', { key: o, onClick: () => setData({ ...data, [f.k]: on ? cur.filter((x) => x !== o) : [...cur, o] }), style: pillStyle(on) }, o) })))
         }
         if (f.t === 'bool') {
           const cur = val === true
           return React.createElement('div', { key: f.k, style: { gridColumn: '1 / -1' } },
-            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab),
+            React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginBottom: 6, fontWeight: 600 } }, f.lab, f.k === 'rpe' ? React.createElement(Aide, { terme: 'rpe' }) : null),
             React.createElement('div', { style: { display: 'flex', gap: 7 } },
               React.createElement('button', { onClick: () => setData({ ...data, [f.k]: false }), style: pillStyle(!cur) }, 'Non'),
               React.createElement('button', { onClick: () => setData({ ...data, [f.k]: true }), style: pillStyle(cur) }, 'Oui')))
@@ -557,7 +557,7 @@ function ExerciseSetRow({ exIdx, setIdx, set, onUpdate, onRemove }) {
         React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'Charge kg'),
         React.createElement('input', { type: 'number', step: '0.5', placeholder: '0', value: set.charge || '', onChange: (e) => onUpdate(exIdx, setIdx, 'charge', e.target.value), style: { ...fieldInputStyle, padding: '8px 9px', fontSize: 13 } })),
       React.createElement('div', null,
-        React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'RPE'),
+        React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginBottom: 3 } }, 'Effort /10', React.createElement(Aide, { terme: 'rpe', style: { width: 16, height: 16, fontSize: 10, marginLeft: 4 } })),
         React.createElement('input', { type: 'number', min: 1, max: 10, placeholder: '—', value: set.rpe || '', onChange: (e) => onUpdate(exIdx, setIdx, 'rpe', e.target.value), style: { ...fieldInputStyle, padding: '8px 9px', fontSize: 13 } }))),
     React.createElement('div', { style: { display: 'flex', gap: 6, marginTop: 6 } },
       React.createElement('button', { onClick: () => onUpdate(exIdx, setIdx, 'mode', 'reps'), style: { flex: 1, padding: '6px 0', borderRadius: 0, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: mode === 'reps' ? `color-mix(in srgb, ${C.primary} 12%, ${C.surface})` : C.surface2, color: mode === 'reps' ? C.primary : C.ink3 } }, 'Répétitions'),
@@ -566,7 +566,7 @@ function ExerciseSetRow({ exIdx, setIdx, set, onUpdate, onRemove }) {
 
 function ExerciseCard({ ex, idx, history, onUpdateSet, onAddSet, onRemoveSet, onRemove }) {
   const h = history && history[ex.name]
-  const last = h && h.last ? `Dernière : ${h.last.charge}kg × ${h.last.reps}${h.last.rpe ? ` · RPE ${h.last.rpe}` : ''}` : ''
+  const last = h && h.last ? `Dernière : ${h.last.charge}kg × ${h.last.reps}${h.last.rpe ? ` · effort ${h.last.rpe}/10` : ''}` : ''
   const record = h && h.record ? `🏆 ${h.record.charge}kg` : ''
   const est = h && h.best1RM ? `≈ ${h.best1RM.value}kg max estimé` : ''
   const sug = h && h.last && h.last.charge ? suggestLoad(h.last.charge, { rpe: h.last.rpe, group: ex.group }) : null
@@ -1153,7 +1153,7 @@ export default function PlannerSpace({ db, store, onClose }) {
     setForm(null)
   }
   function deleteSession(id) {
-    store.set({ planningSessions: sessions.filter((s) => s.id !== id) })
+    store.annulable('Séance supprimée', () => store.set({ planningSessions: sessions.filter((s) => s.id !== id) }))
     setForm(null)
   }
   function goDay(ds) { setDate(new Date(ds + 'T00:00:00')); setView('day') }

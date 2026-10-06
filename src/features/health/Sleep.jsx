@@ -165,7 +165,7 @@ function AnalysisBlock({ ana }) {
   }
   if (cu) {
     rows.push(React.createElement(AnaRow, {
-      key: 'cu', label: 'Semaine vs week-end', color: cu.flagged ? C.warn : C.ink,
+      key: 'cu', label: 'Semaine et week-end', color: cu.flagged ? C.warn : C.ink,
       value: String(cu.weekday).replace('.', ',') + ' h → ' + String(cu.weekend).replace('.', ',') + ' h',
       hint: cu.flagged
         ? `Tu dors ${String(cu.gap).replace('.', ',')} h de plus le week-end : le besoin est présent toute la semaine, c’est l’occasion de dormir qui manque en semaine.`
@@ -175,7 +175,7 @@ function AnalysisBlock({ ana }) {
   if (at) {
     rows.push(React.createElement(AnaRow, {
       key: 'at', label: 'Nuit après une séance', color: at.flagged ? C.warn : C.ink,
-      value: String(at.afterTraining).replace('.', ',') + ' h vs ' + String(at.afterRest).replace('.', ',') + ' h',
+      value: String(at.afterTraining).replace('.', ',') + ' h (repos : ' + String(at.afterRest).replace('.', ',') + ' h)',
       hint: at.flagged
         ? `Tu dors ${String(Math.abs(at.diff)).replace('.', ',')} h de moins après une séance (${at.nightsAfter} nuits comparées). Regarde l’horaire de tes séances tardives et la caféine en fin de journée.`
         : `Les séances ne dégradent pas ta nuit (${at.nightsAfter} nuits comparées).`,

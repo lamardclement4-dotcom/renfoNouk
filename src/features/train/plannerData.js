@@ -248,8 +248,8 @@ export const SPORT_FIELDS = {
     {k:'distance',t:'num',lab:'Distance (km)',ph:'5',step:0.1,dir:'up'},
     {k:'temps',t:'time',lab:'Temps (mm:ss)',ph:'18:30',dir:'down'},
     {k:'allure',t:'auto-allure',lab:'Allure (auto)'},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'165'},
-    {k:'fc_max',t:'num',lab:'FC max (bpm)',ph:'182'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'165'},
+    {k:'fc_max',t:'num',lab:'Pouls max (bpm)',ph:'182'},
     {k:'seance_type',t:'select1',lab:'Type de séance',opts:['Endurance','Seuil','VMA','Côtes','Récupération','Compétition']},
     {k:'fractionne',t:'bool',lab:'Séance fractionnée ?'},
     {k:'repetitions',t:'text',lab:'Détail des répétitions',ph:'8 × 400 m / r=1min30'},
@@ -262,7 +262,7 @@ export const SPORT_FIELDS = {
     {k:'distance',t:'num',lab:'Distance (km)',ph:'21',step:0.1,dir:'up'},
     {k:'temps',t:'time',lab:'Temps (mm:ss)',ph:'95:00',dir:'down'},
     {k:'allure',t:'auto-allure',lab:'Allure (auto)'},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'150'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'150'},
     {k:'seance_type',t:'select1',lab:'Type de séance',opts:['Sortie longue','Endurance','Allure spécifique','Seuil','Récupération','Compétition']},
     {k:'denivele',t:'num',lab:'Dénivelé+ (m)',ph:'250',dir:'up'},
     {k:'terrain',t:'select1',lab:'Terrain',opts:['Route','Chemin','Piste','Tapis']},
@@ -285,7 +285,7 @@ export const SPORT_FIELDS = {
     {k:'distance',t:'num',lab:'Distance (km)',ph:'45',step:0.1,dir:'up'},
     {k:'temps',t:'time',lab:'Temps (hh:mm)',ph:'1:35',dir:'down'},
     {k:'denivele',t:'num',lab:'Dénivelé+ (m)',ph:'600',dir:'up'},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'140'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'140'},
     {k:'type',t:'select1',lab:'Type',opts:['Route','VTT','Home-trainer']},
     {k:'puissance',t:'num',lab:'Puissance moy. (W)',ph:'190',dir:'up'},
     {k:'puissance_norm',t:'num',lab:'Puissance normalisée (W)',ph:'205',dir:'up'},
@@ -300,14 +300,14 @@ export const SPORT_FIELDS = {
     {k:'denivele',t:'num',lab:'Dénivelé+ (m)',ph:'800',dir:'up'},
     {k:'difficulte',t:'select1',lab:'Difficulté',opts:['Facile','Technique','Très technique']},
     {k:'discipline',t:'select1',lab:'Discipline',opts:['Cross-country','Enduro','Descente','Randonnée']},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'150'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'150'},
     {k:'chute',t:'bool',lab:'Chute(s) ?'},
     {k:'rpe',t:'num',lab:'Intensité ressentie (RPE 1-10)',ph:'7'}
   ]},
   aviron:  { icon:'🚣', label:'Aviron / kayak', fields:[
     {k:'distance',t:'num',lab:'Distance (m)',ph:'5000',dir:'up'},
     {k:'temps',t:'time',lab:'Temps (mm:ss)',ph:'25:00',dir:'down'},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'155'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'155'},
     {k:'type',t:'select1',lab:'Lieu',opts:['Mer','Rivière','Bassin','Ergomètre']},
     {k:'cadence',t:'num',lab:'Cadence (coups/min)',ph:'24'},
     {k:'split',t:'time',lab:'Split moyen /500 m (mm:ss)',ph:'2:05',dir:'down'},
@@ -318,7 +318,7 @@ export const SPORT_FIELDS = {
     {k:'duree',t:'text',lab:'Durée',ph:'1h00'},
     {k:'distance',t:'num',lab:'Distance (km, si vitesse)',ph:'',dir:'up'},
     {k:'type',t:'select1',lab:'Type',opts:['Patinage','Hockey','Vitesse','Artistique']},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'150'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'150'},
     {k:'buts',t:'num',lab:'Buts / passes (hockey)',ph:'',dir:'up'},
     {k:'chute',t:'bool',lab:'Chute(s) ?'},
     {k:'rpe',t:'num',lab:'Intensité ressentie (RPE 1-10)',ph:'6'}
@@ -390,7 +390,7 @@ export const SPORT_FIELDS = {
   football:{ icon:'⚽', label:'Football', fields:[
     {k:'duree',t:'num',lab:'Durée jouée (min)',ph:'90',dir:'up'},
     {k:'type',t:'select1',lab:'Type',opts:['Match','Entraînement']},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'155'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'155'},
     {k:'poste',t:'select1',lab:'Poste',opts:['Gardien','Défenseur','Milieu','Attaquant']},
     {k:'buts',t:'num',lab:'Buts marqués',ph:'0',dir:'up'},
     {k:'passes_d',t:'num',lab:'Passes décisives',ph:'0',dir:'up'},
@@ -402,7 +402,7 @@ export const SPORT_FIELDS = {
   basket:  { icon:'🏀', label:'Basket / hand / volley', fields:[
     {k:'duree',t:'num',lab:'Durée jouée (min)',ph:'40',dir:'up'},
     {k:'type',t:'select1',lab:'Type',opts:['Match','Entraînement']},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'150'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'150'},
     {k:'discipline',t:'select1',lab:'Discipline',opts:['Basket','Handball','Volley']},
     {k:'poste',t:'text',lab:'Poste',ph:'Meneur, ailier…'},
     {k:'points',t:'num',lab:'Points marqués',ph:'12',dir:'up'},
@@ -413,7 +413,7 @@ export const SPORT_FIELDS = {
   rugby:   { icon:'🏉', label:'Rugby', fields:[
     {k:'duree',t:'num',lab:'Durée jouée (min)',ph:'80',dir:'up'},
     {k:'type',t:'select1',lab:'Type',opts:['Match','Entraînement']},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'160'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'160'},
     {k:'poste',t:'select1',lab:'Poste',opts:['Première ligne','Deuxième ligne','Troisième ligne','Demi','Centre','Aile','Arrière']},
     {k:'essais',t:'num',lab:'Essais marqués',ph:'0',dir:'up'},
     {k:'plaquages',t:'num',lab:'Plaquages',ph:'12',dir:'up'},
@@ -541,7 +541,7 @@ export const SPORT_FIELDS = {
     {k:'style',t:'text',lab:'Style',ph:'Salsa, hip-hop…'},
     {k:'intensite',t:'select1',lab:'Intensité',opts:['Légère','Modérée','Intense']},
     {k:'type',t:'select1',lab:'Type',opts:['Cours','Répétition','Représentation','Libre']},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'135'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'135'},
     {k:'rpe',t:'num',lab:'Intensité ressentie (RPE 1-10)',ph:'6'}
   ]},
   yoga:    { icon:'🧘', label:'Yoga / Pilates', fields:[
@@ -599,7 +599,7 @@ export const SPORT_FIELDS = {
     {k:'type',t:'select1',lab:'Type',opts:['Cardio','Renfo','Mixte','Circuit']},
     {k:'zones',t:'pills',lab:'Zones travaillées',opts:['Haut du corps','Bas du corps','Tronc','Corps entier']},
     {k:'circuits',t:'num',lab:'Nb de circuits / tours',ph:'4',dir:'up'},
-    {k:'fc',t:'num',lab:'FC moy. (bpm)',ph:'140'},
+    {k:'fc',t:'num',lab:'Pouls moyen (bpm)',ph:'140'},
     {k:'rpe',t:'num',lab:'Intensité ressentie (RPE 1-10)',ph:'6'}
   ]}
 };

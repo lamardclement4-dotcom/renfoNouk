@@ -159,11 +159,11 @@ function TodayTab({ db, store }) {
     addEntry(d.n, DRINKS[selCat].id, d.ml, d.caf, d.sugar, d)
   }
   function removeEntry(id) {
-    store.set((st) => {
+    store.annulable('Boisson supprimée', () => store.set((st) => {
       const h = { ...(st.hydroLog || {}) }
       h[today] = (h[today] || []).filter((e) => e.id !== id)
       return { hydroLog: h }
-    })
+    }))
   }
 
   const cat = DRINKS[selCat]

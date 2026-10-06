@@ -374,7 +374,7 @@ function SuiviTab({ db }) {
     ], 'var(--c-danger)') : null,
 
     ana.loadCheck ? card([
-      React.createElement('div', { key: 'l' }, lab('Charge déclarée vs mesurée')),
+      React.createElement('div', { key: 'l' }, lab('Charge déclarée et charge mesurée')),
       React.createElement('div', { key: 'b' }, body(ana.loadCheck.text)),
     ], ana.loadCheck.level === 'warn' ? C.warn : null) : null,
 

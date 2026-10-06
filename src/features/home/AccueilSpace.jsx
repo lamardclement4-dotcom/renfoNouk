@@ -1,5 +1,5 @@
 import React, { useState, lazy } from 'react'
-import { C, Icon, Ring, MODULE_TINTS, isoToday } from '../health/kit'
+import { C, Icon, Ring, MODULE_TINTS, isoToday, Aide } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
 import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
@@ -26,6 +26,22 @@ function heures(x) {
   const mm = Math.round((x - hh) * 60)
   if (mm === 60) return (hh + 1) + ' h'
   return mm ? `${hh} h ${String(mm).padStart(2, '0')}` : hh + ' h'
+}
+
+// La charge dite en clair : de combien la semaine s'écarte de l'habitude,
+// et quoi en faire. Le rapport chiffré reste à un « ? » pour les curieux.
+export function ecartHabitude(ratio) {
+  if (!Number.isFinite(ratio)) return null
+  if (ratio >= 1.95) return `${fr(Math.round(ratio * 10) / 10)} fois plus`
+  const pct = Math.round((ratio - 1) * 100)
+  if (Math.abs(pct) < 8) return 'autant'
+  return pct > 0 ? `${pct} % de plus` : `${-pct} % de moins`
+}
+export const CONSEIL_CHARGE = {
+  'Sous-charge': 'Semaine calme : tu peux reprendre progressivement.',
+  'Zone optimale': 'Bon rythme : continue comme ça.',
+  'Vigilance': 'Hausse rapide : surveille la fatigue et les douleurs.',
+  'Vigilance renforcée': 'Hausse trop rapide : prévois une séance légère ou du repos.',
 }
 
 function nextPlannedSession(db) {
@@ -74,9 +90,9 @@ function describeSession(sportLabel, exercises) {
 
 // Intitulé de section : capitales étroites et filet fin, comme les
 // rubriques d'une fiche de mesure. Un repère à chasse fixe peut s'y ajouter.
-function Titre(label, repere) {
+function Titre(label, repere, aide) {
   return h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, fontFamily: C.display, fontSize: 15, fontWeight: 800, color: C.ink2, textTransform: 'uppercase', letterSpacing: '.07em', margin: '28px 0 12px', paddingBottom: 5, borderBottom: `1px solid ${C.line}` } },
-    h('span', null, label),
+    h('span', null, label, aide ? h(Aide, { terme: aide }) : null),
     repere ? h('span', { style: { fontFamily: C.mono, fontSize: 10, fontWeight: 400, letterSpacing: 0, color: C.ink3 } }, repere) : null)
 }
 
@@ -102,7 +118,7 @@ function TraceChart({ trace }) {
     const genant = (y) => pts.slice(0, 3).some((p) => Math.abs(p[1] - (y - 3)) < 9)
     etiquetteZone = !genant(dessus) || genant(dessous) || dessous > g.baseline - 3 ? dessus : dessous
   }
-  return h('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': 'Charge des 7 derniers jours, en minutes équivalentes : ' + trace.days.map((x) => x.value).join(', '), style: { display: 'block', overflow: 'visible' } },
+  return h('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': 'Charge des 7 derniers jours, en points de charge : ' + trace.days.map((x) => x.value).join(', '), style: { display: 'block', overflow: 'visible' } },
     g.band && h('g', null,
       h('rect', { x: g.left, y: g.band.y1, width: g.right - g.left, height: Math.max(1, g.band.y2 - g.band.y1), style: { fill: `color-mix(in srgb, ${C.trace} 12%, transparent)` } }),
       h('line', { x1: g.left, x2: g.right, y1: g.band.y1, y2: g.band.y1, strokeWidth: 1, strokeDasharray: '3 3', style: { stroke: C.trace, opacity: .6 } }),
@@ -189,7 +205,7 @@ function OverloadAlert({ db, onPrevention }) {
     h(Icon, { name: 'shield', size: 20, color: r.color, style: { flex: '0 0 auto' } }),
     h('div', { style: { flex: 1, minWidth: 0 } },
       h('div', { style: { fontFamily: C.display, fontWeight: 800, fontSize: 17, textTransform: 'uppercase', letterSpacing: '.03em', color: r.color, marginBottom: 3 } }, "Charge d'entraînement élevée"),
-      h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.35 } }, 'Rapport ' + fr(r.ratio) + ' · surveille fatigue et douleurs')),
+      h('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.35 } }, (ecartHabitude(r.ratio) || '').replace(/^./, (c) => c.toUpperCase()) + ' que ton habitude : prévois une séance légère ou du repos.')),
     h('span', { style: { fontFamily: C.mono, color: C.ink3 } }, '→'))
 }
 
@@ -233,7 +249,7 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines }) {
   const rappels = [
     !(next && next.date === iso) && Ligne('calendar', C.primary, nextTitle, nextDetail, onPlanner, 'next'),
     (nutPillar || hydPillar) && Ligne('apple', C.carb, 'Nutrition & hydratation', [nutPillar && nutPillar.status === 'ok' ? nutPillar.detail : null, hydPillar && hydPillar.status === 'ok' ? hydPillar.detail : null].filter(Boolean).join(' · ') || "Rien enregistré aujourd'hui", onNutrition, 'nut'),
-    acwr.available && acwr.level !== 'Vigilance renforcée' && Ligne('chart', acwr.color, 'Charge : ' + acwr.level, `Rapport ${fr(acwr.ratio)} · ${acwr.acuteMin} min (7 j) contre ${acwr.chronicAvgWeek} min/sem. en moyenne`, onPlanner, 'acwr'),
+    acwr.available && acwr.level !== 'Vigilance renforcée' && Ligne('chart', acwr.color, 'Charge : ' + (CONSEIL_CHARGE[acwr.level] || acwr.level).split(' :')[0].toLowerCase(), `${milliers(acwr.acuteMin)} points sur 7 jours, ${ecartHabitude(acwr.ratio) === 'autant' ? 'comme d’habitude' : ecartHabitude(acwr.ratio) + ' que d’habitude'}`, onPlanner, 'acwr'),
   ].filter(Boolean)
 
   return h('div', null,
@@ -318,11 +334,15 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   // ─── la courbe de la semaine ───
   const trace = weekTrace(db, { today: iso })
   const acwr = acwrRisk(db)
-  const lecture = acwr.available
-    ? h('span', null, 'Rapport aigu/chronique ', h('span', { style: { fontFamily: C.mono, fontWeight: 600, color: C.ink } }, fr(acwr.ratio)), ' — ', h('span', { style: { color: acwr.color, fontWeight: 600 } }, acwr.level.toLowerCase()))
+  const ecart = acwr.available ? ecartHabitude(acwr.ratio) : null
+  const lecture = acwr.available && ecart
+    ? h('span', null,
+      h('span', { style: { color: C.ink } }, ecart === 'autant' ? 'Autant' : ecart.charAt(0).toUpperCase() + ecart.slice(1), ' que ton habitude des 4 dernières semaines'),
+      h(Aide, { terme: 'rapport' }),
+      h('span', { style: { display: 'block', color: acwr.color, fontWeight: 600, marginTop: 3 } }, CONSEIL_CHARGE[acwr.level] || acwr.level))
     : acwr.reason === 'not_enough_history'
-      ? `Zone habituelle tracée après 14 jours d’historique (${acwr.daysOfHistory} pour l’instant).`
-      : acwr.reason === 'no_data' ? 'Aucune séance réalisée pour l’instant.' : 'Pas encore de charge habituelle.'
+      ? `Ta zone habituelle s’affichera après 14 jours d’historique (${acwr.daysOfHistory} pour l’instant).`
+      : acwr.reason === 'no_data' ? 'Enregistre une séance réalisée : la courbe démarre avec elle.' : 'Pas encore de charge habituelle.'
 
   const statCards = [
     { big: streak, lab: 'jours de suite' },
@@ -333,13 +353,13 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     h('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3, textTransform: 'uppercase', marginTop: 6, lineHeight: 1.3 } }, s.lab)))
 
   const charge = h('section', { 'aria-label': 'Charge des 7 derniers jours' },
-    Titre('Charge · 7 jours', 'glissants'),
+    Titre('Charge des 7 derniers jours', null, 'charge'),
     h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
       h('span', { style: { fontFamily: C.mono, fontSize: 40, fontWeight: 600, letterSpacing: '-.04em', lineHeight: 1 } }, milliers(trace.acute)),
-      h('span', { style: { fontFamily: C.mono, fontSize: 12, color: C.ink3 } }, 'min éq.')),
+      h('span', { style: { fontFamily: C.mono, fontSize: 12, color: C.ink3 } }, 'points de charge')),
     h('div', { style: { fontSize: 13, color: C.ink2, marginTop: 7, lineHeight: 1.4 } }, lecture),
     h('div', { style: { marginTop: 12 } }, h(TraceChart, { trace })),
-    h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Minutes d’effort sur 7 jours glissants, pondérées par l’effort ressenti et la chaleur.'),
+    h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Chaque point de la courbe additionne la semaine qui se termine ce jour-là. La bande : ta zone habituelle (0,8 à 1,3 fois ta moyenne).'),
     h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderTop: `1px solid ${C.ink}`, borderBottom: `1px solid ${C.line}`, marginTop: 14 } }, statCards))
 
   // ─── relevés du jour, en cadrans ───
@@ -360,11 +380,11 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   const litres = (ml) => fr((Math.max(0, ml) / 1000).toFixed(1))
 
   const cadrans = h('section', { 'aria-label': 'Relevés du jour' },
-    Titre('Relevés du jour'),
+    Titre('Relevés du jour', null, 'cadrans'),
     h('div', { style: { display: 'flex', gap: 6 } },
       h(Cadran, { label: 'Sommeil', value: dormi ? heures(dormi) : '—', progress: cibleSommeil ? dormi / cibleSommeil : 0, color: MODULE_TINTS.sommeil, sub: !dormi ? 'à saisir' : dormi >= cibleSommeil ? 'cible atteinte' : 'cible ' + heures(cibleSommeil), onClick: () => setHealthTile('sommeil') }),
       h(Cadran, { label: 'Eau', value: litres(eau), unit: 'L', progress: eau / cibleEau, color: MODULE_TINTS.hydratation, sub: eau >= cibleEau ? 'cible atteinte' : 'reste ' + litres(cibleEau - eau) + ' L', onClick: () => setHealthTile('hydratation') }),
-      h(Cadran, { label: 'Protéines', value: String(Math.round(prot)), unit: 'g', progress: cibleProt ? prot / cibleProt : 0, color: C.protein, sub: !cibleProt ? 'sans objectif' : prot >= cibleProt ? 'cible atteinte' : 'reste ' + Math.round(cibleProt - prot) + ' g', onClick: () => setHealthTile('nutrition') })))
+      h(Cadran, { label: 'Protéines', value: String(Math.round(prot)), unit: 'g', progress: cibleProt ? prot / cibleProt : 0, color: C.protein, sub: !cibleProt ? 'fixer un objectif' : prot >= cibleProt ? 'cible atteinte' : 'reste ' + Math.round(cibleProt - prot) + ' g', onClick: () => setHealthTile('nutrition') })))
 
   // ─── séance à faire ───
   const aFaire = h('section', { 'aria-label': 'Séance à faire' },

@@ -208,7 +208,7 @@ function CaloriesTab({ body, setBody, onMacros }) {
     valid && React.createElement('div', { style: { marginTop: 20 } },
       React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 10 } },
         React.createElement(ResultCard, { label: 'Métabolisme base', value: bmr, sub: 'kcal', tint: NUTRI }),
-        React.createElement(ResultCard, { label: 'Dépense totale', value: tdee, sub: 'kcal / TDEE', tint: NUTRI })),
+        React.createElement(ResultCard, { label: 'Dépense totale', value: tdee, sub: 'kcal par jour, activité comprise', tint: NUTRI })),
       React.createElement(ResultCard, { big: true, label: `Cible · ${obj === 'perte' ? 'perte de gras' : obj}`, value: cible + ' kcal', sub: FR[obj], tint: NUTRI }),
       React.createElement('button', { onClick: onMacros, style: { ...xst.primaryBtn, background: NUTRI, boxShadow: 'none', marginTop: 12 } }, 'Répartir en macros →')),
     React.createElement(NoteBox, { tint: NUTRI }, "Ne descends jamais sous ton métabolisme de base. Le déficit reste léger et encadré ; en cas de fatigue ou de cycle perturbé, remonte les apports et consulte. Repères indicatifs, pas un avis diététique."))
@@ -707,7 +707,7 @@ export function FoodTab({ db, store }) {
     })
     return { foodLog: fl }
   })
-  const removeEntry = (id) => store.set((s) => { const fl = { ...s.foodLog || {} }; fl[date] = (fl[date] || []).filter((e) => e.id !== id); return { foodLog: fl } })
+  const removeEntry = (id) => store.annulable('Aliment retiré du journal', () => store.set((s) => { const fl = { ...s.foodLog || {} }; fl[date] = (fl[date] || []).filter((e) => e.id !== id); return { foodLog: fl } }))
   const openAdd = (ml) => { setCible('journal'); setMeal(ml); setEditId(null); setPick(null); setQ(''); setMode('search') }
 
   const recettes = db.recipes || []
@@ -718,7 +718,7 @@ export function FoodTab({ db, store }) {
     const r = makeRecipe(draft)
     saveRecettes(upsertRecipe(recettes, r)); setDraft(null); setMode('recettes')
   }
-  const dropDraft = () => { saveRecettes(removeRecipe(recettes, draft.id)); setDraft(null); setMode('recettes') }
+  const dropDraft = () => { store.annulable('Recette supprimée', () => saveRecettes(removeRecipe(recettes, draft.id))); setDraft(null); setMode('recettes') }
   const addIngredient = () => {
     setCible('recette'); setItemIdx(null); setEditId(null); setPick(null); setQ('')
     setCap((c) => ({ ...c, error: null, parsed: null }))
@@ -1032,7 +1032,7 @@ export function FoodTab({ db, store }) {
       React.createElement('button', { onClick: () => setDate(shiftISO(date, 1)), disabled: date >= todayISO(), style: { ...xst.iconBtn, opacity: date >= todayISO() ? 0.4 : 1 }, 'aria-label': 'Jour suivant' }, React.createElement(Icon, { name: 'next', size: 18 }))),
     targets ? React.createElement('div', { style: { padding: '16px 16px 6px', borderRadius: RADIUS, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 16 } },
       React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 } },
-        React.createElement('span', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3 } }, 'Consommé vs objectifs'),
+        React.createElement('span', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3 } }, 'Consommé et objectifs'),
         React.createElement('button', { onClick: () => setTgtSheet(true), style: { fontSize: 12.5, fontWeight: 700, color: NUTRI, background: 'transparent', border: 'none', cursor: 'pointer' } }, 'Modifier')),
       React.createElement(Bar, { lab: 'Calories', val: tot.k, target: targets.kcal, unit: 'kcal', tint: NUTRI }),
       React.createElement(Bar, { lab: 'Protéines', val: tot.p, target: targets.prot, unit: 'g', tint: 'var(--ch2)' }),
@@ -1043,7 +1043,7 @@ export function FoodTab({ db, store }) {
         React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' } },
           React.createElement('div', { style: { fontFamily: C.display, fontSize: 18, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em' } }, 'Total du jour'),
           React.createElement('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', color: NUTRI } }, Math.round(tot.k), ' kcal')),
-        React.createElement('div', { style: { fontSize: 13, color: INK2, marginTop: 4, lineHeight: 1.5 } }, 'Définis des objectifs pour suivre tes apports vs une cible.'),
+        React.createElement('div', { style: { fontSize: 13, color: INK2, marginTop: 4, lineHeight: 1.5 } }, 'Définis des objectifs pour comparer tes apports à une cible.'),
         React.createElement('button', { onClick: () => setTgtSheet(true), style: { ...xst.primaryBtn, background: NUTRI, boxShadow: 'none', marginTop: 12 } }, 'Régler mes objectifs')),
     React.createElement('button', { onClick: () => openAdd(defaultMeal()), style: { ...xst.primaryBtn, background: NUTRI, boxShadow: 'none', marginBottom: 16 } }, '+ Ajouter un aliment'),
     MEALS.map((m) => {
@@ -1143,7 +1143,7 @@ function NutriAnalysis({ db }) {
     ]) : null,
 
     ana.gaps && ana.gaps.length ? card([
-      React.createElement('div', { key: 'l' }, lab('Moyenne vs objectifs')),
+      React.createElement('div', { key: 'l' }, lab('Moyenne et objectifs')),
       ana.gaps.map((g, i) => React.createElement('div', { key: g.key, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '6px 0', borderTop: i ? `1px solid ${LINE}` : 'none' } },
         React.createElement('span', { style: { fontSize: 12.5, color: INK2, fontWeight: 600 } }, g.label),
         React.createElement('span', { style: { fontSize: 12.5, color: INK3 } },
@@ -1362,7 +1362,7 @@ function DiagTab({ db, store, onGoToJournal }) {
         React.createElement('div', null,
           React.createElement('div', { style: { fontFamily: FONT, fontSize: 17, fontWeight: 700, color: sCol, lineHeight: 1.25 } }, sLab),
           React.createElement('div', { style: { fontSize: 11.5, color: INK3, marginTop: 4 } }, urgent.length + ' urgent(s) · ' + attn.length + ' à améliorer · ' + positifs.length + ' acquis'),
-          prevDiff !== null && React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, marginTop: 5, color: prevDiff > 0 ? 'var(--c-carb)' : prevDiff < 0 ? 'var(--c-danger)' : INK3 } }, prevDiff > 0 ? '▲ +' + prevDiff + ' pts vs précédent' : prevDiff < 0 ? '▼ ' + prevDiff + ' pts vs précédent' : '= identique au précédent'))),
+          prevDiff !== null && React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, marginTop: 5, color: prevDiff > 0 ? 'var(--c-carb)' : prevDiff < 0 ? 'var(--c-danger)' : INK3 } }, prevDiff > 0 ? '▲ +' + prevDiff + ' pts par rapport au précédent' : prevDiff < 0 ? '▼ ' + prevDiff + ' pts par rapport au précédent' : '= identique au précédent'))),
       React.createElement(DiagRadar, { scores: piliers })),
     React.createElement(SecLab, null, 'Scores par pilier'),
     React.createElement('div', { style: { padding: '12px 14px', borderRadius: RADIUS_SM, background: SURFACE, border: `1px solid ${LINE}`, marginBottom: 12 } },

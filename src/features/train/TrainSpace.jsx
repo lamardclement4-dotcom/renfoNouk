@@ -128,18 +128,18 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   }
 
   const tiles = [
-    { ic: 'target', tint: MODULE_TINTS.mobilite, lab: 'Test de mobilité', sub: db.mobility ? `Score : ${db.mobility.score}/100` : '9 questions', on: 'mobility' },
-    { ic: 'route', tint: MODULE_TINTS.renfo, lab: 'Mon programme', sub: db.program ? `${db.program.sessions.filter((s) => db.program.done && db.program.done[s.id]).length}/${db.program.sessions.length}` : 'Perso', on: 'program' },
-    { ic: 'bolt', tint: MODULE_TINTS.plyo, lab: 'Pliométrie', sub: 'Sauts', on: 'plyo' },
-    { ic: 'leaf', tint: MODULE_TINTS.recup, lab: 'Récup', sub: 'Après sport', on: 'recovery' },
+    { ic: 'target', tint: MODULE_TINTS.mobilite, lab: 'Test de mobilité', sub: db.mobility ? `Score : ${db.mobility.score}/100` : 'Repère tes zones raides', on: 'mobility' },
+    { ic: 'route', tint: MODULE_TINTS.renfo, lab: 'Mon programme', sub: db.program ? `${db.program.sessions.filter((s) => db.program.done && db.program.done[s.id]).length}/${db.program.sessions.length} séances faites` : 'Après le test de mobilité', on: 'program' },
+    { ic: 'bolt', tint: MODULE_TINTS.plyo, lab: 'Pliométrie', sub: 'Sauts pour l’explosivité', on: 'plyo' },
+    { ic: 'leaf', tint: MODULE_TINTS.recup, lab: 'Récupération', sub: 'Routines après l’effort', on: 'recovery' },
     { ic: 'wave', tint: MODULE_TINTS.mobilite, lab: 'Mobilité & étirements', sub: '16 routines', on: 'mobcatalog' },
     { ic: 'dumbbell', tint: MODULE_TINTS.renfo, lab: 'Renforcement', sub: '16 séances', on: 'renfocatalog' },
   ]
   const rows = [
     { ic: 'calendar', tint: 'var(--c-success)', lab: 'Calendrier', sub: "Organise ta semaine d'entraînement", on: 'planner' },
-    { ic: 'target', tint: 'var(--ch4)', lab: 'Tests physiques', sub: null, on: 'tests' },
-    { ic: 'spark', tint: 'var(--ch4)', lab: 'Coach', sub: 'Recommandations', on: 'coach' },
-    { ic: 'wave', tint: MODULE_TINTS.hydratation, lab: 'Conditions', sub: 'Météo · adaptation de la charge', on: 'weather' },
+    { ic: 'target', tint: 'var(--ch4)', lab: 'Tests physiques', sub: 'Mesure ta forme : endurance, force, souplesse', on: 'tests' },
+    { ic: 'spark', tint: 'var(--ch4)', lab: 'Coach', sub: 'Conseils tirés de tes données', on: 'coach' },
+    { ic: 'wave', tint: MODULE_TINTS.hydratation, lab: 'Conditions', sub: 'Météo du jour et effort à ajuster', on: 'weather' },
     { ic: 'target', tint: 'var(--c-success)', lab: 'Mes routines', sub: 'Mobilité et pliométrie, à ta main', on: 'routines' },
     { ic: 'target', tint: 'var(--ch3)', lab: 'Pic de forme', sub: db.peakGoals && db.peakGoals.length ? `${db.peakGoals.length} objectif${db.peakGoals.length > 1 ? 's' : ''} programmé${db.peakGoals.length > 1 ? 's' : ''}` : 'Programme tes échéances', on: 'peak' },
   ]

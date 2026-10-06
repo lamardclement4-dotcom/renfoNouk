@@ -1,5 +1,5 @@
 import React, { useState, lazy } from 'react'
-import { C, Icon, Ring, FlowSpace, isoToday, SegPills } from '../health/kit'
+import { C, Icon, Ring, FlowSpace, isoToday, SegPills, Aide } from '../health/kit'
 import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
 import { testsAnalysis } from '../physical-tests/testsIntel'
 import { retroAnalysis, proposalToSessions, proposalStatus } from '../train/retroIntel'
@@ -270,7 +270,7 @@ export default function ProgressSpace({ userId, onClose }) {
           h('div', { style: { fontFamily: C.mono, fontSize: 22, fontWeight: 600, letterSpacing: '-.03em', color: C.primary } }, mhLast.score),
           h('span', { style: { fontSize: 13, color: C.ink3 } }, '/100'),
           g ? h('span', { style: { fontSize: 12.5, fontWeight: 700, marginLeft: 4, color: g.delta >= 0 ? C.success : 'var(--c-danger)' } },
-            (g.delta >= 0 ? '▲+' : '▼') + g.delta + ' vs précédent') : null),
+            (g.delta >= 0 ? '▲+' : '▼') + g.delta + ' par rapport au précédent') : null),
         h('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 14 } }, mAna.freshness.text),
         mAna.zones.map((z, i) => h('div', { key: z.id, style: { display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 } },
           h('div', { style: { fontSize: 12, color: C.ink2, fontWeight: 600, flex: '0 0 108px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, z.label),
@@ -501,7 +501,7 @@ export default function ProgressSpace({ userId, onClose }) {
               h('div', { style: { fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, it.label),
               h('div', { style: { fontSize: 11, color: FRESH_COL[fr.level], marginTop: 2 } },
                 (ch && ch.dir !== 'flat'
-                  ? `${ch.delta > 0 ? '+' : '−'}${Math.abs(ch.delta)} ${it.unit} vs précédent · `
+                  ? `${ch.delta > 0 ? '+' : '−'}${Math.abs(ch.delta)} ${it.unit} par rapport au précédent · `
                   : it.count > 1 ? 'stable · ' : '')
                 + (fr.level === 'due' || fr.level === 'stale' ? `à refaire (${fr.days} j)` : `il y a ${fr.days} j`))),
             ch && ch.dir !== 'flat' ? h('span', { style: { fontSize: 12, fontWeight: 800, color: DIR_COL[ch.dir], flex: '0 0 auto' } }, ch.dir === 'up' ? '▲' : '▼') : null,
@@ -563,7 +563,7 @@ export default function ProgressSpace({ userId, onClose }) {
         h('div', { style: { padding: '12px 14px 8px' } },
           h('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 } }, 'Ta semaine proposée'),
           h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.45 } },
-            story.proposal.total, ' points visés · ', story.proposal.basedOn, '.'),
+            story.proposal.total, ' points de charge visés', h(Aide, { terme: 'points' }), ' · ', story.proposal.basedOn, '.'),
           story.proposal.taper ? h('div', { style: { fontSize: 11.5, color: C.warn, marginTop: 5, lineHeight: 1.45, fontWeight: 600 } }, story.proposal.taper.text) : null),
         story.proposal.days.map((d, i) => h('div', {
           key: d.date,
@@ -573,7 +573,7 @@ export default function ProgressSpace({ userId, onClose }) {
           h('div', { style: { flex: 1, minWidth: 0 } },
             d.session
               ? h('div', { style: { fontSize: 12.5, color: C.ink, lineHeight: 1.45, fontWeight: d.session.hard ? 700 : 400 } },
-                sportMeta(d.session.sport).label, ' · ', d.session.mins, ' min · RPE ', d.session.rpe,
+                sportMeta(d.session.sport).label, ' · ', d.session.mins, ' min · effort ', d.session.rpe, '/10',
                 d.session.hard ? h('span', { style: { color: C.primary, fontWeight: 700 } }, ' · la dure') : null)
               : h('div', { style: { fontSize: 12.5, color: C.ink3 } }, 'Repos'),
             d.kcal ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2 } },
@@ -645,7 +645,7 @@ export default function ProgressSpace({ userId, onClose }) {
             h('div', { style: { flex: 1, minWidth: 0 } },
               d.sessions.length
                 ? d.sessions.map((sx) => h('div', { key: sx.id, style: { fontSize: 12.5, color: C.ink, lineHeight: 1.45 } },
-                  sx.label, ' · ', sx.mins, ' min', sx.rpe ? ` · RPE ${sx.rpe}` : ''))
+                  sx.label, ' · ', sx.mins, ' min', sx.rpe ? ` · effort ${sx.rpe}/10` : ''))
                 : h('div', { style: { fontSize: 12.5, color: C.ink3 } }, d.missed ? `${d.missed} prévue${d.missed > 1 ? 's' : ''}, non faite${d.missed > 1 ? 's' : ''}` : 'Repos'),
               bits.length ? h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2 } }, bits.join(' · ')) : null))
         })) : null,
@@ -668,7 +668,7 @@ export default function ProgressSpace({ userId, onClose }) {
       story.compare.meanBase ? h('div', { style: { display: 'flex', gap: 8, marginBottom: 14 } },
         [
           { v: String(story.consistency.total), l: 'charge' },
-          { v: story.compare.basePct == null ? '—' : (story.compare.basePct > 0 ? '+' : '') + story.compare.basePct + ' %', l: 'vs habituel',
+          { v: story.compare.basePct == null ? '—' : (story.compare.basePct > 0 ? '+' : '') + story.compare.basePct + ' %', l: 'par rapport à d’habitude',
             c: story.compare.basePct == null ? C.ink3 : Math.abs(story.compare.basePct) < 20 ? C.ink : story.compare.basePct > 0 ? C.warn : C.ink3 },
           { v: story.planFit.pct == null ? '—' : story.planFit.pct + ' %', l: 'plan tenu',
             c: story.planFit.pct == null ? C.ink3 : story.planFit.pct >= 80 ? C.success : C.warn },
@@ -698,7 +698,7 @@ export default function ProgressSpace({ userId, onClose }) {
                 vsPrevPct === 0 && vsPrevDelta !== 0
                   ? `${vsPrevDelta > 0 ? '+' : '−'}${Math.abs(vsPrevDelta)} min`
                   : `${vsPrevDelta >= 0 ? '+' : '−'}${Math.abs(vsPrevPct)}%`),
-              ` vs semaine précédente (${prevRetro.total} min).`))),
+              ` par rapport à la semaine précédente (${prevRetro.total} min).`))),
 
       // Répartition par sport / type de séance.
       retro.bySport.length > 0 && h('div', { style: { marginBottom: 14 } },

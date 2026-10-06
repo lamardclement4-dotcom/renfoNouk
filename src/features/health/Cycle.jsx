@@ -92,13 +92,13 @@ function TodayTab({ cycle, store }) {
           React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', opacity: .85 } }, 'Jour ' + info.day + ' / ' + info.len),
           React.createElement('div', { style: { fontFamily: C.display, fontSize: 27, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.05 } }, 'Phase ' + ph.label.toLowerCase()),
           React.createElement('div', { style: { fontSize: 13, opacity: .9, marginTop: 2 } }, ph.energy),
-          React.createElement('div', { style: { fontSize: 11.5, opacity: .8, marginTop: 4 } }, '⚡ ' + it.rpe + ' RPE · ' + it.fc))),
+          React.createElement('div', { style: { fontSize: 11.5, opacity: .8, marginTop: 4 } }, '⚡ Effort ' + it.rpe + ' · pouls ' + it.fc))),
       React.createElement('div', { style: { marginTop: 14, fontSize: 13.5, lineHeight: 1.5, opacity: .95 } }, ph.advice)),
 
     React.createElement('div', { style: { padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${ph.tint}` } },
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: ph.tint, marginBottom: 8 } }, '⚡ Paramètres d’entraînement — phase ' + ph.label.toLowerCase()),
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' } },
-        [['RPE cible', it.rpe], ['FC cible', it.fc], ['Charge', it.charge], ['Volume', it.volume], ['Cardio', it.cardio]].map(([l, v]) =>
+        [['Effort cible', it.rpe], ['Pouls cible', it.fc], ['Charge', it.charge], ['Volume', it.volume], ['Cardio', it.cardio]].map(([l, v]) =>
           React.createElement('div', { key: l, style: { fontSize: 12.5 } }, React.createElement('span', { style: { color: C.ink3, fontWeight: 600 } }, l + ' '), React.createElement('span', { style: { color: C.ink2, fontWeight: 500 } }, v))))),
 
     React.createElement('div', { style: { display: 'flex', gap: 10 } },

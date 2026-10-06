@@ -60,16 +60,16 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
           return PHASES[phase].label
         } catch { return 'Femmes' }
       })()
-    : 'Femmes'
+    : 'Adapter l’entraînement au cycle'
 
   const tiles = [
-    { ic: 'apple', tint: MODULE_TINTS.nutrition, lab: 'Nutrition', sub: 'Cal · macros', on: 'nutrition' },
-    { ic: 'drop', tint: MODULE_TINTS.hydratation, lab: 'Hydratation', sub: 'Eau · compl.', on: 'hydratation' },
-    { ic: 'moon', tint: MODULE_TINTS.sommeil, lab: 'Sommeil', sub: sleepToday ? `${sleepToday.hours} h cette nuit` : 'Log du jour', on: 'sommeil' },
-    { ic: 'shield', tint: MODULE_TINTS.prevention, lab: 'Prévention', sub: 'Bilan de risque', on: 'prevention' },
+    { ic: 'apple', tint: MODULE_TINTS.nutrition, lab: 'Nutrition', sub: 'Repas et calories', on: 'nutrition' },
+    { ic: 'drop', tint: MODULE_TINTS.hydratation, lab: 'Hydratation', sub: 'Ce que tu bois', on: 'hydratation' },
+    { ic: 'moon', tint: MODULE_TINTS.sommeil, lab: 'Sommeil', sub: sleepToday ? `${String(sleepToday.hours).replace('.', ',')} h cette nuit` : 'Saisir ta nuit', on: 'sommeil' },
+    { ic: 'shield', tint: MODULE_TINTS.prevention, lab: 'Prévention', sub: 'Risque de blessure', on: 'prevention' },
     { ic: 'moon', tint: MODULE_TINTS.cycle, lab: 'Cycle', sub: cyclePhaseLabel, on: 'cycle' },
     { ic: 'wave', tint: MODULE_TINTS.esprit, lab: 'Esprit', sub: 'Respiration · mental', on: 'esprit' },
-    { ic: 'spark', tint: MODULE_TINTS.complements, lab: 'Compléments', sub: 'Plan · rappels', on: 'complements' },
+    { ic: 'spark', tint: MODULE_TINTS.complements, lab: 'Compléments', sub: 'Prises et rappels', on: 'complements' },
     { ic: 'flame', tint: MODULE_TINTS.nutrition, lab: 'Cuisine', sub: (db.cookbook || []).length ? `${db.cookbook.length} recette${db.cookbook.length > 1 ? 's' : ''}` : 'Recettes à suivre', on: 'cuisine' },
   ]
 

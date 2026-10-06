@@ -92,7 +92,7 @@ function BreathingSession({ protocol, minutes, onFinish, onExit, onComplete }) {
 
   return React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: '70vh' } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 } },
-      React.createElement('button', { onClick: onExit, style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } }, React.createElement(Icon, { name: 'close', size: 18 })),
+      React.createElement('button', { onClick: onExit, 'aria-label': 'Arrêter la séance', style: { width: 40, height: 40, borderRadius: 'var(--r-pill)', background: C.surface, border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } }, React.createElement(Icon, { name: 'close', size: 18 })),
       React.createElement('div', { style: { fontFamily: C.mono, fontSize: 14.1, fontWeight: 600, letterSpacing: '-.03em', color: C.ink3 } }, timeLabel)),
     React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
       React.createElement('div', { style: { width: 180, height: 180, borderRadius: '50%', background: 'transparent', border: `2px solid ${BR}`, boxSizing: 'border-box', outline: `1px dashed ${C.line}`, outlineOffset: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: `scale(${scale})`, transition: `transform ${curPhase.secs}s ease-in-out`, marginBottom: 28 } },
@@ -137,7 +137,7 @@ function SmartGoalForm({ db, store }) {
   const toggleDone = (id) => store.set((sx) => ({
     smartGoals: ((sx && sx.smartGoals) || []).map((g) => (g.id === id ? { ...g, doneAt: g.doneAt ? null : isoToday() } : g)),
   }))
-  const remove = (id) => store.set((sx) => ({ smartGoals: ((sx && sx.smartGoals) || []).filter((g) => g.id !== id) }))
+  const remove = (id) => store.annulable('Objectif supprimé', () => store.set((sx) => ({ smartGoals: ((sx && sx.smartGoals) || []).filter((g) => g.id !== id) })))
 
   const STATUS_COL = { late: 'var(--c-danger)', today: C.warn, soon: C.warn, nodate: C.ink3, ok: C.ink3, done: C.success }
 

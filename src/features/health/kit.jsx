@@ -1,4 +1,6 @@
 import React from 'react'
+import { ecouterAnnonces, fermerAnnonce } from '../../annonces'
+import { definition } from '../aide/glossaire'
 
 // ============================================================
 // Kit UI partagé des modules Santé, porté depuis l'ancienne app.
@@ -597,7 +599,7 @@ export function SyncBanner({ sync, onRetry, loadError, onRetryLoad, horsLigne, c
     const enAttente = sync && sync.pending ? ` · ${sync.pending} saisie${sync.pending > 1 ? 's' : ''} en attente` : ''
     return React.createElement('div', { role: 'status', style: { position: 'fixed', left: 12, right: 12, bottom: 'calc(76px + env(safe-area-inset-bottom))', zIndex: 90, maxWidth: 436, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.warn}`, fontFamily: C.font } },
       React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase', color: C.warn } }, 'Hors ligne' + enAttente),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase', color: C.warn } }, 'Hors ligne' + enAttente, React.createElement(Aide, { terme: 'horsLigne', style: { width: 16, height: 16, fontSize: 10, marginLeft: 6 } })),
         React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.4 } }, `Dernières données${quand}. Tes saisies partiront au retour du réseau.`)),
       onRetryLoad ? React.createElement('button', { onClick: onRetryLoad, 'aria-label': 'Réessayer la connexion', style: { flex: '0 0 auto', padding: '7px 10px', border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontFamily: C.mono, fontSize: 11, textTransform: 'uppercase', cursor: 'pointer' } }, '↻') : null)
   }
@@ -641,4 +643,53 @@ export function SyncBanner({ sync, onRetry, loadError, onRetryLoad, horsLigne, c
       onClick: onRetry,
       style: { flex: '0 0 auto', padding: '7px 12px', border: 'none', background: tint, color: C.onFill, fontFamily: C.mono, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', cursor: 'pointer' },
     }, 'Réessayer') : null)
+}
+
+// Annonces après une action (« Pesée supprimée — Annuler »). Une région
+// lue par les lecteurs d'écran, posée au-dessus de la barre d'onglets.
+export function Annonces() {
+  const [a, setA] = React.useState(null)
+  React.useEffect(() => ecouterAnnonces(setA), [])
+  return React.createElement('div', { 'aria-live': 'polite', role: 'status', style: { position: 'fixed', left: 12, right: 12, bottom: 'calc(64px + env(safe-area-inset-bottom))', zIndex: 95, maxWidth: 436, margin: '0 auto', pointerEvents: a ? 'auto' : 'none' } },
+    a ? React.createElement('div', { key: a.id, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: C.ink, color: C.bg, fontFamily: C.font, animation: 'sheetUp .2s ease' } },
+      React.createElement('div', { style: { flex: 1, fontSize: 13.5, fontWeight: 600 } }, a.texte),
+      a.annuler ? React.createElement('button', { onClick: () => { const f = a.annuler; fermerAnnonce(); f() }, style: { flex: '0 0 auto', background: 'transparent', border: `1px solid ${C.bg}`, color: C.bg, padding: '6px 11px', fontFamily: C.display, fontSize: 15, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', cursor: 'pointer' } }, 'Annuler') : null)
+    : null)
+}
+
+// ------------------------------------------------------------
+// Aide : un petit « ? » posé à côté d'un terme technique. Il ouvre son
+// explication en français simple (glossaire.js), dans un panneau du bas
+// qu'on ferme d'un geste (« Compris », fond, touche Échap).
+// ------------------------------------------------------------
+export function Aide({ terme, style }) {
+  const [ouvert, setOuvert] = React.useState(false)
+  const def = definition(terme)
+  if (!def) return null
+  return React.createElement(React.Fragment, null,
+    React.createElement('button', {
+      type: 'button',
+      onClick: (e) => { e.stopPropagation(); setOuvert(true) },
+      'aria-label': 'Explication : ' + def.titre,
+      style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, flex: '0 0 auto', verticalAlign: 'middle', padding: 0, marginLeft: 6, background: 'transparent', border: `1px solid ${C.ink3}`, color: C.ink2, fontFamily: C.mono, fontSize: 11, fontWeight: 600, lineHeight: 1, cursor: 'pointer', textTransform: 'none', letterSpacing: 0, ...style },
+    }, '?'),
+    ouvert ? React.createElement(PanneauAide, { def, onClose: () => setOuvert(false) }) : null)
+}
+
+function PanneauAide({ def, onClose }) {
+  const bouton = React.useRef(null)
+  React.useEffect(() => {
+    const avant = document.activeElement
+    if (bouton.current) bouton.current.focus()
+    const touche = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', touche)
+    return () => { document.removeEventListener('keydown', touche); if (avant && avant.focus) avant.focus() }
+  }, [])
+  const idTitre = 'aide-' + def.titre.replace(/[^a-z]/gi, '').toLowerCase()
+  return React.createElement('div', { onClick: onClose, style: { position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn .15s ease' } },
+    React.createElement('div', { role: 'dialog', 'aria-modal': true, 'aria-labelledby': idTitre, onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, background: C.surface, color: C.ink, borderTop: `3px solid ${C.ink}`, padding: '20px 20px calc(20px + env(safe-area-inset-bottom))', fontFamily: C.font, textAlign: 'left', textTransform: 'none', letterSpacing: 'normal', animation: 'sheetUp .2s ease' } },
+      React.createElement('div', { id: idTitre, style: { fontFamily: C.display, fontSize: 24, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, def.titre),
+      React.createElement('p', { style: { fontSize: 14.5, lineHeight: 1.55, color: C.ink, margin: '12px 0 0' } }, def.texte),
+      def.conseil ? React.createElement('p', { style: { fontSize: 13.5, lineHeight: 1.5, color: C.ink2, margin: '10px 0 0', paddingLeft: 10, borderLeft: `3px solid ${C.primary}` } }, def.conseil) : null,
+      React.createElement('button', { ref: bouton, onClick: onClose, style: { width: '100%', marginTop: 18, padding: 13, border: 'none', background: C.primary, color: C.onFill, fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', cursor: 'pointer' } }, 'Compris')))
 }

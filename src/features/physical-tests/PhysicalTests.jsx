@@ -194,7 +194,7 @@ function TestDetail({ def, history, sexe, age, onSave, onDelete, onBack }) {
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column' } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 } },
-      React.createElement('button', { onClick: onBack, style: { width: 38, height: 38, borderRadius: 'var(--r-pill)', cursor: 'pointer', flexShrink: 0, background: SURFACE, border: `1.5px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      React.createElement('button', { onClick: onBack, 'aria-label': 'Retour', style: { width: 38, height: 38, borderRadius: 'var(--r-pill)', cursor: 'pointer', flexShrink: 0, background: SURFACE, border: `1.5px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
         React.createElement(Icon, { name: 'back', size: 18 })),
       React.createElement('div', null,
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1 } }, def.label),
@@ -292,7 +292,7 @@ export default function PhysicalTestsSpace({ userId, onClose }) {
     store.set({ physTests: existing.concat([entry]) })
   }
   function deleteTest(testId, date) {
-    store.set({ physTests: (db.physTests || []).filter((t) => !(t.testId === testId && t.date === date)) })
+    store.annulable('Résultat supprimé', () => store.set({ physTests: (db.physTests || []).filter((t) => !(t.testId === testId && t.date === date)) }))
   }
   function saveProfile(sx, ag) {
     store.set((st) => ({ profilePhys: { ...(st.profilePhys || {}), sexe: sx, age: ag } }))
@@ -367,7 +367,7 @@ export default function PhysicalTestsSpace({ userId, onClose }) {
               ? React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
                   React.createElement('span', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em', color: interp.color } }, last.value + ' ' + def.unit),
                   React.createElement('span', { style: { fontSize: 12, padding: '2px 9px', borderRadius: 'var(--r-pill)', fontWeight: 700, background: 'transparent', color: interp.color, border: `1px solid ${interp.color}` } }, interp.level),
-                  delta !== null && React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: delta >= 0 ? 'var(--c-success)' : 'var(--c-danger)' } }, (delta >= 0 ? '▲+' : '▼') + delta + ' vs précédent'))
+                  delta !== null && React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: delta >= 0 ? 'var(--c-success)' : 'var(--c-danger)' } }, (delta >= 0 ? '▲+' : '▼') + delta + ' par rapport au précédent'))
               : React.createElement('div', { style: { fontSize: 13, color: INK3 } }, 'Pas encore réalisé · ' + def.unit)),
           React.createElement(Icon, { name: 'arrow', size: 19, color: INK3 }))
       })),

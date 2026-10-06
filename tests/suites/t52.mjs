@@ -110,7 +110,7 @@ const render = (Comp, id) => { __reset(); __setDb(RICH); return text(__render(id
 
 const acc = render(Accueil, 'acc')
 a(/Renfo/.test(acc), "l en-tete Accueil affiche le mot-marque 'Renfo'")
-a(/Charge · 7 jours/.test(acc) && /min éq\./.test(acc), 'l accueil s ouvre sur la courbe de charge de la semaine')
+a(/Charge des 7 derniers jours/.test(acc) && /points de charge/.test(acc), 'l accueil s ouvre sur la courbe de charge de la semaine, dans la meme unite que Progres')
 a(/Relevés du jour/.test(acc) && ['Sommeil', 'Eau', 'Protéines'].every((x) => acc.includes(x)), 'avec les cadrans du jour : sommeil, eau, proteines')
 a(/À faire/.test(acc) && /Ouvrir →/.test(acc), 'et la seance a faire')
 for (const lab of ['jours de suite', 'min cette semaine', 'séances faites'])

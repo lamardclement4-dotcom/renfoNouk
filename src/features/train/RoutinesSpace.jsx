@@ -140,7 +140,7 @@ export default function RoutinesSpace({ db, store, onClose, onPlay }) {
     setEdit(null)
   }
   function remove(id) {
-    store.set({ routines: routineList(db).filter((x) => x.id !== id) })
+    store.annulable('Routine supprimée', () => store.set({ routines: routineList(db).filter((x) => x.id !== id) }))
   }
 
   // La durée demandée ajuste tours et mouvements ; sans durée choisie, la

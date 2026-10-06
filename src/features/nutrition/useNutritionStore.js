@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib'
 import { createSyncQueue, clearAllStoredQueues, STORAGE_PREFIX } from './syncQueue'
+import { annoncer } from '../../annonces'
 
 // Fenêtre de journal chargée au montage. Elle valait 10 jours, ce qui
 // suffisait aux graphes de sept jours mais tronquait silencieusement toutes
@@ -678,6 +679,46 @@ export function useNutritionStore(userId) {
           if (entries !== (cur[date] && cur[date].hydration)) saveDay(date, { hydration: entries })
         }
       }
+    },
+
+    // Suppression annulable : l'action s'applique tout de suite, et une
+    // annonce propose « Annuler » quelques secondes. L'annulation restaure
+    // exactement ce que l'action a changé (clé par clé, journée par
+    // journée), sans toucher au reste.
+    annulable: (libelle, action) => {
+      if (!inst || inst.loading) return action()
+      const etat = () => ({ phys: inst.phys || {}, cycle: inst.cycle, goals: inst.goals, zones: inst.sensitiveZones, jours: inst.dayRows || {} })
+      const avant = etat()
+      const resultat = action()
+      // Ce que l'action a changé, et seulement cela : une modification faite
+      // ensuite, avant d'annuler, ne doit pas être défaite.
+      const apres = etat()
+      annoncer(libelle, {
+        annuler: () => {
+          const patch = {}
+          const cles = new Set([...Object.keys(avant.phys), ...Object.keys(apres.phys)])
+          const changees = [...cles].filter((k) => avant.phys[k] !== apres.phys[k])
+          if (changees.length) {
+            const p = { ...inst.phys }
+            for (const k of changees) { if (k in avant.phys) p[k] = avant.phys[k]; else delete p[k] }
+            patch.profilePhys = p
+          }
+          if (avant.cycle !== apres.cycle) patch.cycle = avant.cycle
+          if (avant.goals !== apres.goals) patch.goals = avant.goals
+          if (avant.zones !== apres.zones) patch.sensitiveZones = avant.zones
+          const dates = new Set([...Object.keys(avant.jours), ...Object.keys(apres.jours)])
+          for (const d of dates) {
+            const x = avant.jours[d], y = apres.jours[d]
+            if ((x && x.food) !== (y && y.food)) (patch.foodLog = patch.foodLog || {})[d] = (x && x.food) || []
+            if ((x && x.hydration) !== (y && y.hydration)) (patch.hydroLog = patch.hydroLog || {})[d] = (x && x.hydration) || []
+          }
+          if (Object.keys(patch).length) {
+            store.set(patch)
+            annoncer('Annulé', { duree: 2500 })
+          }
+        },
+      })
+      return resultat
     },
 
     // Actions dédiées au module Entraîner — équivalents des méthodes du store

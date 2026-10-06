@@ -1,5 +1,5 @@
 import React from 'react'
-import { C, Icon } from '../health/kit'
+import { C, Icon, Aide } from '../health/kit'
 import { globalScore, recommendations } from '../train/renfoIntel'
 import { computePeakPlan } from '../train/peakIntel'
 
@@ -12,6 +12,8 @@ const h = React.createElement
 // quelles sur l'écran d'accueil.
 // ============================================================
 const PILLAR_IC = { hydration: 'drop', nutrition: 'apple', sleep: 'moon', load: 'chart', mobility: 'target', prevention: 'shield' }
+// Nom de chaque pilier sous sa jauge : un pictogramme seul ne se lit pas.
+const PILLAR_NOM = { hydration: 'Eau', nutrition: 'Nutrition', sleep: 'Sommeil', load: 'Charge', mobility: 'Mobilité', prevention: 'Blessures' }
 const RECO_COLOR = { alert: C.danger, warn: C.warn, info: C.primary }
 
 // Chaque tuile pilier redirige vers son module — l'id du pilier (renvoyé
@@ -32,7 +34,7 @@ export function HealthScoreCard({ db, onAction }) {
   return h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radius, padding: '16px 16px 14px', marginBottom: 14 } },
     h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 } },
       h('div', null,
-        h('div', { style: { fontFamily: C.display, fontSize: 15, fontWeight: 800, color: C.ink2, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 } }, 'Score santé sportive'),
+        h('div', { style: { fontFamily: C.display, fontSize: 15, fontWeight: 800, color: C.ink2, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 } }, 'Score santé sportive', h(Aide, { terme: 'scoreSante' })),
         h('div', { style: { fontSize: 32, fontWeight: 900, fontFamily: C.font, color: scoreColor, lineHeight: 1 } }, score, h('span', { style: { fontSize: 16, fontWeight: 600, marginLeft: 2 } }, '/100'))),
       h('svg', { width: 52, height: 52, viewBox: '0 0 52 52' },
         h('circle', { cx: 26, cy: 26, r: 22, fill: 'none', strokeWidth: 5, style: { stroke: C.surface2 } }),
@@ -48,13 +50,15 @@ export function HealthScoreCard({ db, onAction }) {
         return h('button', {
           key: p.id,
           onClick: onAction ? () => onAction(PILLAR_ACTION[p.id] || p.id) : undefined,
-          style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: onAction ? 'pointer' : 'default' },
+          'aria-label': (PILLAR_NOM[p.id] || p.label || p.id) + ' : ' + (active ? p.score + ' sur 100' : 'pas encore de donnée'),
+          style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: onAction ? 'pointer' : 'default', minWidth: 0 },
         },
           h('div', { style: { width: '100%', height: 36, borderRadius: 0, background: C.surface2, position: 'relative', overflow: 'hidden', border: isSleep ? `1px solid color-mix(in srgb, var(--ch4) 30%, ${C.line})` : 'none' } },
             h('div', { style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: pct + '%', background: active ? `color-mix(in srgb, ${col} 80%, transparent)` : C.surface2, borderRadius: 0, transition: 'height .4s ease' } }),
             isSleep && !active && h('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: 'var(--ch4)', fontWeight: 700 } }, '+')),
           h(Icon, { name: PILLAR_IC[p.id] || 'target', size: 13, color: isSleep && !active ? 'var(--ch4)' : (active ? col : C.ink3) }),
-          h('div', { style: { fontSize: 10, fontWeight: 700, color: isSleep && !active ? 'var(--ch4)' : (active ? col : C.ink3) } }, active ? p.score : (isSleep ? 'Log' : '—')))
+          h('div', { style: { fontSize: 10, fontWeight: 700, color: isSleep && !active ? 'var(--ch4)' : (active ? col : C.ink3) } }, active ? p.score : (isSleep ? 'Saisir' : '—')),
+          h('div', { 'aria-hidden': true, style: { fontFamily: C.display, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', color: C.ink2, lineHeight: 1, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, PILLAR_NOM[p.id] || p.label || ''))
       })),
 
     topRecos.length > 0 && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },

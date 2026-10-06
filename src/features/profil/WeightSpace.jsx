@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, FlowSpace, Card, BigStat, Bar, SegPills, isoToday } from '../health/kit'
+import { C, Icon, FlowSpace, Card, BigStat, Bar, SegPills, isoToday, Aide } from '../health/kit'
 import { weightAnalysis, weightSeries, trendLine, dayDiff, bodyRates, impliedBalance, estimateTDEE, detectPlateau, toCsv } from './weightIntel'
 import ScaleImport from './ScaleImport'
 import { METRICS } from './scaleOcr'
@@ -126,7 +126,7 @@ export default function WeightSpace({ db, store, onClose }) {
     const patch = { weightLog: next }
     const latest = next[next.length - 1]
     if (latest) patch.profilePhys = { ...(db.profilePhys || {}), poids: latest.kg }
-    store.set(patch)
+    store.annulable('Pesée supprimée', () => store.set(patch))
   }
 
   // Export local : un Blob téléchargé par le navigateur, sans passer par
@@ -228,7 +228,7 @@ export default function WeightSpace({ db, store, onClose }) {
           h('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', marginTop: 3, color: s.col } }, s.val)))),
       a.bmi
         ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, padding: '11px 12px', borderRadius: C.radiusSm, background: C.surface2 } },
-          h('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600, flex: 1 } }, 'IMC'),
+          h('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600, flex: 1 } }, 'IMC', h(Aide, { terme: 'imc' })),
           h('span', { style: { fontFamily: C.mono, fontSize: 14.1, fontWeight: 600, letterSpacing: '-.03em' } }, a.bmi.value),
           h('span', { style: { fontSize: 12, color: C.ink2, fontWeight: 600 } }, a.bmi.label))
         : h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 10 } }, 'Renseigne ta taille dans le profil pour afficher l’IMC.')),

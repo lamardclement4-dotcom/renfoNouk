@@ -160,7 +160,7 @@ export default function CookbookSpace({ userId, onClose }) {
     setErreur(null); setDraft(null); setCourante(r.id); setParts(r.servings || 1); setCoches({}); setMode('recette')
   }
   const supprimer = () => {
-    store.set({ cookbook: removeCook(carnet, draft.id) })
+    store.annulable('Recette supprimée du carnet', () => store.set({ cookbook: removeCook(carnet, draft.id) }))
     setDraft(null); setCourante(null); setMode('liste')
   }
   const basculerFav = (id) => store.set({ cookbook: toggleCookFav(carnet, id) })

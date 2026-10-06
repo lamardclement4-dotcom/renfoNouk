@@ -106,8 +106,8 @@ export const PHASES = {
 export const PHASE_ORDER = ['menstruation', 'folliculaire', 'ovulation', 'luteale']
 
 export const INTENSITE = {
-  menstruation:  { rpe: '5–7 / 10', fc: '55–70 % FC max', charge: '50–70 % 1RM', volume: 'Réduit (–20 à –40 %)', cardio: 'Zone 1–2 (cardio léger)' },
-  folliculaire:  { rpe: '6–9 / 10', fc: '65–85 % FC max', charge: '75–90 % 1RM', volume: 'Normal à augmenté', cardio: 'Zone 2–4 selon objectif' },
-  ovulation:     { rpe: '7–10 / 10', fc: '75–90 % FC max', charge: '85–100 % 1RM', volume: 'Maximum', cardio: 'Zone 3–5 (seuils, fractionné)' },
-  luteale:       { rpe: '6–8 / 10 début, 5–6 fin', fc: '65–80 % (FC perçue +5 bpm)', charge: '65–80 % 1RM fin de phase', volume: 'Modéré, dégressif', cardio: 'Zone 2–3, évite la chaleur' },
+  menstruation:  { rpe: '5–7 / 10', fc: '55–70 % du pouls max', charge: '50–70 % de ta charge max', volume: 'Réduit (–20 à –40 %)', cardio: 'Zone 1–2 (cardio léger)' },
+  folliculaire:  { rpe: '6–9 / 10', fc: '65–85 % du pouls max', charge: '75–90 % de ta charge max', volume: 'Normal à augmenté', cardio: 'Zone 2–4 selon objectif' },
+  ovulation:     { rpe: '7–10 / 10', fc: '75–90 % du pouls max', charge: '85–100 % de ta charge max', volume: 'Maximum', cardio: 'Zone 3–5 (seuils, fractionné)' },
+  luteale:       { rpe: '6–8 / 10 début, 5–6 fin', fc: '65–80 % (FC perçue +5 bpm)', charge: '65–80 % de ta charge max fin de phase', volume: 'Modéré, dégressif', cardio: 'Zone 2–3, évite la chaleur' },
 }
