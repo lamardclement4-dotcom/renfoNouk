@@ -59,6 +59,10 @@ const CSP_SOURCES = (supabase) => [
 // sous-domaine en .supabase.co. Le joker autorisait donc l'envoi du poids,
 // du sommeil et des blessures vers le projet d'un tiers — exactement ce que
 // connect-src est censé empêcher.
+function origineSupabase(url) {
+  try { const u = new URL(url); return u.protocol === 'https:' ? u.origin : null } catch { return null }
+}
+
 function supabaseSources(url) {
   try {
     const u = new URL(url)
@@ -78,6 +82,18 @@ function supabaseSources(url) {
 // Posée au build seulement. En développement, Vite a besoin d'un websocket
 // vers localhost et d'un script en ligne pour le rechargement à chaud :
 // cette politique les bloquerait, et `npm run dev` deviendrait pénible.
+// Pré-connexion à Supabase : la négociation (DNS, TCP, TLS — trois
+// allers-retours en 4G) se fait pendant que le code se télécharge, au lieu
+// d'attendre la première requête de session et de profil.
+const preconnexion = (origine) => ({
+  name: 'preconnexion',
+  apply: 'build',
+  transformIndexHtml: (html) => ({
+    html,
+    tags: origine ? [{ tag: 'link', attrs: { rel: 'preconnect', href: origine, crossorigin: '' }, injectTo: 'head' }] : [],
+  }),
+})
+
 const cspMeta = (csp) => ({
   name: 'csp-meta',
   apply: 'build',
@@ -185,7 +201,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const csp = CSP_SOURCES(supabaseSources(env.VITE_SUPABASE_URL))
   return {
-    plugins: [react(), cspMeta(csp), prechargePolices(), servirOcr(), serviceWorker()],
+    plugins: [react(), cspMeta(csp), preconnexion(origineSupabase(env.VITE_SUPABASE_URL)), prechargePolices(), servirOcr(), serviceWorker()],
     base: '/renfoNouk/',
   }
 })

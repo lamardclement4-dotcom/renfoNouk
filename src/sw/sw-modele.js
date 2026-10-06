@@ -9,8 +9,11 @@
 // - les fichiers de l'app (code, styles, polices) : gardés dès
 //   l'installation, servis depuis le cache. Leur nom change à chaque
 //   version, une copie gardée est donc toujours exacte ;
-// - la page elle-même : réseau d'abord (pour recevoir les mises à jour),
-//   copie gardée si le réseau ne répond pas en quelques secondes ;
+// - la page elle-même : servie depuis le cache, sans attendre le réseau.
+//   Elle n'est mise à jour qu'avec le service worker lui-même (nouvelle
+//   version = nouveau sw.js = nouvelle installation, page et fichiers
+//   ensemble) : une page récente qui pointerait vers des fichiers pas
+//   encore gardés ne pourrait pas s'ouvrir hors ligne ;
 // - le moteur de lecture des captures (/ocr/) : gardé au premier usage
 //   seulement, il pèse plusieurs mégaoctets ;
 // - Supabase, la météo, tout autre site : jamais. Aucune donnée
@@ -22,7 +25,6 @@ const BASE = '__BASE__'
 const FICHIERS = JSON.parse('__FICHIERS__')
 const CACHE_APP = 'renfo-app-' + VERSION
 const CACHE_OCR = 'renfo-ocr-__OCR__'
-const DELAI_PAGE_MS = 4000
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
@@ -55,17 +57,15 @@ self.addEventListener('fetch', (e) => {
   if (chemin.startsWith('ocr/')) { e.respondWith(depuisCache(req, CACHE_OCR)); return }
 })
 
-// Réseau d'abord, copie gardée en repli : en ligne, on reçoit toujours la
-// dernière version ; dans une salle sans réseau, l'app s'ouvre quand même.
+// Cache d'abord : l'app s'ouvre aussitôt, réseau lent ou absent. Le réseau
+// ne sert que si la page n'est pas encore gardée (toute première visite).
 async function page(req) {
   const cache = await caches.open(CACHE_APP)
-  try {
-    const rep = await avecDelai(fetch(req), DELAI_PAGE_MS)
-    if (rep && rep.ok) await cache.put(BASE, rep.clone())
-    return rep
-  } catch {
-    return (await cache.match(BASE, { ignoreVary: true })) || Response.error()
-  }
+  const garde = await cache.match(BASE, { ignoreVary: true })
+  if (garde) return garde
+  const rep = await fetch(req)
+  if (rep && rep.ok) await cache.put(BASE, rep.clone())
+  return rep
 }
 
 async function depuisCache(req, nom) {
@@ -80,11 +80,4 @@ async function depuisCache(req, nom) {
   const rep = await fetch(req)
   if (rep && rep.ok) await cache.put(req, rep.clone())
   return rep
-}
-
-function avecDelai(promesse, ms) {
-  return new Promise((resoudre, rejeter) => {
-    const t = setTimeout(() => rejeter(new Error('délai dépassé')), ms)
-    promesse.then((r) => { clearTimeout(t); resoudre(r) }, (e) => { clearTimeout(t); rejeter(e) })
-  })
 }

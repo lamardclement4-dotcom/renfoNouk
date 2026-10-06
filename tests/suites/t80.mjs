@@ -8,7 +8,7 @@ const code = modele.replace(/\/\/.*$/gm, '')
 a(/if \(url\.origin !== self\.location\.origin \|\| !url\.pathname\.startsWith\(BASE\)\) return/.test(code), 'les requetes vers d autres sites (Supabase, meteo) ne passent jamais par le cache')
 a(/req\.method !== 'GET'\) return/.test(code), 'seules les lectures sont concernees, jamais une ecriture')
 a(/ignoreVary: true/.test(code) && (code.match(/ignoreVary: true/g) || []).length >= 2, 'le cache ignore Vary : sans cela, hors ligne, la page s ouvrait sans son code')
-a(/req\.mode === 'navigate'/.test(code) && /DELAI_PAGE_MS/.test(code), 'la page : reseau d abord, copie gardee si le reseau ne repond pas')
+a(/req\.mode === 'navigate'/.test(code) && /const garde = await cache\.match\(BASE/.test(code) && !/cache\.put\(BASE[^\n]*\n[^\n]*\n[^\n]*catch/.test(code), 'la page : servie depuis le cache sans attendre le reseau')
 a(/startsWith\('renfo-app-'\) && cle !== CACHE_APP/.test(code), 'les anciennes versions de l app sont retirees du cache')
 a(!/supabase|localStorage|indexedDB/i.test(code), 'aucune donnee personnelle ni stockage de compte dans le service worker')
 
@@ -17,6 +17,7 @@ a(/serviceWorker\(\)\]/.test(cfg), 'le service worker est produit a chaque build
 a(/__\[A-Z\]\+__/.test(cfg), 'le build echoue si un marqueur du modele reste vide')
 const entree = readFileSync('../../src/main.jsx', 'utf8')
 a(/import\.meta\.env\.PROD && 'serviceWorker' in navigator/.test(entree), 'enregistre en production seulement, jamais en developpement')
+a(/updateViaCache: 'none'/.test(entree) && /miseAJourPrete\) \{ window\.location\.reload/.test(entree), 'une nouvelle version prend la main au retour suivant dans l app, jamais pendant une saisie')
 
 if (existsSync('../../dist/sw.js')) {
   const sw = readFileSync('../../dist/sw.js', 'utf8')

@@ -6,7 +6,8 @@ export function reset() { for (const k of Object.keys(calls)) calls[k] = [] }
 const ok = (data) => Promise.resolve({ data, error: null })
 // Pannes simulees : nombre de lectures du profil qui echoueront encore, et
 // la facon d echouer (erreur renvoyee par Supabase, ou exception levee).
-export const pannes = { lecture: 0, jette: false, profil: null, message: 'Failed to fetch' }
+export const pannes = { lecture: 0, jette: false, profil: null, message: 'Failed to fetch', delai: 0 }
+const retarde = (p) => (pannes.delai ? new Promise((r) => setTimeout(() => r(p), pannes.delai)) : p)
 const lireProfil = () => {
   if (pannes.lecture > 0) {
     pannes.lecture--
@@ -19,7 +20,7 @@ export const supabase = {
   from: (table) => ({
     select: () => ({
       eq: () => ({
-        single: () => (pannes.lecture > 0 ? lireProfil() : ok(pannes.profil || { phys: {}, cycle: {}, goals: {}, sensitive_zones: [] })),
+        single: () => retarde(pannes.lecture > 0 ? lireProfil() : ok(pannes.profil || { phys: {}, cycle: {}, goals: {}, sensitive_zones: [] })),
         maybeSingle: () => ok(null),
         gte: () => ok([]),
         eq: () => ({ maybeSingle: () => ok(null) }),

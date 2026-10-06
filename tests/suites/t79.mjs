@@ -54,10 +54,10 @@ pannes.lecture = 1; pannes.message = 'permission denied for table profiles'
 __mount('droits', () => useNutritionStore('u1'))
 await tick()
 r = __rerender('droits')
-a(r.loading === true, 'erreur de droits : on n ouvre pas sur une copie peut-etre perimee')
+a(r.loading === false && r.miseAJour === true && r.horsLigne === null, 'erreur de droits : la copie reste affichee, mais comme non confirmee (pas en mode hors ligne)')
 r.store.set({ weightGoal: 60 })
 await tick()
-a(calls.phys.length === 0, 'et rien ne s ecrit')
+a(calls.phys.length === 0, 'et rien ne s envoie tant que le serveur n a pas confirme les donnees')
 
 // ─── 4. la copie d un autre compte n est jamais utilisee ───
 resetStore(); reset()

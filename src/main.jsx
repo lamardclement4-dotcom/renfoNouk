@@ -47,8 +47,23 @@ if (estEncadree()) {
   // En production seulement : en développement, il servirait des fichiers
   // périmés au lieu des modifications en cours.
   if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    // La page est servie depuis le cache : une nouvelle version s'installe
+    // en arrière-plan et prend la main au retour suivant dans l'app, plutôt
+    // que de recharger sous les doigts pendant une saisie.
+    const avaitUnControleur = !!navigator.serviceWorker.controller
+    let miseAJourPrete = false
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (avaitUnControleur) miseAJourPrete = true })
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js', { scope: import.meta.env.BASE_URL }).catch((e) => console.warn('[sw] enregistrement impossible :', e))
+      navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js', { scope: import.meta.env.BASE_URL, updateViaCache: 'none' })
+        .then((reg) => {
+          // Vérifier les mises à jour à chaque retour dans l'app.
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState !== 'visible') return
+            if (miseAJourPrete) { window.location.reload(); return }
+            reg.update().catch(() => {})
+          })
+        })
+        .catch((e) => console.warn('[sw] enregistrement impossible :', e))
     })
   }
   // Fichier d'écran introuvable après une mise en ligne (voir GardeEcran) :

@@ -578,7 +578,16 @@ export function fmtDate(iso) {
 // Une écriture qui échouait finissait dans un console.error : l'écran
 // affichait la saisie, elle n'était jamais partie, et personne ne le
 // savait. Ce bandeau n'apparaît que lorsqu'il y a quelque chose à dire.
-export function SyncBanner({ sync, onRetry, loadError, onRetryLoad, horsLigne }) {
+export function SyncBanner({ sync, onRetry, loadError, onRetryLoad, horsLigne, conflits, onConflitsVus }) {
+  // Saisie écartée au rejeu : elle avait été faite sur une donnée modifiée
+  // ailleurs entre-temps. Rien n'a été écrasé ; il faut la refaire.
+  if (conflits) {
+    return React.createElement('div', { role: 'alert', style: { position: 'fixed', left: 12, right: 12, bottom: 'calc(76px + env(safe-area-inset-bottom))', zIndex: 90, maxWidth: 436, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.warn}`, fontFamily: C.font } },
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink, lineHeight: 1.35 } }, `${conflits} saisie${conflits > 1 ? 's' : ''} non appliquée${conflits > 1 ? 's' : ''}`),
+        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2, lineHeight: 1.4 } }, 'Faite pendant la mise à jour, sur une donnée modifiée depuis un autre appareil. Rien n’a été écrasé : vérifie et refais-la.')),
+      onConflitsVus ? React.createElement('button', { onClick: onConflitsVus, style: { flex: '0 0 auto', padding: '7px 12px', border: `1px solid ${C.line}`, background: 'transparent', color: C.ink2, fontFamily: C.mono, fontSize: 11, textTransform: 'uppercase', cursor: 'pointer' } }, 'Compris') : null)
+  }
   // Ouvert hors ligne sur la copie gardée : on le dit, avec l'heure des
   // données, et les saisies continuent de s'empiler dans la file.
   if (horsLigne) {

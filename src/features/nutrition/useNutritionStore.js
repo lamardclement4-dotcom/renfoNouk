@@ -253,8 +253,8 @@ export const buildDb = (rawPhys, cycleSrc, goalsSrc, zonesSrc, rowsSrc, todayISO
 // primer sur l'instantané serveur ou la copie hors ligne, sinon la personne
 // verrait sa saisie « disparaître » avant de la voir revenir une fois la
 // file vidée. Renvoie les journées à jour.
-function appliquerEnAttente(inst, rows) {
-  const pending = inst.queue.restorePending()
+function appliquerEnAttente(inst, rows, fournies) {
+  const pending = fournies || inst.queue.restorePending()
   for (const [target, payload] of Object.entries(pending)) {
     if (target === 'phys') inst.phys = payload
     else if (target === 'cycle') inst.cycle = payload
@@ -289,7 +289,7 @@ export function sauverInstantane(inst, userId) {
   const st = stockage()
   if (!st || !userId || inst.loading) return false
   try {
-    const texte = JSON.stringify({ v: 1, savedAt: inst.horsLigne || new Date().toISOString(), userId,
+    const texte = JSON.stringify({ v: 1, savedAt: inst.horsLigne || inst.copieDe || new Date().toISOString(), userId,
       phys: inst.phys, cycle: inst.cycle, goals: inst.goals, sensitiveZones: inst.sensitiveZones, dayRows: inst.dayRows, rowIds: inst.rowIds })
     // Trop grosse pour le stockage du navigateur : on renonce à la copie
     // plutôt que d'évincer la file d'écritures, plus précieuse.
@@ -324,9 +324,67 @@ export function estPanneReseau(erreur) {
 // prechargerStore) — plutôt qu'au montage de l'accueil, qui n'arrive
 // qu'après : c'était un aller-retour réseau de plus, en série, à chaque
 // ouverture de l'app.
+function afficherCopie(inst, copie, pending) {
+  inst.phys = copie.phys; inst.cycle = copie.cycle; inst.goals = copie.goals
+  inst.sensitiveZones = copie.sensitiveZones; inst.rowIds = { ...copie.rowIds }
+  inst.dayRows = appliquerEnAttente(inst, { ...copie.dayRows }, pending)
+}
+
+// Empreinte des données qu'une saisie « objet » remplace : si elle a changé
+// entre la copie (où la saisie a été composée) et les données fraîches, la
+// saisie était fondée sur une version périmée — la rejouer écraserait ce
+// qui a été fait ailleurs.
+function empreinte(inst, db, patch) {
+  const e = {}
+  for (const k of Object.keys(patch || {})) {
+    if (k === 'profilePhys') e[k] = JSON.stringify(inst.phys)
+    else if ((k === 'foodLog' || k === 'hydroLog') && patch[k] && typeof patch[k] === 'object') {
+      for (const d of Object.keys(patch[k])) e[k + ':' + d] = JSON.stringify(((db[k] || {})[d]) ?? null)
+    } else e[k] = JSON.stringify(db[k] ?? null)
+  }
+  return e
+}
+
+// Données fraîches arrivées alors que l'écran montrait la copie : on
+// repart d'elles, on remet les écritures d'avant (sessions précédentes),
+// puis on rejoue les saisies faites pendant l'attente.
+function rebaser(inst) {
+  const differes = inst.differes || []
+  inst.differes = []
+  inst.rafraichissement = false
+  inst.copieDe = null
+  let conflits = 0
+  for (const d of differes) {
+    if (d.avant) {
+      const maintenant = empreinte(inst, d.live(), d.patchOrFn)
+      if (Object.keys(d.avant).some((k) => d.avant[k] !== maintenant[k])) { conflits++; continue }
+    }
+    d.set(d.patchOrFn)
+  }
+  if (conflits) inst.conflits = (inst.conflits || 0) + conflits
+  inst.queue.resume()
+}
+
 function demarrerChargement(inst, userId) {
   if (!userId || !inst || inst.started) return
   inst.started = true
+  // Ouverture instantanée : la copie locale s'affiche aussitôt, les données
+  // fraîches la remplacent dès qu'elles arrivent. Pendant cette attente,
+  // l'envoi est suspendu et les saisies sont notées pour être rejouées sur
+  // les données fraîches (voir rebaser).
+  if (inst.loading && !inst.rafraichissement) {
+    const copie = lireInstantane(userId)
+    if (copie) {
+      inst.pendingAvant = inst.queue.restorePending()
+      inst.queue.pause()
+      afficherCopie(inst, copie, inst.pendingAvant)
+      inst.rafraichissement = true
+      inst.copieDe = copie.savedAt
+      inst.differes = []
+      inst.loading = false
+      inst.notify()
+    }
+  }
   async function load() {
     const since = isoDaysAgo(DAYS_HISTORY)
     let profil, journal
@@ -351,12 +409,18 @@ function demarrerChargement(inst, userId) {
       // gardée sur l'appareil. Seulement pour une panne réseau : une autre
       // erreur (serveur, droits) garde le blocage d'écriture, car composer
       // sur une copie peut-être périmée écraserait des données plus récentes.
-      if (inst.loading && estPanneReseau(erreur)) {
+      if (inst.rafraichissement && estPanneReseau(erreur)) {
+        // La copie affichée devient le mode hors ligne : les saisies déjà
+        // faites restent appliquées et partiront au retour du réseau.
+        inst.horsLigne = inst.copieDe
+        inst.rafraichissement = false
+        inst.copieDe = null
+        inst.differes = []
+        inst.queue.resume()
+      } else if (inst.loading && estPanneReseau(erreur)) {
         const copie = lireInstantane(userId)
         if (copie) {
-          inst.phys = copie.phys; inst.cycle = copie.cycle; inst.goals = copie.goals
-          inst.sensitiveZones = copie.sensitiveZones; inst.rowIds = copie.rowIds
-          inst.dayRows = appliquerEnAttente(inst, { ...copie.dayRows })
+          afficherCopie(inst, copie)
           inst.horsLigne = copie.savedAt
           inst.loading = false
         }
@@ -371,6 +435,10 @@ function demarrerChargement(inst, userId) {
     inst.loadError = null
     inst.essais = 0
     inst.horsLigne = null
+    const depuisCopie = inst.rafraichissement
+    // Les écritures notées pendant l'attente seront rejouées : on ne garde
+    // en file que celles des sessions précédentes.
+    if (depuisCopie) inst.queue.clear()
     const profileRow = profil.data
     const logRows = journal.data
     inst.phys = profileRow?.phys || {}
@@ -387,8 +455,10 @@ function demarrerChargement(inst, userId) {
     // elles doivent primer sur l'instantané serveur, sinon la personne
     // verrait sa saisie « disparaître » au rechargement avant de la voir
     // revenir une fois la file vidée.
-    inst.dayRows = appliquerEnAttente(inst, rows)
+    inst.dayRows = appliquerEnAttente(inst, rows, depuisCopie ? inst.pendingAvant : undefined)
+    inst.pendingAvant = null
     inst.loading = false
+    if (depuisCopie) rebaser(inst)
     inst.notify()
   }
   load()
@@ -556,6 +626,17 @@ export function useNutritionStore(userId) {
         console.warn('[store] écriture ignorée : données pas encore chargées')
         return
       }
+      // Copie affichée, données fraîches attendues : la saisie s'applique à
+      // l'écran tout de suite, mais elle est aussi notée pour être rejouée
+      // sur les données fraîches (l'envoi est suspendu d'ici là).
+      if (inst.rafraichissement) {
+        inst.differes.push({
+          set: store.set,
+          live: liveDb,
+          patchOrFn,
+          avant: typeof patchOrFn === 'function' ? null : empreinte(inst, liveDb(), patchOrFn),
+        })
+      }
       // La forme fonction reçoit l'état à jour, pas celui du dernier rendu :
       // deux `set` dans le même tick composaient sinon sur la même base
       // périmée, et le premier était perdu.
@@ -669,6 +750,9 @@ export function useNutritionStore(userId) {
 
   const loadError = inst ? inst.loadError || null : null
   const horsLigne = inst ? inst.horsLigne || null : null
+  const miseAJour = !!(inst && inst.rafraichissement)
+  const conflits = inst ? inst.conflits || 0 : 0
   const retryLoad = () => relancerChargement(userId)
-  return { db, store, loading, sync, retrySync, loadError, retryLoad, horsLigne }
+  const effacerConflits = () => { if (inst) { inst.conflits = 0; inst.notify() } }
+  return { db, store, loading, sync, retrySync, loadError, retryLoad, horsLigne, miseAJour, conflits, effacerConflits }
 }

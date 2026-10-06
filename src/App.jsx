@@ -67,6 +67,12 @@ function useAuth() {
     // Les données de l'accueil partent en même temps que le profil, au lieu
     // d'attendre qu'il soit arrivé et que l'accueil soit monté.
     prechargerStore(userId)
+    // Ouverture instantanée : le profil gardé sur l'appareil ouvre l'app
+    // tout de suite ; le profil frais le remplace dès qu'il arrive (statut
+    // compris : un compte suspendu entre-temps est renvoyé à l'écran
+    // correspondant). Aucune donnée ne part avant d'être confirmée.
+    const garde = profilGarde(userId)
+    if (garde) { setProfile((p) => p || garde); setLoading(false) }
     let res
     try { res = await supabase.from('profiles').select('*').eq('id', userId).single() } catch (e) { res = { data: null, error: e } }
     if (dernierUtilisateur.current !== userId) return
@@ -776,11 +782,11 @@ function Home({ profile, signOut, refreshProfile }) {
   // Le hook partage son état par utilisateur : cet appel ne crée pas de
   // copie supplémentaire, il s'abonne simplement pour connaître l'état
   // d'enregistrement et pouvoir l'afficher où que l'on soit dans l'app.
-  const { sync, retrySync, loadError, retryLoad, horsLigne } = useNutritionStore(userId)
+  const { sync, retrySync, loadError, retryLoad, horsLigne, conflits, effacerConflits } = useNutritionStore(userId)
 
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
-      <SyncBanner sync={sync} onRetry={retrySync} loadError={loadError} onRetryLoad={retryLoad} horsLigne={horsLigne} />
+      <SyncBanner sync={sync} onRetry={retrySync} loadError={loadError} onRetryLoad={retryLoad} horsLigne={horsLigne} conflits={conflits} onConflitsVus={effacerConflits} />
       {/* Une seule frontière d'attente, posée ici : elle couvre aussi les
           écrans que ces espaces ouvrent à leur tour (Entraîner depuis
           l'accueil, Poids ou Records depuis Progrès…). La barre de

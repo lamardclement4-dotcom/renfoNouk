@@ -83,6 +83,8 @@ export function createSyncQueue({ userId, storage, online, now } = {}) {
     listeners: new Set(),
     flushing: false,
     timer: null,
+    // En pause, la file garde tout mais n'envoie rien (voir pause()).
+    enPause: false,
   }
 
   const notify = () => { for (const l of q.listeners) l(publicState()) }
@@ -150,6 +152,7 @@ export function createSyncQueue({ userId, storage, online, now } = {}) {
     async flush() {
       if (q.flushing) return
       if (!q.entries.size) { q.lastError = null; setStatus('idle'); return }
+      if (q.enPause) { setStatus('pending'); return }
       if (!isOnline()) { setStatus('pending'); return }
       q.flushing = true
       setStatus('saving')
@@ -203,6 +206,16 @@ export function createSyncQueue({ userId, storage, online, now } = {}) {
         q.flushing = false
       }
     },
+
+    // Suspendre l'envoi sans rien perdre : le store le fait tant qu'il
+    // affiche la copie locale et attend les données fraîches, pour pouvoir
+    // rejouer les saisies sur ces données plutôt que d'envoyer un état
+    // composé sur une copie peut-être périmée.
+    pause() { q.enPause = true; clearTimeout(q.timer) },
+    resume() { q.enPause = false; return this.flush() },
+
+    // Retire une cible sans l'envoyer (remplacée par une version rejouée).
+    drop(target) { q.entries.delete(target); persist(); notify() },
 
     // Reprise manuelle, pour le bouton « Réessayer ».
     retryNow() {
