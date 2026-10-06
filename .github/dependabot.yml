@@ -25,6 +25,16 @@ updates:
         update-types: ["minor", "patch"]
     commit-message:
       prefix: "deps"
+    # React 19.3 alourdit le fichier principal de 29 kB (+13 kB compressés),
+    # téléchargé avant le premier écran, pour des fonctions dont l'app ne se
+    # sert pas. On reste sur la branche 19.2 (épinglée en ~19.2 dans
+    # package.json), qui reçoit ses correctifs de sécurité. À revoir si elle
+    # cesse d'être maintenue.
+    ignore:
+      - dependency-name: "react"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
 
   # Les actions du workflow sont épinglées sur des étiquettes mobiles
   # (actions/checkout@v4). Dependabot les suit et propose les montées de
