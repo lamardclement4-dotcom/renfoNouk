@@ -16,12 +16,15 @@
 // l'utilisateur via RenfoIntel, peut proposer une action (ouvrir un
 // module, lancer une séance) et des suggestions de relance.
 // ============================================================
-import { pillarSleep, pillarLoad, acwrRisk, trainingStats, trainingTotals, peakReadiness, projectedAcwr, consecutiveDaysBefore, mondayRetro, hydroDay, hydricTargetMl, nutritionDay, globalScore, dureeToMins } from './renfoIntel'
+import { pillarSleep, pillarLoad, acwrRisk, trainingStats, trainingTotals, peakReadiness, projectedAcwr, consecutiveDaysBefore, mondayRetro, hydroDay, hydricTargetMl, nutritionDay, globalScore, dureeToMins, rolling7Mins } from './renfoIntel'
 import { SESSIONS, SPORTS } from './trainData'
 import { computePeakPlan } from './peakIntel'
 import { cycleInfo } from '../health/cycleIntel'
 import { PHASES } from '../health/cycleData'
 import { libelleDuree } from '../health/sommeilForme'
+import { formeDb, coucherDuSoir } from '../health/formeContexte'
+import { ENERGIES } from '../health/sommeilReveil'
+import { sleepDebt, sleepSeries, neededHours } from '../health/sleepIntel'
 
 function norm(s) {
   return (s || '').toLowerCase().normalize('NFD').split('').filter((ch) => {
@@ -49,7 +52,7 @@ function asList(v) {
   return Array.isArray(v) ? v.filter((x) => x != null) : []
 }
 
-export const STARTER_CHIPS = ["Quelle séance aujourd'hui ?", 'Comment est ma charge ?', 'Je me sens fatigué', 'Résumé de mes stats']
+export const STARTER_CHIPS = ['Ma forme du jour', "Quelle séance aujourd'hui ?", 'Comment est ma charge ?', 'Je me sens fatigué']
 const DEFAULT_CHIPS = ["Quelle séance aujourd'hui ?", 'Mon sommeil', 'Ma charge', 'Mes records']
 
 export function coachGreeting() {
@@ -184,7 +187,7 @@ function levenshtein(a, b) {
   return dp[m][n]
 }
 const FUZZY_DICT = [
-  { w: 'fatigue', id: 'fatigue' }, { w: 'sommeil', id: 'sommeil' }, { w: 'dormir', id: 'sommeil' },
+  { w: 'fatigue', id: 'fatigue' }, { w: 'forme', id: 'forme' }, { w: 'sommeil', id: 'sommeil' }, { w: 'dormir', id: 'sommeil' },
   { w: 'douleur', id: 'pain' }, { w: 'blessure', id: 'pain' }, { w: 'charge', id: 'load' },
   { w: 'hydratation', id: 'hydra' }, { w: 'nutrition', id: 'nutri' }, { w: 'mobilite', id: 'mobility' },
   { w: 'record', id: 'records' }, { w: 'stats', id: 'stats' }, { w: 'cycle', id: 'cycle' },
@@ -204,6 +207,34 @@ function fuzzyIntentId(t) {
 
 // --- Réponses par sujet (chacune lit db en direct, ctx = entités extraites) ---
 
+// La forme du jour en une phrase, pour l'accoler à la séance prévue.
+function phraseForme(db) {
+  const f = formeDb(db, todayISO())
+  return f ? ` Ta forme du jour : ${f.score}/100 — ${f.consigne}` : ''
+}
+
+// Ce qui fait baisser la note : les parts sous la moitié de leur maximum,
+// puis les ajustements négatifs, du plus lourd au plus léger.
+function causesForme(f) {
+  const faibles = f.parts.filter((p) => p.pts < p.max / 2).map((p) => `${p.lab.toLowerCase()} (${p.texte})`)
+  const moins = f.ajustements.filter((x) => x.pts < 0).sort((a, b) => a.pts - b.pts).map((x) => `${x.lab.toLowerCase()} (${x.texte}, −${-x.pts})`)
+  return [...faibles, ...moins].slice(0, 3)
+}
+
+function formeReply(db) {
+  const iso = todayISO()
+  const f = formeDb(db, iso)
+  if (!f) {
+    return { text: "Je ne connais pas encore ta forme du jour : saisis ta nuit (la durée suffit, l'énergie au réveil affine). La note sort aussitôt, avec la séance que ton corps peut encaisser.", action: 'sommeil', actionLabel: 'Saisir ma nuit', chips: ["Quelle séance aujourd'hui ?", 'Mon sommeil'] }
+  }
+  const causes = causesForme(f)
+  const soir = coucherDuSoir(db, iso)
+  const text = `Forme du jour : ${f.score}/100. ${f.verdict} ${f.consigne}`
+    + (causes.length ? ` Ce qui pèse : ${causes.join(' ; ')}.` : ' Rien ne tire la note vers le bas.')
+    + (soir ? ` Ce soir, au lit vers ${soir.coucher}.` : '')
+  return { text, action: 'sommeil', actionLabel: 'Voir le détail', chips: ["Quelle séance aujourd'hui ?", 'Mon sommeil', 'Ma charge'] }
+}
+
 function sessionTodayReply(db, ctx) {
   const iso = todayISO()
   if (ctx && ctx.sportId) {
@@ -212,7 +243,7 @@ function sessionTodayReply(db, ctx) {
     const planned = (asList(db && db.planningSessions)).find((s) => s && s.date === iso && s.sport === ctx.sportId)
     if (planned) {
       const mins = dureeToMins(planned.duree)
-      return { text: `Oui, ${label} est prévu aujourd'hui${planned.heure ? ' à ' + planned.heure : ''}${mins ? ` (${mins} min)` : ''} — statut : ${planned.statut === 'realise' ? 'déjà réalisée' : 'à faire'}.`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Ma charge', 'Mon sommeil'] }
+      return { text: `Oui, ${label} est prévu aujourd'hui${planned.heure ? ' à ' + planned.heure : ''}${mins ? ` (${mins} min)` : ''} — statut : ${planned.statut === 'realise' ? 'déjà réalisée' : 'à faire'}.${planned.statut === 'realise' ? '' : phraseForme(db)}`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Ma charge', 'Mon sommeil'] }
     }
     return { text: `Pas de séance de ${label} prévue aujourd'hui dans ton Calendrier.`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ["Quelle séance aujourd'hui ?", 'Planifier une séance'] }
   }
@@ -221,14 +252,14 @@ function sessionTodayReply(db, ctx) {
     const undone = db.program.sessions.find((s) => !(db.program.done && db.program.done[s.id]))
     if (undone) {
       const extra = planned.length ? ` Tu as aussi ${planned.length} séance(s) planifiée(s) au Calendrier aujourd'hui.` : ''
-      return { text: `Ta prochaine séance de programme : « ${undone.title} » (${undone.mins} min).${extra} Je te l'ouvre ?`, action: 'session:' + undone.id, actionLabel: 'Ouvrir la séance', chips: ['Ma charge', 'Je me sens fatigué'] }
+      return { text: `Ta prochaine séance de programme : « ${undone.title} » (${undone.mins} min).${extra}${phraseForme(db)} Je te l'ouvre ?`, action: 'session:' + undone.id, actionLabel: 'Ouvrir la séance', chips: ['Ma charge', 'Je me sens fatigué'] }
     }
   }
   if (planned.length) {
     const p = planned[0]
     const sp = SPORTS.find((s) => s.id === p.sport)
     const mins = dureeToMins(p.duree)
-    return { text: `Tu as prévu ${sp ? sp.label : 'une séance'} aujourd'hui${p.heure ? ' à ' + p.heure : ''}${mins ? ` (${mins} min)` : ''}. Tu peux la retrouver dans le Calendrier.`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Ma charge', 'Mon sommeil'] }
+    return { text: `Tu as prévu ${sp ? sp.label : 'une séance'} aujourd'hui${p.heure ? ' à ' + p.heure : ''}${mins ? ` (${mins} min)` : ''}.${phraseForme(db)} Tu peux la retrouver dans le Calendrier.`, action: 'planner', actionLabel: 'Ouvrir le Calendrier', chips: ['Ma charge', 'Mon sommeil'] }
   }
   const fallback = SESSIONS.find((s) => s.id === 'renfo-full') || SESSIONS[0]
   return { text: `Rien de planifié aujourd'hui. Suggestion : « ${fallback.title} » (${fallback.mins} min), un bon full body. Sinon, fais le test de mobilité pour générer un programme personnalisé.`, action: 'session:' + fallback.id, actionLabel: 'Ouvrir la séance', chips: ['Faire le test de mobilité', 'Planifier une séance'] }
@@ -242,6 +273,14 @@ function fatigueReply(db) {
     parts.push(slp.extra.hours < 7 ? `Tu n'as dormi que ${libelleDuree(slp.extra.hours)} cette nuit — c'est sûrement une grosse partie de l'explication.` : `Ton sommeil est correct (${libelleDuree(slp.extra.hours)} cette nuit), la fatigue vient probablement d'ailleurs.`)
   } else {
     parts.push("Tu n'as pas enregistré ton sommeil — commence par là, c'est le premier suspect.")
+  }
+  const iso = todayISO()
+  const dette = sleepDebt(sleepSeries(db.sleepLog || {}, { days: 14, today: iso }), neededHours(rolling7Mins(db, iso)))
+  if (dette && dette.net >= 5) parts.push(`Tu cumules ${libelleDuree(dette.net)} de dette de sommeil sur deux semaines : une seule bonne nuit n'efface pas ça.`)
+  const f = formeDb(db, iso)
+  if (f) {
+    const causes = causesForme(f)
+    parts.push(`Ta forme du jour est à ${f.score}/100${causes.length ? `, surtout à cause de : ${causes[0]}` : ''}.`)
   }
   if (acwr.available && (acwr.level === 'Vigilance' || acwr.level === 'Vigilance renforcée')) {
     parts.push(`Ta charge d'entraînement est en zone « ${acwr.level.toLowerCase()} » (ratio ${acwr.ratio}) — c'est cohérent avec de la fatigue accumulée.`)
@@ -262,8 +301,11 @@ function sleepReply(db, ctx) {
       return { text: "Tu n'as pas encore enregistré ta nuit. Note ta durée de sommeil, ta qualité et tes réveils — ça alimente ton score santé et mes conseils.", action: 'sommeil', actionLabel: 'Enregistrer mon sommeil', chips: ['Je me sens fatigué', 'Résumé de mes stats'] }
     }
     const h = slp.extra.hours
+    const nuit = (db.sleepLog || {})[todayISO()] || {}
+    const energie = nuit.reveil && Number.isInteger(nuit.reveil.energie) && nuit.reveil.energie >= 1 && nuit.reveil.energie <= 5 ? nuit.reveil.energie : null
+    const f = formeDb(db, todayISO())
     const advice = h < 6 ? 'En dessous de 6 h, récupération et performances chutent nettement — vise 7–9 h.' : h < 7 ? 'Un peu court — vise 7–9 h pour une récupération optimale.' : h <= 9 ? 'Dans la zone optimale (7–9 h), continue comme ça.' : 'Plutôt long — si tu ressens le besoin de dormir autant, surveille ta charge.'
-    return { text: `Cette nuit : ${h} h${slp.extra.quality ? `, qualité ${slp.extra.quality}/5` : ''}${slp.extra.awakenings ? `, ${slp.extra.awakenings} réveil(s)` : ''} (score sommeil ${slp.score}/100). ${advice}`, action: 'sommeil', actionLabel: 'Ouvrir Sommeil', chips: ['Je me sens fatigué', 'Ma charge'] }
+    return { text: `Cette nuit : ${libelleDuree(h)}${slp.extra.quality ? `, qualité ${slp.extra.quality}/5` : ''}${slp.extra.awakenings ? `, ${slp.extra.awakenings} réveil(s)` : ''}${energie ? `, énergie au réveil ${energie}/5 (${ENERGIES[energie - 1].toLowerCase()})` : ''}. ${advice}${f ? ` Forme du jour : ${f.score}/100, ${f.verdict.charAt(0).toLowerCase() + f.verdict.slice(1)}` : ''}`, action: 'sommeil', actionLabel: 'Ouvrir Sommeil', chips: ['Ma forme du jour', 'Je me sens fatigué', 'Ma charge'] }
   }
   const iso = isoOffset(offset)
   const s = (db.sleepLog || {})[iso]
@@ -272,7 +314,7 @@ function sleepReply(db, ctx) {
     return { text: `Rien d'enregistré pour ${lbl === "aujourd'hui" ? "aujourd'hui" : lbl}.`, action: 'sommeil', actionLabel: 'Ouvrir Sommeil', chips: ['Mon sommeil', 'Résumé de mes stats'] }
   }
   const h = s.hours
-  return { text: `${lbl.charAt(0).toUpperCase() + lbl.slice(1)} : ${h} h${s.quality ? `, qualité ${s.quality}/5` : ''}${s.awakenings ? `, ${s.awakenings} réveil(s)` : ''}.`, action: 'sommeil', actionLabel: 'Ouvrir Sommeil', chips: ['Je me sens fatigué', 'Ma charge'] }
+  return { text: `${lbl.charAt(0).toUpperCase() + lbl.slice(1)} : ${libelleDuree(Number(h))}${s.quality ? `, qualité ${s.quality}/5` : ''}${s.awakenings ? `, ${s.awakenings} réveil(s)` : ''}.`, action: 'sommeil', actionLabel: 'Ouvrir Sommeil', chips: ['Je me sens fatigué', 'Ma charge'] }
 }
 
 function painReply(db, ctx) {
@@ -465,7 +507,7 @@ function recoveryReply() {
 }
 
 function helpReply() {
-  return { text: 'Je peux te parler de : ta séance du jour, ta charge d\'entraînement, ton sommeil, ta fatigue, une douleur, ton hydratation, ta nutrition, ta mobilité, tes tests physiques, tes records, ton cycle, tes compléments, tes échéances (pic de forme), ou te faire un résumé de tes stats ou de ta semaine. Tu peux aussi me poser une hypothèse concrète — « je peux faire 1h30 aujourd\'hui ? » — je calcule le vrai impact sur ta charge avant de répondre.', chips: STARTER_CHIPS }
+  return { text: 'Je peux te parler de : ta forme du jour, ta séance du jour, ta charge d\'entraînement, ton sommeil, ta fatigue, une douleur, ton hydratation, ta nutrition, ta mobilité, tes tests physiques, tes records, ton cycle, tes compléments, tes échéances (pic de forme), ou te faire un résumé de tes stats ou de ta semaine. Tu peux aussi me poser une hypothèse concrète — « je peux faire 1h30 aujourd\'hui ? » — je calcule le vrai impact sur ta charge avant de répondre.', chips: STARTER_CHIPS }
 }
 
 // ============================================================
@@ -482,6 +524,7 @@ const META_INTENTS = [
 
 const TOPIC_INTENTS = [
   { id: 'pain', test: testPain, reply: painReply },
+  { id: 'forme', test: (t) => /(^forme\b|forme du jour|ma forme|en forme|forme aujourd|suis.je pret|je peux m.entrainer|apte a)/.test(t), reply: formeReply },
   { id: 'fatigue', test: (t) => /(fatigue|creve|epuise|claque|nase|vide|\bhs\b)/.test(t), reply: fatigueReply },
   { id: 'sommeil', test: (t) => /(sommeil|dormi|dormir|nuit|insomnie|reveil)/.test(t), reply: sleepReply },
   { id: 'motivation', test: (t) => /(motivation|pas envie|flemme|demotive|lache)/.test(t), reply: motivationReply },
