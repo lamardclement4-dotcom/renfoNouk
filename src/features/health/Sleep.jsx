@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, isoToday } from './kit'
+import { ENERGIES, SENSATIONS, libelleNuit, nuitsRecentes, nuitsManquantes, reveilDe, resumeReveil, resumeNuit, decaler } from './sommeilReveil'
+import { annoncer } from '../../annonces'
 import { sleepAnalysis, BASE_NEED } from './sleepIntel'
 import { rolling7Mins } from '../train/renfoIntel'
 
@@ -10,29 +12,73 @@ function toMin(t) { const a = (t || '').split(':'); return (parseInt(a[0], 10) |
 function fmtMin(m) { m = ((m % 1440) + 1440) % 1440; const p = (n) => (n < 10 ? '0' + n : '' + n); return p(Math.floor(m / 60)) + ':' + p(m % 60) }
 function durFromTimes(bt, wk) { let diff = toMin(wk) - toMin(bt); if (diff <= 0) diff += 24 * 60; return diff / 60 }
 
-// ── Onglet "Cette nuit" : assistant de saisie en 3 étapes ──
-function NightTab({ db, store, onDone }) {
+// ── Choix de la nuit : les 7 dernières, les oubliées signalées ──
+// Une nuit oubliée se rattrape ici : on choisit la nuit, puis on la saisit
+// comme celle de la veille. Au-delà d'une semaine, « Autre date ».
+function ChoixNuit({ log, date, onChange }) {
   const today = isoToday()
-  const existing = (db.sleepLog || {})[today] || {}
-  const [hours, setHours] = useState(existing.hours || 7.5)
+  const nuits = nuitsRecentes(log, today, 7)
+  const dansLaSemaine = nuits.some((n) => n.iso === date)
+  return React.createElement('div', { style: { marginBottom: 20 } },
+    React.createElement('div', { role: 'radiogroup', 'aria-label': 'Nuit à saisir', style: { display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 } },
+      nuits.map((n) => {
+        const on = n.iso === date
+        return React.createElement('button', {
+          key: n.iso, role: 'radio', 'aria-checked': on, onClick: () => onChange(n.iso),
+          'aria-label': libelleNuit(n.iso) + (n.renseignee ? ', renseignée' : ', non renseignée'),
+          style: { flex: '0 0 auto', minWidth: 62, padding: '8px 9px 7px', border: `1.5px solid ${on ? SLEEP_COL : C.line}`, borderTop: `3px solid ${on ? SLEEP_COL : n.renseignee ? C.line : C.warn}`, background: on ? `color-mix(in srgb, ${SLEEP_COL} 10%, ${C.surface})` : C.surface, color: C.ink, cursor: 'pointer', textAlign: 'left' },
+        },
+          React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.03em', lineHeight: 1, whiteSpace: 'nowrap' } }, n.titre),
+          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 9.5, marginTop: 4, color: n.renseignee ? C.ink3 : C.warn, textTransform: 'uppercase' } }, n.renseignee ? 'faite' : 'à remplir'))
+      })),
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 10 } },
+      React.createElement('div', { style: { fontSize: 13, color: C.ink2, fontWeight: 600 } }, libelleNuit(date)),
+      React.createElement('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: C.mono, fontSize: 10.5, textTransform: 'uppercase', color: dansLaSemaine ? C.ink3 : SLEEP_COL, cursor: 'pointer', flex: '0 0 auto' } },
+        'Autre date',
+        React.createElement('input', { type: 'date', value: date, min: decaler(today, -60), max: today, 'aria-label': 'Choisir une autre nuit (date du réveil)', onChange: (e) => { const v = e.target.value; if (/^\d{4}-\d{2}-\d{2}$/.test(v) && v <= today) onChange(v) }, style: { fontFamily: C.mono, fontSize: 12, padding: '4px 6px', width: 128 } }))))
+}
+
+// ── Saisie d'une nuit : assistant en 4 étapes ──
+function NightTab({ db, store, date, onDone }) {
+  const log = db.sleepLog || {}
+  const existing = log[date] || {}
+  const dejaRenseignee = Number(existing.hours) > 0
+  const rv = reveilDe(existing)
+  const [hours, setHours] = useState(Number(existing.hours) > 0 ? Number(existing.hours) : 7.5)
   const [awakenings, setAwakenings] = useState(existing.awakenings || 0)
   const [quality, setQuality] = useState(existing.quality || 0)
+  const [energie, setEnergie] = useState(rv.energie)
+  const [sensations, setSensations] = useState(rv.sensations)
   const [step, setStep] = useState(0)
 
   const hLabel = Math.floor(hours) + (hours % 1 ? ' h 30' : ' h')
-  const STEPS = ['Durée', 'Réveils', 'Qualité']
+  const STEPS = ['Durée', 'Réveils', 'Qualité', 'Au réveil']
 
   function saveNight() {
     const cur = db.sleepLog || {}
     const rt = db.sleepRoutine || null
-    store.set({ sleepLog: { ...cur, [today]: { hours, quality: quality || null, awakenings: awakenings || 0, routineBed: rt && rt.enabled ? rt.bedtime : null, routineWake: rt && rt.enabled ? rt.wake : null, savedAt: Date.now() } } })
+    // Les autres champs d'une nuit (source d'import, routine du moment…)
+    // sont gardés : on complète la nuit, on ne la remplace pas.
+    store.set({ sleepLog: { ...cur, [date]: { ...(cur[date] || {}), hours, quality: quality || null, awakenings: awakenings || 0,
+      reveil: { energie: energie || null, sensations },
+      routineBed: rt && rt.enabled ? rt.bedtime : null, routineWake: rt && rt.enabled ? rt.wake : null, savedAt: Date.now() } } })
+    annoncer(libelleNuit(date) + ' enregistrée')
     onDone()
   }
+  function supprimerNuit() {
+    store.annulable(libelleNuit(date) + ' supprimée', () => store.set((sx) => {
+      const next = { ...((sx && sx.sleepLog) || {}) }
+      delete next[date]
+      return { sleepLog: next }
+    }))
+    onDone()
+  }
+  const basculer = (id) => setSensations((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]))
 
   const progress = React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 22 } },
     STEPS.map((lab, idx) => {
       const done = idx < step, cur = idx === step
-      return React.createElement('div', { key: idx, style: { flex: 1, textAlign: 'center' } },
+      return React.createElement('button', { key: idx, type: 'button', onClick: () => setStep(idx), 'aria-label': 'Étape ' + (idx + 1) + ' : ' + lab, 'aria-current': cur ? 'step' : undefined, style: { flex: 1, textAlign: 'center', background: 'none', border: 'none', padding: 0, cursor: 'pointer' } },
         React.createElement('div', { style: { height: 4, borderRadius: 'var(--r-pill)', background: (done || cur) ? SLEEP_COL : C.line, transition: 'all .2s ease' } }),
         React.createElement('div', { style: { fontSize: 11, fontWeight: 700, marginTop: 6, color: cur ? SLEEP_COL : C.ink3 } }, lab))
     }))
@@ -49,28 +95,50 @@ function NightTab({ db, store, onDone }) {
     React.createElement('div', { style: { display: 'flex', gap: 8 } },
       [[0, 'Aucun'], [1, '1 fois'], [2, '2 fois'], [3, '3 +']].map(([val, lab]) => {
         const active = awakenings === val
-        return React.createElement('button', { key: val, onClick: () => setAwakenings(val), style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: '14px 0', borderRadius: 0, border: '1.5px solid ' + (active ? SLEEP_COL : C.line), background: active ? SLEEP_COL : C.surface, color: active ? 'var(--c-on-fill)' : C.ink2, cursor: 'pointer' } }, lab)
+        return React.createElement('button', { key: val, onClick: () => setAwakenings(val), 'aria-pressed': active, style: { fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: '14px 0', borderRadius: 0, border: '1.5px solid ' + (active ? SLEEP_COL : C.line), background: active ? SLEEP_COL : C.surface, color: active ? 'var(--c-on-fill)' : C.ink2, cursor: 'pointer' } }, lab)
       })))
 
   const stepQualite = React.createElement('div', { style: { textAlign: 'center' } },
-    React.createElement('div', { style: { fontSize: 14, color: C.ink2, marginBottom: 6 } }, 'Comment t’es-tu senti au réveil ?'),
-    React.createElement('div', { style: { height: 18, marginBottom: 12 } }, quality > 0 && React.createElement('span', { style: { fontSize: 13, color: SLEEP_COL, fontWeight: 700 } }, ['', 'Mauvais', 'Passable', 'Correct', 'Bien', 'Excellent'][quality])),
+    React.createElement('div', { style: { fontSize: 14, color: C.ink2, marginBottom: 6 } }, 'Comment as-tu dormi ?'),
+    React.createElement('div', { style: { height: 18, marginBottom: 12 } }, quality > 0 && React.createElement('span', { style: { fontSize: 13, color: SLEEP_COL, fontWeight: 700 } }, ['', 'Très mal', 'Mal', 'Correctement', 'Bien', 'Très bien'][quality])),
     React.createElement('div', { style: { display: 'flex', gap: 10, justifyContent: 'center' } },
-      [1, 2, 3, 4, 5].map((n) => React.createElement('button', { key: n, onClick: () => setQuality(quality === n ? 0 : n), 'aria-label': 'Qualité ' + n, style: { width: 48, height: 48, borderRadius: 0, border: '2px solid ' + (quality >= n ? SLEEP_COL : C.line), background: quality >= n ? `color-mix(in srgb, ${SLEEP_COL} 20%, ${C.surface})` : C.surface, cursor: 'pointer', fontSize: 22 } }, quality >= n ? '★' : '☆'))),
+      [1, 2, 3, 4, 5].map((n) => React.createElement('button', { key: n, onClick: () => setQuality(quality === n ? 0 : n), 'aria-label': 'Qualité ' + n + ' sur 5', 'aria-pressed': quality >= n, style: { width: 48, height: 48, borderRadius: 0, border: '2px solid ' + (quality >= n ? SLEEP_COL : C.line), background: C.surface, color: SLEEP_COL, cursor: 'pointer', fontSize: 22 } }, quality >= n ? '★' : '☆'))),
     React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 12 } }, 'Facultatif'))
 
-  const panes = [stepDuree, stepReveils, stepQualite]
-  const isLast = step === 2
+  // Au réveil : l'énergie (une seule réponse) et les sensations (autant
+  // qu'il en faut). Ce que la durée ne dit pas.
+  const stepReveil = React.createElement('div', null,
+    React.createElement('div', { style: { fontSize: 14, color: C.ink2, marginBottom: 10, textAlign: 'center' } }, 'Quelle énergie au réveil ?'),
+    React.createElement('div', { role: 'radiogroup', 'aria-label': 'Énergie au réveil', style: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', border: `1px solid ${C.line}`, background: C.surface } },
+      ENERGIES.map((lab, i) => {
+        const n = i + 1, on = energie === n
+        return React.createElement('button', { key: n, role: 'radio', 'aria-checked': on, onClick: () => setEnergie(on ? null : n), style: { padding: '10px 2px 9px', border: 'none', borderLeft: i ? `1px solid ${C.line}` : 'none', background: on ? SLEEP_COL : 'transparent', color: on ? 'var(--c-on-fill)' : C.ink2, cursor: 'pointer' } },
+          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600 } }, n),
+          React.createElement('div', { style: { fontSize: 10, fontWeight: 600, marginTop: 3, lineHeight: 1.15 } }, lab))
+      })),
+    React.createElement('div', { style: { fontSize: 14, color: C.ink2, margin: '18px 0 10px', textAlign: 'center' } }, 'Et comment te sens-tu ?'),
+    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' } },
+      SENSATIONS.map((x) => {
+        const on = sensations.includes(x.id)
+        return React.createElement('button', { key: x.id, onClick: () => basculer(x.id), 'aria-pressed': on, style: { padding: '8px 11px', fontSize: 13, fontWeight: on ? 700 : 600, cursor: 'pointer', border: `1.5px solid ${on ? (x.bon ? C.success : C.warn) : C.line}`, borderLeftWidth: on ? 4 : 1.5, background: C.surface, color: C.ink } }, on ? '✓ ' + x.lab : x.lab)
+      })),
+    React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 12, textAlign: 'center' } }, 'Facultatif · plusieurs choix possibles'))
+
+  const panes = [stepDuree, stepReveils, stepQualite, stepReveil]
+  const isLast = step === STEPS.length - 1
 
   return React.createElement('div', null,
+    dejaRenseignee ? React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, marginBottom: 14, paddingLeft: 10, borderLeft: `3px solid ${SLEEP_COL}` } }, 'Nuit déjà renseignée : tu la modifies.') : null,
     progress,
     React.createElement('div', { style: { minHeight: 150, display: 'flex', flexDirection: 'column', justifyContent: 'center' } }, panes[step]),
     React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 26 } },
       step > 0 && React.createElement('button', { onClick: () => setStep(step - 1), style: { flex: '0 0 auto', padding: '14px 20px', borderRadius: 'var(--r-pill)', fontSize: 14, fontWeight: 700, border: `1.5px solid ${C.line}`, background: C.surface, color: C.ink2, cursor: 'pointer' } }, 'Retour'),
-      React.createElement('button', { onClick: isLast ? saveNight : () => setStep(step + 1), style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: 14, borderRadius: 'var(--r-pill)', border: 'none', color: 'var(--c-on-fill)', background: SLEEP_COL, cursor: 'pointer', boxShadow: 'none' } }, isLast ? 'Enregistrer — ' + hLabel : 'Suivant')))
+      React.createElement('button', { onClick: isLast ? saveNight : () => setStep(step + 1), style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', flex: 1, padding: 14, borderRadius: 'var(--r-pill)', border: 'none', color: 'var(--c-on-fill)', background: SLEEP_COL, cursor: 'pointer', boxShadow: 'none' } }, isLast ? 'Enregistrer — ' + hLabel : 'Suivant')),
+    // Enregistrer sans tout remplir : dès la durée, la nuit compte.
+    !isLast ? React.createElement('button', { onClick: saveNight, style: { width: '100%', marginTop: 10, padding: 11, background: 'transparent', border: 'none', color: SLEEP_COL, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, 'Enregistrer maintenant (' + hLabel + ')') : null,
+    dejaRenseignee ? React.createElement('button', { onClick: supprimerNuit, style: { width: '100%', marginTop: 6, padding: 11, background: 'transparent', border: `1px solid ${C.line}`, color: C.danger, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, 'Supprimer cette nuit') : null)
 }
 
-// ── Onglet "Routine" : coucher/réveil + calcul par cycles ──
 function RoutineTab({ db, store }) {
   const routine0 = db.sleepRoutine || { bedtime: '23:00', wake: '07:00', enabled: false }
   const [bedtime, setBedtime] = useState(routine0.bedtime || '23:00')
@@ -194,7 +262,19 @@ function AnalysisBlock({ ana }) {
         React.createElement('span', null, t)))) : null)
 }
 
-function HistoryTab({ db, store }) {
+// Au réveil, sur 14 jours : énergie moyenne, sensations fréquentes, et ce
+// qu'elles demandent (alléger la charge, se reposer).
+function BlocReveil({ log }) {
+  const r = resumeReveil(log, isoToday(), 14)
+  if (!r.nuits) return null
+  return React.createElement('div', { style: { padding: '14px 16px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}` } },
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 2 } }, 'Au réveil (14 derniers jours)'),
+    r.energieMoy != null ? React.createElement(AnaRow, { label: 'Énergie moyenne', value: String(r.energieMoy).replace('.', ',') + ' / 5', color: r.energieMoy < 2.5 ? C.warn : C.ink, hint: ENERGIES[Math.min(4, Math.max(0, Math.round(r.energieMoy) - 1))] + ' en moyenne, sur ' + r.nuits + ' réveil' + (r.nuits > 1 ? 's' : '') + ' notés.' }) : null,
+    r.frequentes.length ? React.createElement(AnaRow, { label: 'Sensations les plus fréquentes', value: '', hint: r.frequentes.slice(0, 4).map((f) => f.lab + ' (' + f.n + ')').join(' · ') }) : null,
+    r.alertes.map((t, i) => React.createElement('div', { key: i, style: { fontSize: 12.5, color: C.ink, lineHeight: 1.5, marginTop: 10, paddingLeft: 10, borderLeft: `3px solid ${C.warn}` } }, t)))
+}
+
+function HistoryTab({ db, store, onEdit }) {
   const log = db.sleepLog || {}
   const dates = Object.keys(log).filter((d) => log[d] && log[d].hours).sort().reverse()
   const recent = dates.slice(0, 14)
@@ -202,7 +282,8 @@ function HistoryTab({ db, store }) {
     return React.createElement('div', { style: { textAlign: 'center', padding: '40px 10px', color: C.ink3, fontSize: 14 } },
       React.createElement(Icon, { name: 'moon', size: 28, color: C.line, style: { marginBottom: 12 } }),
       React.createElement('div', null, 'Aucune nuit enregistrée pour le moment.'),
-      React.createElement('div', { style: { fontSize: 12.5, marginTop: 6 } }, 'Tes nuits apparaîtront ici au fil des jours.'))
+      React.createElement('div', { style: { fontSize: 12.5, marginTop: 6 } }, 'Tes nuits apparaîtront ici au fil des jours.'),
+      React.createElement('button', { onClick: () => onEdit(isoToday()), style: { marginTop: 16, padding: '11px 16px', border: 'none', background: SLEEP_COL, color: 'var(--c-on-fill)', fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', cursor: 'pointer' } }, 'Saisir une nuit'))
   }
   const avgH = recent.reduce((a, d) => a + (log[d].hours || 0), 0) / recent.length
   const qs = recent.filter((d) => log[d].quality)
@@ -226,7 +307,13 @@ function HistoryTab({ db, store }) {
   const barW = 16, barGap = 6, chartH = 70
   const chartW = chartDates.length * (barW + barGap) - barGap
 
+  const manquantes = nuitsManquantes(log, isoToday(), 7)
   return React.createElement('div', null,
+    manquantes.length ? React.createElement('button', { onClick: () => onEdit(manquantes[0].iso), style: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '11px 14px', marginBottom: 14, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.warn}`, color: C.ink, cursor: 'pointer' } },
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700 } }, manquantes.length + ' nuit' + (manquantes.length > 1 ? 's' : '') + ' non renseignée' + (manquantes.length > 1 ? 's' : '') + ' cette semaine'),
+        React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 2 } }, manquantes.map((m) => m.titre).join(', ') + ' — touche pour compléter')),
+      React.createElement('span', { style: { fontFamily: C.mono, color: C.ink3 } }, '→')) : null,
     React.createElement('div', { style: { borderRadius: 0, padding: '14px 16px', marginBottom: 14, background: C.surface, border: `1px solid ${C.line}` } },
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 10 } }, 'Durée par nuit (14 derniers jours)'),
       React.createElement('svg', { width: '100%', height: chartH + 18, viewBox: '0 0 ' + chartW + ' ' + (chartH + 18), preserveAspectRatio: 'xMidYMax meet' },
@@ -249,33 +336,43 @@ function HistoryTab({ db, store }) {
     React.createElement('div', { style: { display: 'flex', gap: 12, marginBottom: 18 } },
       React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${SLEEP_COL}` } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, 'Moyenne durée'),
-        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', color: SLEEP_COL } }, Math.floor(avgH) + ' h' + (Math.round((avgH % 1) * 60) ? ' ' + Math.round((avgH % 1) * 60) : ''))),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', color: SLEEP_COL } }, Math.floor(avgH) + ' h' + (Math.round((avgH % 1) * 60) ? ' ' + String(Math.round((avgH % 1) * 60)).padStart(2, '0') : ''))),
       React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}` } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, 'Qualité moy.'),
         React.createElement('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', color: C.ink } }, avgQ != null ? Math.round(avgQ * 10) / 10 + ' / 5' : '—'))),
     React.createElement(AnalysisBlock, { ana }),
+    React.createElement(BlocReveil, { log }),
     React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, recent.length + ' dernière' + (recent.length > 1 ? 's' : '') + ' nuit' + (recent.length > 1 ? 's' : '')),
     React.createElement('div', { style: { maxHeight: 280, overflowY: 'auto' } },
       recent.map((d) => {
         const e = log[d]; const h = e.hours; const hLab = Math.floor(h) + (h % 1 ? 'h30' : 'h'); const aw = e.awakenings || 0
-        return React.createElement('div', { key: d, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 2px', borderBottom: `1px solid ${C.line}` } },
-          React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, fontWeight: 600, flex: 1 } }, fmtDay(d)),
+        const reveil = resumeNuit(e)
+        // Toucher une nuit l'ouvre pour la corriger.
+        return React.createElement('button', { key: d, onClick: () => onEdit(d), 'aria-label': 'Modifier la ' + libelleNuit(d).toLowerCase(), style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', padding: '11px 2px', background: 'none', border: 'none', borderBottom: `1px solid ${C.line}`, cursor: 'pointer', color: C.ink } },
+          React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+            React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, fontWeight: 600 } }, fmtDay(d)),
+            reveil ? React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, reveil) : null),
           React.createElement('div', { style: { fontSize: 13, color: C.ink3, flex: '0 0 auto', marginRight: 14 } }, aw > 0 ? aw + '× réveil' + (aw > 1 ? 's' : '') : ''),
           e.quality ? React.createElement('div', { style: { fontSize: 12.5, color: SLEEP_COL, flex: '0 0 auto', marginRight: 14, fontWeight: 700 } }, '★' + e.quality) : React.createElement('div', { style: { flex: '0 0 auto', marginRight: 14 } }),
           React.createElement('div', { style: { fontFamily: C.mono, fontSize: 14.1, fontWeight: 600, letterSpacing: '-.03em', color: C.ink, flex: '0 0 auto', minWidth: 48, textAlign: 'right' } }, hLab))
       })),
-    React.createElement('button', { onClick: () => store.set({ sleepLog: {} }), style: { width: '100%', marginTop: 16, padding: 11, borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 700, border: `1.5px solid ${C.line}`, background: 'transparent', color: C.ink3, cursor: 'pointer' } }, 'Effacer l’historique'))
+    React.createElement('button', { onClick: () => store.annulable('Historique du sommeil effacé', () => store.set({ sleepLog: {} })), style: { width: '100%', marginTop: 16, padding: 11, borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 700, border: `1.5px solid ${C.line}`, background: 'transparent', color: C.ink3, cursor: 'pointer' } }, 'Effacer l’historique'))
 }
 
 export default function SleepSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [tab, setTab] = useState('night')
+  // Nuit en cours de saisie (date du réveil) : aujourd'hui par défaut, ou
+  // une nuit passée choisie dans la liste ou depuis l'historique.
+  const [nuit, setNuit] = useState(isoToday())
+  const editer = (iso) => { setNuit(iso); setTab('night') }
   if (loading) {
     return React.createElement(FlowSpace, { bg: 'sante', title: 'Sommeil', onClose, tint: SLEEP_COL }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
   }
   return React.createElement(FlowSpace, { bg: 'sante', title: 'Sommeil', onClose, tint: SLEEP_COL },
-    React.createElement(SegTabs, { tint: SLEEP_COL, value: tab, onChange: setTab, tabs: [{ id: 'night', lab: 'Cette nuit' }, { id: 'routine', lab: 'Routine' }, { id: 'history', lab: 'Historique' }] }),
-    tab === 'night' && React.createElement(NightTab, { db, store, onDone: () => setTab('history') }),
+    React.createElement(SegTabs, { tint: SLEEP_COL, value: tab, onChange: setTab, tabs: [{ id: 'night', lab: 'Saisie' }, { id: 'routine', lab: 'Routine' }, { id: 'history', lab: 'Historique' }] }),
+    tab === 'night' && React.createElement(ChoixNuit, { log: db.sleepLog || {}, date: nuit, onChange: setNuit }),
+    tab === 'night' && React.createElement(NightTab, { key: nuit, db, store, date: nuit, onDone: () => { setNuit(isoToday()); setTab('history') } }),
     tab === 'routine' && React.createElement(RoutineTab, { db, store }),
-    tab === 'history' && React.createElement(HistoryTab, { db, store }))
+    tab === 'history' && React.createElement(HistoryTab, { db, store, onEdit: editer }))
 }

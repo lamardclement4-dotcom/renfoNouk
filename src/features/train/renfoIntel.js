@@ -37,6 +37,7 @@ import { macroDeepAnalysis } from '../nutrition/macroIntel'
 import { weightSeries, weeklyRate } from '../profil/weightIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
+import { resumeReveil } from '../health/sommeilReveil'
 
 function num(v, def) { const n = Number(v); return Number.isFinite(n) ? n : (def || 0) }
 function round(v) { return Math.round(v) }
@@ -843,6 +844,13 @@ export function recommendations(db) {
   const hyd = pillarHydration(db, iso)
   if (hyd.status === 'ok' && hyd.extra.ml < hyd.extra.target * 0.6) {
     push('warn', 'drop', `Hydratation en retard : ${hyd.extra.ml} / ${hyd.extra.target} ml aujourd'hui.`, 'hydratation')
+  }
+  // --- Réveil : ce que disent les sensations notées le matin ---
+  // Fièvre ce matin, réveils épuisés en série, courbatures à répétition :
+  // trois raisons d'alléger la séance que la durée de sommeil ne montre pas.
+  const reveil = resumeReveil(db.sleepLog, iso, 14)
+  if (reveil.alertes.length) {
+    push(/rhume/.test(reveil.alertes[0]) ? 'alert' : 'warn', 'moon', reveil.alertes[0], 'sleep', 'sommeil')
   }
   if (hyd.status === 'ok' && hyd.extra.caf >= 320) {
     push(hyd.extra.caf >= 400 ? 'alert' : 'warn', 'bolt', `Ta consommation de caféine (${hyd.extra.caf} mg) est proche de la limite recommandée (400 mg/j).`, 'hydratation')
