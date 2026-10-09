@@ -3,7 +3,8 @@ import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, isoToday, Aide } from './kit'
 import { ENERGIES, SENSATIONS, libelleNuit, nuitsRecentes, nuitsManquantes, reveilDe, resumeReveil, resumeNuit, decaler } from './sommeilReveil'
 import { annoncer } from '../../annonces'
-import { FACTEURS, facteursDe, dureeDepuisHeures, libelleDuree, minutesDe, formeDuJour, influences, regulariteHoraires } from './sommeilForme'
+import { FACTEURS, facteursDe, dureeDepuisHeures, libelleDuree, minutesDe, influences, regulariteHoraires } from './sommeilForme'
+import { formeDb, formeSemaine, coucherDuSoir } from './formeContexte'
 import { sleepAnalysis, BASE_NEED } from './sleepIntel'
 import { rolling7Mins } from '../train/renfoIntel'
 
@@ -43,19 +44,65 @@ function ChoixNuit({ log, date, onChange, onExpress }) {
 }
 
 // ── Forme du jour : ce que la nuit dit de la séance d'aujourd'hui ──
+// La note, son verdict et la consigne de séance ; à la demande, le détail
+// du calcul ligne par ligne. Dessous, les sept derniers jours et l'heure
+// du coucher pour la nuit qui vient.
 const COULEUR_FORME = { haute: C.success, bonne: C.primary, moyenne: C.warn, basse: C.danger }
+const LETTRE_JOUR = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
+const petitTitre = { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3 }
+function LigneCalcul({ lab, texte, pts, max }) {
+  const signe = max == null
+  const couleur = !signe ? C.ink : pts < 0 ? C.warn : pts > 0 ? C.success : C.ink3
+  return React.createElement('div', { style: { padding: '8px 0', borderBottom: `1px solid ${C.line}` } },
+    React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 } },
+      React.createElement('div', { style: { minWidth: 0 } },
+        React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink2 } }, lab),
+        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 1 } }, texte)),
+      React.createElement('div', { style: { fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: couleur, flex: '0 0 auto' } },
+        signe ? (pts > 0 ? '+' + pts : pts < 0 ? '−' + -pts : '0') : pts + ' / ' + max)),
+    !signe ? React.createElement('div', { 'aria-hidden': true, style: { height: 3, background: C.line, marginTop: 6 } },
+      React.createElement('div', { style: { height: 3, width: Math.round(pts / max * 100) + '%', background: SLEEP_COL } })) : null)
+}
 export function CarteForme({ db }) {
-  const f = formeDuJour(db.sleepLog || {}, isoToday(), rolling7Mins(db))
+  const [detail, setDetail] = useState(false)
+  const iso = isoToday()
+  const f = formeDb(db, iso)
   if (!f) return null
   const col = COULEUR_FORME[f.niveau] || C.ink
-  return React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 14, padding: '13px 14px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}`, borderTop: `3px solid ${col}` } },
-    React.createElement('div', { style: { flex: '0 0 auto', textAlign: 'center', minWidth: 58 } },
-      React.createElement('div', { style: { fontFamily: C.mono, fontSize: 28, fontWeight: 600, letterSpacing: '-.04em', color: col, lineHeight: 1 } }, f.score),
-      React.createElement('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3, marginTop: 3 } }, '/ 100')),
-    React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-      React.createElement('div', { style: { fontFamily: C.display, fontSize: 15, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink2 } }, 'Forme du jour', React.createElement(Aide, { terme: 'forme' })),
-      React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: col, marginTop: 3, lineHeight: 1.35 } }, f.verdict),
-      React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.4 } }, f.details.join(' · '))))
+  const semaine = formeSemaine(db, iso, 7)
+  const notees = semaine.filter((x) => x.score != null)
+  const soir = coucherDuSoir(db, iso)
+  return React.createElement('div', { style: { padding: '13px 14px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}`, borderTop: `3px solid ${col}` } },
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 14 } },
+      React.createElement('div', { style: { flex: '0 0 auto', textAlign: 'center', minWidth: 58 } },
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 28, fontWeight: 600, letterSpacing: '-.04em', color: col, lineHeight: 1 } }, f.score),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3, marginTop: 3 } }, '/ 100')),
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 15, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink2 } }, 'Forme du jour', React.createElement(Aide, { terme: 'forme' })),
+        React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: col, marginTop: 3, lineHeight: 1.35 } }, f.verdict))),
+    React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: 10, paddingLeft: 10, borderLeft: `3px solid ${col}` } }, f.consigne),
+    React.createElement('button', { type: 'button', onClick: () => setDetail((v) => !v), 'aria-expanded': detail, style: { display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: 10, padding: '7px 0', background: 'none', border: 'none', borderTop: `1px solid ${C.line}`, color: SLEEP_COL, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } },
+      'Détail du calcul', React.createElement('span', { 'aria-hidden': true, style: { fontFamily: C.mono } }, detail ? '−' : '+')),
+    detail ? React.createElement('div', null,
+      f.parts.map((p) => React.createElement(LigneCalcul, { key: p.id, ...p })),
+      f.ajustements.map((p) => React.createElement(LigneCalcul, { key: p.id, lab: p.lab, texte: p.texte, pts: p.pts })),
+      React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', padding: '8px 0 2px', fontSize: 12.5, fontWeight: 700, color: C.ink } },
+        'Total', React.createElement('span', { style: { fontFamily: C.mono, color: col } }, f.score + ' / 100')),
+      React.createElement('div', { style: { fontSize: 11, color: C.ink3, lineHeight: 1.45, marginTop: 4 } }, 'Un élément non noté compte un peu sous la moyenne. La note ne descend pas sous 0.')) : null,
+    notees.length >= 2 ? React.createElement('div', { style: { marginTop: 12 } },
+      React.createElement('div', { style: { ...petitTitre, fontSize: 11.5, marginBottom: 6 } }, 'Sept derniers jours · moyenne ' + Math.round(notees.reduce((a, x) => a + x.score, 0) / notees.length)),
+      React.createElement('div', { role: 'list', style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 } },
+        semaine.map((x) => {
+          const c = x.score != null ? COULEUR_FORME[x.niveau] : C.line
+          return React.createElement('div', { key: x.iso, role: 'listitem', 'aria-label': libelleNuit(x.iso) + (x.score != null ? ' : forme ' + x.score : ' : non renseignée'), style: { textAlign: 'center', padding: '5px 0 4px', borderTop: `3px solid ${c}`, background: x.iso === isoToday() ? C.surface2 : 'transparent' } },
+            React.createElement('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3 } }, LETTRE_JOUR[new Date(x.iso + 'T00:00:00Z').getUTCDay()]),
+            React.createElement('div', { style: { fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: x.score != null ? C.ink : C.ink3, marginTop: 2 } }, x.score != null ? x.score : '—'))
+        }))) : null,
+    soir ? React.createElement('div', { style: { display: 'flex', gap: 10, alignItems: 'baseline', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.line}` } },
+      React.createElement('div', { style: { flex: '0 0 auto' } },
+        React.createElement('div', { style: { ...petitTitre, fontSize: 11.5 } }, 'Ce soir'),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, color: SLEEP_COL, marginTop: 2 } }, soir.coucher)),
+      React.createElement('div', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.45 } }, 'Au lit à cette heure ' + soir.raison + '.')) : null)
 }
 
 // ── Rattrapage express : toutes les nuits oubliées sur un écran ──
@@ -137,8 +184,8 @@ function NightTab({ db, store, date, onDone }) {
       coucher: mode === 'heures' ? coucher : null, lever: mode === 'heures' ? lever : null, endormissement: mode === 'heures' ? endormissement : null,
       routineBed: rt && rt.enabled ? rt.bedtime : null, routineWake: rt && rt.enabled ? rt.wake : null, savedAt: Date.now() } } })
     // La nuit du jour donne la forme du jour : on la dit tout de suite.
-    const forme = date === isoToday() ? formeDuJour({ ...cur, [date]: { hours, quality: quality || null, reveil: { energie: energie || null, sensations } } }, date, rolling7Mins(db)) : null
-    annoncer(forme ? `Nuit enregistrée · forme du jour ${forme.score}/100` : libelleNuit(date) + ' enregistrée')
+    const forme = date === isoToday() ? formeDb(db, date, { ...cur, [date]: { hours, quality: quality || null, reveil: { energie: energie || null, sensations } } }) : null
+    annoncer(forme ? `Nuit enregistrée · forme du jour ${forme.score}/100 · ${forme.verdict.split(' :')[0].toLowerCase()}` : libelleNuit(date) + ' enregistrée')
     onDone()
   }
   function supprimerNuit() {
@@ -273,25 +320,36 @@ function RoutineTab({ db, store }) {
       React.createElement('span', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', color: SLEEP_COL } }, t),
       React.createElement('span', { style: { fontSize: 11, color: C.ink3 } }, labels[ix]))))
 
+  // Le coucher qui donne TA nuit : ton besoin du moment (relevé par
+  // l'entraînement), ton temps habituel pour t'endormir, ta dette.
+  const conseil = coucherDuSoir({ ...db, sleepRoutine: { enabled: true, wake } }, isoToday())
+  const carteBesoin = conseil ? React.createElement('div', { style: { padding: '13px 15px', marginBottom: 16, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${SLEEP_COL}` } },
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Selon ton besoin', React.createElement(Aide, { terme: 'dette' })),
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+      React.createElement('div', { style: { fontFamily: C.mono, fontSize: 24, fontWeight: 600, letterSpacing: '-.03em', color: SLEEP_COL, lineHeight: 1 } }, conseil.coucher),
+      React.createElement('div', { style: { flex: 1, fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } }, 'Au lit à cette heure ' + conseil.raison.replace(/ avant ton lever( habituel)? de /, ' avant un lever à ') + '.')),
+    bedtime !== conseil.coucher ? React.createElement('button', { type: 'button', onClick: () => setBedtime(conseil.coucher), style: { marginTop: 10, padding: '8px 12px', border: `1.5px solid ${SLEEP_COL}`, background: C.surface, color: SLEEP_COL, fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Prendre ' + conseil.coucher + ' comme coucher') : null) : null
+
   return React.createElement('div', null,
     React.createElement('div', { style: { display: 'flex', gap: 12, marginBottom: 16 } }, timeField('Heure de coucher', bedtime, setBedtime), timeField('Heure de réveil', wake, setWake)),
+    carteBesoin,
     React.createElement('div', { style: { marginBottom: 18 } },
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Durée cible rapide'),
       React.createElement('div', { style: { display: 'flex', gap: 7 } },
         TARGETS.map((t) => {
-          const lab = Number.isInteger(t) ? t + ' h' : Math.floor(t) + 'h30'
+          const lab = libelleDuree(t)
           const active = Math.abs(idealRounded - t) < 0.05
           return React.createElement('button', { key: t, onClick: () => applyTarget(t), style: { flex: 1, padding: '9px 0', borderRadius: 0, fontWeight: 700, fontSize: 12.5, border: '1.5px solid ' + (active ? SLEEP_COL : C.line), background: active ? SLEEP_COL : C.surface, color: active ? 'var(--c-on-fill)' : C.ink2, cursor: 'pointer' } }, lab)
         }))),
     React.createElement('div', { style: { borderRadius: 0, padding: '16px 18px', marginBottom: 14, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${SLEEP_COL}` } },
-      React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Temps de sommeil idéal'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 6 } }, 'Temps au lit'),
       React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 12 } },
-        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 26, fontWeight: 600, letterSpacing: '-.03em', color: SLEEP_COL, lineHeight: 1 } }, Math.floor(idealRounded) + ' h' + (Math.round((idealRounded % 1) * 60) ? ' ' + Math.round((idealRounded % 1) * 60) : '')),
-        React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, fontWeight: 600 } }, '🌙 ' + bedtime + '  →  ☀️ ' + wake)),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 26, fontWeight: 600, letterSpacing: '-.03em', color: SLEEP_COL, lineHeight: 1 } }, libelleDuree(durFromTimes(bedtime, wake))),
+        React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, fontWeight: 600 } }, 'de ' + bedtime + ' à ' + wake)),
       React.createElement('div', { style: { fontSize: 12.5, marginTop: 10, fontWeight: 600, color: inIdealRange ? 'var(--c-success)' : 'var(--c-danger)' } }, inIdealRange ? '✓ Dans la fenêtre recommandée (7–9 h, adulte).' : '⚠ Hors fenêtre recommandée pour un adulte (7–9 h).')),
     React.createElement('div', { style: { display: 'flex', gap: 12, marginBottom: 14 } },
-      idealCard('🌙 Couchers idéaux', 'pour un réveil à ' + wake, idealBeds, ['9 h', '7 h 30']),
-      idealCard('☀️ Réveils idéaux', 'pour un coucher à ' + bedtime, idealWakes, ['7 h 30', '9 h'])),
+      idealCard('Couchers en fin de cycle', 'pour un lever à ' + wake, idealBeds, ['9 h', '7 h 30']),
+      idealCard('Levers en fin de cycle', 'pour un coucher à ' + bedtime, idealWakes, ['7 h 30', '9 h'])),
     React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginBottom: 14, padding: '0 2px' } }, 'Basé sur des cycles de ~90 min (+15 min pour s’endormir) : se réveiller en fin de cycle est plus reposant.'),
     React.createElement('label', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer' } },
       React.createElement('input', { type: 'checkbox', checked: enabled, onChange: (e) => setEnabled(e.target.checked), style: { width: 18, height: 18, accentColor: SLEEP_COL, cursor: 'pointer' } }),
@@ -329,34 +387,36 @@ function AnalysisBlock({ ana }) {
   if (reg) {
     rows.push(React.createElement(AnaRow, {
       key: 'reg', label: 'Régularité des durées', color: lvlColor(reg.level),
-      value: '± ' + reg.sd.toFixed(1).replace('.', ',') + ' h',
+      value: '± ' + libelleDuree(reg.sd),
       hint: reg.text,
     }))
   }
   if (cu) {
     rows.push(React.createElement(AnaRow, {
       key: 'cu', label: 'Semaine et week-end', color: cu.flagged ? C.warn : C.ink,
-      value: String(cu.weekday).replace('.', ',') + ' h → ' + String(cu.weekend).replace('.', ',') + ' h',
+      value: libelleDuree(cu.weekday) + ' → ' + libelleDuree(cu.weekend),
       hint: cu.flagged
-        ? `Tu dors ${String(cu.gap).replace('.', ',')} h de plus le week-end : le besoin est présent toute la semaine, c’est l’occasion de dormir qui manque en semaine.`
+        ? `Tu dors ${libelleDuree(cu.gap)} de plus le week-end : le besoin est présent toute la semaine, c’est l’occasion de dormir qui manque en semaine.`
         : 'Durées comparables en semaine et le week-end : pas de restriction à rattraper.',
     }))
   }
   if (at) {
     rows.push(React.createElement(AnaRow, {
       key: 'at', label: 'Nuit après une séance', color: at.flagged ? C.warn : C.ink,
-      value: String(at.afterTraining).replace('.', ',') + ' h (repos : ' + String(at.afterRest).replace('.', ',') + ' h)',
+      value: libelleDuree(at.afterTraining) + ' (repos : ' + libelleDuree(at.afterRest) + ')',
       hint: at.flagged
-        ? `Tu dors ${String(Math.abs(at.diff)).replace('.', ',')} h de moins après une séance (${at.nightsAfter} nuits comparées). Regarde l’horaire de tes séances tardives et la caféine en fin de journée.`
+        ? `Tu dors ${libelleDuree(Math.abs(at.diff))} de moins après une séance (${at.nightsAfter} nuits comparées). Regarde l’horaire de tes séances tardives et la caféine en fin de journée.`
         : `Les séances ne dégradent pas ta nuit (${at.nightsAfter} nuits comparées).`,
     }))
   }
-  if (!rows.length && !ana.tips) return null
+  // Les conseils qui redisent une ligne déjà affichée au-dessus sont ôtés.
+  const tips = (ana.tips || []).filter((t) => !(reg && t === reg.text) && !(cu && /^Tu récupères/.test(t)) && !(at && /^Tu dors/.test(t)))
+  if (!rows.length && !tips.length) return null
   return React.createElement('div', { style: { borderRadius: 0, padding: '14px 16px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}` } },
     React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 2 } }, 'Analyse sur 14 jours'),
     rows.length ? rows : React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, padding: '8px 0' } }, 'Encore trop peu de nuits enregistrées pour analyser la régularité — compte au moins trois nuits.'),
-    (ana.tips || []).length ? React.createElement('div', { style: { marginTop: 12 } },
-      (ana.tips || []).map((t, i) => React.createElement('div', {
+    tips.length ? React.createElement('div', { style: { marginTop: 12 } },
+      tips.map((t, i) => React.createElement('div', {
         key: i,
         style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: i ? 8 : 0 },
       },
@@ -386,7 +446,9 @@ function BlocHoraires({ log }) {
     React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 2 } }, 'Horaires (' + r.nuits + ' nuits)'),
     React.createElement(AnaRow, { label: 'Coucher moyen', value: r.coucher + ' ± ' + r.ecartCoucher + ' min', color: col }),
     r.lever ? React.createElement(AnaRow, { label: 'Lever moyen', value: r.lever + ' ± ' + r.ecartLever + ' min', color: col }) : null,
-    React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: 10 } }, r.texte))
+    React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, padding: '10px 0', borderBottom: (r.endormissement != null || r.decalage != null) ? `1px solid ${C.line}` : 'none' } }, r.texte),
+    r.endormissement != null ? React.createElement(AnaRow, { label: 'Endormissement moyen', value: r.endormissement + ' min', color: r.endormissement > 30 ? C.warn : C.ink, hint: r.texteEndormissement }) : null,
+    r.decalage != null ? React.createElement(AnaRow, { label: React.createElement(React.Fragment, null, 'Décalage du week-end', React.createElement(Aide, { terme: 'decalage' })), value: Math.abs(r.decalage) < 15 ? 'aucun' : (r.decalage > 0 ? '+' : '−') + libelleDuree(Math.abs(r.decalage) / 60), color: Math.abs(r.decalage) >= 60 ? C.warn : C.ink, hint: r.texteDecalage }) : null)
 }
 
 // Ce qui pèse vraiment sur TES nuits : les facteurs de la veille croisés
@@ -423,12 +485,22 @@ function HistoryTab({ db, store, onEdit }) {
   const ana = sleepAnalysis(db, { days: 14, today: isoToday(), weeklyTrainingMins: weeklyMins })
   const need = ana.need || BASE_NEED
   const debtTotal = ana.debt ? ana.debt.net : 0
-  const debtLabel = (debtTotal <= 0 ? '0' : Math.floor(debtTotal)) + ' h'
-    + (debtTotal > 0 && Math.round((debtTotal % 1) * 60) ? ' ' + Math.round((debtTotal % 1) * 60) : '')
+  const debtLabel = debtTotal > 0 ? libelleDuree(debtTotal) : '0 h'
   const debtLevel = debtTotal < 3 ? 'faible' : debtTotal < 8 ? 'modérée' : 'élevée'
   const debtColor = debtTotal < 3 ? C.success : debtTotal < 8 ? C.warn : 'var(--c-danger)'
-  const effList = recent.map((d) => Math.max(60, 100 - (log[d].awakenings || 0) * 12))
+  // Efficacité : temps endormi sur temps au lit quand coucher et lever sont
+  // saisis (chaque réveil compté dix minutes éveillé), sinon estimée sur
+  // les seuls réveils.
+  const avecHeures = (e) => minutesDe(e.coucher) != null && minutesDe(e.lever) != null
+  const effDe = (e) => {
+    if (!avecHeures(e)) return Math.max(60, 100 - (e.awakenings || 0) * 12)
+    let lit = minutesDe(e.lever) - minutesDe(e.coucher)
+    if (lit <= 0) lit += 1440
+    return Math.max(40, Math.min(100, Math.round(((Number(e.hours) || 0) * 60 - (e.awakenings || 0) * 10) / lit * 100)))
+  }
+  const effList = recent.map((d) => effDe(log[d]))
   const avgEff = Math.round(effList.reduce((a, b) => a + b, 0) / effList.length)
+  const effMesuree = recent.some((d) => avecHeures(log[d]))
 
   const chartDates = recent.slice().reverse()
   const chartMax = Math.max(...chartDates.map((d) => log[d].hours || 0), 9)
@@ -458,13 +530,13 @@ function HistoryTab({ db, store, onEdit }) {
       React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Barre foncée : dans la fenêtre recommandée (7–9 h). Carré dessous : énergie au réveil (vert en forme, gris correct, orange fatigué).')),
     React.createElement('div', { style: { display: 'flex', gap: 12, marginBottom: 14 } },
       React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${debtColor}` } },
-        React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, 'Dette de sommeil'),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, 'Dette de sommeil', React.createElement(Aide, { terme: 'dette' })),
         React.createElement('div', { style: { fontFamily: C.mono, fontSize: 19, fontWeight: 600, letterSpacing: '-.03em', color: debtColor } }, debtLabel),
         React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3 } }, '14 j · ' + debtLevel + ' · besoin ' + libelleDuree(need))),
       React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}` } },
-        React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, 'Efficacité estimée'),
-        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 19, fontWeight: 600, letterSpacing: '-.03em', color: C.ink } }, avgEff + ' %'),
-        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3 } }, 'Basée sur les réveils'))),
+        React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, effMesuree ? 'Efficacité' : 'Efficacité estimée', React.createElement(Aide, { terme: 'efficacite' })),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 19, fontWeight: 600, letterSpacing: '-.03em', color: avgEff < 85 ? C.warn : C.ink } }, avgEff + ' %'),
+        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3 } }, effMesuree ? 'Temps endormi / temps au lit' : 'D’après les réveils'))),
     React.createElement('div', { style: { display: 'flex', gap: 12, marginBottom: 18 } },
       React.createElement('div', { style: { flex: 1, borderRadius: 0, padding: '14px 16px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${SLEEP_COL}` } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, 'Moyenne durée'),

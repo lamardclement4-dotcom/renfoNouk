@@ -47,7 +47,7 @@ a(dur.net === 8, `a 9 h de besoin, quatre nuits de 7 h font ${dur.net} h de dett
 const ana = sleepAnalysis({ sleepLog: semaine }, { today: T })
 const tous = ana.tips.join(' ')
 a(!/\d+\.\d/.test(tous), 'aucun nombre a point decimal dans les conseils')
-a(/3,6 h de plus le week-end/.test(tous), 'les decimales s ecrivent avec une virgule')
+a(/3 h 36 de plus le week-end/.test(tous), 'les durees s ecrivent en heures et minutes')
 a(/Dette de 14 h/.test(tous), 'et la dette annoncee est la dette corrigee')
 
 // ─── cas limites ───

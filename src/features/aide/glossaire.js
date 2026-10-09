@@ -62,8 +62,18 @@ export const GLOSSAIRE = {
   },
   forme: {
     titre: 'Forme du jour',
-    texte: 'Une note sur 100 tirée de ta nuit : durée par rapport à ton besoin, dette de sommeil des deux dernières semaines, énergie et qualité au réveil, corrigée par les sensations (courbatures, fièvre, stress…). Elle dit quelle séance ton corps peut encaisser aujourd’hui.',
-    conseil: '75 et plus : séance intense possible. 55 à 74 : séance normale. 35 à 54 : séance légère. En dessous, ou en cas de fièvre : repos.',
+    texte: 'Une note sur 100 tirée de ta nuit : durée par rapport à ton besoin (40 points), dette de sommeil des deux dernières semaines (20), énergie au réveil (25) et qualité (15). Elle est ensuite corrigée par les sensations au réveil, la séance d’hier comparée à ta séance habituelle, les jours d’entraînement enchaînés et une douleur en cours. « Détail du calcul » montre chaque ligne.',
+    conseil: '75 et plus : séance intense possible. 55 à 74 : séance normale. 35 à 54 : séance légère. En dessous, en cas de fièvre ou de douleur à faire voir : repos.',
+  },
+  efficacite: {
+    titre: 'Efficacité du sommeil',
+    texte: 'La part du temps passé au lit à dormir vraiment. 85 % et plus : bon. En dessous, trop de temps éveillé au lit (endormissement long, réveils) : se coucher un peu plus tard, quand le sommeil vient, aide souvent plus que se coucher tôt.',
+    conseil: 'Calculée exactement quand tu saisis coucher et lever ; sinon estimée d’après le nombre de réveils.',
+  },
+  decalage: {
+    titre: 'Décalage du week-end',
+    texte: 'De combien le milieu de ta nuit glisse entre la semaine et le week-end. Une heure ou plus, et ton corps vit chaque lundi un petit décalage horaire : endormissement difficile le dimanche soir, réveil lourd le lundi.',
+    conseil: 'Le levier le plus simple : un lever du week-end à moins d’une heure de celui de la semaine.',
   },
   dette: {
     titre: 'Dette de sommeil',

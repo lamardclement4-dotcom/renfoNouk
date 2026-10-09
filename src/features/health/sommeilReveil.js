@@ -64,6 +64,15 @@ export function nuitsManquantes(log, aujourdhui, n = 7) {
   return nuitsRecentes(log, aujourdhui, n).filter((x) => !x.renseignee)
 }
 
+// Une durée en heures, écrite partout de la même façon : « 7 h 15 »,
+// « 8 h », « 45 min ». Jamais « 7.25 h » ni « 7,3 h ».
+export function libelleDuree(h) {
+  if (!(h > 0)) return '—'
+  const total = Math.round(h * 60), hh = Math.floor(total / 60), mm = total % 60
+  if (!hh) return `${mm} min`
+  return mm ? `${hh} h ${String(mm).padStart(2, '0')}` : `${hh} h`
+}
+
 // Réveil normalisé : une donnée abîmée (ancienne version, saisie partielle)
 // ne doit jamais faire tomber l'écran.
 export function reveilDe(e) {

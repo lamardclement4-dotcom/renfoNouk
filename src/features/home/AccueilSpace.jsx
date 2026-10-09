@@ -2,8 +2,9 @@ import React, { useState, lazy } from 'react'
 import { C, Icon, Ring, MODULE_TINTS, isoToday, Aide } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
-import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay, rolling7Mins } from '../train/renfoIntel'
-import { formeDuJour } from '../health/sommeilForme'
+import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
+import { formeDb, coucherDuSoir } from '../health/formeContexte'
+import { libelleDuree } from '../health/sommeilForme'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
 import { neededHours } from '../health/sleepIntel'
 import { HealthScoreCard, PeakHomeCard } from '../progress/cards'
@@ -250,7 +251,10 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil }) {
   const nextTitle = next ? (nextSport ? nextSport.label : 'Séance planifiée') : 'Planifier une séance'
 
   const nuitSaisie = Number(((db.sleepLog || {})[iso] || {}).hours) > 0
+  // Le soir, l'heure du coucher qui donne la nuit dont tu as besoin.
+  const soir = new Date().getHours() >= 18 && onSommeil ? coucherDuSoir(db, iso) : null
   const rappels = [
+    soir && Ligne('moon', MODULE_TINTS.sommeil, 'Ce soir : au lit vers ' + soir.coucher, `Pour dormir ${libelleDuree(soir.besoin)} avant ton lever de ${soir.lever}${soir.bonus ? `, dont ${soir.bonus} min pour la dette` : ''}`, onSommeil, 'soir'),
     // La nuit se saisit le matin ou elle s'oublie : tant qu'elle manque, on
     // la rappelle — elle fait la forme du jour.
     !nuitSaisie && onSommeil && Ligne('moon', MODULE_TINTS.sommeil, 'Comment as-tu dormi ?', 'Saisis ta nuit pour connaître ta forme du jour', onSommeil, 'nuit'),
@@ -394,12 +398,13 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
       h(Cadran, { label: 'Protéines', value: String(Math.round(prot)), unit: 'g', progress: cibleProt ? prot / cibleProt : 0, color: C.protein, sub: !cibleProt ? 'fixer un objectif' : prot >= cibleProt ? 'cible atteinte' : 'reste ' + Math.round(cibleProt - prot) + ' g', onClick: () => setHealthTile('nutrition') })))
 
   // ─── séance à faire, avec la forme du jour au-dessus ───
-  const forme = formeDuJour(db.sleepLog || {}, iso, rolling7Mins(db))
+  const forme = formeDb(db, iso)
   const aFaire = h('section', { 'aria-label': 'Séance à faire' },
     Titre('À faire'),
     forme ? h('button', { onClick: () => setHealthTile('sommeil'), style: { display: 'flex', alignItems: 'baseline', gap: 10, width: '100%', textAlign: 'left', padding: '0 0 12px', background: 'none', border: 'none', cursor: 'pointer', color: C.ink } },
       h('span', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', color: COULEUR_FORME[forme.niveau] } }, forme.score),
-      h('span', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.4 } }, h('strong', { style: { color: C.ink } }, 'Forme du jour'), h(Aide, { terme: 'forme' }), ' — ', forme.verdict)) : null,
+      h('span', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.4 } }, h('strong', { style: { color: C.ink } }, 'Forme du jour'), h(Aide, { terme: 'forme' }), ' — ', forme.verdict,
+        h('span', { style: { display: 'block', fontSize: 12, color: C.ink3, marginTop: 2 } }, forme.consigne))) : null,
     seancesAFaire(heroInfo, setOpenId, () => setTile('planner')))
 
   const mobilityCta = !db.mobility && h('div', { className: 'liste', style: { ...listeStyle, marginTop: 22 } },

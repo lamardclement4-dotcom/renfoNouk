@@ -14,8 +14,8 @@
 // Indicateurs de suivi, pas diagnostic médical.
 // ============================================================
 
-// Les nombres s'écrivent avec une virgule : « 3.6 h » n'est pas du français.
-const fr = (v) => String(v).replace('.', ',')
+// Les durées s'écrivent en heures et minutes : « 3 h 36 », pas « 3.6 h ».
+import { libelleDuree } from './sommeilReveil'
 
 const num = (v) => {
   if (v === null || v === undefined || v === '') return null
@@ -190,12 +190,12 @@ export function sleepAnalysis(db, { days = 14, today, weeklyTrainingMins = 0 } =
   const meanQuality = quality.length ? Math.round(quality.reduce((a, n) => a + n.quality, 0) / quality.length * 10) / 10 : null
 
   const tips = []
-  if (debt && debt.net >= 5) tips.push(`Dette de ${fr(debt.net)} h accumulée sur ${debt.nights} nuits : c’est le poste de récupération à traiter en premier, avant tout complément ou protocole.`)
-  else if (debt && debt.net >= 2) tips.push(`Léger déficit cumulé (${fr(debt.net)} h) : une demi-heure de plus par nuit suffirait à le résorber.`)
+  if (debt && debt.net >= 5) tips.push(`Dette de ${libelleDuree(debt.net)} accumulée sur ${debt.nights} nuits : c’est le poste de récupération à traiter en premier, avant tout complément ou protocole.`)
+  else if (debt && debt.net >= 2) tips.push(`Léger déficit cumulé (${libelleDuree(debt.net)}) : une demi-heure de plus par nuit suffirait à le résorber.`)
   if (reg && reg.level !== 'ok') tips.push(reg.text)
-  if (catchUp && catchUp.flagged) tips.push(`Tu récupères ${fr(catchUp.gap)} h de plus le week-end (${fr(catchUp.weekend)} h contre ${fr(catchUp.weekday)} h en semaine) : le besoin est là toute la semaine, c’est l’occasion de dormir qui manque.`)
-  if (afterTraining && afterTraining.flagged) tips.push(`Tu dors ${fr(Math.abs(afterTraining.diff))} h de moins après une séance : vérifie l’horaire de tes entraînements tardifs et la caféine en fin de journée.`)
-  if (need > BASE_NEED) tips.push(`Ton volume d’entraînement actuel élève le besoin à environ ${fr(need)} h par nuit.`)
+  if (catchUp && catchUp.flagged) tips.push(`Tu récupères ${libelleDuree(catchUp.gap)} de plus le week-end (${libelleDuree(catchUp.weekend)} contre ${libelleDuree(catchUp.weekday)} en semaine) : le besoin est là toute la semaine, c’est l’occasion de dormir qui manque.`)
+  if (afterTraining && afterTraining.flagged) tips.push(`Tu dors ${libelleDuree(Math.abs(afterTraining.diff))} de moins après une séance : vérifie l’horaire de tes entraînements tardifs et la caféine en fin de journée.`)
+  if (need > BASE_NEED) tips.push(`Ton volume d’entraînement actuel élève le besoin à environ ${libelleDuree(need)} par nuit.`)
   if (!tips.length) tips.push('Rien à signaler : durée et régularité tiennent la route.')
 
   return {
