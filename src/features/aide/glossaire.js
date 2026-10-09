@@ -60,6 +60,15 @@ export const GLOSSAIRE = {
     titre: 'Macros',
     texte: 'Les trois grandes familles de nutriments qui apportent l’énergie : protéines (muscles, récupération), glucides (carburant de l’effort) et lipides (hormones, réserves).',
   },
+  forme: {
+    titre: 'Forme du jour',
+    texte: 'Une note sur 100 tirée de ta nuit : durée par rapport à ton besoin, dette de sommeil des deux dernières semaines, énergie et qualité au réveil, corrigée par les sensations (courbatures, fièvre, stress…). Elle dit quelle séance ton corps peut encaisser aujourd’hui.',
+    conseil: '75 et plus : séance intense possible. 55 à 74 : séance normale. 35 à 54 : séance légère. En dessous, ou en cas de fièvre : repos.',
+  },
+  dette: {
+    titre: 'Dette de sommeil',
+    texte: 'Le sommeil manquant cumulé sur deux semaines, par rapport à ton besoin. Une longue nuit n’en rattrape qu’une partie (une heure au plus) : la dette se résorbe en dormant un peu plus chaque nuit.',
+  },
   horsLigne: {
     titre: 'Hors ligne',
     texte: 'Sans réseau, l’app s’ouvre sur la dernière copie de tes données gardée sur ce téléphone. Tes saisies sont notées et partent d’elles-mêmes au retour du réseau.',

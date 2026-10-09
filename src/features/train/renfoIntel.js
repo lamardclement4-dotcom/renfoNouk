@@ -38,6 +38,7 @@ import { weightSeries, weeklyRate } from '../profil/weightIntel'
 import { feelsLike, extraHydrationMlPerHour, loadMultiplier, heatAcclimation } from './weatherIntel'
 import { sleepSeries, sleepDebt, neededHours, sleepAnalysis } from '../health/sleepIntel'
 import { resumeReveil } from '../health/sommeilReveil'
+import { libelleDuree } from '../health/sommeilForme'
 
 function num(v, def) { const n = Number(v); return Number.isFinite(n) ? n : (def || 0) }
 function round(v) { return Math.round(v) }
@@ -898,8 +899,8 @@ export function recommendations(db) {
   const slp = pillarSleep(db)
   if (slp.status === 'ok' && slp.extra.hours) {
     const h = slp.extra.hours
-    if (h < 6) push('alert', 'moon', `Seulement ${h.toFixed(1)} h de sommeil cette nuit — en-dessous de 6 h, récupération et performances chutent significativement (AASM).`, 'sommeil')
-    else if (h < 7) push('warn', 'moon', `${h.toFixed(1)} h de sommeil cette nuit — vise 7–9 h pour une récupération optimale.`, 'sommeil')
+    if (h < 6) push('alert', 'moon', `Seulement ${libelleDuree(h)} de sommeil cette nuit — en-dessous de 6 h, récupération et performances chutent significativement (AASM).`, 'sommeil')
+    else if (h < 7) push('warn', 'moon', `${libelleDuree(h)} de sommeil cette nuit — vise 7–9 h pour une récupération optimale.`, 'sommeil')
   }
 
   // --- Dette de sommeil chronique (nouveau) : moyenne des 3 dernières nuits
@@ -916,7 +917,7 @@ export function recommendations(db) {
   if (last3Nights.length === 3) {
     const avg3 = last3Nights.reduce((a, b) => a + b, 0) / 3
     if (avg3 < 6.5) {
-      push('alert', 'moon', `Moyenne de ${avg3.toFixed(1)} h de sommeil sur les 3 dernières nuits — dette de sommeil qui s'installe, pas juste une mauvaise nuit isolée. Priorise le repos avant que ça n'affecte tes séances.`, 'sommeil')
+      push('alert', 'moon', `Moyenne de ${libelleDuree(avg3)} de sommeil sur les 3 dernières nuits — dette de sommeil qui s'installe, pas juste une mauvaise nuit isolée. Priorise le repos avant que ça n'affecte tes séances.`, 'sommeil')
     }
   }
 

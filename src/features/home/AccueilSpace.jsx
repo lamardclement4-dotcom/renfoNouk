@@ -2,7 +2,8 @@ import React, { useState, lazy } from 'react'
 import { C, Icon, Ring, MODULE_TINTS, isoToday, Aide } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
-import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
+import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay, rolling7Mins } from '../train/renfoIntel'
+import { formeDuJour } from '../health/sommeilForme'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
 import { neededHours } from '../health/sleepIntel'
 import { HealthScoreCard, PeakHomeCard } from '../progress/cards'
@@ -37,6 +38,8 @@ export function ecartHabitude(ratio) {
   if (Math.abs(pct) < 8) return 'autant'
   return pct > 0 ? `${pct} % de plus` : `${-pct} % de moins`
 }
+const COULEUR_FORME = { haute: C.success, bonne: C.primary, moyenne: C.warn, basse: C.danger }
+
 export const CONSEIL_CHARGE = {
   'Sous-charge': 'Semaine calme : tu peux reprendre progressivement.',
   'Zone optimale': 'Bon rythme : continue comme ça.',
@@ -228,7 +231,7 @@ const listeStyle = { background: C.surface, border: `1px solid ${C.line}`, paddi
 // Rappels : prochaine séance planifiée, résumé nutrition/hydratation du
 // jour, routines, charge ACWR (si assez d'historique et pas déjà signalée
 // par OverloadAlert).
-function TodayInsights({ db, onPlanner, onNutrition, onRoutines }) {
+function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil }) {
   const iso = isoToday()
   const pillarList = intelPillars(db, iso)
   const nutPillar = pillarList.find((p) => p.id === 'nutrition')
@@ -246,7 +249,11 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines }) {
   const nextDetail = next ? `${next.date === iso ? "Aujourd'hui" : next.date}${next.heure ? ' · ' + next.heure : ''}${nextMins ? ' · ' + nextMins + ' min' : ''}` : 'Aucune séance planifiée'
   const nextTitle = next ? (nextSport ? nextSport.label : 'Séance planifiée') : 'Planifier une séance'
 
+  const nuitSaisie = Number(((db.sleepLog || {})[iso] || {}).hours) > 0
   const rappels = [
+    // La nuit se saisit le matin ou elle s'oublie : tant qu'elle manque, on
+    // la rappelle — elle fait la forme du jour.
+    !nuitSaisie && onSommeil && Ligne('moon', MODULE_TINTS.sommeil, 'Comment as-tu dormi ?', 'Saisis ta nuit pour connaître ta forme du jour', onSommeil, 'nuit'),
     !(next && next.date === iso) && Ligne('calendar', C.primary, nextTitle, nextDetail, onPlanner, 'next'),
     (nutPillar || hydPillar) && Ligne('apple', C.carb, 'Nutrition & hydratation', [nutPillar && nutPillar.status === 'ok' ? nutPillar.detail : null, hydPillar && hydPillar.status === 'ok' ? hydPillar.detail : null].filter(Boolean).join(' · ') || "Rien enregistré aujourd'hui", onNutrition, 'nut'),
     acwr.available && acwr.level !== 'Vigilance renforcée' && Ligne('chart', acwr.color, 'Charge : ' + (CONSEIL_CHARGE[acwr.level] || acwr.level).split(' :')[0].toLowerCase(), `${milliers(acwr.acuteMin)} points sur 7 jours, ${ecartHabitude(acwr.ratio) === 'autant' ? 'comme d’habitude' : ecartHabitude(acwr.ratio) + ' que d’habitude'}`, onPlanner, 'acwr'),
@@ -386,9 +393,13 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
       h(Cadran, { label: 'Eau', value: litres(eau), unit: 'L', progress: eau / cibleEau, color: MODULE_TINTS.hydratation, sub: eau >= cibleEau ? 'cible atteinte' : 'reste ' + litres(cibleEau - eau) + ' L', onClick: () => setHealthTile('hydratation') }),
       h(Cadran, { label: 'Protéines', value: String(Math.round(prot)), unit: 'g', progress: cibleProt ? prot / cibleProt : 0, color: C.protein, sub: !cibleProt ? 'fixer un objectif' : prot >= cibleProt ? 'cible atteinte' : 'reste ' + Math.round(cibleProt - prot) + ' g', onClick: () => setHealthTile('nutrition') })))
 
-  // ─── séance à faire ───
+  // ─── séance à faire, avec la forme du jour au-dessus ───
+  const forme = formeDuJour(db.sleepLog || {}, iso, rolling7Mins(db))
   const aFaire = h('section', { 'aria-label': 'Séance à faire' },
     Titre('À faire'),
+    forme ? h('button', { onClick: () => setHealthTile('sommeil'), style: { display: 'flex', alignItems: 'baseline', gap: 10, width: '100%', textAlign: 'left', padding: '0 0 12px', background: 'none', border: 'none', cursor: 'pointer', color: C.ink } },
+      h('span', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', color: COULEUR_FORME[forme.niveau] } }, forme.score),
+      h('span', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.4 } }, h('strong', { style: { color: C.ink } }, 'Forme du jour'), h(Aide, { terme: 'forme' }), ' — ', forme.verdict)) : null,
     seancesAFaire(heroInfo, setOpenId, () => setTile('planner')))
 
   const mobilityCta = !db.mobility && h('div', { className: 'liste', style: { ...listeStyle, marginTop: 22 } },
@@ -402,7 +413,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     h(MondayRetroCard, { db, onOpen: () => setTile('planner') }),
     h(OverloadAlert, { db, onPrevention: () => setHealthTile('prevention') }),
     h('div', { style: { marginTop: 22 } }, h(HealthScoreCard, { db, onAction: handleAction })),
-    h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition'), onRoutines: () => setTile('routines') }),
+    h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition'), onRoutines: () => setTile('routines'), onSommeil: () => setHealthTile('sommeil') }),
     h('div', { style: { marginTop: 22 } }, h(PeakHomeCard, { db, onPeak: () => setTile('peak') })),
     mobilityCta)
 

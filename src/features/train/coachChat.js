@@ -21,6 +21,7 @@ import { SESSIONS, SPORTS } from './trainData'
 import { computePeakPlan } from './peakIntel'
 import { cycleInfo } from '../health/cycleIntel'
 import { PHASES } from '../health/cycleData'
+import { libelleDuree } from '../health/sommeilForme'
 
 function norm(s) {
   return (s || '').toLowerCase().normalize('NFD').split('').filter((ch) => {
@@ -238,7 +239,7 @@ function fatigueReply(db) {
   const acwr = acwrRisk(db)
   const parts = []
   if (slp.status === 'ok') {
-    parts.push(slp.extra.hours < 7 ? `Tu n'as dormi que ${slp.extra.hours} h cette nuit — c'est sûrement une grosse partie de l'explication.` : `Ton sommeil est correct (${slp.extra.hours} h cette nuit), la fatigue vient probablement d'ailleurs.`)
+    parts.push(slp.extra.hours < 7 ? `Tu n'as dormi que ${libelleDuree(slp.extra.hours)} cette nuit — c'est sûrement une grosse partie de l'explication.` : `Ton sommeil est correct (${libelleDuree(slp.extra.hours)} cette nuit), la fatigue vient probablement d'ailleurs.`)
   } else {
     parts.push("Tu n'as pas enregistré ton sommeil — commence par là, c'est le premier suspect.")
   }

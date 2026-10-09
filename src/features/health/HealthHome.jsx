@@ -2,6 +2,7 @@ import React, { useState, lazy } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, isoToday } from './kit'
 import { PHASES } from './cycleData'
+import { libelleDuree } from './sommeilForme'
 
 // Les sept sous-espaces ne s'ouvrent que sur une tuile pressée. Chargés
 // d'avance, ils pesaient tous sur l'ouverture de « Santé » : la table
@@ -65,7 +66,7 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
   const tiles = [
     { ic: 'apple', tint: MODULE_TINTS.nutrition, lab: 'Nutrition', sub: 'Repas et calories', on: 'nutrition' },
     { ic: 'drop', tint: MODULE_TINTS.hydratation, lab: 'Hydratation', sub: 'Ce que tu bois', on: 'hydratation' },
-    { ic: 'moon', tint: MODULE_TINTS.sommeil, lab: 'Sommeil', sub: sleepToday ? `${String(sleepToday.hours).replace('.', ',')} h cette nuit` : 'Saisir ta nuit', on: 'sommeil' },
+    { ic: 'moon', tint: MODULE_TINTS.sommeil, lab: 'Sommeil', sub: sleepToday ? `${libelleDuree(Number(sleepToday.hours))} cette nuit` : 'Saisir ta nuit', on: 'sommeil' },
     { ic: 'shield', tint: MODULE_TINTS.prevention, lab: 'Prévention', sub: 'Risque de blessure', on: 'prevention' },
     { ic: 'moon', tint: MODULE_TINTS.cycle, lab: 'Cycle', sub: cyclePhaseLabel, on: 'cycle' },
     { ic: 'wave', tint: MODULE_TINTS.esprit, lab: 'Esprit', sub: 'Respiration · mental', on: 'esprit' },
