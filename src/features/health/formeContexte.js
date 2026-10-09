@@ -12,7 +12,7 @@ import { sessionLoad } from '../home/weekTrace'
 import { heatAcclimation } from '../train/weatherIntel'
 import { painEpisodes, regionLabel } from './preventionIntel'
 import { decaler } from './sommeilReveil'
-import { formeDuJour, formeSerie, coucherConseille } from './sommeilForme'
+import { formeDuJour, formeSerie, coucherConseille, minutesDe, libelleDuree } from './sommeilForme'
 import { neededHours, sleepDebt, sleepSeries } from './sleepIntel'
 
 const VALIDE = /^\d{4}-\d{2}-\d{2}$/
@@ -148,4 +148,63 @@ export function reglagesSeance(forme, seance) {
   if (allegee) out.push({ id: 'alleger', lab: `Alléger : ${seance.duree} → ${allegee}`, duree: allegee })
   if (forme.niveau === 'basse') out.push({ id: 'decaler', lab: 'Décaler à demain', date: decaler(seance.date, 1) })
   return out
+}
+
+// ─── La forme prédit-elle tes séances ? ───
+// Le ressenti des séances faites (1 à 5) les jours de bonne forme (55 et
+// plus) et les jours de forme faible. C'est ce qui dit si la note vaut
+// quelque chose pour toi, pas seulement en théorie.
+export function formeEtSeances(db, iso, jours = 60) {
+  const debut = decaler(iso, -jours + 1)
+  const seances = (Array.isArray(db && db.planningSessions) ? db.planningSessions : [])
+    .filter((s) => s && s.statut === 'realise' && typeof s.date === 'string' && s.date >= debut && s.date <= iso && Number(s.ressenti) >= 1 && Number(s.ressenti) <= 5)
+  const cache = {}
+  const formeDe = (d) => (d in cache ? cache[d] : (cache[d] = formeDb(db, d)))
+  const haute = [], basse = []
+  for (const s of seances) {
+    const f = formeDe(s.date)
+    if (!f) continue
+    ;(f.score >= 55 ? haute : basse).push(Number(s.ressenti))
+  }
+  const moy = (l) => Math.round(l.reduce((a, b) => a + b, 0) / l.length * 10) / 10
+  const v = (x) => String(x).replace('.', ',')
+  const base = { seances: haute.length + basse.length, haute: haute.length, basse: basse.length }
+  if (haute.length < 3 || basse.length < 3) {
+    return { ...base, ecart: null, texte: `Pas encore assez de séances notées pour comparer (${haute.length} en bonne forme, ${basse.length} en forme faible ; il en faut 3 de chaque). Note le ressenti de tes séances.` }
+  }
+  const h = moy(haute), b = moy(basse), ecart = Math.round((h - b) * 10) / 10
+  const chiffres = `ressenti ${v(h)}/5 en bonne forme contre ${v(b)}/5 en forme faible (${haute.length} et ${basse.length} séances)`
+  return {
+    ...base, ressentiHaute: h, ressentiBasse: b, ecart,
+    texte: ecart >= 0.5 ? `Ta forme du jour annonce bien tes séances : ${chiffres}. Les jours de forme faible, alléger n’est pas de la paresse.`
+      : ecart <= -0.5 ? `Curieusement, tes séances se passent mieux les jours de forme faible : ${chiffres}. Tes nuits courtes pèsent peut-être moins sur toi que la moyenne.`
+        : `Pas de différence nette : ${chiffres}. Tu encaisses bien les petites nuits, ou tes séances de ces jours-là étaient déjà allégées.`,
+  }
+}
+
+// ─── Le coucher conseillé, tenu ou pas ───
+// Pour chacune des dernières nuits saisies avec l'heure du coucher : le
+// conseil de la veille au soir, et l'écart avec le coucher réel.
+export function respectCoucher(db, iso, n = 7) {
+  const log = (db && db.sleepLog) || {}
+  const ecarts = []
+  for (let k = 0; k < n; k++) {
+    const d = decaler(iso, -k)
+    const reel = minutesDe(log[d] && log[d].coucher)
+    if (reel == null) continue
+    const conseil = coucherDuSoir(db, decaler(d, -1))
+    if (!conseil) continue
+    const c = minutesDe(conseil.coucher)
+    const diff = ((reel - 19 * 60 + 1440) % 1440) - ((c - 19 * 60 + 1440) % 1440)
+    ecarts.push(diff)
+  }
+  if (ecarts.length < 3) return null
+  const tenus = ecarts.filter((x) => x <= 20).length
+  const tard = ecarts.filter((x) => x > 20)
+  const retard = tard.length ? Math.round(tard.reduce((a, b) => a + b, 0) / tard.length) : 0
+  return {
+    nuits: ecarts.length, tenus, retard,
+    texte: `Au lit à l’heure conseillée, à 20 minutes près, ${tenus} soir${tenus > 1 ? 's' : ''} sur ${ecarts.length}.`
+      + (tard.length ? ` Les autres soirs, ${libelleDuree(retard / 60)} plus tard en moyenne.` : ' Rien à reprendre.'),
+  }
 }

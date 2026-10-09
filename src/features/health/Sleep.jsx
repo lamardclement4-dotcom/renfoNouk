@@ -3,8 +3,8 @@ import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, isoToday, Aide } from './kit'
 import { ENERGIES, SENSATIONS, libelleNuit, nuitsRecentes, nuitsManquantes, reveilDe, resumeReveil, resumeNuit, decaler } from './sommeilReveil'
 import { annoncer } from '../../annonces'
-import { FACTEURS, facteursDe, dureeDepuisHeures, libelleDuree, minutesDe, influences, regulariteHoraires } from './sommeilForme'
-import { formeDb, formeSemaine, coucherDuSoir, normaleDuPouls } from './formeContexte'
+import { FACTEURS, facteursDe, dureeDepuisHeures, libelleDuree, minutesDe, influences, regulariteHoraires, chronotype } from './sommeilForme'
+import { formeDb, formeSemaine, coucherDuSoir, normaleDuPouls, formeEtSeances, respectCoucher } from './formeContexte'
 import { sleepAnalysis, BASE_NEED } from './sleepIntel'
 import { rolling7Mins } from '../train/renfoIntel'
 
@@ -451,9 +451,12 @@ function BlocReveil({ log }) {
 
 // Heures de coucher et de lever, quand elles sont saisies : leur
 // régularité compte autant que la durée.
-function BlocHoraires({ log }) {
+function BlocHoraires({ db }) {
+  const log = db.sleepLog || {}
   const r = regulariteHoraires(log, isoToday(), 14)
   if (!r) return null
+  const chrono = chronotype(log, isoToday())
+  const tenu = respectCoucher(db, isoToday())
   const col = r.niveau === 'alert' ? C.danger : r.niveau === 'warn' ? C.warn : C.success
   return React.createElement('div', { style: { padding: '14px 16px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}` } },
     React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 2 } }, 'Horaires (' + r.nuits + ' nuits)'),
@@ -461,7 +464,9 @@ function BlocHoraires({ log }) {
     r.lever ? React.createElement(AnaRow, { label: 'Lever moyen', value: r.lever + ' ± ' + r.ecartLever + ' min', color: col }) : null,
     React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, padding: '10px 0', borderBottom: (r.endormissement != null || r.decalage != null) ? `1px solid ${C.line}` : 'none' } }, r.texte),
     r.endormissement != null ? React.createElement(AnaRow, { label: 'Endormissement moyen', value: r.endormissement + ' min', color: r.endormissement > 30 ? C.warn : C.ink, hint: r.texteEndormissement }) : null,
-    r.decalage != null ? React.createElement(AnaRow, { label: React.createElement(React.Fragment, null, 'Décalage du week-end', React.createElement(Aide, { terme: 'decalage' })), value: Math.abs(r.decalage) < 15 ? 'aucun' : (r.decalage > 0 ? '+' : '−') + libelleDuree(Math.abs(r.decalage) / 60), color: Math.abs(r.decalage) >= 60 ? C.warn : C.ink, hint: r.texteDecalage }) : null)
+    r.decalage != null ? React.createElement(AnaRow, { label: React.createElement(React.Fragment, null, 'Décalage du week-end', React.createElement(Aide, { terme: 'decalage' })), value: Math.abs(r.decalage) < 15 ? 'aucun' : (r.decalage > 0 ? '+' : '−') + libelleDuree(Math.abs(r.decalage) / 60), color: Math.abs(r.decalage) >= 60 ? C.warn : C.ink, hint: r.texteDecalage }) : null,
+    tenu ? React.createElement(AnaRow, { label: 'Coucher conseillé tenu', value: tenu.tenus + ' / ' + tenu.nuits, color: tenu.tenus * 2 >= tenu.nuits ? C.ink : C.warn, hint: tenu.texte }) : null,
+    chrono ? React.createElement(AnaRow, { label: React.createElement(React.Fragment, null, 'Chronotype', React.createElement(Aide, { terme: 'chronotype' })), value: chrono.lab, hint: chrono.texte }) : null)
 }
 
 // Le cœur sur quatre semaines : dernière mesure, normale, jours qui s'en
@@ -508,6 +513,21 @@ function BlocCoeur({ db }) {
     React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 2 } }, 'Cœur au réveil (4 semaines)'),
     blocs,
     React.createElement('div', { style: { fontSize: 11, color: C.ink3, lineHeight: 1.45, marginTop: 4 } }, 'Pointillé : ta normale. Carré orange : jour nettement hors de ta normale, souvent une récupération incomplète.'))
+}
+
+// La note a-t-elle du sens pour toi ? Le ressenti des séances selon la
+// forme du jour, sur deux mois.
+function BlocFormeSeances({ db }) {
+  const r = formeEtSeances(db, isoToday(), 60)
+  if (!r.seances) return null
+  return React.createElement('div', { style: { padding: '14px 16px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}` } },
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Ta forme et tes séances (60 jours)', React.createElement(Aide, { terme: 'forme' })),
+    r.ecart != null ? React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 } },
+      [['Bonne forme', r.ressentiHaute, r.haute, C.success], ['Forme faible', r.ressentiBasse, r.basse, C.warn]].map(([lab, v, n, col]) => React.createElement('div', { key: lab, style: { padding: '8px 10px', border: `1px solid ${C.line}`, borderTop: `3px solid ${col}` } },
+        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, fontWeight: 600 } }, lab + ' · ' + n + ' séance' + (n > 1 ? 's' : '')),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, color: C.ink, marginTop: 2 } }, String(v).replace('.', ',') + ' / 5'),
+        React.createElement('div', { style: { fontSize: 10.5, color: C.ink3 } }, 'ressenti moyen')))) : null,
+    React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5 } }, r.texte))
 }
 
 // Ce qui pèse vraiment sur TES nuits : les facteurs de la veille croisés
@@ -606,8 +626,9 @@ function HistoryTab({ db, store, onEdit }) {
     React.createElement(AnalysisBlock, { ana }),
     React.createElement(BlocReveil, { log }),
     React.createElement(BlocCoeur, { db }),
+    React.createElement(BlocFormeSeances, { db }),
     React.createElement(BlocInfluences, { log }),
-    React.createElement(BlocHoraires, { log }),
+    React.createElement(BlocHoraires, { db }),
     React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, recent.length + ' dernière' + (recent.length > 1 ? 's' : '') + ' nuit' + (recent.length > 1 ? 's' : '')),
     React.createElement('div', { style: { maxHeight: 280, overflowY: 'auto' } },
       recent.map((d) => {

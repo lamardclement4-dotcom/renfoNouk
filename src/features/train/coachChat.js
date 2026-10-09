@@ -22,7 +22,8 @@ import { computePeakPlan } from './peakIntel'
 import { cycleInfo } from '../health/cycleIntel'
 import { PHASES } from '../health/cycleData'
 import { libelleDuree } from '../health/sommeilForme'
-import { formeDb, coucherDuSoir } from '../health/formeContexte'
+import { formeDb, coucherDuSoir, formeEtSeances } from '../health/formeContexte'
+import { chronotype } from '../health/sommeilForme'
 import { ENERGIES } from '../health/sommeilReveil'
 import { sleepDebt, sleepSeries, neededHours } from '../health/sleepIntel'
 
@@ -232,7 +233,14 @@ function formeReply(db) {
   const text = `Forme du jour : ${f.score}/100. ${f.verdict} ${f.consigne}`
     + (causes.length ? ` Ce qui pèse : ${causes.join(' ; ')}.` : ' Rien ne tire la note vers le bas.')
     + (soir ? ` Ce soir, au lit vers ${soir.coucher}.` : '')
+    + (() => { const v = formeEtSeances(db, iso); return v.ecart != null && v.ecart >= 0.5 ? ` Chez toi, la note tient la route : ressenti ${String(v.ressentiHaute).replace('.', ',')}/5 en bonne forme contre ${String(v.ressentiBasse).replace('.', ',')}/5 en forme faible.` : '' })()
   return { text, action: 'sommeil', actionLabel: 'Voir le détail', chips: ["Quelle séance aujourd'hui ?", 'Mon sommeil', 'Ma charge'] }
+}
+
+function chronoReply(db) {
+  const c = chronotype(db.sleepLog || {}, todayISO())
+  if (!c) return { text: "Pour savoir à quelle heure tu performes le mieux, il me faut tes heures de coucher et de lever : saisis tes nuits en mode « Coucher / lever », week-ends compris. Cinq nuits suffisent pour une première estimation.", action: 'sommeil', actionLabel: 'Saisir une nuit', chips: ['Ma forme du jour', 'Mon sommeil'] }
+  return { text: c.texte, action: 'sommeil', actionLabel: 'Ouvrir Sommeil', chips: ['Ma forme du jour', "Quelle séance aujourd'hui ?"] }
 }
 
 function sessionTodayReply(db, ctx) {
@@ -507,7 +515,7 @@ function recoveryReply() {
 }
 
 function helpReply() {
-  return { text: 'Je peux te parler de : ta forme du jour, ta séance du jour, ta charge d\'entraînement, ton sommeil, ta fatigue, une douleur, ton hydratation, ta nutrition, ta mobilité, tes tests physiques, tes records, ton cycle, tes compléments, tes échéances (pic de forme), ou te faire un résumé de tes stats ou de ta semaine. Tu peux aussi me poser une hypothèse concrète — « je peux faire 1h30 aujourd\'hui ? » — je calcule le vrai impact sur ta charge avant de répondre.', chips: STARTER_CHIPS }
+  return { text: 'Je peux te parler de : ta forme du jour, ton meilleur moment pour t\'entraîner, ta séance du jour, ta charge d\'entraînement, ton sommeil, ta fatigue, une douleur, ton hydratation, ta nutrition, ta mobilité, tes tests physiques, tes records, ton cycle, tes compléments, tes échéances (pic de forme), ou te faire un résumé de tes stats ou de ta semaine. Tu peux aussi me poser une hypothèse concrète — « je peux faire 1h30 aujourd\'hui ? » — je calcule le vrai impact sur ta charge avant de répondre.', chips: STARTER_CHIPS }
 }
 
 // ============================================================
@@ -524,6 +532,7 @@ const META_INTENTS = [
 
 const TOPIC_INTENTS = [
   { id: 'pain', test: testPain, reply: painReply },
+  { id: 'chrono', test: (t) => /(chronotype|meilleur moment|quand m.entrainer|a quelle heure.*(entrain|seance)|du matin ou du soir)/.test(t), reply: chronoReply },
   { id: 'forme', test: (t) => /(^forme\b|forme du jour|ma forme|en forme|forme aujourd|suis.je pret|je peux m.entrainer|apte a)/.test(t), reply: formeReply },
   { id: 'fatigue', test: (t) => /(fatigue|creve|epuise|claque|nase|vide|\bhs\b)/.test(t), reply: fatigueReply },
   { id: 'sommeil', test: (t) => /(sommeil|dormi|dormir|nuit|insomnie|reveil)/.test(t), reply: sleepReply },

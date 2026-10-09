@@ -312,3 +312,51 @@ export function coucherConseille(log, aujourdhui, { besoin = 8, routine = null, 
     + ` (${endormissement} min pour t’endormir${endo.length >= 2 ? ', d’après tes nuits' : ''}${bonus ? `, plus ${bonus} min pour résorber la dette` : ''})`
   return { coucher, lever, source, besoin, endormissement, bonus, raison, texte: `Au lit vers ${coucher} ${raison}.` }
 }
+
+// ─── Chronotype ───
+// Le milieu de la nuit les jours libres (week-end), corrigé du sommeil
+// rattrapé : c'est la mesure usuelle du chronotype (questionnaire de
+// Munich). Il dit à quelle heure ton corps est au meilleur de lui-même :
+// les profils du matin culminent vers midi, les profils du soir en
+// soirée.
+const PROFILS = [
+  { max: 180, id: 'tres-matin', lab: 'très du matin', pic: 'en fin de matinée, vers midi' },
+  { max: 240, id: 'matin', lab: 'du matin', pic: 'vers midi, début d’après-midi' },
+  { max: 300, id: 'intermediaire', lab: 'intermédiaire', pic: 'en milieu d’après-midi' },
+  { max: 360, id: 'soir', lab: 'du soir', pic: 'en fin d’après-midi' },
+  { max: Infinity, id: 'tres-soir', lab: 'très du soir', pic: 'en soirée, vers 20 h' },
+]
+export function chronotype(log, aujourdhui, jours = 28) {
+  const libres = [], travail = []
+  for (let k = 0; k < jours; k++) {
+    const iso = decaler(aujourdhui, -k)
+    const e = (log || {})[iso]
+    if (!e) continue
+    const mc = minutesDe(e.coucher), ml = minutesDe(e.lever)
+    if (mc == null || ml == null) continue
+    const debut = decale(mc) + (Number(e.endormissement) || 0)
+    const fin = decale(ml) <= decale(mc) ? decale(ml) + 1440 : decale(ml)
+    if (fin <= debut) continue
+    // Milieu de nuit en minutes après minuit (peut dépasser 24 h si la nuit
+    // commence tard : on le ramène sur l'horloge plus bas).
+    const n = { milieu: (debut + fin) / 2 + 19 * 60 - 1440, duree: (fin - debut) / 60 }
+    ;(finDeSemaine(iso) ? libres : travail).push(n)
+  }
+  const estime = libres.length >= 2 && travail.length >= 3
+  const base = estime ? libres : libres.concat(travail)
+  if (base.length < 5 && !estime) return null
+  const msf = moyenne(base.map((n) => n.milieu))
+  let corrige = msf
+  if (estime) {
+    const sdf = moyenne(libres.map((n) => n.duree)), sdw = moyenne(travail.map((n) => n.duree))
+    // Rattrapage du week-end : le milieu de nuit est avancé de la moitié du
+    // sommeil en trop, pour ne pas confondre fatigue et horloge.
+    if (sdf > sdw) corrige = msf - ((sdf - (5 * sdw + 2 * sdf) / 7) * 60) / 2
+  }
+  const p = PROFILS.find((x) => corrige < x.max)
+  return {
+    id: p.id, lab: p.lab, milieu: hhmm(corrige), estime, nuits: base.length,
+    texte: `Profil ${p.lab} : le milieu de ta nuit${estime ? ' les jours libres' : ''} tombe vers ${hhmm(corrige)}${estime ? ' (corrigé du sommeil rattrapé)' : ''}. Ton pic de performance probable : ${p.pic}. Les séances intenses ou les tests y passent mieux.`
+      + (estime ? '' : ' Estimation sur toutes tes nuits : avec deux week-ends saisis (coucher et lever), elle sera plus juste.'),
+  }
+}

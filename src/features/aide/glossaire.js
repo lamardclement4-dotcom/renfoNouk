@@ -75,6 +75,11 @@ export const GLOSSAIRE = {
     texte: 'Les petites variations d’écart entre deux battements, mesurées par une montre et importées d’Apple Santé. Plus elle est haute par rapport à ta normale, plus ton corps est reposé ; une chute de 15 % ou plus sous ta normale signale une fatigue ou un stress que les sensations ne montrent pas toujours.',
     conseil: 'Elle varie beaucoup d’une personne à l’autre : seule la comparaison avec ta propre normale compte.',
   },
+  chronotype: {
+    titre: 'Chronotype',
+    texte: 'Ton horloge interne : plutôt du matin, intermédiaire ou du soir. Il se lit au milieu de ta nuit les jours sans réveil imposé (le week-end), corrigé du sommeil que tu y rattrapes. Il ne se change guère, mais il dit à quelle heure ton corps performe le mieux : vers midi pour un profil du matin, en soirée pour un profil du soir.',
+    conseil: 'Plus il y a de week-ends saisis avec coucher et lever, plus l’estimation est juste.',
+  },
   efficacite: {
     titre: 'Efficacité du sommeil',
     texte: 'La part du temps passé au lit à dormir vraiment. 85 % et plus : bon. En dessous, trop de temps éveillé au lit (endormissement long, réveils) : se coucher un peu plus tard, quand le sommeil vient, aide souvent plus que se coucher tôt.',
