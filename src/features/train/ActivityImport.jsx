@@ -185,9 +185,10 @@ export default function ActivityImport({ onSave, onClose, db, store }) {
         [
           ['Nuits ajoutées', health.summary.sleepAdded],
           ['Nuits déjà notées, laissées telles quelles', health.summary.sleepKept],
+          ['Nuits importées complétées de leurs heures de coucher et de lever', health.summary.sleepTimes || 0],
           ['Séances ajoutées', health.summary.addedSessions],
           ['Séances déjà présentes, ignorées', health.summary.skippedSessions],
-          ['Journées de pas et de fréquence au repos', health.summary.vitalsAdded],
+          ['Journées de pas, de fréquence au repos et de variabilité cardiaque', health.summary.vitalsAdded],
         ].map(([lab, v], i) => h('div', { key: lab, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderTop: i ? `1px solid ${C.line}` : 'none' } },
           h('span', { style: { flex: 1, fontSize: 13.5, fontWeight: 600, color: v ? C.ink : C.ink3 } }, lab),
           h('span', { style: { fontFamily: C.mono, fontSize: 13.2, fontWeight: 600, letterSpacing: '-.03em', color: v ? C.ink : C.ink3 } }, v))),

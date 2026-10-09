@@ -3,7 +3,7 @@ import { C, Icon, Ring, MODULE_TINTS, isoToday, Aide } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
 import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
-import { formeDb, coucherDuSoir } from '../health/formeContexte'
+import { formeDb, coucherDuSoir, reglagesSeance } from '../health/formeContexte'
 import { libelleDuree } from '../health/sommeilForme'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
 import { neededHours } from '../health/sleepIntel'
@@ -289,7 +289,7 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil }) {
 // santé et le prochain objectif.
 // ============================================================
 export default function AccueilSpace({ userId, profile, onProfil }) {
-  const { db, loading } = useNutritionStore(userId)
+  const { db, store, loading } = useNutritionStore(userId)
   const [tile, setTile] = useState(null)
   const [openId, setOpenId] = useState(null)
   const [healthTile, setHealthTile] = useState(null)
@@ -399,12 +399,29 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
 
   // ─── séance à faire, avec la forme du jour au-dessus ───
   const forme = formeDb(db, iso)
+  // La forme règle la séance prévue aujourd'hui : l'alléger ou la décaler
+  // d'un geste, annulable, avec la trace de ce qui a été changé et pourquoi.
+  const seanceDuJour = heroInfo.planned || null
+  const reglages = reglagesSeance(forme, seanceDuJour)
+  function reglerSeance(r) {
+    const id = seanceDuJour.id
+    const avant = { duree: seanceDuJour.duree, date: seanceDuJour.date, forme: forme.score }
+    store.annulable(r.id === 'alleger' ? `Séance allégée : ${r.duree}` : 'Séance décalée à demain', () => store.set((sx) => ({
+      planningSessions: ((sx && sx.planningSessions) || []).map((x) => (x && x.id === id
+        ? (r.id === 'alleger' ? { ...x, duree: r.duree, reglage: { ...avant, type: 'alleger' } } : { ...x, date: r.date, reglage: { ...avant, type: 'decaler' } })
+        : x)),
+    })))
+  }
   const aFaire = h('section', { 'aria-label': 'Séance à faire' },
     Titre('À faire'),
     forme ? h('button', { onClick: () => setHealthTile('sommeil'), style: { display: 'flex', alignItems: 'baseline', gap: 10, width: '100%', textAlign: 'left', padding: '0 0 12px', background: 'none', border: 'none', cursor: 'pointer', color: C.ink } },
       h('span', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', color: COULEUR_FORME[forme.niveau] } }, forme.score),
       h('span', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.4 } }, h('strong', { style: { color: C.ink } }, 'Forme du jour'), h(Aide, { terme: 'forme' }), ' — ', forme.verdict,
         h('span', { style: { display: 'block', fontSize: 12, color: C.ink3, marginTop: 2 } }, forme.consigne))) : null,
+    seanceDuJour && seanceDuJour.reglage && seanceDuJour.reglage.type === 'alleger' ? h('div', { style: { fontSize: 12, color: C.ink3, margin: '-4px 0 10px', paddingLeft: 10, borderLeft: `3px solid ${C.line}` } },
+      `Séance allégée : ${seanceDuJour.reglage.duree} prévu, ${seanceDuJour.duree} maintenant.`) : null,
+    reglages.length ? h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, margin: '-4px 0 12px' } },
+      reglages.map((r) => h('button', { key: r.id, type: 'button', onClick: () => reglerSeance(r), style: { padding: '7px 10px', border: `1.5px solid ${COULEUR_FORME[forme.niveau]}`, background: C.surface, color: C.ink, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } }, r.lab))) : null,
     seancesAFaire(heroInfo, setOpenId, () => setTile('planner')))
 
   const mobilityCta = !db.mobility && h('div', { className: 'liste', style: { ...listeStyle, marginTop: 22 } },

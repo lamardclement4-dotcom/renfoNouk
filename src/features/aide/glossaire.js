@@ -65,6 +65,16 @@ export const GLOSSAIRE = {
     texte: 'Une note sur 100 tirée de ta nuit : durée par rapport à ton besoin (40 points), dette de sommeil des deux dernières semaines (20), énergie au réveil (25) et qualité (15). Elle est ensuite corrigée par les sensations au réveil, la séance d’hier comparée à ta séance habituelle, les jours d’entraînement enchaînés et une douleur en cours. « Détail du calcul » montre chaque ligne.',
     conseil: '75 et plus : séance intense possible. 55 à 74 : séance normale. 35 à 54 : séance légère. En dessous, en cas de fièvre ou de douleur à faire voir : repos.',
   },
+  pouls: {
+    titre: 'Pouls au réveil',
+    texte: 'Tes battements par minute, pris au réveil, encore allongé, avant de te lever ou de regarder ton téléphone : une minute au poignet ou au cou, ou la mesure de ta montre. Seul il ne dit pas grand-chose ; comparé à ta normale, il parle : 7 battements de plus qu’à l’habitude signalent souvent une récupération incomplète, un manque de sommeil ou un début de maladie.',
+    conseil: 'Ta normale se calcule après 5 mesures, sur les 4 dernières semaines. Mesure-le toujours de la même façon.',
+  },
+  vfc: {
+    titre: 'Variabilité cardiaque (VFC)',
+    texte: 'Les petites variations d’écart entre deux battements, mesurées par une montre et importées d’Apple Santé. Plus elle est haute par rapport à ta normale, plus ton corps est reposé ; une chute de 15 % ou plus sous ta normale signale une fatigue ou un stress que les sensations ne montrent pas toujours.',
+    conseil: 'Elle varie beaucoup d’une personne à l’autre : seule la comparaison avec ta propre normale compte.',
+  },
   efficacite: {
     titre: 'Efficacité du sommeil',
     texte: 'La part du temps passé au lit à dormir vraiment. 85 % et plus : bon. En dessous, trop de temps éveillé au lit (endormissement long, réveils) : se coucher un peu plus tard, quand le sommeil vient, aide souvent plus que se coucher tôt.',

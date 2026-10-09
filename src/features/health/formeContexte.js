@@ -7,7 +7,7 @@
 // Séparé de sommeilForme.js : ce module lit les séances et la prévention,
 // et renfoIntel importe déjà sommeilForme — l'inverse ferait une boucle.
 // ============================================================
-import { rolling7Mins } from '../train/renfoIntel'
+import { rolling7Mins, dureeToMins } from '../train/renfoIntel'
 import { sessionLoad } from '../home/weekTrace'
 import { heatAcclimation } from '../train/weatherIntel'
 import { painEpisodes, regionLabel } from './preventionIntel'
@@ -53,6 +53,42 @@ function douleurDu(db, iso) {
   return null
 }
 
+// Signaux du cœur : pouls au réveil (saisi avec la nuit) ou, à défaut,
+// fréquence cardiaque de repos et variabilité cardiaque importées d'Apple
+// Santé. La normale est la moyenne des 28 jours d'avant, dès cinq mesures,
+// prise dans la même source que la valeur du jour : un pouls pris allongé
+// au réveil et une FC de repos calculée sur la journée ne se comparent pas.
+const dansBornes = (x, lo, hi) => { const n = Number(x); return x != null && x !== '' && Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n) : null }
+function serieAvant(iso, lire, jours = 28) {
+  const l = []
+  for (let k = 1; k <= jours; k++) { const x = lire(decaler(iso, -k)); if (x != null) l.push(x) }
+  return l
+}
+const moyenneOuNull = (l) => (l.length >= 5 ? Math.round(l.reduce((a, b) => a + b, 0) / l.length * 10) / 10 : null)
+const poulsSaisi = (log) => (d) => dansBornes(log[d] && log[d].pouls, 30, 120)
+// Normale du pouls au réveil avant ce jour : pour la montrer pendant la
+// saisie, avant même que la valeur du jour existe.
+export function normaleDuPouls(db, iso) {
+  const avant = serieAvant(iso, poulsSaisi((db && db.sleepLog) || {}))
+  return { normale: moyenneOuNull(avant), mesures: avant.length }
+}
+export function signauxCorps(db, iso) {
+  const log = (db && db.sleepLog) || {}, vit = (db && db.vitalsLog) || {}
+  const reveil = poulsSaisi(log)
+  const repos = (d) => dansBornes(vit[d] && vit[d].restingHr, 30, 120)
+  const hrv = (d) => dansBornes(vit[d] && vit[d].hrv, 5, 300)
+  let pouls = null
+  for (const [source, lire] of [['reveil', reveil], ['sante', repos]]) {
+    if (lire(iso) == null) continue
+    const avant = serieAvant(iso, lire)
+    pouls = { valeur: lire(iso), normale: moyenneOuNull(avant), mesures: avant.length, source }
+    break
+  }
+  const avantVfc = serieAvant(iso, hrv)
+  const vfc = hrv(iso) != null ? { valeur: hrv(iso), normale: moyenneOuNull(avantVfc), mesures: avantVfc.length } : null
+  return { pouls, vfc }
+}
+
 export function formeContexte(db, iso) {
   const parJour = chargesAvant(db, iso, 29)
   const hier = decaler(iso, -1)
@@ -64,11 +100,14 @@ export function formeContexte(db, iso) {
   const chargeHabituelle = jours.length >= 3 ? Math.round(jours.reduce((a, b) => a + b, 0) / jours.length) : null
   let joursDaffilee = 0
   while (joursDaffilee < 28 && parJour[decaler(iso, -(joursDaffilee + 1))] > 0) joursDaffilee++
-  return { minutesSemaine: rolling7Mins(db, iso), chargeHier, chargeHabituelle, joursDaffilee, douleur: douleurDu(db, iso) }
+  return { minutesSemaine: rolling7Mins(db, iso), chargeHier, chargeHabituelle, joursDaffilee, douleur: douleurDu(db, iso), signaux: signauxCorps(db, iso) }
 }
 
+// `log` : un journal de sommeil pas encore enregistré (la nuit qu'on vient
+// de saisir), qui sert aussi au contexte (pouls au réveil).
 export function formeDb(db, iso, log) {
-  return formeDuJour(log || (db && db.sleepLog) || {}, iso, formeContexte(db, iso))
+  const base = log ? { ...(db || {}), sleepLog: log } : db
+  return formeDuJour((base && base.sleepLog) || {}, iso, formeContexte(base, iso))
 }
 
 export function formeSemaine(db, iso, n = 7) {
@@ -82,4 +121,31 @@ export function coucherDuSoir(db, iso) {
   const besoin = neededHours(rolling7Mins(db, iso))
   const dette = sleepDebt(sleepSeries(log, { days: 14, today: iso }), besoin)
   return coucherConseille(log, iso, { besoin, routine: db && db.sleepRoutine, dette: dette ? Math.max(0, dette.net) : 0 })
+}
+
+// ─── La séance du jour, réglée sur la forme ───
+// Alléger : un tiers de volume en moins, ramené au palier de durée du
+// calendrier le plus proche (plus court que la séance). Null si la séance
+// est déjà trop courte pour être allégée.
+const PALIERS = [[15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 h'], [90, '1 h 30'], [120, '2 h'], [150, '2 h 30'], [180, '3 h']]
+export function dureeAllegee(duree) {
+  const m = dureeToMins(duree)
+  if (!(m > 15)) return null
+  const cible = m * 2 / 3
+  const p = PALIERS.filter(([x]) => x < m).sort((a, b) => Math.abs(a[0] - cible) - Math.abs(b[0] - cible) || a[0] - b[0])[0]
+  return p ? p[1] : null
+}
+
+// Ce qu'on propose pour une séance prévue aujourd'hui : alléger en forme
+// moyenne, alléger ou décaler à demain en récupération. Rien en bonne forme.
+export function reglagesSeance(forme, seance) {
+  if (!forme || !seance || seance.statut !== 'planifie') return []
+  if (forme.niveau !== 'moyenne' && forme.niveau !== 'basse') return []
+  const out = []
+  // Déjà allégée : on ne réallège pas une séance à chaque passage.
+  const dejaAllegee = !!(seance.reglage && seance.reglage.type === 'alleger')
+  const allegee = dejaAllegee ? null : dureeAllegee(seance.duree)
+  if (allegee) out.push({ id: 'alleger', lab: `Alléger : ${seance.duree} → ${allegee}`, duree: allegee })
+  if (forme.niveau === 'basse') out.push({ id: 'decaler', lab: 'Décaler à demain', date: decaler(seance.date, 1) })
+  return out
 }

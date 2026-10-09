@@ -4,7 +4,7 @@ import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, isoToday, Aide } from './kit
 import { ENERGIES, SENSATIONS, libelleNuit, nuitsRecentes, nuitsManquantes, reveilDe, resumeReveil, resumeNuit, decaler } from './sommeilReveil'
 import { annoncer } from '../../annonces'
 import { FACTEURS, facteursDe, dureeDepuisHeures, libelleDuree, minutesDe, influences, regulariteHoraires } from './sommeilForme'
-import { formeDb, formeSemaine, coucherDuSoir } from './formeContexte'
+import { formeDb, formeSemaine, coucherDuSoir, normaleDuPouls } from './formeContexte'
 import { sleepAnalysis, BASE_NEED } from './sleepIntel'
 import { rolling7Mins } from '../train/renfoIntel'
 
@@ -167,6 +167,9 @@ function NightTab({ db, store, date, onDone }) {
   const [quality, setQuality] = useState(existing.quality || 0)
   const [energie, setEnergie] = useState(rv.energie)
   const [sensations, setSensations] = useState(rv.sensations)
+  const [pouls, setPouls] = useState(Number(existing.pouls) >= 30 && Number(existing.pouls) <= 120 ? String(existing.pouls) : '')
+  const poulsValide = /^\d{2,3}$/.test(pouls) && Number(pouls) >= 30 && Number(pouls) <= 120 ? Number(pouls) : null
+  const normalePouls = normaleDuPouls({ sleepLog: log }, date).normale
   const [step, setStep] = useState(0)
 
   const hLabel = libelleDuree(hours)
@@ -178,13 +181,13 @@ function NightTab({ db, store, date, onDone }) {
     // Les autres champs d'une nuit (source d'import, routine du moment…)
     // sont gardés : on complète la nuit, on ne la remplace pas.
     store.set({ sleepLog: { ...cur, [date]: { ...(cur[date] || {}), hours, quality: quality || null, awakenings: awakenings || 0,
-      reveil: { energie: energie || null, sensations }, facteurs,
+      reveil: { energie: energie || null, sensations }, facteurs, pouls: poulsValide,
       // Les heures ne sont gardées que si elles ont servi : une durée saisie
       // à la main ne doit pas cohabiter avec des heures qui la contredisent.
       coucher: mode === 'heures' ? coucher : null, lever: mode === 'heures' ? lever : null, endormissement: mode === 'heures' ? endormissement : null,
       routineBed: rt && rt.enabled ? rt.bedtime : null, routineWake: rt && rt.enabled ? rt.wake : null, savedAt: Date.now() } } })
     // La nuit du jour donne la forme du jour : on la dit tout de suite.
-    const forme = date === isoToday() ? formeDb(db, date, { ...cur, [date]: { hours, quality: quality || null, reveil: { energie: energie || null, sensations } } }) : null
+    const forme = date === isoToday() ? formeDb(db, date, { ...cur, [date]: { hours, quality: quality || null, reveil: { energie: energie || null, sensations }, pouls: poulsValide } }) : null
     annoncer(forme ? `Nuit enregistrée · forme du jour ${forme.score}/100 · ${forme.verdict.split(' :')[0].toLowerCase()}` : libelleNuit(date) + ' enregistrée')
     onDone()
   }
@@ -260,7 +263,17 @@ function NightTab({ db, store, date, onDone }) {
         const on = sensations.includes(x.id)
         return React.createElement('button', { key: x.id, onClick: () => basculer(x.id), 'aria-pressed': on, style: { padding: '8px 11px', fontSize: 13, fontWeight: on ? 700 : 600, cursor: 'pointer', border: `1.5px solid ${on ? (x.bon ? C.success : C.warn) : C.line}`, borderLeftWidth: on ? 4 : 1.5, background: C.surface, color: C.ink } }, on ? '✓ ' + x.lab : x.lab)
       })),
-    React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 12, textAlign: 'center' } }, 'Facultatif · plusieurs choix possibles'))
+    React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 12, textAlign: 'center' } }, 'Facultatif · plusieurs choix possibles'),
+    // Pouls au réveil : le signal le plus simple d'une récupération
+    // incomplète, à condition de le comparer à sa propre normale.
+    React.createElement('label', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 18, paddingTop: 14, borderTop: `1px solid ${C.line}`, fontSize: 13.5, color: C.ink2 } },
+      React.createElement('span', null, 'Pouls au réveil', React.createElement(Aide, { terme: 'pouls' })),
+      React.createElement('input', { type: 'text', inputMode: 'numeric', pattern: '[0-9]*', maxLength: 3, value: pouls, placeholder: '—', 'aria-label': 'Pouls au réveil, en battements par minute', onChange: (e) => setPouls(e.target.value.replace(/\D/g, '').slice(0, 3)), style: { width: 64, fontFamily: C.mono, fontSize: 18, fontWeight: 600, textAlign: 'center', padding: '6px 4px', color: C.ink } }),
+      React.createElement('span', { style: { fontFamily: C.mono, fontSize: 11, color: C.ink3 } }, 'bpm')),
+    React.createElement('div', { style: { fontSize: 11.5, color: (pouls && !poulsValide) || (poulsValide && normalePouls != null && poulsValide - normalePouls >= 7) ? C.warn : C.ink3, marginTop: 6, textAlign: 'center' } },
+      pouls && !poulsValide ? 'Entre 30 et 120 battements par minute.'
+        : normalePouls != null ? 'Ta normale : ' + Math.round(normalePouls) + ' bpm' + (poulsValide ? ' · ' + (poulsValide - Math.round(normalePouls) >= 0 ? '+' : '−') + Math.abs(poulsValide - Math.round(normalePouls)) + ' aujourd’hui' : '')
+          : 'Facultatif · allongé, avant de te lever'))
 
   // La veille : ce qui a pu jouer sur la nuit. Croisé sur plusieurs
   // semaines, c'est ce qui dit ce qui influence vraiment tes nuits.
@@ -451,6 +464,52 @@ function BlocHoraires({ log }) {
     r.decalage != null ? React.createElement(AnaRow, { label: React.createElement(React.Fragment, null, 'Décalage du week-end', React.createElement(Aide, { terme: 'decalage' })), value: Math.abs(r.decalage) < 15 ? 'aucun' : (r.decalage > 0 ? '+' : '−') + libelleDuree(Math.abs(r.decalage) / 60), color: Math.abs(r.decalage) >= 60 ? C.warn : C.ink, hint: r.texteDecalage }) : null)
 }
 
+// Le cœur sur quatre semaines : dernière mesure, normale, jours qui s'en
+// écartaient, et la courbe avec la normale en pointillé.
+function BlocCoeur({ db }) {
+  const iso = isoToday()
+  const log = db.sleepLog || {}, vit = db.vitalsLog || {}
+  const mesures = [
+    { id: 'pouls', lab: 'Pouls au réveil', unite: 'bpm', terme: 'pouls', lire: (d) => log[d] && log[d].pouls, lo: 30, hi: 120, haut: true },
+    { id: 'repos', lab: 'FC de repos (Santé)', unite: 'bpm', terme: 'pouls', lire: (d) => vit[d] && vit[d].restingHr, lo: 30, hi: 120, haut: true },
+    { id: 'vfc', lab: 'Variabilité cardiaque', unite: 'ms', terme: 'vfc', lire: (d) => vit[d] && vit[d].hrv, lo: 5, hi: 300, haut: false },
+  ]
+  const blocs = []
+  for (const m of mesures) {
+    const pts = []
+    for (let k = 27; k >= 0; k--) {
+      const d = decaler(iso, -k), x = Number(m.lire(d))
+      if (m.lire(d) != null && Number.isFinite(x) && x >= m.lo && x <= m.hi) pts.push({ k, x: Math.round(x) })
+    }
+    if (!pts.length) continue
+    const der = pts[pts.length - 1], avant = pts.slice(0, -1)
+    const normale = avant.length >= 5 ? avant.reduce((a, p) => a + p.x, 0) / avant.length : null
+    const ecart = (x) => (normale == null ? false : m.haut ? x - normale >= 7 : x / normale <= 0.85)
+    const horsNormale = normale == null ? 0 : pts.filter((p) => p.k < 14 && ecart(p.x)).length
+    const quand = der.k === 0 ? 'aujourd’hui' : der.k === 1 ? 'hier' : 'il y a ' + der.k + ' jours'
+    const hint = normale == null
+      ? `Dernière mesure : ${quand}. Ta normale se dessine après 5 mesures (encore ${5 - avant.length}).`
+      : `Dernière mesure : ${quand}. Normale : ${Math.round(normale)} ${m.unite} sur ${avant.length} mesures.`
+        + (horsNormale ? ` ${horsNormale} jour${horsNormale > 1 ? 's' : ''} ${m.haut ? 'à 7 battements ou plus au-dessus' : 'à 15 % ou plus sous'} ces deux dernières semaines.` : ' Aucun écart marqué ces deux dernières semaines.')
+    const W = 280, H = 34
+    const xs = pts.map((p) => p.x).concat(normale != null ? [normale] : [])
+    const lo = Math.min(...xs) - 2, hi = Math.max(...xs) + 2
+    const y = (v) => H - 3 - ((v - lo) / (hi - lo)) * (H - 6)
+    const x = (k) => ((27 - k) / 27) * W
+    blocs.push(React.createElement('div', { key: m.id },
+      React.createElement(AnaRow, { label: React.createElement(React.Fragment, null, m.lab, React.createElement(Aide, { terme: m.terme })), value: der.x + ' ' + m.unite, color: ecart(der.x) ? C.warn : C.ink, hint }),
+      pts.length >= 2 ? React.createElement('svg', { width: '100%', height: H, viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none', role: 'img', 'aria-label': m.lab + ' sur 4 semaines', style: { display: 'block', margin: '4px 0 6px' } },
+        normale != null ? React.createElement('line', { x1: 0, x2: W, y1: y(normale), y2: y(normale), style: { stroke: C.ink3, strokeWidth: 1, strokeDasharray: '3 3' } }) : null,
+        React.createElement('polyline', { points: pts.map((p) => x(p.k) + ',' + y(p.x)).join(' '), style: { fill: 'none', stroke: SLEEP_COL, strokeWidth: 1.5 } }),
+        pts.filter((p) => ecart(p.x)).map((p) => React.createElement('rect', { key: p.k, x: x(p.k) - 2.5, y: y(p.x) - 2.5, width: 5, height: 5, style: { fill: C.warn } }))) : null))
+  }
+  if (!blocs.length) return null
+  return React.createElement('div', { style: { padding: '14px 16px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}` } },
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 2 } }, 'Cœur au réveil (4 semaines)'),
+    blocs,
+    React.createElement('div', { style: { fontSize: 11, color: C.ink3, lineHeight: 1.45, marginTop: 4 } }, 'Pointillé : ta normale. Carré orange : jour nettement hors de ta normale, souvent une récupération incomplète.'))
+}
+
 // Ce qui pèse vraiment sur TES nuits : les facteurs de la veille croisés
 // avec la durée, l'énergie et la qualité sur 30 jours.
 function BlocInfluences({ log }) {
@@ -546,6 +605,7 @@ function HistoryTab({ db, store, onEdit }) {
         React.createElement('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', color: C.ink } }, avgQ != null ? String(Math.round(avgQ * 10) / 10).replace('.', ',') + ' / 5' : '—'))),
     React.createElement(AnalysisBlock, { ana }),
     React.createElement(BlocReveil, { log }),
+    React.createElement(BlocCoeur, { db }),
     React.createElement(BlocInfluences, { log }),
     React.createElement(BlocHoraires, { log }),
     React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, recent.length + ' dernière' + (recent.length > 1 ? 's' : '') + ' nuit' + (recent.length > 1 ? 's' : '')),

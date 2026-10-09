@@ -71,7 +71,9 @@ function sportEmoji(id) { return SPORT_EMOJI[id] || '🏋️' }
 function loadColor(load) { return load > 80 ? 'var(--c-danger)' : load > 50 ? 'var(--ch2)' : C.success }
 
 function SessionCard({ s, onOpen }) {
-  const meta = [s.heure, s.duree].filter(Boolean).join(' · ')
+  // Une séance réglée sur la forme du jour (Accueil) le dit, avec la note.
+  const reglage = s.reglage && s.reglage.type ? (s.reglage.type === 'decaler' ? 'décalée' : 'allégée, prévue ' + s.reglage.duree) + ' (forme ' + s.reglage.forme + ')' : null
+  const meta = [s.heure, s.duree, reglage].filter(Boolean).join(' · ')
   return React.createElement('button', { onClick: () => onOpen(s), style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: 12, borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, cursor: 'pointer', marginBottom: 8 } },
     React.createElement('div', { style: { width: 40, height: 40, borderRadius: 0, flex: '0 0 auto', background: 'transparent', border: `1px solid ${C.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19 } }, sportEmoji(s.sport)),
     React.createElement('div', { style: { flex: 1, minWidth: 0 } },

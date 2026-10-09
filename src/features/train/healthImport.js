@@ -131,6 +131,43 @@ export function mergeIntervals(list) {
   return out
 }
 
+// Heure locale d'un horodatage de l'export (« 2026-01-05 07:12:00 +0100 »
+// → « 07:12 ») : l'heure écrite est déjà l'heure locale du moment.
+export function heureOf(stamp) {
+  const m = /^\d{4}-\d{2}-\d{2}[ T](\d{2}:\d{2})/.exec(String(stamp || ''))
+  return m ? m[1] : null
+}
+
+// Le bloc principal d'une journée de sommeil : les segments séparés de
+// moins de deux heures forment un bloc, et le plus long est la nuit. Une
+// sieste rangée au même jour ne déplace ainsi ni le coucher ni le lever.
+export function blocPrincipal(list) {
+  const tri = (list || []).filter((x) => x && x.a != null && x.b != null && x.b > x.a).sort((x, y) => x.a - y.a)
+  const blocs = []
+  for (const it of tri) {
+    const der = blocs[blocs.length - 1]
+    if (der && it.a - der.b <= 2 * 3600000) { if (it.b > der.b) { der.b = it.b; der.hb = it.hb } }
+    else blocs.push({ ...it })
+  }
+  return blocs.sort((x, y) => (y.b - y.a) - (x.b - x.a))[0] || null
+}
+
+// Coucher, lever et temps pour s'endormir d'une nuit de l'export : le
+// coucher est l'entrée au lit quand elle est connue et précède le sommeil
+// de moins de deux heures, sinon le début du sommeil.
+export function horairesNuit(asleep, inBed) {
+  const dort = blocPrincipal(asleep)
+  const lit = blocPrincipal(inBed)
+  if (!dort) return lit && lit.ha && lit.hb ? { coucher: lit.ha, lever: lit.hb, endormissement: null } : null
+  if (!dort.ha || !dort.hb) return null
+  const avant = lit && lit.ha && lit.a <= dort.a && dort.a - lit.a <= 2 * 3600000
+  return {
+    coucher: avant ? lit.ha : dort.ha,
+    lever: dort.hb,
+    endormissement: avant ? Math.round((dort.a - lit.a) / 60000) : null,
+  }
+}
+
 export function totalHours(intervals) {
   const ms = mergeIntervals(intervals).reduce((a, i) => a + (i.b - i.a), 0)
   return Math.round(ms / 3600000 * 10) / 10
@@ -183,8 +220,9 @@ export function createHealthReader() {
       // note soi-même, et c'est ce qu'attend le journal de sommeil.
       const day = dayOf(r.end)
       if (a == null || b == null || !day) return
-      if (ASLEEP.test(r.value || '')) push(sleepAsleep, day, { a, b })
-      else if (IN_BED.test(r.value || '')) push(sleepInBed, day, { a, b })
+      const seg = { a, b, ha: heureOf(r.start), hb: heureOf(r.end) }
+      if (ASLEEP.test(r.value || '')) push(sleepAsleep, day, seg)
+      else if (IN_BED.test(r.value || '')) push(sleepInBed, day, seg)
       return
     }
     if (r.type === STEPS_TYPE) {
@@ -212,7 +250,7 @@ export function createHealthReader() {
     for (const d of days) {
       const asleep = sleepAsleep.get(d)
       const hours = asleep && asleep.length ? totalHours(asleep) : totalHours(sleepInBed.get(d) || [])
-      if (hours > 0) sleep[d] = { hours, fromInBed: !(asleep && asleep.length) }
+      if (hours > 0) sleep[d] = { hours, fromInBed: !(asleep && asleep.length), ...(horairesNuit(asleep, sleepInBed.get(d)) || {}) }
     }
     const avg = (m) => {
       const out = {}
@@ -292,10 +330,18 @@ export function toPatch(result, db, { now } = {}) {
   let sleepAdded = 0
   let sleepKept = 0
   let sleepFromBed = 0
+  let sleepTimes = 0
+  const horaires = (v) => (v.coucher && v.lever ? { coucher: v.coucher, lever: v.lever, endormissement: v.endormissement == null ? null : v.endormissement } : {})
   for (const [d, v] of Object.entries(result.sleep || {})) {
     const existing = prevSleep[d]
-    if (existing && num(existing.hours) != null) { sleepKept++; continue }
-    sleepLog[d] = { ...(existing || {}), hours: v.hours, source: 'sante' }
+    if (existing && num(existing.hours) != null) {
+      // Une nuit venue d'un import précédent, sans heures : on les ajoute.
+      // Une nuit notée à la main garde ses propres heures, ou leur absence.
+      if (existing.source === 'sante' && !existing.coucher && v.coucher && v.lever) { sleepLog[d] = { ...existing, ...horaires(v) }; sleepTimes++ }
+      sleepKept++
+      continue
+    }
+    sleepLog[d] = { ...(existing || {}), hours: v.hours, source: 'sante', ...horaires(v) }
     sleepAdded++
     if (v.fromInBed) sleepFromBed++
   }
@@ -342,7 +388,7 @@ export function toPatch(result, db, { now } = {}) {
   return {
     patch: { sleepLog, vitalsLog, planningSessions: sessions },
     summary: {
-      sleepAdded, sleepKept, sleepFromBed,
+      sleepAdded, sleepKept, sleepFromBed, sleepTimes,
       vitalsAdded,
       addedSessions, skippedSessions, unknownSport,
       records: result.seen,

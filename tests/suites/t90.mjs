@@ -28,4 +28,10 @@ const matin = rendu(9, avec)
 a(!/Ce soir : au lit/.test(matin), 'le matin : pas de rappel du coucher')
 const sansNuit = rendu(9, { sleepLog: {} })
 a(/Comment as-tu dormi \?/.test(sansNuit) && !/Forme du jour —/.test(sansNuit), 'nuit non saisie : rappel, pas de forme inventee')
+// Forme basse + seance prevue aujourd hui : l alleger ou la decaler d un geste
+const mauvaise = { sleepLog: { [J]: { hours: 4.5, quality: 1, reveil: { energie: 1, sensations: ['courbatures'] } } }, planningSessions: [{ id: 'auj', date: J, statut: 'planifie', sport: 'course', duree: '1 h' }] }
+const reg = rendu(9, mauvaise)
+a(/Alléger : 1 h → 45 min/.test(reg) && /Décaler à demain/.test(reg), 'forme basse : alleger ou decaler la seance du jour')
+const bonneNuit = rendu(9, { ...mauvaise, sleepLog: { [J]: { hours: 8.5, quality: 5, reveil: { energie: 5, sensations: [] } } } })
+a(!/Alléger :/.test(bonneNuit), 'bonne forme : rien a regler')
 console.log('\nALL PASS')

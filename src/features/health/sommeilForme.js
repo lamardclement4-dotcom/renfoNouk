@@ -154,7 +154,8 @@ export function regulariteHoraires(log, aujourdhui, jours = 14) {
 //
 // Le contexte (troisième argument) : un nombre = minutes d'entraînement
 // des 7 derniers jours (ancienne forme), ou un objet
-// { minutesSemaine, chargeHier, chargeHabituelle, joursDaffilee, douleur }
+// { minutesSemaine, chargeHier, chargeHabituelle, joursDaffilee, douleur,
+//   signaux: { pouls, vfc } }
 // que formeContexte (formeContexte.js) tire des données.
 const EFFET = { malade: -25, courbatures: -8, groggy: -5, tete: -5, stress: -5, repose: 4, motive: 4, humeur: 2 }
 const SENSATION = Object.fromEntries(SENSATIONS.map((x) => [x.id, x]))
@@ -221,6 +222,37 @@ export function formeDuJour(log, aujourdhui, contexte = 0) {
     ajustements.push({ id: 'douleur', lab: 'Douleur', pts: douleur.urgent ? -20 : douleur.jours >= 7 ? -10 : -6, texte: zone + depuis })
   }
 
+  // Signaux du cœur, comparés à TA normale (moyenne des 28 jours d'avant,
+  // dès cinq mesures) : un pouls au réveil qui monte de 7 battements, ou une
+  // variabilité cardiaque qui chute de 15 %, disent souvent une
+  // récupération incomplète ou un début de maladie avant les sensations.
+  const sig = ctx.signaux || {}
+  let coeurFatigue = false
+  const p = sig.pouls
+  if (p && p.valeur != null) {
+    const lab = p.source === 'sante' ? 'Fréquence cardiaque de repos' : 'Pouls au réveil'
+    if (p.normale == null) {
+      ajustements.push({ id: 'pouls', lab, pts: 0, texte: `${p.valeur} bpm · ta normale se dessine après 5 mesures${p.mesures ? ` (${p.mesures} pour l’instant)` : ''}` })
+    } else {
+      const d = Math.round(p.valeur - p.normale)
+      const pts = d >= 7 ? -8 : d >= 4 ? -4 : 0
+      if (d >= 7) coeurFatigue = true
+      ajustements.push({ id: 'pouls', lab, pts, texte: `${p.valeur} bpm, ${d > 0 ? d + ' au-dessus de' : d < 0 ? -d + ' sous' : 'égal à'} ta normale (${Math.round(p.normale)})` })
+    }
+  }
+  const v = sig.vfc
+  if (v && v.valeur != null) {
+    const lab = 'Variabilité cardiaque'
+    if (v.normale == null) {
+      ajustements.push({ id: 'vfc', lab, pts: 0, texte: `${v.valeur} ms · ta normale se dessine après 5 mesures${v.mesures ? ` (${v.mesures} pour l’instant)` : ''}` })
+    } else {
+      const r = v.valeur / v.normale, pct = Math.round((r - 1) * 100)
+      const pts = r <= 0.85 ? -8 : r <= 0.93 ? -4 : 0
+      if (r <= 0.85) coeurFatigue = true
+      ajustements.push({ id: 'vfc', lab, pts, texte: `${v.valeur} ms, ${pct < 0 ? -pct + ' % sous' : pct > 0 ? pct + ' % au-dessus de' : 'égale à'} ta normale (${Math.round(v.normale)} ms)` })
+    }
+  }
+
   const total = parts.reduce((a, x) => a + x.pts, 0) + ajustements.reduce((a, x) => a + x.pts, 0)
   const score = Math.max(0, Math.min(100, total))
   const malade = r.sensations.includes('malade')
@@ -234,6 +266,7 @@ export function formeDuJour(log, aujourdhui, contexte = 0) {
     verdict = 'Douleur à faire voir : pas de séance qui sollicite la zone.'
     consigne = 'Repos de la zone en attendant un avis professionnel. Le reste du corps peut bouger doucement.'
   }
+  if (coeurFatigue && !malade && !urgente && niveau.id !== 'basse') consigne += ' Ton cœur n’a pas fini de récupérer : pas d’intensité aujourd’hui.'
   if (douleur && !urgente && !malade) consigne += ` Ménage la zone douloureuse${douleur.region ? ' (' + douleur.region + ')' : ''} : rien qui réveille la douleur.`
 
   const details = [`${libelleDuree(h)} de sommeil pour un besoin de ${libelleDuree(besoin)}`]
