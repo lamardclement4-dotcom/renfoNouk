@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Construit le raccourci iOS « Renfo » (Apple Watch → Renfo) et le signe.
+"""Construit le raccourci iOS « Envoyer ma nuit » (Apple Watch → Renfo) et le signe.
+
+Renfo est un site, pas une app : le raccourci vit dans l'app Raccourcis
+d'Apple, sous un nom qui dit ce qu'il fait plutôt que « Renfo ».
 
 Le raccourci tient en trois actions, pour que la mise en place se résume à
 « installer, coller sa clé » :
@@ -25,7 +28,7 @@ Usage (macOS, depuis la racine du dépôt) :
   python3 outils/raccourci/construire_raccourci.py          # source XML
   python3 outils/raccourci/construire_raccourci.py --signer # + fichier signé
 La signature (« shortcuts sign --mode anyone ») passe par le compte iCloud
-du Mac. Le fichier signé est publié dans public/raccourci/Renfo.shortcut.
+du Mac. Le fichier signé est publié dans public/raccourci/.
 """
 
 import argparse
@@ -36,8 +39,8 @@ import uuid
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[2]
-SOURCE = Path(__file__).with_name("Renfo.plist")
-SIGNE = RACINE / "public" / "raccourci" / "Renfo.shortcut"
+SOURCE = Path(__file__).with_name("Envoyer-ma-nuit.plist")
+SIGNE = RACINE / "public" / "raccourci" / "Envoyer ma nuit.shortcut"
 ESPACE = uuid.UUID("5f0c8e1a-6a8e-4b7e-9d3f-2c1b0a9e8d7c")
 REMPLACEMENT = "￼"
 
@@ -96,7 +99,7 @@ def construire():
         # 0. Ce que fait le raccourci, lisible dans l'app Raccourcis.
         action(
             "is.workflow.actions.comment",
-            WFCommentActionText="Renfo : envoie ta dernière nuit (Apple Watch, via Santé) à Renfo. "
+            WFCommentActionText="Envoie ta dernière nuit (Apple Watch, via Santé) au site Renfo. "
             "Seuls les segments de sommeil sont lus. Lance-le chaque matin avec une automatisation "
             "« Quand mon réveil est arrêté ».",
         ),
@@ -153,7 +156,7 @@ def construire():
         ),
     ]
     return {
-        "WFWorkflowName": "Renfo",
+        "WFWorkflowName": "Envoyer ma nuit",
         "WFWorkflowActions": actions,
         "WFWorkflowClientVersion": "2700.0.4",
         "WFWorkflowClientRelease": "26A0000a",
@@ -168,7 +171,7 @@ def construire():
                 "Category": "Parameter",
                 "DefaultValue": "",
                 "ParameterKey": "WFTextActionText",
-                "Text": "Colle ta clé Renfo (Profil › Apple Watch › Créer ma clé)",
+                "Text": "Colle ta clé (site Renfo › Profil › Apple Watch › Créer ma clé)",
             }
         ],
         "WFWorkflowInputContentItemClasses": [],

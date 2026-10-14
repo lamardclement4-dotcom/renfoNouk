@@ -15,7 +15,7 @@ const COL = MODULE_TINTS.sommeil
 const URL_DEPOT = ((import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '').replace(/\/$/, '') + '/rest/v1/rpc/deposer_mesures_montre'
 const CLE_PUBLIQUE = (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || ''
 // Le raccourci tout prêt, signé, publié avec le site (outils/raccourci).
-const RACCOURCI = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'raccourci/Renfo.shortcut'
+const RACCOURCI = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'raccourci/' + encodeURIComponent('Envoyer ma nuit') + '.shortcut'
 
 
 function quand(iso) {
@@ -45,7 +45,7 @@ function AvecCopie({ lab, valeur, quoi }) {
 }
 
 const ETAPES_RACCOURCI = [
-  ['Ouvre l’app Raccourcis, touche « + » et nomme le raccourci « Renfo ».'],
+  ['Ouvre l’app Raccourcis, touche « + » et nomme le raccourci « Envoyer ma nuit ».'],
   ['Ajoute l’action « Rechercher des échantillons de santé ». Type : « Analyse du sommeil ». Filtre : « Date de début » est dans les derniers « 1 jour ». Tri : « Date de début », du plus ancien au plus récent. Sans limite.'],
   ['Ajoute « Répéter avec chaque élément ». À l’intérieur, ajoute « Texte » et compose une ligne :', 'sommeil;[Date de début];[Date de fin];[Valeur]', 'Chaque [ ] est la variable « Élément répété », dont tu choisis la propriété. Garde les points-virgules.'],
   ['Sous « Fin de la répétition », ajoute « Combiner le texte » : « Résultats répétés », séparateur « Nouvelle ligne ».'],
@@ -112,7 +112,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
   return React.createElement('div', null,
     React.createElement('button', { type: 'button', onClick: onRetour, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 0 10px', background: 'none', border: 'none', color: COL, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, '← ' + retour),
     React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } },
-      'Chaque matin, un raccourci de ton iPhone lit ta nuit dans Santé (durée, heures, phases) et l’envoie ici. Trois étapes, une seule fois.'),
+      'Chaque matin, un raccourci de l’app Raccourcis (celle d’Apple, déjà sur ton iPhone) lit ta nuit dans Santé (durée, heures, phases) et l’envoie ici. Rien à installer depuis l’App Store. Trois étapes, une seule fois.'),
 
     // État
     React.createElement('div', { style: { ...bloc, marginTop: 14, borderLeft: `3px solid ${etat.configuree ? C.success : etat.erreur ? C.warn : C.line}` } },
@@ -140,15 +140,15 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
 
       titre('2 · Installer le raccourci'),
       React.createElement('div', { style: bloc },
-        React.createElement('a', { href: RACCOURCI, target: '_blank', rel: 'noopener', style: { display: 'block', textAlign: 'center', padding: '11px 14px', background: COL, color: 'var(--c-on-fill)', fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', textDecoration: 'none' } }, 'Installer « Renfo »'),
+        React.createElement('a', { href: RACCOURCI, target: '_blank', rel: 'noopener', style: { display: 'block', textAlign: 'center', padding: '11px 14px', background: COL, color: 'var(--c-on-fill)', fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', textDecoration: 'none' } }, 'Installer le raccourci'),
         React.createElement('ol', { style: { margin: '10px 0 0', paddingLeft: 20, fontSize: 12.5, color: C.ink2, lineHeight: 1.55 } },
-          React.createElement('li', null, 'Safari télécharge « Renfo.shortcut » : ouvre-le (flèche ↓ des téléchargements).'),
-          React.createElement('li', null, 'Raccourcis s’ouvre : « Ajouter le raccourci », puis colle ta clé quand elle est demandée.'),
-          React.createElement('li', null, 'Lance « Renfo » une fois et autorise l’accès au sommeil dans Santé. En haut de cet écran, « Dernier dépôt » passe à maintenant.'))),
+          React.createElement('li', null, 'Safari télécharge « Envoyer ma nuit » : ouvre-le (flèche ↓ des téléchargements).'),
+          React.createElement('li', null, 'L’app Raccourcis s’ouvre : « Ajouter le raccourci », puis colle ta clé quand elle est demandée.'),
+          React.createElement('li', null, 'Dans Raccourcis, touche « Envoyer ma nuit » une fois et autorise l’accès au sommeil dans Santé. Ici, recharge la page : « Dernier dépôt » passe à maintenant.'))),
 
       titre('3 · Chaque matin, tout seul'),
       React.createElement('div', { style: { ...bloc, fontSize: 12.5, color: C.ink2, lineHeight: 1.55 } },
-        'Raccourcis › Automatisation › « + » › « Réveil » › « Quand mon réveil est arrêté » › « Exécuter immédiatement » › choisis « Renfo ». Ta nuit arrive pendant que tu te lèves.'),
+        'Raccourcis › Automatisation › « + » › « Réveil » › « Quand mon réveil est arrêté » › « Exécuter immédiatement » › choisis « Envoyer ma nuit ». Ta nuit arrive pendant que tu te lèves.'),
 
       // Le chemin d'avant, pour qui veut aussi la FC au repos et la VFC, ou
       // si l'installation ne passe pas.

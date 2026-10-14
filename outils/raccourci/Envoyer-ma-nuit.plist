@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>WFWorkflowName</key>
-	<string>Renfo</string>
+	<string>Envoyer ma nuit</string>
 	<key>WFWorkflowActions</key>
 	<array>
 		<dict>
@@ -12,7 +12,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>WFCommentActionText</key>
-				<string>Renfo : envoie ta dernière nuit (Apple Watch, via Santé) à Renfo. Seuls les segments de sommeil sont lus. Lance-le chaque matin avec une automatisation « Quand mon réveil est arrêté ».</string>
+				<string>Envoie ta dernière nuit (Apple Watch, via Santé) au site Renfo. Seuls les segments de sommeil sont lus. Lance-le chaque matin avec une automatisation « Quand mon réveil est arrêté ».</string>
 			</dict>
 		</dict>
 		<dict>
@@ -328,7 +328,7 @@
 			<key>ParameterKey</key>
 			<string>WFTextActionText</string>
 			<key>Text</key>
-			<string>Colle ta clé Renfo (Profil › Apple Watch › Créer ma clé)</string>
+			<string>Colle ta clé (site Renfo › Profil › Apple Watch › Créer ma clé)</string>
 		</dict>
 	</array>
 	<key>WFWorkflowInputContentItemClasses</key>
