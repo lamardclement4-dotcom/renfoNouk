@@ -16,7 +16,10 @@
 --     durée de nuit possible (« bandes »), et le serveur prend celle de la
 --     nuit reçue, mesurée ici sur les segments de sommeil ;
 --   - l'eau bue : lue en direct dans nutrition_logs du jour.
--- Chaque rappel n'est envoyé qu'une fois. Les heures sont celles de
+-- Chaque rappel n'est envoyé qu'une fois.
+--
+-- Corrige aussi la réponse en texte simple (domaine « text/plain », voir
+-- plus bas) : sans lui, le raccourci recevait une erreur 406. Les heures sont celles de
 -- l'iPhone : le site les écrit avec leur décalage horaire.
 -- ============================================================
 
@@ -226,6 +229,21 @@ revoke all on function instant_montre(text) from public;
 revoke all on function minutes_sommeil_montre(text[], text[], text[]) from public;
 revoke all on function rappels_du_moment(uuid, int) from public;
 
+-- Réponse en texte simple. Le raccourci demande « Accept: text/plain » pour
+-- afficher la réponse telle quelle dans sa notification. Depuis sa
+-- version 12, PostgREST ne sert ce type que pour une fonction qui renvoie
+-- un domaine nommé « text/plain » (« media type handler ») : avec un
+-- simple « text », il répond 406 avant même d'exécuter la fonction — et
+-- rien n'était déposé.
+do $$
+begin
+  if not exists (select 1 from pg_type t join pg_namespace n on n.oid = t.typnamespace
+                 where t.typname = 'text/plain' and n.nspname = 'public') then
+    create domain public."text/plain" as text;
+  end if;
+end;
+$$;
+
 -- deposer_nuit_montre (0007) : même envoi, réponse augmentée des rappels
 -- du moment, placés en tête ; l'accusé d'envoi devient une ligne courte.
 drop function if exists deposer_nuit_montre(text, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb);
@@ -233,7 +251,7 @@ create function deposer_nuit_montre(
   jeton text, debuts jsonb, fins jsonb, valeurs jsonb,
   fc_dates jsonb default null, fc jsonb default null,
   vfc_dates jsonb default null, vfc jsonb default null)
-returns text
+returns "text/plain"
 language plpgsql
 security definer
 set search_path = public, pg_temp

@@ -46,4 +46,5 @@ a(r.length <= 16 && JSON.stringify(r).length < 20000, 'au plus 16 rappels, taill
 const sql = readFileSync(new URL('../../supabase/migrations/0008_rappels_montre.sql', import.meta.url), 'utf8')
 a(/alter table rappels_montre enable row level security/.test(sql) && /revoke all on rappels_montre from anon/.test(sql) && /grant execute on function preparer_rappels_montre\(jsonb\) to authenticated/.test(sql) && /revoke all on function rappels_du_moment\(uuid, int\) from public/.test(sql), '0008 : RLS, preparation reservee a la session, calcul interne ferme')
 a(/jsonb_array_length\(lignes\) > 16/.test(sql) && /char_length\(texte\) between 1 and 600/.test(sql), '0008 : nombre et taille des rappels bornes')
+a(/create domain public\."text\/plain" as text/.test(sql) && /returns "text\/plain"/.test(sql), '0008 : reponse typee « text/plain » (sinon PostgREST 12 repond 406 au raccourci)')
 console.log('\nALL PASS')
