@@ -168,6 +168,28 @@ export function horairesNuit(asleep, inBed) {
   }
 }
 
+// Phase d'un segment de sommeil : « AsleepDeep » → profond, etc.
+export function phaseOf(value) {
+  const v = String(value || '')
+  if (/AsleepDeep/i.test(v)) return 'profond'
+  if (/AsleepREM/i.test(v)) return 'paradoxal'
+  if (/AsleepCore/i.test(v)) return 'leger'
+  if (/Awake/i.test(v)) return 'eveille'
+  return null
+}
+
+// Minutes par phase sur une nuit, segments fusionnés par phase (montre et
+// téléphone peuvent écrire la même nuit). Null sans phase mesurée.
+export function phasesNuit(par) {
+  if (!par || !(par.profond || par.paradoxal || par.leger)) return null
+  const out = { profond: null, paradoxal: null, leger: null, eveille: null }
+  for (const k of Object.keys(out)) {
+    if (!par[k]) continue
+    out[k] = Math.round(mergeIntervals(par[k]).reduce((a, i) => a + (i.b - i.a), 0) / 60000)
+  }
+  return out
+}
+
 export function totalHours(intervals) {
   const ms = mergeIntervals(intervals).reduce((a, i) => a + (i.b - i.a), 0)
   return Math.round(ms / 3600000 * 10) / 10
@@ -178,6 +200,7 @@ export function totalHours(intervals) {
 export function createHealthReader() {
   const sleepAsleep = new Map()   // jour de réveil -> intervalles
   const sleepInBed = new Map()
+  const sleepPhases = new Map()   // jour de réveil -> { profond: [], … }
   const steps = new Map()
   const restingHr = new Map()
   const hrv = new Map()
@@ -223,6 +246,13 @@ export function createHealthReader() {
       const seg = { a, b, ha: heureOf(r.start), hb: heureOf(r.end) }
       if (ASLEEP.test(r.value || '')) push(sleepAsleep, day, seg)
       else if (IN_BED.test(r.value || '')) push(sleepInBed, day, seg)
+      // Phases mesurées par la montre (Apple Watch depuis watchOS 9).
+      const phase = phaseOf(r.value)
+      if (phase) {
+        if (!sleepPhases.has(day)) sleepPhases.set(day, {})
+        const ph = sleepPhases.get(day)
+        ;(ph[phase] = ph[phase] || []).push(seg)
+      }
       return
     }
     if (r.type === STEPS_TYPE) {
@@ -250,7 +280,11 @@ export function createHealthReader() {
     for (const d of days) {
       const asleep = sleepAsleep.get(d)
       const hours = asleep && asleep.length ? totalHours(asleep) : totalHours(sleepInBed.get(d) || [])
-      if (hours > 0) sleep[d] = { hours, fromInBed: !(asleep && asleep.length), ...(horairesNuit(asleep, sleepInBed.get(d)) || {}) }
+      if (hours > 0) {
+        sleep[d] = { hours, fromInBed: !(asleep && asleep.length), ...(horairesNuit(asleep, sleepInBed.get(d)) || {}) }
+        const ph = phasesNuit(sleepPhases.get(d))
+        if (ph) sleep[d].phases = ph
+      }
     }
     const avg = (m) => {
       const out = {}
@@ -321,7 +355,7 @@ export function sameSession(existing, w) {
   return Math.abs(ma - mb) <= DUP_MINUTES
 }
 
-export function toPatch(result, db, { now } = {}) {
+export function toPatch(result, db, { now, source = 'sante' } = {}) {
   const prevSleep = (db && db.sleepLog) || {}
   const prevVitals = (db && db.vitalsLog) || {}
   const prevSessions = Array.isArray(db && db.planningSessions) ? db.planningSessions : []
@@ -331,17 +365,21 @@ export function toPatch(result, db, { now } = {}) {
   let sleepKept = 0
   let sleepFromBed = 0
   let sleepTimes = 0
-  const horaires = (v) => (v.coucher && v.lever ? { coucher: v.coucher, lever: v.lever, endormissement: v.endormissement == null ? null : v.endormissement } : {})
+  const horaires = (v) => ({
+    ...(v.coucher && v.lever ? { coucher: v.coucher, lever: v.lever, endormissement: v.endormissement == null ? null : v.endormissement } : {}),
+    ...(v.phases ? { phases: v.phases } : {}),
+  })
+  const importee = (e) => e.source === 'sante' || e.source === 'montre'
   for (const [d, v] of Object.entries(result.sleep || {})) {
     const existing = prevSleep[d]
     if (existing && num(existing.hours) != null) {
       // Une nuit venue d'un import précédent, sans heures : on les ajoute.
       // Une nuit notée à la main garde ses propres heures, ou leur absence.
-      if (existing.source === 'sante' && !existing.coucher && v.coucher && v.lever) { sleepLog[d] = { ...existing, ...horaires(v) }; sleepTimes++ }
+      if (importee(existing) && ((!existing.coucher && v.coucher && v.lever) || (!existing.phases && v.phases))) { sleepLog[d] = { ...existing, ...horaires(v) }; sleepTimes++ }
       sleepKept++
       continue
     }
-    sleepLog[d] = { ...(existing || {}), hours: v.hours, source: 'sante', ...horaires(v) }
+    sleepLog[d] = { ...(existing || {}), hours: v.hours, source, ...horaires(v) }
     sleepAdded++
     if (v.fromInBed) sleepFromBed++
   }

@@ -1,8 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, isoToday, Aide } from './kit'
 import { ENERGIES, SENSATIONS, libelleNuit, nuitsRecentes, nuitsManquantes, reveilDe, resumeReveil, resumeNuit, decaler } from './sommeilReveil'
 import { annoncer } from '../../annonces'
+import MontrePanneau from './MontrePanneau'
+import { montreReliee } from './montreDrapeau'
 import { imageTooLarge } from './fileGuard'
 import { lireCaptureSommeil, qualiteDuScore, lectureIncomplete, fusionnerCaptures } from './sommeilOcr'
 import { FACTEURS, facteursDe, dureeDepuisHeures, libelleDuree, minutesDe, influences, regulariteHoraires, chronotype } from './sommeilForme'
@@ -806,11 +808,26 @@ export default function SleepSpace({ userId, onClose }) {
   const [nuit, setNuit] = useState(isoToday())
   const editer = (iso) => { setNuit(iso); setExpress(false); setTab('night') }
   const [express, setExpress] = useState(false)
+  const [montre, setMontre] = useState(false)
+  // Montre reliée : la boîte de dépôt est relevée à l'ouverture.
+  useEffect(() => {
+    if (loading || !userId || !montreReliee(userId)) return
+    import('./montreSync').then((m) => m.releverEnFond(store)).catch(() => {})
+  }, [loading, userId]) // eslint-disable-line react-hooks/exhaustive-deps
   if (loading) {
     return React.createElement(FlowSpace, { bg: 'sante', title: 'Sommeil', onClose, tint: SLEEP_COL }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
   }
+  if (montre) {
+    return React.createElement(FlowSpace, { bg: 'sante', title: 'Apple Watch', onClose, tint: SLEEP_COL },
+      React.createElement(MontrePanneau, { userId, store, onRetour: () => setMontre(false) }))
+  }
+  const reliee = !!userId && montreReliee(userId)
   return React.createElement(FlowSpace, { bg: 'sante', title: 'Sommeil', onClose, tint: SLEEP_COL },
     React.createElement(SegTabs, { tint: SLEEP_COL, value: tab, onChange: setTab, tabs: [{ id: 'night', lab: 'Saisie' }, { id: 'routine', lab: 'Routine' }, { id: 'history', lab: 'Historique' }] }),
+    tab === 'night' && !express && React.createElement('button', { type: 'button', onClick: () => setMontre(true), style: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '8px 0', marginBottom: 10, background: 'none', border: 'none', borderBottom: `1px solid ${C.line}`, color: C.ink2, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' } },
+      React.createElement('span', { 'aria-hidden': true, style: { width: 8, height: 8, flex: '0 0 auto', background: reliee ? C.success : C.line } }),
+      React.createElement('span', { style: { flex: 1 } }, reliee ? 'Apple Watch reliée : ta nuit arrive chaque matin' : 'Relier mon Apple Watch : la nuit arrive toute seule'),
+      React.createElement('span', { style: { fontFamily: C.mono, color: C.ink3 } }, '→')),
     tab === 'night' && express && React.createElement(RattrapageExpress, { db, store, onFini: () => setExpress(false) }),
     tab === 'night' && !express && nuit === isoToday() && React.createElement(CarteForme, { db }),
     tab === 'night' && !express && React.createElement(ChoixNuit, { log: db.sleepLog || {}, date: nuit, onChange: setNuit, onExpress: () => setExpress(true) }),

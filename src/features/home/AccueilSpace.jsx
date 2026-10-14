@@ -1,9 +1,10 @@
-import React, { useState, lazy } from 'react'
+import React, { useState, useEffect, lazy } from 'react'
 import { C, Icon, Ring, MODULE_TINTS, isoToday, Aide } from '../health/kit'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
 import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import { formeDb, coucherDuSoir, reglagesSeance } from '../health/formeContexte'
+import { montreReliee } from '../health/montreDrapeau'
 import { libelleDuree } from '../health/sommeilForme'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
 import { neededHours } from '../health/sleepIntel'
@@ -290,6 +291,12 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil }) {
 // ============================================================
 export default function AccueilSpace({ userId, profile, onProfil }) {
   const { db, store, loading } = useNutritionStore(userId)
+  // Apple Watch reliée : la nuit déposée ce matin par le raccourci est
+  // relevée dès l'accueil, pour que la forme du jour en tienne compte.
+  useEffect(() => {
+    if (loading || !montreReliee(userId)) return
+    import('../health/montreSync').then((m) => m.releverEnFond(store)).catch(() => {})
+  }, [loading, userId]) // eslint-disable-line react-hooks/exhaustive-deps
   const [tile, setTile] = useState(null)
   const [openId, setOpenId] = useState(null)
   const [healthTile, setHealthTile] = useState(null)
