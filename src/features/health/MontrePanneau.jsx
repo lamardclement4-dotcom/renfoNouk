@@ -200,6 +200,20 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
         ] }),
         React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Pas de réveil ? Choisis plutôt « Heure de la journée », 8:00, « Quotidiennement ».')),
 
+      titre('Étape 5 · Plusieurs envois par jour (conseillé)'),
+      React.createElement('div', { style: bloc },
+        React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginBottom: 4 } },
+          'Le matin, la montre n’a parfois pas fini de verser ta nuit dans Santé, et ta FC au repos se calcule au fil de la journée. Deux envois de plus la complètent. Chaque envoi reprend les dernières 24 h : rien n’est compté deux fois, et ce que tu as corrigé à la main n’est jamais remplacé.'),
+        React.createElement(Liste, { items: [
+          'App Raccourcis › onglet « Automatisation » › « + » en haut à droite.',
+          'Choisis « Heure de la journée ».',
+          'Touche l’heure et règle 13:00. Sous « Répéter », garde « Quotidiennement ».',
+          'Coche « Exécuter immédiatement », puis touche « Suivant ».',
+          'Choisis « Envoyer ma nuit ».',
+          'Recommence les points 1 à 5 avec 20:00.',
+        ] }),
+        React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Chaque envoi affiche une notification « Renfo », sans son. Ce site range aussi ce qui est arrivé à chaque ouverture (au plus toutes les 10 minutes), ou quand tu touches « Relever maintenant ».')),
+
       React.createElement('details', { style: { marginTop: 14, fontSize: 12.5, color: C.ink2 } },
         React.createElement('summary', { style: { cursor: 'pointer', color: COL, fontWeight: 700 } }, 'Ça ne marche pas ?'),
         React.createElement('div', { style: { ...bloc, marginTop: 8 } },

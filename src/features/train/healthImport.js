@@ -296,8 +296,16 @@ export function createHealthReader() {
       for (const [d, list] of m) out[d] = Math.round(list.reduce((a, b) => a + b, 0))
       return out
     }
+    // Nombre de mesures par jour : un envoi plus tardif dans la journée, qui
+    // en compte autant ou plus, remplace la moyenne d'un envoi précédent.
+    const compte = (m) => {
+      const out = {}
+      for (const [d, list] of m) out[d] = list.length
+      return out
+    }
     return {
       sleep, steps: sum(steps), restingHr: avg(restingHr), hrv: avg(hrv),
+      restingHrN: compte(restingHr), hrvN: compte(hrv),
       workouts: workouts.sort((a, b) => a.date.localeCompare(b.date)),
       seen,
     }
@@ -369,12 +377,24 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
     ...(v.coucher && v.lever ? { coucher: v.coucher, lever: v.lever, endormissement: v.endormissement == null ? null : v.endormissement } : {}),
     ...(v.phases ? { phases: v.phases } : {}),
   })
-  const importee = (e) => e.source === 'sante' || e.source === 'montre'
+  // Une nuit importée et jamais corrigée à la main peut être complétée ou
+  // mise à jour par un import plus récent ; une nuit notée ou corrigée à la
+  // main, jamais.
+  const importee = (e) => (e.source === 'sante' || e.source === 'montre') && !e.corrigee
+  let sleepUpdated = 0
   for (const [d, v] of Object.entries(result.sleep || {})) {
     const existing = prevSleep[d]
     if (existing && num(existing.hours) != null) {
+      // Plusieurs envois par jour : le matin, la montre n'a parfois pas
+      // fini de verser la nuit dans Santé. Un envoi plus tardif qui compte
+      // plus de sommeil la remplace (heures, phases), sans toucher à ce
+      // que tu as ajouté (qualité, réveil, la veille).
+      if (importee(existing) && v.hours > num(existing.hours) + 0.05) {
+        sleepLog[d] = { ...existing, hours: v.hours, ...horaires(v) }
+        sleepUpdated++
+        continue
+      }
       // Une nuit venue d'un import précédent, sans heures : on les ajoute.
-      // Une nuit notée à la main garde ses propres heures, ou leur absence.
       if (importee(existing) && ((!existing.coucher && v.coucher && v.lever) || (!existing.phases && v.phases))) { sleepLog[d] = { ...existing, ...horaires(v) }; sleepTimes++ }
       sleepKept++
       continue
@@ -391,8 +411,19 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
     const entry = { ...(prevVitals[d] || {}) }
     let touched = false
     if (result.steps[d] != null && entry.steps == null) { entry.steps = result.steps[d]; touched = true }
-    if (result.restingHr[d] != null && entry.restingHr == null) { entry.restingHr = result.restingHr[d]; touched = true }
-    if (result.hrv[d] != null && entry.hrv == null) { entry.hrv = result.hrv[d]; touched = true }
+    // FC et VFC : remplies si absentes, ou remplacées par un envoi qui en
+    // compte autant ou plus pour ce jour-là (la VFC de la nuit s'affine
+    // d'un envoi à l'autre ; un envoi du soir, qui ne voit que la fin de la
+    // veille, ne remplace pas la moyenne complète du matin).
+    const plusComplet = (cle, n) => entry[cle] == null || (entry[cle + 'N'] != null && n != null && n >= entry[cle + 'N'])
+    for (const cle of ['restingHr', 'hrv']) {
+      const val = result[cle] && result[cle][d], n = result[cle + 'N'] && result[cle + 'N'][d]
+      if (val == null || !plusComplet(cle, n)) continue
+      if (entry[cle] === val && entry[cle + 'N'] === n) continue
+      entry[cle] = val
+      if (n != null) entry[cle + 'N'] = n
+      touched = true
+    }
     if (touched) { vitalsLog[d] = entry; vitalsAdded++ }
   }
 
@@ -426,7 +457,7 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
   return {
     patch: { sleepLog, vitalsLog, planningSessions: sessions },
     summary: {
-      sleepAdded, sleepKept, sleepFromBed, sleepTimes,
+      sleepAdded, sleepKept, sleepFromBed, sleepTimes, sleepUpdated,
       vitalsAdded,
       addedSessions, skippedSessions, unknownSport,
       records: result.seen,

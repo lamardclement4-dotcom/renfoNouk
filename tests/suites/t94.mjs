@@ -66,6 +66,25 @@ const complete = toPatch(r, { sleepLog: { '2026-10-15': { hours: 7.3, source: 's
 a(complete.patch.sleepLog['2026-10-15'].phases && complete.summary.sleepTimes === 1, 'une nuit importee sans phases est completee')
 a(resumeReleve(summary) === 'Montre : 1 nuit ajoutée, FC et VFC de 2 jours' && resumeReleve({}) === null, 'releve dit en une phrase : ' + resumeReleve(summary))
 
+// ─── Plusieurs envois par jour ───
+const matin = lireDepot('sommeil;2026-10-14T23:10:00+02:00;2026-10-15T04:10:00+02:00;Principal\nvfc;2026-10-15T02:00:00+02:00;40\nvfc;2026-10-15T03:00:00+02:00;50\n')
+const j1 = toPatch(matin, { sleepLog: {}, planningSessions: [] }, { source: 'montre' }).patch
+a(j1.sleepLog['2026-10-15'].hours === 5 && j1.vitalsLog['2026-10-15'].hrv === 45 && j1.vitalsLog['2026-10-15'].hrvN === 2, 'envoi de 7 h : nuit incomplete (5 h), VFC sur 2 mesures')
+const midi = lireDepot('sommeil;2026-10-14T23:10:00+02:00;2026-10-15T04:10:00+02:00;Principal\nsommeil;2026-10-15T04:10:00+02:00;2026-10-15T06:40:00+02:00;Profond\nvfc;2026-10-15T02:00:00+02:00;40\nvfc;2026-10-15T03:00:00+02:00;50\nvfc;2026-10-15T05:00:00+02:00;60\n')
+const deux = toPatch(midi, { sleepLog: { '2026-10-15': { ...j1.sleepLog['2026-10-15'], quality: 4 } }, vitalsLog: j1.vitalsLog, planningSessions: [] }, { source: 'montre' })
+a(deux.summary.sleepUpdated === 1 && deux.patch.sleepLog['2026-10-15'].hours === 7.5 && deux.patch.sleepLog['2026-10-15'].quality === 4 && deux.patch.sleepLog['2026-10-15'].phases.profond === 150, 'envoi de 13 h : la nuit complete remplace la partielle, la qualite notee reste')
+a(deux.patch.vitalsLog['2026-10-15'].hrv === 50 && deux.patch.vitalsLog['2026-10-15'].hrvN === 3, 'VFC sur 3 mesures remplace celle sur 2')
+const soir = lireDepot('vfc;2026-10-15T23:00:00+02:00;80\n')
+const trois = toPatch(soir, { sleepLog: deux.patch.sleepLog, vitalsLog: { '2026-10-15': { hrv: 50, hrvN: 3 } }, planningSessions: [] }, { source: 'montre' })
+a(trois.patch.vitalsLog['2026-10-15'].hrv === 50, 'envoi du soir avec moins de mesures : la moyenne complete reste')
+const corrigee = toPatch(midi, { sleepLog: { '2026-10-15': { hours: 6, source: 'montre', corrigee: true } }, planningSessions: [] }, { source: 'montre' })
+a(corrigee.patch.sleepLog['2026-10-15'].hours === 6 && corrigee.summary.sleepUpdated === 0, 'nuit corrigee a la main : jamais remplacee')
+const manuelle = toPatch(midi, { sleepLog: { '2026-10-15': { hours: 6 } }, planningSessions: [] }, { source: 'montre' })
+a(manuelle.patch.sleepLog['2026-10-15'].hours === 6, 'nuit notee a la main : jamais remplacee')
+a(resumeReleve(deux.summary) === 'Montre : 1 nuit mise à jour, FC et VFC de 1 jour', 'releve dit la mise a jour : ' + resumeReleve(deux.summary))
+const sleepSrc = readFileSync(new URL('../../src/features/health/Sleep.jsx', import.meta.url), 'utf8')
+a(/existing\.source && \(dureeChangee \|\| mode === 'heures'\) \? \{ corrigee: true \}/.test(sleepSrc) && /existing\.coucher && existing\.lever && !mesuree \? 'heures' : 'duree'/.test(sleepSrc), 'une nuit importee n est figee que si sa duree ou ses heures sont changees ; elle s ouvre sur sa duree mesuree')
+
 // L export Sante XML gagne aussi les phases
 const xml = readHealthText(`<Record type="${SLEEP_TYPE}" value="HKCategoryValueSleepAnalysisAsleepDeep" startDate="2026-01-05 01:00:00 +0100" endDate="2026-01-05 02:00:00 +0100"/>
 <Record type="${SLEEP_TYPE}" value="HKCategoryValueSleepAnalysisAsleepCore" startDate="2026-01-05 02:00:00 +0100" endDate="2026-01-05 06:00:00 +0100"/>

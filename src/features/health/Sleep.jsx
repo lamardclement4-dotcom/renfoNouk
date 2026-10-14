@@ -241,7 +241,11 @@ function NightTab({ db, store, date, onDone }) {
   // celles de la routine, sinon celles de la dernière nuit qui en avait.
   const derniere = Object.keys(log).filter((d) => d < date && log[d] && log[d].coucher && log[d].lever).sort().pop()
   const rt = db.sleepRoutine && db.sleepRoutine.enabled ? db.sleepRoutine : null
-  const [mode, setMode] = useState(existing.coucher && existing.lever ? 'heures' : 'duree')
+  // Une nuit mesurée (montre, Santé, capture) s'ouvre sur sa durée : la
+  // recalculer depuis ses heures avec un temps d'endormissement supposé
+  // remplacerait la mesure par une estimation.
+  const mesuree = !!(existing.source || existing.capture)
+  const [mode, setMode] = useState(existing.coucher && existing.lever && !mesuree ? 'heures' : 'duree')
   const [coucher, setCoucher] = useState(existing.coucher || (rt && rt.bedtime) || (derniere && log[derniere].coucher) || '23:00')
   const [lever, setLever] = useState(existing.lever || (rt && rt.wake) || (derniere && log[derniere].lever) || '07:00')
   const [endormissement, setEndormissement] = useState(Number(existing.endormissement) >= 0 && existing.endormissement != null ? Number(existing.endormissement) : 15)
@@ -284,13 +288,21 @@ function NightTab({ db, store, date, onDone }) {
     // Celles d'une capture accompagnent sa durée : l'écart entre les deux,
     // c'est le temps passé éveillé, que l'application a mesuré.
     const heuresCapture = mode === 'duree' && capture && capture.heures != null && capture.coucher && capture.lever
+    const dureeChangee = Math.abs(hours - Number(existing.hours || 0)) > 0.01
+    const gardeHeures = mode === 'duree' && !capture && mesuree && !dureeChangee
     const phases = capture && Object.values(capture.phases).some((v) => v != null) ? capture.phases : null
     const nuit = { ...(cur[date] || {}), hours, quality: quality || null, awakenings: awakenings || 0,
       reveil: { energie: energie || null, sensations }, facteurs, pouls: poulsValide,
-      coucher: mode === 'heures' ? coucher : heuresCapture ? capture.coucher : null,
-      lever: mode === 'heures' ? lever : heuresCapture ? capture.lever : null,
-      endormissement: mode === 'heures' ? endormissement : null,
-      routineBed: rt && rt.enabled ? rt.bedtime : null, routineWake: rt && rt.enabled ? rt.wake : null, savedAt: Date.now() }
+      // Une nuit mesurée garde ses heures tant que la durée n'est pas
+      // changée ici.
+      coucher: mode === 'heures' ? coucher : heuresCapture ? capture.coucher : gardeHeures ? existing.coucher || null : null,
+      lever: mode === 'heures' ? lever : heuresCapture ? capture.lever : gardeHeures ? existing.lever || null : null,
+      endormissement: mode === 'heures' ? endormissement : gardeHeures ? (existing.endormissement == null ? null : existing.endormissement) : null,
+      routineBed: rt && rt.enabled ? rt.bedtime : null, routineWake: rt && rt.enabled ? rt.wake : null, savedAt: Date.now(),
+      // Une nuit importée dont la durée ou les heures sont changées ici
+      // n'est plus remplacée par les envois suivants de la montre. Y
+      // ajouter seulement son ressenti ne la fige pas.
+      ...(existing.source && (dureeChangee || mode === 'heures') ? { corrigee: true } : {}) }
     if (capture) Object.assign(nuit, { capture: true, ...(phases ? { phases } : {}), ...(capture.score != null ? { scoreApp: capture.score } : {}), ...(capture.lit != null ? { litMinutes: capture.lit } : {}) })
     store.set((sx) => {
       const patch = { sleepLog: { ...((sx && sx.sleepLog) || cur), [date]: nuit } }

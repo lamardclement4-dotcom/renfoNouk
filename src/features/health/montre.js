@@ -134,6 +134,7 @@ export function resumeReleve(summary) {
   const morceaux = []
   if (summary.sleepAdded) morceaux.push(summary.sleepAdded + ' nuit' + (summary.sleepAdded > 1 ? 's' : '') + ' ajoutée' + (summary.sleepAdded > 1 ? 's' : ''))
   if (summary.sleepTimes) morceaux.push(summary.sleepTimes + ' complétée' + (summary.sleepTimes > 1 ? 's' : ''))
+  if (summary.sleepUpdated) morceaux.push(summary.sleepUpdated + ' nuit' + (summary.sleepUpdated > 1 ? 's' : '') + ' mise' + (summary.sleepUpdated > 1 ? 's' : '') + ' à jour')
   if (summary.vitalsAdded) morceaux.push('FC et VFC de ' + summary.vitalsAdded + ' jour' + (summary.vitalsAdded > 1 ? 's' : ''))
   return morceaux.length ? 'Montre : ' + morceaux.join(', ') : null
 }
