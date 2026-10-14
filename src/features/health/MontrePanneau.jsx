@@ -239,7 +239,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
           React.createElement(Liste, { items: [
             'Notification « clé refusée » ou « clé absente » : refais l’étape 1 (« Remplacer ma clé »), supprime « Envoyer ma nuit » dans Raccourcis (appui long › Supprimer), puis refais l’étape 2.',
             'Notification « aucune donnée trouvée » ou « aucune nuit trouvée » : ta montre n’a rien enregistré sur les dernières 24 h. Vérifie dans l’app Santé › Sommeil, porte la montre la nuit (suivi du sommeil activé), puis relance le raccourci.',
-            'Notification en anglais « Could not find the function… » : le serveur de Renfo n’est pas encore à jour (migrations 0006 et 0007 à appliquer par l’administrateur).',
+            'Notification « Le serveur de Renfo n’a pas pu recevoir ta nuit » : le serveur n’est pas encore à jour (migrations 0005 à 0008 dans Supabase, à appliquer par l’administrateur). Un message en anglais vient d’une ancienne version du raccourci : réinstalle-le (étape 2).',
             'Aucune notification : Réglages › Notifications › Raccourcis › active « Autoriser les notifications ». L’envoi a peut-être quand même eu lieu : recharge cette page.',
             'Santé refusé par erreur, ou une mesure manque : Réglages › Santé › Accès aux données et appareils › Raccourcis › active Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque, Fréquence respiratoire et Minutes d’exercice.',
             'Le téléchargement rouvre ce site au lieu du fichier : recharge la page une fois, puis réessaie l’étape 2.',

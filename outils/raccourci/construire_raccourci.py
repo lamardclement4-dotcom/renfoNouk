@@ -175,6 +175,32 @@ def construire():
             champ("fins", liste("sommeil", "End Date")),
             champ("valeurs", liste("sommeil", "Value")),
         ]),
+        # Notification toujours en français : la réponse de Renfo l'est ;
+        # une erreur technique du serveur (JSON en anglais, avec « "code" »)
+        # est remplacée par une phrase claire.
+        action(
+            "is.workflow.actions.comment",
+            WFCommentActionText="Si le serveur répond par une erreur technique (en anglais), afficher un message en français.",
+        ),
+        action(
+            "is.workflow.actions.conditional",
+            GroupingIdentifier=uid("si-erreur"),
+            WFControlFlowMode=0,
+            WFCondition=99,
+            WFConditionalActionString='"code"',
+            WFInput={"Type": "Variable", "Variable": {"Value": sortie("envoi", "Contents of URL"), "WFSerializationType": "WFTextTokenAttachment"}},
+        ),
+        action(
+            "is.workflow.actions.notification",
+            UUID=uid("notification-erreur"),
+            WFNotificationActionTitle=texte("Renfo"),
+            WFNotificationActionBody=texte(
+                "Le serveur de Renfo n’a pas pu recevoir ta nuit : il n’est peut-être pas encore à jour. "
+                "Réessaie plus tard ; si ça dure, ouvre le site Renfo › Profil › Apple Watch › « Ça ne marche pas ? »."
+            ),
+            WFNotificationActionSound=False,
+        ),
+        action("is.workflow.actions.conditional", GroupingIdentifier=uid("si-erreur"), WFControlFlowMode=1),
         action(
             "is.workflow.actions.notification",
             UUID=uid("notification"),
@@ -182,6 +208,7 @@ def construire():
             WFNotificationActionBody=texte(sortie("envoi", "Contents of URL")),
             WFNotificationActionSound=False,
         ),
+        action("is.workflow.actions.conditional", GroupingIdentifier=uid("si-erreur"), WFControlFlowMode=2),
         # 5–9. Les signaux, en silence : FC au repos (deux jours, la valeur
         # du jour se calcule en journée), VFC et respiration de la nuit,
         # minutes d'exercice (deux jours : la veille entière).
