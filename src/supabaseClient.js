@@ -74,7 +74,8 @@ export function creerClient(url, cle, options = {}) {
     return reseau(entree, { ...init, headers: entetes })
   }
   const rest = new PostgrestClient(new URL('rest/v1', base).href, { headers: {}, schema: 'public', fetch: fetchAvecJeton })
-  return { auth, from: (table) => rest.from(table) }
+  // rpc : appel d'une fonction du serveur (rappels de la montre).
+  return { auth, from: (table) => rest.from(table), rpc: (fn, args) => rest.rpc(fn, args) }
 }
 
 // Session gardée sur l'appareil, lue sans réseau. Hors ligne, le jeton

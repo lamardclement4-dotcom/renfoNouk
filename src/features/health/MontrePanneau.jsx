@@ -187,7 +187,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
           'Écran « Accès à Santé » : touche « Tout activer » (Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque), puis « Autoriser ».',
           'Message « Autoriser “Envoyer ma nuit” à envoyer des éléments à ' + HOTE + ' ? » : touche « Toujours autoriser ».',
           'Si l’iPhone demande d’autoriser les notifications de Raccourcis : « Autoriser ».',
-          'Une notification « Renfo » s’affiche : « Envoyé à Renfo : ta nuit (… segments), ta FC au repos, ta VFC. » Si elle dit autre chose, suis ce qu’elle indique (voir aussi « Ça ne marche pas ? » plus bas).',
+          'Une notification « Renfo » s’affiche et se termine par « Données envoyées : nuit, FC au repos, VFC. » Si elle dit autre chose, suis ce qu’elle indique (voir aussi « Ça ne marche pas ? » plus bas).',
           'Reviens sur ce site et recharge la page : en haut, « Dernier dépôt » indique l’heure de l’envoi. Touche « Relever maintenant » pour voir ta nuit dans Sommeil.',
         ] })),
 
@@ -202,6 +202,16 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
         ] }),
         React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Pas de réveil ? Choisis plutôt « Heure de la journée », 8:00, « Quotidiennement ».'),
         React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Tu ne vois pas « Réveil » ni « Heure de la journée » ? Fais défiler la liste, ou tape « heure » dans la barre de recherche en haut de la liste. Sur iOS 16 : « Créer une automatisation personnelle » d’abord. Toujours rien : utilise le bouton « Envoyer maintenant depuis la montre » en haut de cet écran, il marche sans automatisation.')),
+
+      titre('Tes rappels dans ces notifications'),
+      React.createElement('div', { style: { ...bloc, fontSize: 12.5, color: C.ink2, lineHeight: 1.55 } },
+        React.createElement('div', { style: { marginBottom: 6 } }, 'Chaque envoi rapporte aussi le rappel du moment, préparé par ce site à chaque fois que tu l’ouvres :'),
+        React.createElement(Liste, { items: [
+          'Au réveil : ta forme du jour, calculée sur la nuit qui vient d’arriver (« Forme du jour : 64/100. Forme correcte : séance normale. »).',
+          'À 13 h : ta séance prévue avec ta forme (« Séance du jour : Course à pied à 18:30, 1 h. Forme 64 : séance normale. »), et l’eau bue face à ta cible (« Eau : 0,8 L sur 2,5 L. Il reste 1,7 L. »).',
+          'À 20 h : l’heure du coucher conseillée (« Ce soir : au lit vers 22:30 pour dormir 8 h. »).',
+        ] }),
+        React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Ouvre ce site au moins une fois par jour : c’est là que les rappels du lendemain se préparent. Chaque rappel n’arrive qu’une fois. Ton eau est lue au moment de l’envoi : note ce que tu bois dans Renfo › Santé › Hydratation.')),
 
       titre('Étape 5 · Plusieurs envois par jour (conseillé)'),
       React.createElement('div', { style: bloc },

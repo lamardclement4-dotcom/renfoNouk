@@ -18,6 +18,7 @@ a(/Étape 1 · Créer ta clé/.test(t) && /Étape 2 · Installer le raccourci/.t
 a(/« Télécharger »/.test(t) && /Fichiers › Téléchargements/.test(t) && /« Coller »/.test(t) && /« Toujours autoriser »/.test(t) && /« Exécuter immédiatement »/.test(t) && /« Autoriser »/.test(t), 'chaque bouton a toucher est nomme')
 a(/ta fréquence cardiaque au repos et ta variabilité cardiaque/.test(t) && /« Tout activer »/.test(t), 'FC au repos et VFC annoncees, autorisation Sante complete')
 a(/Étape 5 · Plusieurs envois par jour/.test(t) && /« Heure de la journée »/.test(t) && /13:00/.test(t) && /20:00/.test(t) && /rien n’est compté deux fois/.test(t), 'plusieurs envois par jour : etapes et garanties')
+a(/Tes rappels dans ces notifications/.test(t) && /Au réveil : ta forme du jour/.test(t) && /Ce soir : au lit vers/.test(t) && /Eau : 0,8 L sur 2,5 L/.test(t), 'rappels expliques avec exemples')
 a(/Ça ne marche pas \?/.test(t) && /clé refusée/.test(t) && /aucune nuit trouvée/.test(t) && /Réglages › Santé/.test(t), 'depannage : chaque message du serveur a sa marche a suivre')
 const lien = trouver(arbre, (n) => n.type === 'a')
 a(lien && /raccourci\/Envoyer%20ma%20nuit\.shortcut$/.test(lien.props.href) && lien.props.target === '_blank', 'bouton « Installer » vers le raccourci signe publie avec le site')

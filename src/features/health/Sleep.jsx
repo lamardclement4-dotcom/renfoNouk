@@ -824,7 +824,7 @@ export default function SleepSpace({ userId, onClose }) {
   // Montre reliée : la boîte de dépôt est relevée à l'ouverture.
   useEffect(() => {
     if (loading || !userId || !montreReliee(userId)) return
-    import('./montreSync').then((m) => m.releverEnFond(store)).catch(() => {})
+    import('./montreSync').then((m) => m.releverEnFond(store, db)).catch(() => {})
   }, [loading, userId]) // eslint-disable-line react-hooks/exhaustive-deps
   if (loading) {
     return React.createElement(FlowSpace, { bg: 'sante', title: 'Sommeil', onClose, tint: SLEEP_COL }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))

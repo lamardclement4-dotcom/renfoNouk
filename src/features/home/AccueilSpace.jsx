@@ -297,7 +297,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     if (loading || !montreReliee(userId)) return
     // Retour du raccourci lancé depuis le site : relevé immédiat, annoncé.
     const retour = retourDeMontre()
-    import('../health/montreSync').then((m) => (retour ? m.releverMontre(store, { force: true }) : m.releverEnFond(store))).catch(() => {})
+    import('../health/montreSync').then((m) => (retour ? m.releverMontre(store, { force: true }).finally(() => m.preparerRappels(db, { force: true })) : m.releverEnFond(store, db))).catch(() => {})
   }, [loading, userId]) // eslint-disable-line react-hooks/exhaustive-deps
   const [tile, setTile] = useState(null)
   const [openId, setOpenId] = useState(null)
