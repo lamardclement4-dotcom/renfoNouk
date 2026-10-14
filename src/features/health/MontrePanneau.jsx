@@ -121,12 +121,12 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
   return React.createElement('div', null,
     React.createElement('button', { type: 'button', onClick: onRetour, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 0 10px', background: 'none', border: 'none', color: COL, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, '← ' + retour),
     React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } },
-      'Chaque matin, un raccourci de l’app Raccourcis (celle d’Apple, déjà sur ton iPhone) lit ta nuit dans Santé (durée, heures, phases) et l’envoie à ce site. Rien à installer depuis l’App Store. Quatre étapes, une seule fois.'),
+      'Chaque matin, un raccourci de l’app Raccourcis (celle d’Apple, déjà sur ton iPhone) lit dans Santé ta nuit (durée, heures, phases), ta fréquence cardiaque au repos et ta variabilité cardiaque, et les envoie à ce site — elles comptent dans ta forme du jour. Rien à installer depuis l’App Store. Quatre étapes, une seule fois.'),
 
     // État
     React.createElement('div', { style: { ...bloc, marginTop: 14, borderLeft: `3px solid ${etat.configuree ? C.success : etat.erreur ? C.warn : C.line}` } },
       etat.chargement ? React.createElement('div', { style: { fontSize: 13, color: C.ink3 } }, 'Vérification…')
-        : etat.erreur === 'migration' ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Le serveur n’est pas encore prêt : les migrations « 0005_montre.sql » et « 0006_montre_raccourci_simple.sql » doivent être appliquées dans Supabase (éditeur SQL), une seule fois.')
+        : etat.erreur === 'migration' ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Le serveur n’est pas encore prêt : les migrations 0005, 0006 et 0007 (dossier supabase/migrations) doivent être appliquées dans Supabase (éditeur SQL), une seule fois.')
           : etat.erreur ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Serveur injoignable pour l’instant. Réessaie avec du réseau.')
             : React.createElement('div', null,
               React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink } }, etat.configuree ? 'Clé active' : 'Pas encore reliée'),
@@ -139,6 +139,17 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
       React.createElement('div', { style: { ...bloc, marginTop: 14, fontSize: 12.5, color: C.ink2, lineHeight: 1.55, borderLeft: `3px solid ${COL}` } },
         React.createElement('strong', { style: { color: C.ink } }, 'Avant de commencer : '),
         'fais tout sur ton iPhone, avec ce site ouvert dans Safari. Compte 5 minutes. Il te faut une Apple Watch qui enregistre ton sommeil (app Santé › Sommeil).'),
+
+      etat.configuree ? React.createElement('details', { style: { marginTop: 10, fontSize: 12.5, color: C.ink2 } },
+        React.createElement('summary', { style: { cursor: 'pointer', color: COL, fontWeight: 700 } }, 'Tu as déjà installé « Envoyer ma nuit » ? Mettre à jour'),
+        React.createElement('div', { style: { ...bloc, marginTop: 8 } },
+          React.createElement(Liste, { items: [
+            'La nouvelle version envoie aussi ta FC au repos et ta VFC. Ta clé ne s’affiche plus : il en faut une nouvelle.',
+            'Étape 1 ci-dessous : touche « Remplacer ma clé », puis « Oui, remplacer ma clé ». La nouvelle clé est copiée.',
+            'Étape 2 : installe le raccourci. Si Raccourcis propose « Remplacer » ou « Garder les deux », choisis « Remplacer ». Colle la nouvelle clé.',
+            'Étape 3 : lance-le une fois et touche « Tout activer » sur l’écran Santé.',
+            'Vérifie l’automatisation : app Raccourcis › onglet « Automatisation » › touche ton automatisation du réveil. Elle doit lancer « Envoyer ma nuit » ; sinon, touche l’action et choisis-le à nouveau.',
+          ] }))) : null,
 
       titre('Étape 1 · Créer ta clé (ici)'),
       React.createElement('div', { style: bloc },
@@ -171,10 +182,10 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
       React.createElement('div', { style: bloc },
         React.createElement(Liste, { items: [
           'Dans l’app Raccourcis, onglet « Raccourcis » en bas, touche la tuile « Envoyer ma nuit ».',
-          'Écran « Accès à Santé » : active « Sommeil » (ou « Tout activer »), puis touche « Autoriser ».',
+          'Écran « Accès à Santé » : touche « Tout activer » (Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque), puis « Autoriser ».',
           'Message « Autoriser “Envoyer ma nuit” à envoyer des éléments à ' + HOTE + ' ? » : touche « Toujours autoriser ».',
           'Si l’iPhone demande d’autoriser les notifications de Raccourcis : « Autoriser ».',
-          'Une notification « Renfo » s’affiche : « Nuit envoyée à Renfo (… segments de sommeil) ». Si elle dit autre chose, suis ce qu’elle indique (voir aussi « Ça ne marche pas ? » plus bas).',
+          'Une notification « Renfo » s’affiche : « Envoyé à Renfo : ta nuit (… segments), ta FC au repos, ta VFC. » Si elle dit autre chose, suis ce qu’elle indique (voir aussi « Ça ne marche pas ? » plus bas).',
           'Reviens sur ce site et recharge la page : en haut, « Dernier dépôt » indique l’heure de l’envoi. Touche « Relever maintenant » pour voir ta nuit dans Sommeil.',
         ] })),
 
@@ -185,7 +196,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
           'Touche « + » en haut à droite (ou « Nouvelle automatisation »).',
           'Choisis « Réveil ». Garde « Est arrêté » et « N’importe quel réveil » (ou choisis ton réveil du matin).',
           'Coche « Exécuter immédiatement » (pas « Exécuter après confirmation »), puis touche « Suivant ».',
-          'Choisis « Envoyer ma nuit ». C’est fini : chaque matin, quand tu arrêtes ton réveil, ta nuit part vers Renfo et une notification le confirme.',
+          'Choisis « Envoyer ma nuit ». C’est fini : chaque matin, quand tu arrêtes ton réveil, ta nuit, ta FC au repos et ta VFC partent vers Renfo, et une notification le confirme.',
         ] }),
         React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Pas de réveil ? Choisis plutôt « Heure de la journée », 8:00, « Quotidiennement ».')),
 
@@ -194,10 +205,10 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
         React.createElement('div', { style: { ...bloc, marginTop: 8 } },
           React.createElement(Liste, { items: [
             'Notification « clé refusée » ou « clé absente » : refais l’étape 1 (« Remplacer ma clé »), supprime « Envoyer ma nuit » dans Raccourcis (appui long › Supprimer), puis refais l’étape 2.',
-            'Notification « aucune nuit trouvée » : ta montre n’a pas enregistré de sommeil sur les dernières 24 h. Vérifie dans l’app Santé › Sommeil, porte la montre la nuit, puis relance le raccourci.',
-            'Notification en anglais « Could not find the function… » : le serveur de Renfo n’est pas encore à jour (migration 0006 à appliquer par l’administrateur).',
+            'Notification « aucune donnée trouvée » ou « aucune nuit trouvée » : ta montre n’a rien enregistré sur les dernières 24 h. Vérifie dans l’app Santé › Sommeil, porte la montre la nuit (suivi du sommeil activé), puis relance le raccourci.',
+            'Notification en anglais « Could not find the function… » : le serveur de Renfo n’est pas encore à jour (migrations 0006 et 0007 à appliquer par l’administrateur).',
             'Aucune notification : Réglages › Notifications › Raccourcis › active « Autoriser les notifications ». L’envoi a peut-être quand même eu lieu : recharge cette page.',
-            'Santé refusé par erreur : Réglages › Santé › Accès aux données et appareils › Raccourcis › active « Sommeil ».',
+            'Santé refusé par erreur, ou pas de FC/VFC : Réglages › Santé › Accès aux données et appareils › Raccourcis › active « Sommeil », « Fréquence cardiaque au repos » et « Variabilité de la fréquence cardiaque ».',
             'Le téléchargement rouvre ce site au lieu du fichier : recharge la page une fois, puis réessaie l’étape 2.',
           ] }))),
 

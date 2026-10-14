@@ -51,6 +51,9 @@ a(fr.sleep['2026-10-15'] && fr.sleep['2026-10-15'].hours === 7 && fr.restingHr['
 const simple = lireDepot('sommeil;14 oct. 2026 à 23:10;15 oct. 2026 à 01:00;Principal\nsommeil;15 oct. 2026 à 01:00;15 oct. 2026 à 02:05;Profond\nsommeil;15 oct. 2026 à 02:05;15 oct. 2026 à 06:40;3\n')
 a(simple.lues === 3 && simple.sleep['2026-10-15'] && simple.sleep['2026-10-15'].phases.profond === 65 && simple.sleep['2026-10-15'].phases.leger === 385, 'depot du raccourci tout pret : nuit et phases (' + JSON.stringify(simple.sleep['2026-10-15']) + ')')
 
+const coeur = lireDepot('fc;15 oct. 2026 à 08:00;52\nvfc;15 oct. 2026 à 02:00;48,5\nvfc;15 oct. 2026 à 04:00;55\n')
+a(coeur.restingHr['2026-10-15'] === 52 && coeur.hrv['2026-10-15'] === 52, 'FC et VFC du raccourci (dates de l iPhone, virgule decimale) : FC 52, VFC moyenne 52')
+
 // ─── Rangement dans le journal ───
 const db = { sleepLog: { '2026-10-14': { hours: 6.5, quality: 3 } }, vitalsLog: { '2026-10-15': { restingHr: 47 } }, planningSessions: [] }
 const { patch, summary } = toPatch(r, db, { source: 'montre' })
@@ -79,6 +82,8 @@ a(await empreinteCle('abc') === 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9
 // ─── Migration ───
 const sql = readFileSync(new URL('../../supabase/migrations/0005_montre.sql', import.meta.url), 'utf8')
 const sql6 = readFileSync(new URL('../../supabase/migrations/0006_montre_raccourci_simple.sql', import.meta.url), 'utf8')
+const sql7 = readFileSync(new URL('../../supabase/migrations/0007_montre_coeur.sql', import.meta.url), 'utf8')
+a(/drop function if exists deposer_nuit_montre\(text, jsonb, jsonb, jsonb\);/.test(sql7) && /fc_dates jsonb default null/.test(sql7) && /perform deposer_mesures_montre\(jeton, lignes\)/.test(sql7) && /'fc;'/.test(sql7) && /'vfc;'/.test(sql7) && /grant execute on function deposer_nuit_montre\(text, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb\) to anon, authenticated/.test(sql7), '0007 : FC et VFC remises en lignes fc;/vfc;, ancienne signature retiree, memes controles')
 a(/perform deposer_mesures_montre\(jeton, lignes\)/.test(sql6) && /returns text/.test(sql6) && /Nuit envoyée à Renfo/.test(sql6) && /clé refusée/.test(sql6) && /security definer\s+set search_path = public, pg_temp/.test(sql6) && /revoke all on function liste_montre\(jsonb\) from public/.test(sql6) && /grant execute on function deposer_nuit_montre\(text, jsonb, jsonb, jsonb\) to anon, authenticated/.test(sql6), '0006 : passe par la porte de 0005 (memes controles), utilitaire ferme')
 a(/alter table jetons_montre enable row level security/.test(sql) && /alter table depots_montre enable row level security/.test(sql), 'RLS sur les deux tables')
 a(/security definer\s+set search_path = public, pg_temp/.test(sql), 'fonction security definer au search_path fige (cf. 0004)')

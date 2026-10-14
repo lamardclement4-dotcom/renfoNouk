@@ -9,11 +9,11 @@ Le raccourci tient en quatre actions, pour que la mise en place se résume à
 
   1. Texte : la clé personnelle, demandée à l'installation (question
      d'import) — elle n'est donc jamais dans le fichier publié ;
-  2. Rechercher des échantillons de santé : Type « Sommeil », date de
-     début dans le dernier jour ;
+  2. Rechercher des échantillons de santé : « Sommeil » (dernier jour),
+     « FC au repos » (deux jours), « Variabilité cardiaque » (dernier jour) ;
   3. Obtenir le contenu de l'URL : POST vers deposer_nuit_montre
-     (migration 0006), corps JSON = la clé et trois listes tirées des
-     échantillons (dates de début, dates de fin, valeurs) ;
+     (migrations 0006–0007), corps JSON = la clé et les listes tirées des
+     échantillons (dates et valeurs) ;
   4. Afficher une notification : la réponse du serveur, en clair
      (« Nuit envoyée à Renfo… » ou ce qui ne va pas et quoi faire).
 
@@ -94,6 +94,41 @@ def action(identifiant, **parametres):
     return {"WFWorkflowActionIdentifier": identifiant, "WFWorkflowActionParameters": parametres}
 
 
+def recherche_sante(nom, type_sante, jours):
+    """Rechercher des échantillons de santé : Type = type_sante, date de
+    début dans les `jours` derniers jours. Les libellés (« Sleep »,
+    « Resting Heart Rate », « Heart Rate Variability ») sont ceux de la
+    table de types de Raccourcis (ActionKit, cache système de macOS 26)."""
+    return action(
+        "is.workflow.actions.filter.health.quantity",
+        UUID=uid(nom),
+        WFContentItemLimitEnabled=False,
+        WFContentItemFilter={
+            "Value": {
+                "WFActionParameterFilterPrefix": 1,
+                "WFContentPredicateBoundedDate": False,
+                "WFActionParameterFilterTemplates": [
+                    {
+                        "Bounded": True,
+                        "Operator": 4,
+                        "Property": "Type",
+                        "Removable": False,
+                        "Values": {"Enumeration": {"Value": type_sante, "WFSerializationType": "WFStringSubstitutableState"}},
+                    },
+                    {
+                        "Bounded": True,
+                        "Operator": 1001,
+                        "Property": "Start Date",
+                        "Removable": True,
+                        "Values": {"Number": jours, "Unit": 16384},
+                    },
+                ],
+            },
+            "WFSerializationType": "WFContentPredicateTableTemplate",
+        },
+    )
+
+
 def construire():
     url, anon = lire_env()
     adresse = f"{url}/rest/v1/rpc/deposer_nuit_montre?apikey={anon}"
@@ -101,41 +136,18 @@ def construire():
         # 0. Ce que fait le raccourci, lisible dans l'app Raccourcis.
         action(
             "is.workflow.actions.comment",
-            WFCommentActionText="Envoie ta dernière nuit (Apple Watch, via Santé) au site Renfo. "
-            "Seuls les segments de sommeil sont lus. Lance-le chaque matin avec une automatisation "
+            WFCommentActionText="Envoie ta dernière nuit, ta fréquence cardiaque au repos et ta variabilité cardiaque "
+            "(Apple Watch, via Santé) au site Renfo. Rien d’autre n’est lu. Lance-le chaque matin avec une automatisation "
             "« Quand mon réveil est arrêté ».",
         ),
         # 1. La clé, posée à l'installation (question d'import).
         action("is.workflow.actions.gettext", UUID=uid("cle"), WFTextActionText="colle-ta-cle-renfo"),
-        # 2. Les segments de la dernière nuit.
-        action(
-            "is.workflow.actions.filter.health.quantity",
-            UUID=uid("sommeil"),
-            WFContentItemLimitEnabled=False,
-            WFContentItemFilter={
-                "Value": {
-                    "WFActionParameterFilterPrefix": 1,
-                    "WFContentPredicateBoundedDate": False,
-                    "WFActionParameterFilterTemplates": [
-                        {
-                            "Bounded": True,
-                            "Operator": 4,
-                            "Property": "Type",
-                            "Removable": False,
-                            "Values": {"Enumeration": {"Value": "Sleep", "WFSerializationType": "WFStringSubstitutableState"}},
-                        },
-                        {
-                            "Bounded": True,
-                            "Operator": 1001,
-                            "Property": "Start Date",
-                            "Removable": True,
-                            "Values": {"Number": 1, "Unit": 16384},
-                        },
-                    ],
-                },
-                "WFSerializationType": "WFContentPredicateTableTemplate",
-            },
-        ),
+        # 2. Les segments de la dernière nuit, puis la FC au repos (deux
+        # jours : la valeur du jour n'est parfois calculée qu'en journée) et
+        # la variabilité cardiaque mesurée pendant la nuit.
+        recherche_sante("sommeil", "Sleep", 1),
+        recherche_sante("fc", "Resting Heart Rate", 2),
+        recherche_sante("vfc", "Heart Rate Variability", 1),
         # 3. L'envoi : la clé et trois listes parallèles.
         action(
             "is.workflow.actions.downloadurl",
@@ -156,6 +168,10 @@ def construire():
                         champ("debuts", texte(sortie("sommeil", "Health Samples", "Start Date"))),
                         champ("fins", texte(sortie("sommeil", "Health Samples", "End Date"))),
                         champ("valeurs", texte(sortie("sommeil", "Health Samples", "Value"))),
+                        champ("fc_dates", texte(sortie("fc", "Health Samples", "Start Date"))),
+                        champ("fc", texte(sortie("fc", "Health Samples", "Value"))),
+                        champ("vfc_dates", texte(sortie("vfc", "Health Samples", "Start Date"))),
+                        champ("vfc", texte(sortie("vfc", "Health Samples", "Value"))),
                     ]
                 },
                 "WFSerializationType": "WFDictionaryFieldValue",
