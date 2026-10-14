@@ -4,7 +4,7 @@ import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
 import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import { formeDb, coucherDuSoir, reglagesSeance } from '../health/formeContexte'
-import { montreReliee } from '../health/montreDrapeau'
+import { montreReliee, retourDeMontre } from '../health/montreDrapeau'
 import { libelleDuree } from '../health/sommeilForme'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
 import { neededHours } from '../health/sleepIntel'
@@ -295,7 +295,9 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   // relevée dès l'accueil, pour que la forme du jour en tienne compte.
   useEffect(() => {
     if (loading || !montreReliee(userId)) return
-    import('../health/montreSync').then((m) => m.releverEnFond(store)).catch(() => {})
+    // Retour du raccourci lancé depuis le site : relevé immédiat, annoncé.
+    const retour = retourDeMontre()
+    import('../health/montreSync').then((m) => (retour ? m.releverMontre(store, { force: true }) : m.releverEnFond(store))).catch(() => {})
   }, [loading, userId]) // eslint-disable-line react-hooks/exhaustive-deps
   const [tile, setTile] = useState(null)
   const [openId, setOpenId] = useState(null)

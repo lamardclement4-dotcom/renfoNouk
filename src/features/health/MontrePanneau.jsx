@@ -9,7 +9,7 @@
 import React, { useState, useEffect } from 'react'
 import { C, MODULE_TINTS, Icon } from './kit'
 import { annoncer } from '../../annonces'
-import { marquerMontre as poserDrapeau } from './montreDrapeau'
+import { marquerMontre as poserDrapeau, lienEnvoyerMaintenant, adresseRetour } from './montreDrapeau'
 
 const COL = MODULE_TINTS.sommeil
 const URL_DEPOT = ((import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '').replace(/\/$/, '') + '/rest/v1/rpc/deposer_mesures_montre'
@@ -131,7 +131,9 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
             : React.createElement('div', null,
               React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink } }, etat.configuree ? 'Clé active' : 'Pas encore reliée'),
               React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, marginTop: 3 } }, etat.configuree ? 'Dernier dépôt : ' + (quand(etat.dernierDepot) || 'aucun pour l’instant') : 'Commence par créer ta clé.'),
-              etat.configuree ? React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' } }, bouton('Relever maintenant', relever, true), bouton(confirme === 'deconnecter' ? 'Oui, supprimer la clé' : 'Déconnecter', deconnecter)) : null,
+              etat.configuree ? React.createElement('a', { href: lienEnvoyerMaintenant(adresseRetour()), style: { display: 'block', textAlign: 'center', marginTop: 10, padding: '10px 14px', background: COL, color: 'var(--c-on-fill)', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' } }, 'Envoyer maintenant depuis la montre') : null,
+              etat.configuree ? React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4, lineHeight: 1.4 } }, 'Ouvre Raccourcis, lance « Envoyer ma nuit », puis revient ici : ta nuit est rangée aussitôt. Marche même sans automatisation.') : null,
+              etat.configuree ? React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' } }, bouton('Relever maintenant', relever), bouton(confirme === 'deconnecter' ? 'Oui, supprimer la clé' : 'Déconnecter', deconnecter)) : null,
               confirme === 'deconnecter' ? React.createElement('div', { style: { fontSize: 12, color: C.warn, marginTop: 6, lineHeight: 1.45 } }, 'Le raccourci ne pourra plus rien déposer. Les nuits déjà rangées restent. ', React.createElement('button', { type: 'button', onClick: () => setConfirme(null), style: { background: 'none', border: 'none', padding: 0, color: COL, fontWeight: 700, cursor: 'pointer', fontSize: 12 } }, 'Annuler')) : null,
               message ? React.createElement('div', { role: 'status', style: { fontSize: 12.5, color: C.ink2, marginTop: 8 } }, message) : null)),
 
@@ -198,7 +200,8 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
           'Coche « Exécuter immédiatement » (pas « Exécuter après confirmation »), puis touche « Suivant ».',
           'Choisis « Envoyer ma nuit ». C’est fini : chaque matin, quand tu arrêtes ton réveil, ta nuit, ta FC au repos et ta VFC partent vers Renfo, et une notification le confirme.',
         ] }),
-        React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Pas de réveil ? Choisis plutôt « Heure de la journée », 8:00, « Quotidiennement ».')),
+        React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Pas de réveil ? Choisis plutôt « Heure de la journée », 8:00, « Quotidiennement ».'),
+        React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Tu ne vois pas « Réveil » ni « Heure de la journée » ? Fais défiler la liste, ou tape « heure » dans la barre de recherche en haut de la liste. Sur iOS 16 : « Créer une automatisation personnelle » d’abord. Toujours rien : utilise le bouton « Envoyer maintenant depuis la montre » en haut de cet écran, il marche sans automatisation.')),
 
       titre('Étape 5 · Plusieurs envois par jour (conseillé)'),
       React.createElement('div', { style: bloc },

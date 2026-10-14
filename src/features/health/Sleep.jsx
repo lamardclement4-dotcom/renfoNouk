@@ -4,7 +4,7 @@ import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, isoToday, Aide } from './kit
 import { ENERGIES, SENSATIONS, libelleNuit, nuitsRecentes, nuitsManquantes, reveilDe, resumeReveil, resumeNuit, decaler } from './sommeilReveil'
 import { annoncer } from '../../annonces'
 import MontrePanneau from './MontrePanneau'
-import { montreReliee } from './montreDrapeau'
+import { montreReliee, lienEnvoyerMaintenant, adresseRetour } from './montreDrapeau'
 import { imageTooLarge } from './fileGuard'
 import { lireCaptureSommeil, qualiteDuScore, lectureIncomplete, fusionnerCaptures } from './sommeilOcr'
 import { FACTEURS, facteursDe, dureeDepuisHeures, libelleDuree, minutesDe, influences, regulariteHoraires, chronotype } from './sommeilForme'
@@ -840,6 +840,7 @@ export default function SleepSpace({ userId, onClose }) {
       React.createElement('span', { 'aria-hidden': true, style: { width: 8, height: 8, flex: '0 0 auto', background: reliee ? C.success : C.line } }),
       React.createElement('span', { style: { flex: 1 } }, reliee ? 'Apple Watch reliée : ta nuit arrive chaque matin' : 'Relier mon Apple Watch : la nuit arrive toute seule'),
       React.createElement('span', { style: { fontFamily: C.mono, color: C.ink3 } }, '→')),
+    tab === 'night' && !express && reliee && React.createElement('a', { href: lienEnvoyerMaintenant(adresseRetour()), style: { display: 'block', textAlign: 'center', padding: '9px 12px', marginBottom: 12, border: `1.5px solid ${SLEEP_COL}`, color: SLEEP_COL, fontSize: 13, fontWeight: 700, textDecoration: 'none' } }, 'Envoyer ma nuit depuis la montre'),
     tab === 'night' && express && React.createElement(RattrapageExpress, { db, store, onFini: () => setExpress(false) }),
     tab === 'night' && !express && nuit === isoToday() && React.createElement(CarteForme, { db }),
     tab === 'night' && !express && React.createElement(ChoixNuit, { log: db.sleepLog || {}, date: nuit, onChange: setNuit, onExpress: () => setExpress(true) }),

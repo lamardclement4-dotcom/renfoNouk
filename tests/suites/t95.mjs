@@ -4,6 +4,7 @@ import '../harness/browser-env.mjs'
 import { __render, __reset } from '../harness/react-stub4.mjs'
 import { readFileSync } from 'node:fs'
 import MontrePanneau from '../../src/features/health/MontrePanneau.jsx'
+import { lienEnvoyerMaintenant, retourDeMontre } from '../../src/features/health/montreDrapeau.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
 const text = (n) => { if (n == null || n === false) return ''
   if (typeof n === 'string' || typeof n === 'number') return String(n) + ' '
@@ -28,4 +29,11 @@ a(sig.slice(0, 4).toString() === 'AEA1', 'raccourci publie signe (format AEA1)')
 const src = readFileSync(new URL('../../outils/raccourci/Envoyer-ma-nuit.plist', import.meta.url), 'utf8')
 a(/is\.workflow\.actions\.filter\.health\.quantity/.test(src) && /<string>Sleep<\/string>/.test(src) && /deposer_nuit_montre\?apikey=/.test(src) && /WFTextActionText/.test(src) && /Colle ta clé \(site Renfo/.test(src) && /is\.workflow\.actions\.notification/.test(src) && /text\/plain/.test(src) && /<string>Resting Heart Rate<\/string>/.test(src) && /<string>Heart Rate Variability<\/string>/.test(src) && /<string>fc_dates<\/string>/.test(src) && /<string>vfc<\/string>/.test(src) && /<string>Envoyer ma nuit<\/string>/.test(src), 'source du raccourci : Sante « Sleep », envoi a deposer_nuit_montre, cle demandee a l installation')
 a(!/colle-ta-cle-renfo[^<]{20,}/.test(src) && !/[A-Za-z0-9_-]{43}<\/string>\s*<key>Category/.test(src), 'aucune cle personnelle dans le raccourci publie')
+const lien2 = lienEnvoyerMaintenant('https://site.test/renfoNouk/?montre=1')
+a(lien2 === 'shortcuts://x-callback-url/run-shortcut?name=Envoyer%20ma%20nuit&x-success=https%3A%2F%2Fsite.test%2FrenfoNouk%2F%3Fmontre%3D1', 'lancer le raccourci depuis le site, retour sur le site avec ?montre=1')
+window.history = { state: null, replaceState: (_e, _t, u) => { window.location.href = 'http://localhost' + u } }
+window.location.href = 'http://localhost/renfoNouk/?montre=1'
+a(retourDeMontre() === true && !/montre/.test(window.location.href) && retourDeMontre() === false, 'retour du raccourci : lu une fois, retire de l adresse')
+const src2 = readFileSync(new URL('../../src/features/home/AccueilSpace.jsx', import.meta.url), 'utf8')
+a(/retour \? m\.releverMontre\(store, \{ force: true \}\)/.test(src2), 'au retour, l accueil releve aussitot (sans attendre les 10 minutes)')
 console.log('\nALL PASS')
