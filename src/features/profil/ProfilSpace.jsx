@@ -7,6 +7,8 @@ import { SPORTS } from '../train/trainData'
 import TrainSpace from '../train/TrainSpace'
 import WeightSpace from './WeightSpace'
 import { exporterDonnees } from './exportDonnees'
+import MontrePanneau from '../health/MontrePanneau'
+import { montreReliee } from '../health/montreDrapeau'
 
 const h = React.createElement
 
@@ -167,6 +169,10 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
   if (flow === 'weight') {
     return h(WeightSpace, { db, store, onClose: () => setFlow(null) })
   }
+  if (flow === 'montre') {
+    return h(FlowSpace, { bg: 'profil', title: 'Apple Watch', onClose: () => setFlow(null), fixed: false },
+      h(MontrePanneau, { userId, store, onRetour: () => setFlow(null), retour: 'Retour au profil' }))
+  }
   if (flow === 'mobility' || flow === 'program' || flow === 'recovery') {
     return h(TrainSpace, { userId, initialTile: flow, embedded: true, onClose: () => setFlow(null) })
   }
@@ -221,6 +227,12 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
 
     h('div', { style: { display: 'flex', alignItems: 'center', padding: '14px 0', background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}` } },
       Stat(totals.streak, 'Jours de série'), Divider(), Stat(totals.sessionsTotal, 'Séances'), Divider(), Stat(g.weeklySessions + '/sem', 'Objectif')),
+
+    // La montre, là où on la cherche : avec les réglages du compte.
+    SecTitle('Montre connectée'),
+    h('div', { style: { background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, overflow: 'hidden' } },
+      LinkRow('montre', 'Apple Watch', montreReliee(userId) ? 'Reliée' : 'Relier', () => setFlow('montre'), 'montre')),
+    h('p', { style: { fontSize: 12, color: C.ink3, lineHeight: 1.4, marginTop: 6 } }, 'Ta nuit, ta fréquence cardiaque au repos et ta variabilité cardiaque arrivent chaque matin, par un raccourci de l’iPhone.'),
 
     SecTitle('Mes sports'),
     h('div', { style: { position: 'relative' } },

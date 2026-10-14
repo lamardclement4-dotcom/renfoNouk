@@ -187,6 +187,11 @@ const ICONS = {
     el('path', { key: 2, d: 'M12 7V4.2' }),
     el('path', { key: 3, d: 'M12 5.5c1.2-1.6 3-1.3 3-1.3s.1 2-1.8 2.7c-.6.2-1.2 0-1.2 0' }),
   ],
+  montre: [
+    el('rect', { key: 1, x: 6.5, y: 6.5, width: 11, height: 11, rx: 2 }),
+    el('path', { key: 2, d: 'M9 6.5V3h6v3.5M9 17.5V21h6v-3.5' }),
+    el('path', { key: 3, d: 'M12 9.5V12l1.8 1.3' }),
+  ],
   drop: [el('path', { d: 'M12 3s6.5 7 6.5 11.5a6.5 6.5 0 1 1-13 0C5.5 10 12 3 12 3z' })],
   droplet: [el('path', { d: 'M12 3s6.5 7 6.5 11.5a6.5 6.5 0 1 1-13 0C5.5 10 12 3 12 3z' })],
   moon: [el('path', { d: 'M20 14.2A8.5 8.5 0 1 1 9.8 4a7 7 0 0 0 10.2 10.2z', fill: 'currentColor' })],

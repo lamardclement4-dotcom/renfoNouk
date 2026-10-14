@@ -54,7 +54,7 @@ const ETAPES_RACCOURCI = [
   ['Lance le raccourci une fois et autorise l’accès à Santé. En haut de cet écran, « Dernier dépôt » passe à maintenant.'],
 ]
 
-export default function MontrePanneau({ userId, store, onRetour }) {
+export default function MontrePanneau({ userId, store, onRetour, retour = 'Retour à la saisie' }) {
   const [etat, setEtat] = useState({ chargement: true })
   const [cle, setCle] = useState(null)
   const [occupe, setOccupe] = useState(false)
@@ -105,7 +105,7 @@ export default function MontrePanneau({ userId, store, onRetour }) {
   const bouton = (lab, f, plein) => React.createElement('button', { type: 'button', onClick: f, disabled: occupe, style: { padding: '10px 14px', border: plein ? 'none' : `1.5px solid ${COL}`, background: plein ? COL : C.surface, color: plein ? 'var(--c-on-fill)' : COL, fontSize: 13.5, fontWeight: 700, cursor: occupe ? 'default' : 'pointer', opacity: occupe ? 0.6 : 1 } }, lab)
 
   return React.createElement('div', null,
-    React.createElement('button', { type: 'button', onClick: onRetour, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 0 10px', background: 'none', border: 'none', color: COL, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, '← Retour à la saisie'),
+    React.createElement('button', { type: 'button', onClick: onRetour, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 0 10px', background: 'none', border: 'none', color: COL, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, '← ' + retour),
     React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } },
       'Chaque matin, un raccourci de ton iPhone lit dans Santé ta nuit (avec ses phases), ta fréquence cardiaque au repos et ta variabilité cardiaque, et les dépose ici. Renfo les range à l’ouverture, sans toucher à ce que tu as noté à la main. Rien d’autre n’est lu.'),
 
