@@ -6,6 +6,7 @@ import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayR
 import { formeDb, coucherDuSoir, reglagesSeance } from '../health/formeContexte'
 import { montreReliee, retourDeMontre } from '../health/montreDrapeau'
 import { libelleDuree } from '../health/sommeilForme'
+import { decaler } from '../health/sommeilReveil'
 import { SESSIONS, SPORTS, sessionExercises } from '../train/trainData'
 import { neededHours } from '../health/sleepIntel'
 import { HealthScoreCard, PeakHomeCard } from '../progress/cards'
@@ -254,7 +255,13 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil }) {
   const nuitSaisie = Number(((db.sleepLog || {})[iso] || {}).hours) > 0
   // Le soir, l'heure du coucher qui donne la nuit dont tu as besoin.
   const soir = new Date().getHours() >= 18 && onSommeil ? coucherDuSoir(db, iso) : null
+  // La montre a compté de l'exercice hier, mais aucune séance n'est notée
+  // ce jour-là : la charge d'entraînement est sous-estimée.
+  const hier = decaler(iso, -1)
+  const exoHier = Math.round(Number(((db.vitalsLog || {})[hier] || {}).exoMin) || 0)
+  const seanceHier = (Array.isArray(db.planningSessions) ? db.planningSessions : []).some((x) => x && x.statut === 'realise' && x.date === hier)
   const rappels = [
+    exoHier >= 20 && !seanceHier && Ligne('bolt', C.warn, `La montre a compté ${exoHier} min d’exercice hier`, 'Aucune séance notée ce jour-là : ajoute-la pour que ta charge soit juste', onPlanner, 'exo'),
     soir && Ligne('moon', MODULE_TINTS.sommeil, 'Ce soir : au lit vers ' + soir.coucher, `Pour dormir ${libelleDuree(soir.besoin)} avant ton lever de ${soir.lever}${soir.bonus ? `, dont ${soir.bonus} min pour la dette` : ''}`, onSommeil, 'soir'),
     // La nuit se saisit le matin ou elle s'oublie : tant qu'elle manque, on
     // la rappelle — elle fait la forme du jour.

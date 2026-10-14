@@ -323,3 +323,73 @@ $$;
 
 revoke all on function deposer_nuit_montre(text, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb) from public;
 grant execute on function deposer_nuit_montre(text, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb) to anon, authenticated;
+
+-- ─── Signaux de la montre, envoyés après la nuit ───
+-- Le raccourci envoie d'abord la nuit (et reçoit les rappels), puis, dans
+-- un second envoi, les signaux du jour : FC au repos, VFC, fréquence
+-- respiratoire de la nuit, minutes d'exercice. Si une recherche Santé
+-- échoue, la nuit est déjà partie. Mêmes contrôles de clé et de quota.
+create or replace function deposer_signaux_montre(
+  jeton text,
+  fc_dates jsonb default null, fc jsonb default null,
+  vfc_dates jsonb default null, vfc jsonb default null,
+  resp_dates jsonb default null, resp jsonb default null,
+  exo_debuts jsonb default null, exo_fins jsonb default null, exo jsonb default null)
+returns "text/plain"
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  lignes text := '';
+  quoi text[] := array[]::text[];
+  x text[]; y text[]; z text[];
+  k int;
+  propre text := '';
+begin
+  -- fc, vfc, resp : « type;date;valeur »
+  x := liste_montre(fc_dates); y := liste_montre(fc); k := 0;
+  for i in 1..least(coalesce(array_length(x, 1), 0), coalesce(array_length(y, 1), 0), 100) loop
+    if coalesce(trim(x[i]), '') = '' or coalesce(trim(y[i]), '') = '' then continue; end if;
+    propre := propre || 'fc;' || translate(trim(x[i]), E';\n', ',,') || ';' || translate(trim(y[i]), E';\n', ',,') || E'\n'; k := k + 1;
+  end loop;
+  if k > 0 then quoi := array_append(quoi, 'FC au repos'); end if;
+  x := liste_montre(vfc_dates); y := liste_montre(vfc); k := 0;
+  for i in 1..least(coalesce(array_length(x, 1), 0), coalesce(array_length(y, 1), 0), 200) loop
+    if coalesce(trim(x[i]), '') = '' or coalesce(trim(y[i]), '') = '' then continue; end if;
+    propre := propre || 'vfc;' || translate(trim(x[i]), E';\n', ',,') || ';' || translate(trim(y[i]), E';\n', ',,') || E'\n'; k := k + 1;
+  end loop;
+  if k > 0 then quoi := array_append(quoi, 'VFC'); end if;
+  x := liste_montre(resp_dates); y := liste_montre(resp); k := 0;
+  for i in 1..least(coalesce(array_length(x, 1), 0), coalesce(array_length(y, 1), 0), 300) loop
+    if coalesce(trim(x[i]), '') = '' or coalesce(trim(y[i]), '') = '' then continue; end if;
+    propre := propre || 'resp;' || translate(trim(x[i]), E';\n', ',,') || ';' || translate(trim(y[i]), E';\n', ',,') || E'\n'; k := k + 1;
+  end loop;
+  if k > 0 then quoi := array_append(quoi, 'respiration'); end if;
+  -- exercice : « exo;début;fin;minutes »
+  x := liste_montre(exo_debuts); y := liste_montre(exo_fins); z := liste_montre(exo); k := 0;
+  for i in 1..least(coalesce(array_length(x, 1), 0), coalesce(array_length(y, 1), 0), coalesce(array_length(z, 1), 0), 1500) loop
+    if coalesce(trim(x[i]), '') = '' or coalesce(trim(z[i]), '') = '' then continue; end if;
+    propre := propre || 'exo;' || translate(trim(x[i]), E';\n', ',,') || ';' || translate(trim(y[i]), E';\n', ',,') || ';' || translate(trim(z[i]), E';\n', ',,') || E'\n'; k := k + 1;
+  end loop;
+  if k > 0 then quoi := array_append(quoi, 'exercice'); end if;
+  lignes := propre;
+
+  if lignes = '' then
+    return 'Signaux : rien de nouveau dans Santé.';
+  end if;
+  begin
+    perform deposer_mesures_montre(jeton, lignes);
+  exception when others then
+    return case
+      when sqlerrm like 'clé%' then 'Renfo : clé refusée pour les signaux. Sur le site Renfo : Profil › Apple Watch.'
+      when sqlerrm like 'trop de dépôts%' then 'Renfo : trop d’envois cette heure-ci.'
+      else 'Renfo : signaux refusés (' || sqlerrm || ').'
+    end;
+  end;
+  return 'Signaux envoyés : ' || array_to_string(quoi, ', ') || '.';
+end;
+$$;
+
+revoke all on function deposer_signaux_montre(text, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb) from public;
+grant execute on function deposer_signaux_montre(text, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb, jsonb) to anon, authenticated;

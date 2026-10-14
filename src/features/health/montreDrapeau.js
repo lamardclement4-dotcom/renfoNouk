@@ -34,3 +34,15 @@ export function retourDeMontre() {
     return true
   } catch { return false }
 }
+
+// La clé du raccourci, gardée sur cet appareil pour pouvoir la recopier
+// (réinstaller le raccourci, une mise à jour) sans en créer une nouvelle.
+// Préfixe « renfo:sync: » : effacée avec le reste à la déconnexion. Elle
+// ne permet que de déposer des mesures dans ce compte.
+const cleLocale = (userId) => 'renfo:sync:cle-montre:' + userId
+export function lireCleLocale(userId) {
+  try { return (userId && localStorage.getItem(cleLocale(userId))) || null } catch { return null }
+}
+export function garderCleLocale(userId, cle) {
+  try { if (cle) localStorage.setItem(cleLocale(userId), cle); else localStorage.removeItem(cleLocale(userId)) } catch { /* stockage indisponible */ }
+}

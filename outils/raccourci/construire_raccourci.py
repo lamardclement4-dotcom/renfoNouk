@@ -4,7 +4,7 @@
 Renfo est un site, pas une app : le raccourci vit dans l'app Raccourcis
 d'Apple, sous un nom qui dit ce qu'il fait plutôt que « Renfo ».
 
-Le raccourci tient en quatre actions, pour que la mise en place se résume à
+Le raccourci se met en place en « installer, coller sa clé » :
 « installer, coller sa clé » :
 
   1. Texte : la clé personnelle, demandée à l'installation (question
@@ -132,53 +132,49 @@ def recherche_sante(nom, type_sante, jours):
 def construire():
     url, anon = lire_env()
     adresse = f"{url}/rest/v1/rpc/deposer_nuit_montre?apikey={anon}"
-    actions = [
-        # 0. Ce que fait le raccourci, lisible dans l'app Raccourcis.
-        action(
-            "is.workflow.actions.comment",
-            WFCommentActionText="Envoie ta dernière nuit, ta fréquence cardiaque au repos et ta variabilité cardiaque "
-            "(Apple Watch, via Santé) au site Renfo. Rien d’autre n’est lu. Lance-le chaque matin avec une automatisation "
-            "« Quand mon réveil est arrêté ».",
-        ),
-        # 1. La clé, posée à l'installation (question d'import).
-        action("is.workflow.actions.gettext", UUID=uid("cle"), WFTextActionText="colle-ta-cle-renfo"),
-        # 2. Les segments de la dernière nuit, puis la FC au repos (deux
-        # jours : la valeur du jour n'est parfois calculée qu'en journée) et
-        # la variabilité cardiaque mesurée pendant la nuit.
-        recherche_sante("sommeil", "Sleep", 1),
-        recherche_sante("fc", "Resting Heart Rate", 2),
-        recherche_sante("vfc", "Heart Rate Variability", 1),
-        # 3. L'envoi : la clé et trois listes parallèles.
-        action(
+    adresse_signaux = f"{url}/rest/v1/rpc/deposer_signaux_montre?apikey={anon}"
+
+    def envoi(nom, url_rpc, champs):
+        return action(
             "is.workflow.actions.downloadurl",
-            UUID=uid("envoi"),
-            WFURL=adresse,
+            UUID=uid(nom),
+            WFURL=url_rpc,
             WFHTTPMethod="POST",
             WFHTTPBodyType="JSON",
             ShowHeaders=False,
-            # Réponse du serveur en texte simple (une phrase), pas en JSON.
+            # Réponse du serveur en texte simple (domaine « text/plain »,
+            # migration 0008), pas en JSON.
             WFHTTPHeaders={
                 "Value": {"WFDictionaryFieldValueItems": [champ("Accept", texte("text/plain"))]},
                 "WFSerializationType": "WFDictionaryFieldValue",
             },
             WFJSONValues={
-                "Value": {
-                    "WFDictionaryFieldValueItems": [
-                        champ("jeton", texte(sortie("cle", "Text"))),
-                        champ("debuts", texte(sortie("sommeil", "Health Samples", "Start Date"))),
-                        champ("fins", texte(sortie("sommeil", "Health Samples", "End Date"))),
-                        champ("valeurs", texte(sortie("sommeil", "Health Samples", "Value"))),
-                        champ("fc_dates", texte(sortie("fc", "Health Samples", "Start Date"))),
-                        champ("fc", texte(sortie("fc", "Health Samples", "Value"))),
-                        champ("vfc_dates", texte(sortie("vfc", "Health Samples", "Start Date"))),
-                        champ("vfc", texte(sortie("vfc", "Health Samples", "Value"))),
-                    ]
-                },
+                "Value": {"WFDictionaryFieldValueItems": [champ("jeton", texte(sortie("cle", "Text")))] + champs},
                 "WFSerializationType": "WFDictionaryFieldValue",
             },
+        )
+
+    def liste(nom, propriete):
+        return texte(sortie(nom, "Health Samples", propriete))
+
+    actions = [
+        # 0. Ce que fait le raccourci, lisible dans l'app Raccourcis.
+        action(
+            "is.workflow.actions.comment",
+            WFCommentActionText="Envoie au site Renfo ta dernière nuit, puis ta fréquence cardiaque au repos, ta "
+            "variabilité cardiaque, ta respiration la nuit et tes minutes d’exercice (Apple Watch, via Santé). "
+            "Rien d’autre n’est lu. La notification rapporte aussi le rappel du moment.",
         ),
-        # 4. La réponse du serveur, en clair : « Nuit envoyée à Renfo… », ou
-        # ce qui ne va pas et quoi faire (clé refusée, aucune nuit…).
+        # 1. La clé, posée à l'installation (question d'import).
+        action("is.workflow.actions.gettext", UUID=uid("cle"), WFTextActionText="colle-ta-cle-renfo"),
+        # 2–4. La nuit d'abord, avec sa notification (rappels du moment) :
+        # si une recherche de signaux échoue plus loin, la nuit est partie.
+        recherche_sante("sommeil", "Sleep", 1),
+        envoi("envoi", adresse, [
+            champ("debuts", liste("sommeil", "Start Date")),
+            champ("fins", liste("sommeil", "End Date")),
+            champ("valeurs", liste("sommeil", "Value")),
+        ]),
         action(
             "is.workflow.actions.notification",
             UUID=uid("notification"),
@@ -186,6 +182,24 @@ def construire():
             WFNotificationActionBody=texte(sortie("envoi", "Contents of URL")),
             WFNotificationActionSound=False,
         ),
+        # 5–9. Les signaux, en silence : FC au repos (deux jours, la valeur
+        # du jour se calcule en journée), VFC et respiration de la nuit,
+        # minutes d'exercice (deux jours : la veille entière).
+        recherche_sante("fc", "Resting Heart Rate", 2),
+        recherche_sante("vfc", "Heart Rate Variability", 1),
+        recherche_sante("resp", "Respiratory Rate", 1),
+        recherche_sante("exo", "Exercise Minutes", 2),
+        envoi("signaux", adresse_signaux, [
+            champ("fc_dates", liste("fc", "Start Date")),
+            champ("fc", liste("fc", "Value")),
+            champ("vfc_dates", liste("vfc", "Start Date")),
+            champ("vfc", liste("vfc", "Value")),
+            champ("resp_dates", liste("resp", "Start Date")),
+            champ("resp", liste("resp", "Value")),
+            champ("exo_debuts", liste("exo", "Start Date")),
+            champ("exo_fins", liste("exo", "End Date")),
+            champ("exo", liste("exo", "Value")),
+        ]),
     ]
     return {
         "WFWorkflowName": "Envoyer ma nuit",

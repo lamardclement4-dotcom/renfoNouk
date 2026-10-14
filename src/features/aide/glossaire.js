@@ -80,6 +80,11 @@ export const GLOSSAIRE = {
     texte: 'Ton horloge interne : plutôt du matin, intermédiaire ou du soir. Il se lit au milieu de ta nuit les jours sans réveil imposé (le week-end), corrigé du sommeil que tu y rattrapes. Il ne se change guère, mais il dit à quelle heure ton corps performe le mieux : vers midi pour un profil du matin, en soirée pour un profil du soir.',
     conseil: 'Plus il y a de week-ends saisis avec coucher et lever, plus l’estimation est juste.',
   },
+  respiration: {
+    titre: 'Respiration la nuit',
+    texte: 'Le nombre de respirations par minute pendant ton sommeil, mesuré par la montre. Il varie peu d’une nuit à l’autre : 3 de plus que ta normale, surtout avec un pouls plus haut ou une VFC plus basse, annonce souvent une infection un ou deux jours avant les symptômes.',
+    conseil: 'Ta normale se calcule après 5 nuits mesurées, sur les 4 dernières semaines.',
+  },
   phases: {
     titre: 'Phases du sommeil',
     texte: 'Une nuit enchaîne quatre ou cinq cycles d’environ 90 minutes : sommeil léger, profond (la récupération physique, l’hormone de croissance), paradoxal (la mémoire, l’apprentissage des gestes) et de courts éveils. Le profond domine en début de nuit, le paradoxal en fin de nuit : écourter la fin de nuit rogne surtout le paradoxal.',

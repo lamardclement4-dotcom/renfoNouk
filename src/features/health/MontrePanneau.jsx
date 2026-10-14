@@ -9,7 +9,7 @@
 import React, { useState, useEffect } from 'react'
 import { C, MODULE_TINTS, Icon } from './kit'
 import { annoncer } from '../../annonces'
-import { marquerMontre as poserDrapeau, lienEnvoyerMaintenant, adresseRetour } from './montreDrapeau'
+import { marquerMontre as poserDrapeau, lienEnvoyerMaintenant, adresseRetour, lireCleLocale, garderCleLocale } from './montreDrapeau'
 
 const COL = MODULE_TINTS.sommeil
 const URL_DEPOT = ((import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '').replace(/\/$/, '') + '/rest/v1/rpc/deposer_mesures_montre'
@@ -89,6 +89,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
     setOccupe(false)
     if (r.erreur) { setEtat({ ...etat, erreur: r.erreur }); return }
     setCle(r.cle)
+    garderCleLocale(userId, r.cle)
     // Copiée tout de suite : l'étape suivante (installer le raccourci) la
     // demande, et l'iPhone n'a qu'à la coller.
     copier(r.cle, 'Clé')
@@ -111,7 +112,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
     const m = await import('./montreSync')
     const r = await m.supprimerCle(userId).catch(() => ({ erreur: 'reseau' }))
     setOccupe(false)
-    if (!r.erreur) { poserDrapeau(userId, false); setCle(null); charger() }
+    if (!r.erreur) { poserDrapeau(userId, false); garderCleLocale(userId, null); setCle(null); charger() }
   }
 
   const titre = (t) => React.createElement('div', { style: { fontFamily: C.display, fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink2, margin: '18px 0 8px' } }, t)
@@ -121,7 +122,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
   return React.createElement('div', null,
     React.createElement('button', { type: 'button', onClick: onRetour, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 0 10px', background: 'none', border: 'none', color: COL, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, '← ' + retour),
     React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } },
-      'Chaque matin, un raccourci de l’app Raccourcis (celle d’Apple, déjà sur ton iPhone) lit dans Santé ta nuit (durée, heures, phases), ta fréquence cardiaque au repos et ta variabilité cardiaque, et les envoie à ce site — elles comptent dans ta forme du jour. Rien à installer depuis l’App Store. Quatre étapes, une seule fois.'),
+      'Chaque matin, un raccourci de l’app Raccourcis (celle d’Apple, déjà sur ton iPhone) lit dans Santé ta nuit (durée, heures, phases), puis ta fréquence cardiaque au repos, ta variabilité cardiaque, ta respiration la nuit et tes minutes d’exercice, et les envoie à ce site. Elles comptent dans ta forme du jour. Rien à installer depuis l’App Store. Quatre étapes, une seule fois.'),
 
     // État
     React.createElement('div', { style: { ...bloc, marginTop: 14, borderLeft: `3px solid ${etat.configuree ? C.success : etat.erreur ? C.warn : C.line}` } },
@@ -143,12 +144,12 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
         'fais tout sur ton iPhone, avec ce site ouvert dans Safari. Compte 5 minutes. Il te faut une Apple Watch qui enregistre ton sommeil (app Santé › Sommeil).'),
 
       etat.configuree ? React.createElement('details', { style: { marginTop: 10, fontSize: 12.5, color: C.ink2 } },
-        React.createElement('summary', { style: { cursor: 'pointer', color: COL, fontWeight: 700 } }, 'Tu as déjà installé « Envoyer ma nuit » ? Mettre à jour'),
+        React.createElement('summary', { style: { cursor: 'pointer', color: COL, fontWeight: 700 } }, 'Tu as déjà installé « Envoyer ma nuit » ? Mettre à jour (version 3)'),
         React.createElement('div', { style: { ...bloc, marginTop: 8 } },
           React.createElement(Liste, { items: [
-            'La nouvelle version envoie aussi ta FC au repos et ta VFC. Ta clé ne s’affiche plus : il en faut une nouvelle.',
-            'Étape 1 ci-dessous : touche « Remplacer ma clé », puis « Oui, remplacer ma clé ». La nouvelle clé est copiée.',
-            'Étape 2 : installe le raccourci. Si Raccourcis propose « Remplacer » ou « Garder les deux », choisis « Remplacer ». Colle la nouvelle clé.',
+            'La nouvelle version envoie la nuit d’abord, puis FC au repos, VFC, respiration et minutes d’exercice. Si ta clé s’affiche à l’étape 1 (« gardée sur cet appareil »), touche « Copier » ; sinon, il en faut une nouvelle.',
+            'Pas de clé affichée à l’étape 1 : touche « Remplacer ma clé », puis « Oui, remplacer ma clé ». La nouvelle clé est copiée (et gardée sur cet appareil pour la prochaine fois).',
+            'Étape 2 : installe le raccourci. Si Raccourcis propose « Remplacer » ou « Garder les deux », choisis « Remplacer ». Colle la clé.',
             'Étape 3 : lance-le une fois et touche « Tout activer » sur l’écran Santé.',
             'Vérifie l’automatisation : app Raccourcis › onglet « Automatisation » › touche ton automatisation du réveil. Elle doit lancer « Envoyer ma nuit » ; sinon, touche l’action et choisis-le à nouveau.',
           ] }))) : null,
@@ -159,6 +160,11 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
           React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: C.success, marginBottom: 4 } }, '✓ Clé créée et copiée'),
           React.createElement(AvecCopie, { lab: 'Ta clé (affichée une seule fois)', valeur: cle, quoi: 'Clé' }),
           React.createElement('div', { style: { fontSize: 12, color: C.ink3, lineHeight: 1.45 } }, 'Elle est dans le presse-papiers. Ne copie rien d’autre avant la fin de l’étape 2. Si le message « Clé copiée » n’est pas apparu, touche « Copier ». Ne la partage pas.'))
+          : etat.configuree && lireCleLocale(userId) ? React.createElement('div', null,
+            React.createElement(AvecCopie, { lab: 'Ta clé (gardée sur cet appareil)', valeur: lireCleLocale(userId), quoi: 'Clé' }),
+            React.createElement('div', { style: { fontSize: 12, color: C.ink3, lineHeight: 1.45, marginBottom: 8 } }, 'Touche « Copier » pour réinstaller ou mettre à jour le raccourci avec la même clé. Ne la partage pas.'),
+            bouton(confirme === 'remplacer' ? 'Oui, remplacer ma clé' : 'Remplacer ma clé', creer),
+            confirme === 'remplacer' ? React.createElement('div', { style: { fontSize: 12, color: C.warn, marginTop: 6, lineHeight: 1.45 } }, 'L’ancienne clé cessera aussitôt de marcher. ', React.createElement('button', { type: 'button', onClick: () => setConfirme(null), style: { background: 'none', border: 'none', padding: 0, color: COL, fontWeight: 700, cursor: 'pointer', fontSize: 12 } }, 'Annuler')) : null)
           : React.createElement('div', null,
             React.createElement(Liste, { items: [
               'Touche « ' + (etat.configuree ? 'Remplacer ma clé' : 'Créer ma clé') + ' » ci-dessous.',
@@ -184,10 +190,10 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
       React.createElement('div', { style: bloc },
         React.createElement(Liste, { items: [
           'Dans l’app Raccourcis, onglet « Raccourcis » en bas, touche la tuile « Envoyer ma nuit ».',
-          'Écran « Accès à Santé » : touche « Tout activer » (Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque), puis « Autoriser ».',
+          'Écran « Accès à Santé » : touche « Tout activer » (Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque, Fréquence respiratoire, Minutes d’exercice), puis « Autoriser ». Il peut s’afficher deux fois : une pour la nuit, une pour les autres mesures.',
           'Message « Autoriser “Envoyer ma nuit” à envoyer des éléments à ' + HOTE + ' ? » : touche « Toujours autoriser ».',
           'Si l’iPhone demande d’autoriser les notifications de Raccourcis : « Autoriser ».',
-          'Une notification « Renfo » s’affiche et se termine par « Données envoyées : nuit, FC au repos, VFC. » Si elle dit autre chose, suis ce qu’elle indique (voir aussi « Ça ne marche pas ? » plus bas).',
+          'Une notification « Renfo » s’affiche et se termine par « Données envoyées : nuit. » (les autres mesures partent juste après, sans notification). Si elle dit autre chose, suis ce qu’elle indique (voir aussi « Ça ne marche pas ? » plus bas).',
           'Reviens sur ce site et recharge la page : en haut, « Dernier dépôt » indique l’heure de l’envoi. Touche « Relever maintenant » pour voir ta nuit dans Sommeil.',
         ] })),
 
@@ -198,7 +204,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
           'Touche « + » en haut à droite (ou « Nouvelle automatisation »).',
           'Choisis « Réveil ». Garde « Est arrêté » et « N’importe quel réveil » (ou choisis ton réveil du matin).',
           'Coche « Exécuter immédiatement » (pas « Exécuter après confirmation »), puis touche « Suivant ».',
-          'Choisis « Envoyer ma nuit ». C’est fini : chaque matin, quand tu arrêtes ton réveil, ta nuit, ta FC au repos et ta VFC partent vers Renfo, et une notification le confirme.',
+          'Choisis « Envoyer ma nuit ». C’est fini : chaque matin, quand tu arrêtes ton réveil, ta nuit et tes signaux partent vers Renfo, et une notification le confirme.',
         ] }),
         React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Pas de réveil ? Choisis plutôt « Heure de la journée », 8:00, « Quotidiennement ».'),
         React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Tu ne vois pas « Réveil » ni « Heure de la journée » ? Fais défiler la liste, ou tape « heure » dans la barre de recherche en haut de la liste. Sur iOS 16 : « Créer une automatisation personnelle » d’abord. Toujours rien : utilise le bouton « Envoyer maintenant depuis la montre » en haut de cet écran, il marche sans automatisation.')),
@@ -235,7 +241,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
             'Notification « aucune donnée trouvée » ou « aucune nuit trouvée » : ta montre n’a rien enregistré sur les dernières 24 h. Vérifie dans l’app Santé › Sommeil, porte la montre la nuit (suivi du sommeil activé), puis relance le raccourci.',
             'Notification en anglais « Could not find the function… » : le serveur de Renfo n’est pas encore à jour (migrations 0006 et 0007 à appliquer par l’administrateur).',
             'Aucune notification : Réglages › Notifications › Raccourcis › active « Autoriser les notifications ». L’envoi a peut-être quand même eu lieu : recharge cette page.',
-            'Santé refusé par erreur, ou pas de FC/VFC : Réglages › Santé › Accès aux données et appareils › Raccourcis › active « Sommeil », « Fréquence cardiaque au repos » et « Variabilité de la fréquence cardiaque ».',
+            'Santé refusé par erreur, ou une mesure manque : Réglages › Santé › Accès aux données et appareils › Raccourcis › active Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque, Fréquence respiratoire et Minutes d’exercice.',
             'Le téléchargement rouvre ce site au lieu du fichier : recharge la page une fois, puis réessaie l’étape 2.',
           ] }))),
 

@@ -64,7 +64,14 @@ const encore = toPatch(r, { ...db, sleepLog: patch.sleepLog, vitalsLog: patch.vi
 a(encore.summary.sleepAdded === 0 && encore.summary.sleepTimes === 0 && encore.summary.vitalsAdded === 0, 'deposer deux fois la meme nuit : rien en double')
 const complete = toPatch(r, { sleepLog: { '2026-10-15': { hours: 7.3, source: 'sante' } }, planningSessions: [] }, { source: 'montre' })
 a(complete.patch.sleepLog['2026-10-15'].phases && complete.summary.sleepTimes === 1, 'une nuit importee sans phases est completee')
-a(resumeReleve(summary) === 'Montre : 1 nuit ajoutée, FC et VFC de 2 jours' && resumeReleve({}) === null, 'releve dit en une phrase : ' + resumeReleve(summary))
+a(resumeReleve(summary) === 'Montre : 1 nuit ajoutée, signaux de 2 jours' && resumeReleve({}) === null, 'releve dit en une phrase : ' + resumeReleve(summary))
+
+// ─── Respiration et exercice (signaux, second envoi) ───
+const sig = lireDepot('resp;15 oct. 2026 à 01:00;14,5\nresp;15 oct. 2026 à 03:00;15,5\nexo;14 oct. 2026 à 18:00;14 oct. 2026 à 18:01;1\nexo;14 oct. 2026 à 18:01;14 oct. 2026 à 18:30;29\nexo;15 oct. 2026 à 07:00;15 oct. 2026 à 07:10;10\n')
+a(sig.resp['2026-10-15'] === 15 && sig.respN['2026-10-15'] === 2 && sig.exoMin['2026-10-14'] === 30 && sig.exoMin['2026-10-15'] === 10, 'respiration moyennee (15/min sur 2 mesures), exercice additionne par jour (30 et 10 min)')
+const psig = toPatch(sig, { vitalsLog: { '2026-10-14': { exoMin: 12 } }, planningSessions: [] }, { source: 'montre' }).patch.vitalsLog
+a(psig['2026-10-15'].resp === 15 && psig['2026-10-14'].exoMin === 30, 'exercice : la valeur la plus complete de la journee remplace la partielle')
+a(toPatch(sig, { vitalsLog: { '2026-10-14': { exoMin: 45 } }, planningSessions: [] }, { source: 'montre' }).patch.vitalsLog['2026-10-14'].exoMin === 45, 'exercice : une valeur plus petite ne remplace pas')
 
 // ─── Plusieurs envois par jour ───
 const matin = lireDepot('sommeil;2026-10-14T23:10:00+02:00;2026-10-15T04:10:00+02:00;Principal\nvfc;2026-10-15T02:00:00+02:00;40\nvfc;2026-10-15T03:00:00+02:00;50\n')
@@ -81,7 +88,7 @@ const corrigee = toPatch(midi, { sleepLog: { '2026-10-15': { hours: 6, source: '
 a(corrigee.patch.sleepLog['2026-10-15'].hours === 6 && corrigee.summary.sleepUpdated === 0, 'nuit corrigee a la main : jamais remplacee')
 const manuelle = toPatch(midi, { sleepLog: { '2026-10-15': { hours: 6 } }, planningSessions: [] }, { source: 'montre' })
 a(manuelle.patch.sleepLog['2026-10-15'].hours === 6, 'nuit notee a la main : jamais remplacee')
-a(resumeReleve(deux.summary) === 'Montre : 1 nuit mise à jour, FC et VFC de 1 jour', 'releve dit la mise a jour : ' + resumeReleve(deux.summary))
+a(resumeReleve(deux.summary) === 'Montre : 1 nuit mise à jour, signaux de 1 jour', 'releve dit la mise a jour : ' + resumeReleve(deux.summary))
 const sleepSrc = readFileSync(new URL('../../src/features/health/Sleep.jsx', import.meta.url), 'utf8')
 a(/existing\.source && \(dureeChangee \|\| mode === 'heures'\) \? \{ corrigee: true \}/.test(sleepSrc) && /existing\.coucher && existing\.lever && !mesuree \? 'heures' : 'duree'/.test(sleepSrc), 'une nuit importee n est figee que si sa duree ou ses heures sont changees ; elle s ouvre sur sa duree mesuree')
 

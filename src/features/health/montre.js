@@ -12,11 +12,13 @@
 //   sommeil;<début>;<fin>;<valeur>   (Au lit, Principal, Profond, …)
 //   fc;<date>;<valeur>               (bpm)
 //   vfc;<date>;<valeur>              (ms)
+//   resp;<date>;<valeur>             (respirations par minute, la nuit)
+//   exo;<début>;<fin>;<minutes>      (minutes d'exercice de la montre)
 // Les dates arrivent au format ISO 8601 si on l'a choisi dans le
 // Raccourci, sinon au format affiché par l'iPhone (« 14 oct. 2026 à
 // 23:14 ») : les deux sont lus. Rien ici ne touche au réseau.
 // ============================================================
-import { createHealthReader, SLEEP_TYPE, RESTING_HR_TYPE, HRV_TYPE } from '../train/healthImport'
+import { createHealthReader, SLEEP_TYPE, RESTING_HR_TYPE, HRV_TYPE, RESP_TYPE, EXO_TYPE } from '../train/healthImport'
 
 const sansAccents = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
 const p2 = (n) => String(n).padStart(2, '0')
@@ -104,6 +106,12 @@ export function lireDepot(texte) {
     } else if (/^(fc|rhr|frequence|hr)$/.test(type) && champs.length >= 3) {
       const d = dateRaccourci(champs[1]), v = nombre(champs[champs.length - 1])
       if (d && v != null && v >= 25 && v <= 150) xml = `<Record type="${RESTING_HR_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
+    } else if (/^(resp|rr)$/.test(type) && champs.length >= 3) {
+      const d = dateRaccourci(champs[1]), v = nombre(champs[champs.length - 1])
+      if (d && v != null && v >= 4 && v <= 60) xml = `<Record type="${RESP_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
+    } else if (/^(exo|exercice)$/.test(type) && champs.length >= 4) {
+      const d = dateRaccourci(champs[1]), v = nombre(champs[champs.length - 1])
+      if (d && v != null && v >= 0 && v <= 600) xml = `<Record type="${EXO_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
     } else if (/^(vfc|hrv)$/.test(type) && champs.length >= 3) {
       const d = dateRaccourci(champs[1]), v = nombre(champs[champs.length - 1])
       if (d && v != null && v >= 3 && v <= 400) xml = `<Record type="${HRV_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
@@ -135,6 +143,6 @@ export function resumeReleve(summary) {
   if (summary.sleepAdded) morceaux.push(summary.sleepAdded + ' nuit' + (summary.sleepAdded > 1 ? 's' : '') + ' ajoutée' + (summary.sleepAdded > 1 ? 's' : ''))
   if (summary.sleepTimes) morceaux.push(summary.sleepTimes + ' complétée' + (summary.sleepTimes > 1 ? 's' : ''))
   if (summary.sleepUpdated) morceaux.push(summary.sleepUpdated + ' nuit' + (summary.sleepUpdated > 1 ? 's' : '') + ' mise' + (summary.sleepUpdated > 1 ? 's' : '') + ' à jour')
-  if (summary.vitalsAdded) morceaux.push('FC et VFC de ' + summary.vitalsAdded + ' jour' + (summary.vitalsAdded > 1 ? 's' : ''))
+  if (summary.vitalsAdded) morceaux.push('signaux de ' + summary.vitalsAdded + ' jour' + (summary.vitalsAdded > 1 ? 's' : ''))
   return morceaux.length ? 'Montre : ' + morceaux.join(', ') : null
 }

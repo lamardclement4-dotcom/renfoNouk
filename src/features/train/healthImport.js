@@ -52,6 +52,8 @@ export const SLEEP_TYPE = 'HKCategoryTypeIdentifierSleepAnalysis'
 export const STEPS_TYPE = 'HKQuantityTypeIdentifierStepCount'
 export const RESTING_HR_TYPE = 'HKQuantityTypeIdentifierRestingHeartRate'
 export const HRV_TYPE = 'HKQuantityTypeIdentifierHeartRateVariabilitySDNN'
+export const RESP_TYPE = 'HKQuantityTypeIdentifierRespiratoryRate'
+export const EXO_TYPE = 'HKQuantityTypeIdentifierAppleExerciseTime'
 
 // Les séances Apple portent un type long ; on ne garde que le suffixe.
 export const WORKOUT_SPORTS = [
@@ -204,6 +206,8 @@ export function createHealthReader() {
   const steps = new Map()
   const restingHr = new Map()
   const hrv = new Map()
+  const resp = new Map()          // fréquence respiratoire (nuit), par jour
+  const exo = new Map()           // minutes d'exercice (montre), par jour
   const workouts = []
   let seen = 0
 
@@ -272,6 +276,11 @@ export function createHealthReader() {
       const v = num(r.value)
       if (day && v != null) push(hrv, day, v)
     }
+    if (r.type === RESP_TYPE || r.type === EXO_TYPE) {
+      const day = dayOf(r.start)
+      const v = num(r.value)
+      if (day && v != null) push(r.type === RESP_TYPE ? resp : exo, day, v)
+    }
   }
 
   function result() {
@@ -306,6 +315,7 @@ export function createHealthReader() {
     return {
       sleep, steps: sum(steps), restingHr: avg(restingHr), hrv: avg(hrv),
       restingHrN: compte(restingHr), hrvN: compte(hrv),
+      resp: avg(resp), respN: compte(resp), exoMin: sum(exo),
       workouts: workouts.sort((a, b) => a.date.localeCompare(b.date)),
       seen,
     }
@@ -406,17 +416,20 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
 
   const vitalsLog = { ...prevVitals }
   let vitalsAdded = 0
-  const days = new Set([...Object.keys(result.steps || {}), ...Object.keys(result.restingHr || {}), ...Object.keys(result.hrv || {})])
+  const days = new Set(['steps', 'restingHr', 'hrv', 'resp', 'exoMin'].flatMap((k) => Object.keys(result[k] || {})))
   for (const d of days) {
     const entry = { ...(prevVitals[d] || {}) }
     let touched = false
-    if (result.steps[d] != null && entry.steps == null) { entry.steps = result.steps[d]; touched = true }
+    if (result.steps && result.steps[d] != null && entry.steps == null) { entry.steps = result.steps[d]; touched = true }
+    // Minutes d'exercice : cumulées dans la journée, la plus grande valeur
+    // reçue est la plus complète.
+    if (result.exoMin && result.exoMin[d] != null && !(entry.exoMin >= result.exoMin[d])) { entry.exoMin = result.exoMin[d]; touched = true }
     // FC et VFC : remplies si absentes, ou remplacées par un envoi qui en
     // compte autant ou plus pour ce jour-là (la VFC de la nuit s'affine
     // d'un envoi à l'autre ; un envoi du soir, qui ne voit que la fin de la
     // veille, ne remplace pas la moyenne complète du matin).
     const plusComplet = (cle, n) => entry[cle] == null || (entry[cle + 'N'] != null && n != null && n >= entry[cle + 'N'])
-    for (const cle of ['restingHr', 'hrv']) {
+    for (const cle of ['restingHr', 'hrv', 'resp']) {
       const val = result[cle] && result[cle][d], n = result[cle + 'N'] && result[cle + 'N'][d]
       if (val == null || !plusComplet(cle, n)) continue
       if (entry[cle] === val && entry[cle + 'N'] === n) continue

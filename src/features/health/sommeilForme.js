@@ -253,6 +253,19 @@ export function formeDuJour(log, aujourdhui, contexte = 0) {
     }
   }
 
+  const rs = sig.resp
+  if (rs && rs.valeur != null) {
+    const lab = 'Respiration la nuit'
+    if (rs.normale == null) {
+      ajustements.push({ id: 'resp', lab, pts: 0, texte: `${rs.valeur}/min · ta normale se dessine après 5 mesures${rs.mesures ? ` (${rs.mesures} pour l’instant)` : ''}` })
+    } else {
+      const d = Math.round((rs.valeur - rs.normale) * 10) / 10
+      const pts = d >= 3 ? -6 : d >= 2 ? -3 : 0
+      if (d >= 3) coeurFatigue = true
+      ajustements.push({ id: 'resp', lab, pts, texte: `${rs.valeur}/min, ${d > 0 ? fr(d) + ' au-dessus de' : d < 0 ? fr(-d) + ' sous' : 'égale à'} ta normale (${fr(Math.round(rs.normale * 10) / 10)})` })
+    }
+  }
+
   const total = parts.reduce((a, x) => a + x.pts, 0) + ajustements.reduce((a, x) => a + x.pts, 0)
   const score = Math.max(0, Math.min(100, total))
   const malade = r.sensations.includes('malade')

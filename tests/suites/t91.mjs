@@ -74,5 +74,13 @@ const bas = reglagesSeance({ niveau: 'basse' }, seance)
 a(bas.map((r) => r.id).join() === 'alleger,decaler' && bas[1].date === '2026-10-10', 'recuperation : alleger ou decaler a demain')
 a(reglagesSeance({ niveau: 'basse' }, { ...seance, statut: 'realise' }).length === 0, 'seance deja faite : rien')
 a(reglagesSeance({ niveau: 'basse' }, { ...seance, duree: '45 min', reglage: { type: 'alleger', duree: '1 h' } }).map((r) => r.id).join() === 'decaler', 'deja allegee : pas une deuxieme fois, decaler reste possible')
-a(formeContexte({}, J).signaux.pouls === null, 'contexte sans mesure du coeur : neutre')
+a(formeContexte({}, J).signaux.pouls === null && formeContexte({}, J).signaux.resp === null, 'contexte sans mesure du coeur : neutre')
+const vitR = {}
+for (let k = 1; k <= 8; k++) vitR[decaler(J, -k)] = { resp: 14 }
+vitR[J] = { resp: 18 }
+const sr = signauxCorps({ vitalsLog: vitR }, J)
+a(sr.resp.valeur === 18 && sr.resp.normale === 14, 'respiration : valeur du jour et normale')
+const fr3 = formeDuJour({ [J]: nuit }, J, { signaux: sr })
+const ajr = fr3.ajustements.find((x) => x.id === 'resp')
+a(ajr.pts === -6 && /4 au-dessus de ta normale \(14\)/.test(ajr.texte) && /cœur n’a pas fini de récupérer/.test(fr3.consigne), 'respiration +4 la nuit : -6 et pas d intensite : ' + ajr.texte)
 console.log('\nALL PASS')

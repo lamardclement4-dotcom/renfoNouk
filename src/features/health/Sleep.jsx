@@ -643,6 +643,7 @@ function BlocCoeur({ db }) {
     { id: 'pouls', lab: 'Pouls au réveil', unite: 'bpm', terme: 'pouls', lire: (d) => log[d] && log[d].pouls, lo: 30, hi: 120, haut: true },
     { id: 'repos', lab: 'FC de repos (Santé)', unite: 'bpm', terme: 'pouls', lire: (d) => vit[d] && vit[d].restingHr, lo: 30, hi: 120, haut: true },
     { id: 'vfc', lab: 'Variabilité cardiaque', unite: 'ms', terme: 'vfc', lire: (d) => vit[d] && vit[d].hrv, lo: 5, hi: 300, haut: false },
+    { id: 'resp', lab: 'Respiration la nuit', unite: '/min', terme: 'respiration', lire: (d) => vit[d] && vit[d].resp, lo: 4, hi: 60, haut: true, seuil: 3 },
   ]
   const blocs = []
   for (const m of mesures) {
@@ -654,13 +655,13 @@ function BlocCoeur({ db }) {
     if (!pts.length) continue
     const der = pts[pts.length - 1], avant = pts.slice(0, -1)
     const normale = avant.length >= 5 ? avant.reduce((a, p) => a + p.x, 0) / avant.length : null
-    const ecart = (x) => (normale == null ? false : m.haut ? x - normale >= 7 : x / normale <= 0.85)
+    const ecart = (x) => (normale == null ? false : m.haut ? x - normale >= (m.seuil || 7) : x / normale <= 0.85)
     const horsNormale = normale == null ? 0 : pts.filter((p) => p.k < 14 && ecart(p.x)).length
     const quand = der.k === 0 ? 'aujourd’hui' : der.k === 1 ? 'hier' : 'il y a ' + der.k + ' jours'
     const hint = normale == null
       ? `Dernière mesure : ${quand}. Ta normale se dessine après 5 mesures (encore ${5 - avant.length}).`
       : `Dernière mesure : ${quand}. Normale : ${Math.round(normale)} ${m.unite} sur ${avant.length} mesures.`
-        + (horsNormale ? ` ${horsNormale} jour${horsNormale > 1 ? 's' : ''} ${m.haut ? 'à 7 battements ou plus au-dessus' : 'à 15 % ou plus sous'} ces deux dernières semaines.` : ' Aucun écart marqué ces deux dernières semaines.')
+        + (horsNormale ? ` ${horsNormale} jour${horsNormale > 1 ? 's' : ''} ${m.id === 'resp' ? 'à 3 respirations ou plus au-dessus' : m.haut ? 'à 7 battements ou plus au-dessus' : 'à 15 % ou plus sous'} ces deux dernières semaines.` : ' Aucun écart marqué ces deux dernières semaines.')
     const W = 280, H = 34
     const xs = pts.map((p) => p.x).concat(normale != null ? [normale] : [])
     const lo = Math.min(...xs) - 2, hi = Math.max(...xs) + 2

@@ -86,7 +86,12 @@ export function signauxCorps(db, iso) {
   }
   const avantVfc = serieAvant(iso, hrv)
   const vfc = hrv(iso) != null ? { valeur: hrv(iso), normale: moyenneOuNull(avantVfc), mesures: avantVfc.length } : null
-  return { pouls, vfc }
+  // Fréquence respiratoire de la nuit (montre) : elle monte souvent un ou
+  // deux jours avant les premiers symptômes d'une infection.
+  const rr = (d) => dansBornes(vit[d] && vit[d].resp, 4, 60)
+  const avantResp = serieAvant(iso, rr)
+  const resp = rr(iso) != null ? { valeur: rr(iso), normale: moyenneOuNull(avantResp), mesures: avantResp.length } : null
+  return { pouls, vfc, resp }
 }
 
 export function formeContexte(db, iso) {
