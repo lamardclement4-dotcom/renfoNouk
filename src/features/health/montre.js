@@ -42,6 +42,15 @@ export function dateRaccourci(raw) {
     else off = off.replace(':', '')
     return `${y}-${mo}-${d} ${h}:${mi}:${se || '00'} ${off}`
   }
+  // « Oct 14, 2026 at 11:14 PM » (iPhone réglé en anglais)
+  m = /^([a-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})(?:\s*(?:at|,))?\s+(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?/.exec(s)
+  if (m && (MOIS[m[1].slice(0, 4)] || MOIS[m[1].slice(0, 3)])) {
+    const mo = MOIS[m[1].slice(0, 4)] || MOIS[m[1].slice(0, 3)], d = +m[2], y = +m[3]
+    let h = +m[4]
+    if (m[6] === 'pm' && h < 12) h += 12
+    if (m[6] === 'am' && h === 12) h = 0
+    if (d >= 1 && d <= 31 && h <= 23) return `${y}-${p2(mo)}-${p2(d)} ${p2(h)}:${m[5]}:00 ${decalageLocal(y, mo, d, h, +m[5])}`
+  }
   // « 14 oct. 2026 à 23:14 », « 14 octobre 2026 23:14 », « 14/10/2026 23:14 »
   m = /^(\d{1,2})[\s/.-]+([a-z]+\.?|\d{1,2})[\s/.-]+(\d{4})(?:\s*(?:a|,|at))?\s+(\d{1,2})[:h](\d{2})(?:\s*(am|pm))?/.exec(s)
   if (m) {
@@ -59,8 +68,12 @@ export function dateRaccourci(raw) {
 // Valeur d'un segment de sommeil telle que l'iPhone l'écrit (« Au lit »,
 // « Principal », « Profond », « Paradoxal », « Éveillé », « Endormi »), en
 // français ou en anglais → valeur de l'export Santé.
+// Valeur brute de Santé, si l'iPhone l'écrit en chiffre (0 au lit,
+// 1 endormi, 2 éveillé, 3 principal, 4 profond, 5 paradoxal).
+const VALEURS_BRUTES = ['InBed', 'AsleepUnspecified', 'Awake', 'AsleepCore', 'AsleepDeep', 'AsleepREM']
 export function valeurSommeil(raw) {
   const v = sansAccents(raw).toLowerCase()
+  if (/^\s*[0-5]\s*$/.test(v)) return 'HKCategoryValueSleepAnalysis' + VALEURS_BRUTES[Number(v)]
   if (/lit|bed/.test(v)) return 'HKCategoryValueSleepAnalysisInBed'
   if (/eveill|awake|reveil/.test(v)) return 'HKCategoryValueSleepAnalysisAwake'
   if (/profond|deep/.test(v)) return 'HKCategoryValueSleepAnalysisAsleepDeep'

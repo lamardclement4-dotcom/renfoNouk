@@ -1,0 +1,26 @@
+// Ecran Apple Watch : trois etapes (cle, installer le raccourci tout pret,
+// automatisation), la methode manuelle repliee en secours.
+import '../harness/browser-env.mjs'
+import { __render, __reset } from '../harness/react-stub4.mjs'
+import { readFileSync } from 'node:fs'
+import MontrePanneau from '../../src/features/health/MontrePanneau.jsx'
+const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
+const text = (n) => { if (n == null || n === false) return ''
+  if (typeof n === 'string' || typeof n === 'number') return String(n) + ' '
+  if (Array.isArray(n)) return n.map(text).join('')
+  return text(n.children) }
+const trouver = (n, f) => { if (!n || typeof n !== 'object') return null; if (Array.isArray(n)) { for (const x of n) { const r = trouver(x, f); if (r) return r } return null } if (f(n)) return n; return trouver(n.children, f) }
+__reset()
+const arbre = __render('montre', MontrePanneau, { userId: 'u1', store: {}, onRetour: () => {} })
+const t = text(arbre)
+a(/1 · Créer ta clé/.test(t) && /2 · Installer le raccourci/.test(t) && /3 · Chaque matin, tout seul/.test(t), 'trois etapes')
+const lien = trouver(arbre, (n) => n.type === 'a')
+a(lien && /raccourci\/Renfo\.shortcut$/.test(lien.props.href) && lien.props.target === '_blank', 'bouton « Installer » vers le raccourci signe publie avec le site')
+a(/colle ta clé quand elle est demandée/.test(t) && /Quand mon réveil est arrêté/.test(t), 'consignes courtes : coller la cle, automatisation du reveil')
+a(/Construire le raccourci à la main/.test(t), 'methode manuelle gardee, repliee')
+const sig = readFileSync(new URL('../../public/raccourci/Renfo.shortcut', import.meta.url))
+a(sig.slice(0, 4).toString() === 'AEA1', 'raccourci publie signe (format AEA1)')
+const src = readFileSync(new URL('../../outils/raccourci/Renfo.plist', import.meta.url), 'utf8')
+a(/is\.workflow\.actions\.filter\.health\.quantity/.test(src) && /<string>Sleep<\/string>/.test(src) && /deposer_nuit_montre\?apikey=/.test(src) && /WFTextActionText/.test(src) && /Colle ta clé Renfo/.test(src), 'source du raccourci : Sante « Sleep », envoi a deposer_nuit_montre, cle demandee a l installation')
+a(!/colle-ta-cle-renfo[^<]{20,}/.test(src) && !/[A-Za-z0-9_-]{43}<\/string>\s*<key>Category/.test(src), 'aucune cle personnelle dans le raccourci publie')
+console.log('\nALL PASS')

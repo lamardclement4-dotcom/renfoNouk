@@ -14,6 +14,8 @@ import { marquerMontre as poserDrapeau } from './montreDrapeau'
 const COL = MODULE_TINTS.sommeil
 const URL_DEPOT = ((import.meta.env && import.meta.env.VITE_SUPABASE_URL) || '').replace(/\/$/, '') + '/rest/v1/rpc/deposer_mesures_montre'
 const CLE_PUBLIQUE = (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) || ''
+// Le raccourci tout prêt, signé, publié avec le site (outils/raccourci).
+const RACCOURCI = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'raccourci/Renfo.shortcut'
 
 
 function quand(iso) {
@@ -78,6 +80,9 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
     setOccupe(false)
     if (r.erreur) { setEtat({ ...etat, erreur: r.erreur }); return }
     setCle(r.cle)
+    // Copiée tout de suite : l'étape suivante (installer le raccourci) la
+    // demande, et l'iPhone n'a qu'à la coller.
+    copier(r.cle, 'Clé')
     poserDrapeau(userId, true)
     charger()
   }
@@ -107,12 +112,12 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
   return React.createElement('div', null,
     React.createElement('button', { type: 'button', onClick: onRetour, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 0 10px', background: 'none', border: 'none', color: COL, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, '← ' + retour),
     React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } },
-      'Chaque matin, un raccourci de ton iPhone lit dans Santé ta nuit (avec ses phases), ta fréquence cardiaque au repos et ta variabilité cardiaque, et les dépose ici. Renfo les range à l’ouverture, sans toucher à ce que tu as noté à la main. Rien d’autre n’est lu.'),
+      'Chaque matin, un raccourci de ton iPhone lit ta nuit dans Santé (durée, heures, phases) et l’envoie ici. Trois étapes, une seule fois.'),
 
     // État
     React.createElement('div', { style: { ...bloc, marginTop: 14, borderLeft: `3px solid ${etat.configuree ? C.success : etat.erreur ? C.warn : C.line}` } },
       etat.chargement ? React.createElement('div', { style: { fontSize: 13, color: C.ink3 } }, 'Vérification…')
-        : etat.erreur === 'migration' ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Le serveur n’est pas encore prêt : la migration « 0005_montre.sql » doit être appliquée dans Supabase (éditeur SQL), une seule fois.')
+        : etat.erreur === 'migration' ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Le serveur n’est pas encore prêt : les migrations « 0005_montre.sql » et « 0006_montre_raccourci_simple.sql » doivent être appliquées dans Supabase (éditeur SQL), une seule fois.')
           : etat.erreur ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Serveur injoignable pour l’instant. Réessaie avec du réseau.')
             : React.createElement('div', null,
               React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink } }, etat.configuree ? 'Clé active' : 'Pas encore reliée'),
@@ -122,28 +127,40 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
               message ? React.createElement('div', { role: 'status', style: { fontSize: 12.5, color: C.ink2, marginTop: 8 } }, message) : null)),
 
     etat.erreur === 'migration' ? null : React.createElement(React.Fragment, null,
-      titre('1 · Ta clé'),
+      titre('1 · Créer ta clé'),
       React.createElement('div', { style: bloc },
         cle ? React.createElement(React.Fragment, null,
+          React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: C.success, marginBottom: 4 } }, '✓ Clé créée et copiée'),
           React.createElement(AvecCopie, { lab: 'Ta clé (affichée une seule fois)', valeur: cle, quoi: 'Clé' }),
-          React.createElement('div', { style: { fontSize: 12, color: C.warn, lineHeight: 1.45 } }, 'Colle-la dans le raccourci maintenant : elle ne sera plus affichée. Elle donne le droit de déposer des mesures dans ton compte, rien d’autre ; ne la partage pas.'))
+          React.createElement('div', { style: { fontSize: 12, color: C.ink3, lineHeight: 1.45 } }, 'Le raccourci te la demandera à l’installation : tu n’auras qu’à la coller. Ne la partage pas.'))
           : React.createElement('div', null,
-            React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginBottom: 10 } }, etat.configuree ? 'Ta clé est dans ton raccourci. Une nouvelle clé remplace l’ancienne.' : 'Une clé personnelle, à coller dans le raccourci. Le serveur n’en garde qu’une empreinte.'),
+            React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginBottom: 10 } }, etat.configuree ? 'Déjà fait. Une nouvelle clé remplace l’ancienne (il faudra réinstaller le raccourci).' : 'Elle est copiée automatiquement.'),
             bouton(confirme === 'remplacer' ? 'Oui, remplacer ma clé' : etat.configuree ? 'Remplacer ma clé' : 'Créer ma clé', creer, !etat.configuree),
-            confirme === 'remplacer' ? React.createElement('div', { style: { fontSize: 12, color: C.warn, marginTop: 6, lineHeight: 1.45 } }, 'L’ancienne clé cessera aussitôt de marcher : il faudra coller la nouvelle dans le raccourci. ', React.createElement('button', { type: 'button', onClick: () => setConfirme(null), style: { background: 'none', border: 'none', padding: 0, color: COL, fontWeight: 700, cursor: 'pointer', fontSize: 12 } }, 'Annuler')) : null)),
+            confirme === 'remplacer' ? React.createElement('div', { style: { fontSize: 12, color: C.warn, marginTop: 6, lineHeight: 1.45 } }, 'L’ancienne clé cessera aussitôt de marcher. ', React.createElement('button', { type: 'button', onClick: () => setConfirme(null), style: { background: 'none', border: 'none', padding: 0, color: COL, fontWeight: 700, cursor: 'pointer', fontSize: 12 } }, 'Annuler')) : null)),
 
-      titre('2 · Le raccourci (une fois)'),
+      titre('2 · Installer le raccourci'),
       React.createElement('div', { style: bloc },
-        React.createElement(AvecCopie, { lab: 'Adresse (URL)', valeur: URL_DEPOT, quoi: 'Adresse' }),
-        React.createElement(AvecCopie, { lab: 'En-tête apikey (clé publique de l’app)', valeur: CLE_PUBLIQUE, quoi: 'En-tête' }),
+        React.createElement('a', { href: RACCOURCI, target: '_blank', rel: 'noopener', style: { display: 'block', textAlign: 'center', padding: '11px 14px', background: COL, color: 'var(--c-on-fill)', fontFamily: C.display, fontSize: 16, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', textDecoration: 'none' } }, 'Installer « Renfo »'),
         React.createElement('ol', { style: { margin: '10px 0 0', paddingLeft: 20, fontSize: 12.5, color: C.ink2, lineHeight: 1.55 } },
-          ETAPES_RACCOURCI.map(([texte, code, note], i) => React.createElement('li', { key: i, style: { marginBottom: 8 } }, texte,
-            code ? React.createElement('code', { style: { display: 'block', fontFamily: C.mono, fontSize: 11.5, margin: '4px 0', padding: '5px 7px', background: C.surface2, border: `1px solid ${C.line}`, color: C.ink } }, code) : null,
-            note ? React.createElement('span', { style: { display: 'block', fontSize: 11.5, color: C.ink3 } }, note) : null)))),
+          React.createElement('li', null, 'Safari télécharge « Renfo.shortcut » : ouvre-le (flèche ↓ des téléchargements).'),
+          React.createElement('li', null, 'Raccourcis s’ouvre : « Ajouter le raccourci », puis colle ta clé quand elle est demandée.'),
+          React.createElement('li', null, 'Lance « Renfo » une fois et autorise l’accès au sommeil dans Santé. En haut de cet écran, « Dernier dépôt » passe à maintenant.'))),
 
       titre('3 · Chaque matin, tout seul'),
       React.createElement('div', { style: { ...bloc, fontSize: 12.5, color: C.ink2, lineHeight: 1.55 } },
-        'Raccourcis › Automatisation › « + » › « Réveil » › « Quand mon réveil est arrêté » (ou « Heure de la journée », 9:00) › « Exécuter immédiatement » › choisis « Renfo ». Ta nuit arrive pendant que tu te lèves.'),
+        'Raccourcis › Automatisation › « + » › « Réveil » › « Quand mon réveil est arrêté » › « Exécuter immédiatement » › choisis « Renfo ». Ta nuit arrive pendant que tu te lèves.'),
+
+      // Le chemin d'avant, pour qui veut aussi la FC au repos et la VFC, ou
+      // si l'installation ne passe pas.
+      React.createElement('details', { style: { marginTop: 14, fontSize: 12.5, color: C.ink2 } },
+        React.createElement('summary', { style: { cursor: 'pointer', color: COL, fontWeight: 700 } }, 'Construire le raccourci à la main (avec FC et VFC)'),
+        React.createElement('div', { style: { ...bloc, marginTop: 8 } },
+          React.createElement(AvecCopie, { lab: 'Adresse (URL)', valeur: URL_DEPOT, quoi: 'Adresse' }),
+          React.createElement(AvecCopie, { lab: 'En-tête apikey (clé publique de l’app)', valeur: CLE_PUBLIQUE, quoi: 'En-tête' }),
+          React.createElement('ol', { style: { margin: '10px 0 0', paddingLeft: 20, fontSize: 12.5, color: C.ink2, lineHeight: 1.55 } },
+            ETAPES_RACCOURCI.map(([texte, code, note], i) => React.createElement('li', { key: i, style: { marginBottom: 8 } }, texte,
+              code ? React.createElement('code', { style: { display: 'block', fontFamily: C.mono, fontSize: 11.5, margin: '4px 0', padding: '5px 7px', background: C.surface2, border: `1px solid ${C.line}`, color: C.ink } }, code) : null,
+              note ? React.createElement('span', { style: { display: 'block', fontSize: 11.5, color: C.ink3 } }, note) : null))))),
 
       React.createElement('div', { style: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 11.5, color: C.ink3, lineHeight: 1.45, marginTop: 14 } },
         React.createElement(Icon, { name: 'shield', size: 14, color: C.ink3 }),

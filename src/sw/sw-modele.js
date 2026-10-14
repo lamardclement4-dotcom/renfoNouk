@@ -51,8 +51,11 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url)
   // Tout ce qui ne vient pas de l'app passe sans détour par le réseau.
   if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE)) return
-  if (req.mode === 'navigate') { e.respondWith(page(req)); return }
   const chemin = url.pathname.slice(BASE.length)
+  // Une ouverture de page reçoit l'app gardée. Pas un fichier publié à
+  // côté (le raccourci iOS, raccourci/Renfo.shortcut) : il doit se
+  // télécharger, pas rouvrir l'app.
+  if (req.mode === 'navigate') { if (!/\.[a-z0-9]+$/i.test(chemin)) e.respondWith(page(req)); return }
   if (chemin.startsWith('assets/')) { e.respondWith(depuisCache(req, CACHE_APP)); return }
   if (chemin.startsWith('ocr/')) { e.respondWith(depuisCache(req, CACHE_OCR)); return }
 })

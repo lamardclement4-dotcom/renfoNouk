@@ -10,13 +10,14 @@ a(dateRaccourci('2026-10-14T23:14:00+02:00') === '2026-10-14 23:14:00 +0200', 'I
 a(dateRaccourci('2026-10-14T21:14:00Z') === '2026-10-14 21:14:00 +0000', 'ISO 8601 en UTC')
 a(/^2026-10-14 23:14:00 [+-]\d{4}$/.test(dateRaccourci('14 oct. 2026 à 23:14')), 'format affiche par l iPhone (« 14 oct. 2026 a 23:14 »)')
 a(/^2026-10-15 07:02:00/.test(dateRaccourci('15 octobre 2026 07:02')) && /^2026-10-15 07:02:00/.test(dateRaccourci('15/10/2026 07:02')), 'mois en toutes lettres, ou en chiffres')
-a(/^2026-10-14 23:14:00/.test(dateRaccourci('Oct 14, 2026 at 11:14 PM') || '2026-10-14 23:14:00') && dateRaccourci('n importe quoi') === null, 'illisible : null')
+a(/^2026-10-14 23:14:00/.test(dateRaccourci('Oct 14, 2026 at 11:14 PM')) && /^2026-10-15 06:58:00/.test(dateRaccourci('Oct 15, 2026, 6:58 AM')) && dateRaccourci('n importe quoi') === null, 'iPhone en anglais (« Oct 14, 2026 at 11:14 PM »), illisible : null')
 a(/^2026-08-03 06:30/.test(dateRaccourci('3 août 2026 à 06:30')), 'accents des mois')
 
 // ─── Valeurs de sommeil ───
 a(valeurSommeil('Au lit') === 'HKCategoryValueSleepAnalysisInBed' && valeurSommeil('In Bed') === 'HKCategoryValueSleepAnalysisInBed', 'au lit')
 a(valeurSommeil('Profond') === 'HKCategoryValueSleepAnalysisAsleepDeep' && valeurSommeil('Paradoxal') === 'HKCategoryValueSleepAnalysisAsleepREM' && valeurSommeil('REM') === 'HKCategoryValueSleepAnalysisAsleepREM', 'profond, paradoxal')
 a(valeurSommeil('Principal') === 'HKCategoryValueSleepAnalysisAsleepCore' && valeurSommeil('Core') === 'HKCategoryValueSleepAnalysisAsleepCore', 'principal (core)')
+a(valeurSommeil('4') === 'HKCategoryValueSleepAnalysisAsleepDeep' && valeurSommeil('0') === 'HKCategoryValueSleepAnalysisInBed' && valeurSommeil('Sommeil paradoxal') === 'HKCategoryValueSleepAnalysisAsleepREM', 'valeurs brutes en chiffre, libelles longs')
 a(valeurSommeil('Éveillé') === 'HKCategoryValueSleepAnalysisAwake' && valeurSommeil('Endormi') === 'HKCategoryValueSleepAnalysisAsleepUnspecified' && valeurSommeil('Licorne') === null, 'eveille, endormi, inconnu')
 
 // ─── Un depot complet ───
@@ -46,6 +47,10 @@ const fr = lireDepot(`sommeil ; 14 oct. 2026 à 23:30 ; 15 oct. 2026 à 06:30 ; 
 fc|15 oct. 2026 à 08:00|50`)
 a(fr.sleep['2026-10-15'] && fr.sleep['2026-10-15'].hours === 7 && fr.restingHr['2026-10-15'] === 50, 'dates « 14 oct. 2026 a 23:30 », separateurs « ; » et « | »')
 
+// Depot du raccourci tout pret : lignes rebaties par le serveur (0006)
+const simple = lireDepot('sommeil;14 oct. 2026 à 23:10;15 oct. 2026 à 01:00;Principal\nsommeil;15 oct. 2026 à 01:00;15 oct. 2026 à 02:05;Profond\nsommeil;15 oct. 2026 à 02:05;15 oct. 2026 à 06:40;3\n')
+a(simple.lues === 3 && simple.sleep['2026-10-15'] && simple.sleep['2026-10-15'].phases.profond === 65 && simple.sleep['2026-10-15'].phases.leger === 385, 'depot du raccourci tout pret : nuit et phases (' + JSON.stringify(simple.sleep['2026-10-15']) + ')')
+
 // ─── Rangement dans le journal ───
 const db = { sleepLog: { '2026-10-14': { hours: 6.5, quality: 3 } }, vitalsLog: { '2026-10-15': { restingHr: 47 } }, planningSessions: [] }
 const { patch, summary } = toPatch(r, db, { source: 'montre' })
@@ -73,6 +78,8 @@ a(await empreinteCle('abc') === 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9
 
 // ─── Migration ───
 const sql = readFileSync(new URL('../../supabase/migrations/0005_montre.sql', import.meta.url), 'utf8')
+const sql6 = readFileSync(new URL('../../supabase/migrations/0006_montre_raccourci_simple.sql', import.meta.url), 'utf8')
+a(/return deposer_mesures_montre\(jeton, lignes\)/.test(sql6) && /security definer\s+set search_path = public, pg_temp/.test(sql6) && /revoke all on function liste_montre\(jsonb\) from public/.test(sql6) && /grant execute on function deposer_nuit_montre\(text, jsonb, jsonb, jsonb\) to anon, authenticated/.test(sql6), '0006 : passe par la porte de 0005 (memes controles), utilitaire ferme')
 a(/alter table jetons_montre enable row level security/.test(sql) && /alter table depots_montre enable row level security/.test(sql), 'RLS sur les deux tables')
 a(/security definer\s+set search_path = public, pg_temp/.test(sql), 'fonction security definer au search_path fige (cf. 0004)')
 a(/revoke all on function deposer_mesures_montre\(text, text\) from public;/.test(sql) && /grant execute on function deposer_mesures_montre\(text, text\) to anon, authenticated;/.test(sql), 'seule la fonction est ouverte au role anonyme')
