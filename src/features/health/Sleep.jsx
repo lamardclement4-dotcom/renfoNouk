@@ -3,6 +3,8 @@ import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, isoToday, Aide } from './kit'
 import { ENERGIES, SENSATIONS, libelleNuit, nuitsRecentes, nuitsManquantes, reveilDe, resumeReveil, resumeNuit, decaler } from './sommeilReveil'
 import { annoncer } from '../../annonces'
+import { imageTooLarge } from './fileGuard'
+import { lireCaptureSommeil, qualiteDuScore, lectureIncomplete, fusionnerCaptures } from './sommeilOcr'
 import { FACTEURS, facteursDe, dureeDepuisHeures, libelleDuree, minutesDe, influences, regulariteHoraires, chronotype } from './sommeilForme'
 import { formeDb, formeSemaine, coucherDuSoir, normaleDuPouls, formeEtSeances, respectCoucher } from './formeContexte'
 import { sleepAnalysis, BASE_NEED } from './sleepIntel'
@@ -145,6 +147,88 @@ function RattrapageExpress({ db, store, onFini }) {
     React.createElement('button', { onClick: onFini, style: { width: '100%', marginTop: 8, padding: 11, background: 'transparent', border: 'none', color: C.ink2, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' } }, 'Annuler'))
 }
 
+// ── Capture d'écran d'une application de sommeil ──
+// Santé, Garmin, Fitbit, Samsung, Oura, Withings… : la capture est lue sur
+// l'appareil (ocr.js), jamais envoyée. Ce qui est lu est montré avant
+// d'être appliqué : une lecture fautive se voit et se refuse.
+const NOMS_PHASES = [['profond', 'Profond'], ['paradoxal', 'Paradoxal'], ['leger', 'Léger'], ['eveille', 'Éveillé']]
+export function resumeCapture(r) {
+  const l = []
+  if (r.heures != null) l.push(['Sommeil', libelleDuree(r.heures)])
+  if (r.lit != null) l.push(['Au lit', libelleDuree(r.lit / 60)])
+  if (r.coucher || r.lever) l.push(['Horaires', (r.coucher || '?') + ' → ' + (r.lever || '?')])
+  for (const [k, lab] of NOMS_PHASES) if (r.phases[k] != null) l.push([lab, libelleDuree(r.phases[k] / 60)])
+  if (r.reveils != null) l.push(['Réveils', String(r.reveils)])
+  if (r.score != null) l.push(['Score de l’app', r.score + ' / 100'])
+  if (r.efficacite != null) l.push(['Efficacité', r.efficacite + ' %'])
+  if (r.fcRepos != null) l.push(['FC au repos', r.fcRepos + ' bpm'])
+  if (r.vfc != null) l.push(['Variabilité cardiaque', r.vfc + ' ms'])
+  return l
+}
+function ImportCapture({ date, onAppliquer }) {
+  const [etat, setEtat] = useState({ phase: 'repos' })
+  async function lire(file) {
+    if (!file) return
+    const trop = imageTooLarge(file)
+    if (trop) { setEtat({ phase: 'erreur', message: trop }); return }
+    setEtat({ phase: 'lecture', progres: 0, passe: 1 })
+    try {
+      const { ouvrirLecteur } = await import('../ocr')
+      const url = URL.createObjectURL(file)
+      let r = null
+      let passe = 1
+      const lecteur = await ouvrirLecteur({ logger: (m) => { if (m.status === 'recognizing text') setEtat({ phase: 'lecture', progres: Math.round(m.progress * 100), passe }) } })
+      try {
+        const texte = (x) => (x && x.data && x.data.text) || ''
+        r = lireCaptureSommeil(texte(await lecteur.lire(url)))
+        // Une étiquette vue sans sa valeur, ou la durée ou les heures
+        // absentes : seconde lecture, plus fine, qui comble les trous.
+        if (lectureIncomplete(r)) {
+          passe = 2
+          setEtat({ phase: 'lecture', progres: 0, passe })
+          r = fusionnerCaptures(r, lireCaptureSommeil(texte(await lecteur.lire(url, { psm: 11 }))))
+        }
+      } finally { URL.revokeObjectURL(url); lecteur.fermer() }
+      if (!r || (r.heures == null && !(r.coucher && r.lever))) {
+        setEtat({ phase: 'erreur', message: 'Aucune durée de sommeil lisible sur cette capture. Prends l’écran du résumé de la nuit (durée, heures), bien net, sans recadrer le texte.' })
+        return
+      }
+      setEtat({ phase: 'apercu', r })
+    } catch (e) {
+      setEtat({ phase: 'erreur', message: 'Lecture impossible : ' + (e && e.message ? e.message : 'image illisible') })
+    }
+  }
+  const cadre = { padding: '11px 12px', marginBottom: 16, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${SLEEP_COL}` }
+  if (etat.phase === 'lecture') {
+    return React.createElement('div', { style: cadre, role: 'status' },
+      React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: C.ink } }, etat.passe === 2 ? 'Seconde lecture, plus fine…' : 'Lecture de la capture…'),
+      React.createElement('div', { 'aria-hidden': true, style: { height: 4, background: C.line, margin: '9px 0 6px' } },
+        React.createElement('div', { style: { height: 4, width: Math.max(4, etat.progres) + '%', background: SLEEP_COL, transition: 'width .3s ease' } })),
+      React.createElement('div', { style: { fontSize: 11.5, color: C.ink3 } }, etat.progres > 0 ? etat.progres + ' %' : 'Préparation du moteur de lecture (la première fois seulement)…'))
+  }
+  if (etat.phase === 'apercu') {
+    const lignes = resumeCapture(etat.r)
+    return React.createElement('div', { style: cadre },
+      React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: C.ink, marginBottom: 6 } }, 'Lu sur la capture'),
+      lignes.map(([lab, v]) => React.createElement('div', { key: lab, style: { display: 'flex', justifyContent: 'space-between', gap: 10, padding: '4px 0', borderBottom: `1px solid ${C.line}`, fontSize: 12.5 } },
+        React.createElement('span', { style: { color: C.ink2 } }, lab),
+        React.createElement('span', { style: { fontFamily: C.mono, fontWeight: 600, color: C.ink } }, v))),
+      etat.r.alertes.map((t, i) => React.createElement('div', { key: i, style: { fontSize: 11.5, color: C.warn, marginTop: 6, lineHeight: 1.4 } }, t)),
+      React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 8, lineHeight: 1.4 } }, 'Pour la ' + libelleNuit(date).charAt(0).toLowerCase() + libelleNuit(date).slice(1).replace(/\.$/, '') + '. Vérifie, puis complète ton ressenti dans les étapes.'),
+      React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 10 } },
+        React.createElement('button', { type: 'button', onClick: () => { onAppliquer(etat.r); setEtat({ phase: 'appliquee' }) }, style: { flex: 1, padding: 10, border: 'none', background: SLEEP_COL, color: 'var(--c-on-fill)', fontFamily: C.display, fontSize: 15, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', cursor: 'pointer' } }, 'Remplir la nuit'),
+        React.createElement('button', { type: 'button', onClick: () => setEtat({ phase: 'repos' }), style: { padding: '10px 14px', border: `1px solid ${C.line}`, background: C.surface, color: C.ink2, fontSize: 13, fontWeight: 700, cursor: 'pointer' } }, 'Annuler')))
+  }
+  return React.createElement('div', { style: { marginBottom: 16 } },
+    React.createElement('label', { style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: C.surface, border: `1px dashed ${C.line}`, cursor: 'pointer' } },
+      React.createElement(Icon, { name: 'plus', size: 18, color: SLEEP_COL }),
+      React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+        React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink } }, etat.phase === 'appliquee' ? 'Importer une autre capture' : 'Importer une capture d’écran'),
+        React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 2, lineHeight: 1.4 } }, 'Santé, Garmin, Fitbit, Samsung, Oura, Withings… Lue sur ton téléphone, jamais envoyée.')),
+      React.createElement('input', { type: 'file', accept: 'image/*', 'aria-label': 'Choisir une capture d’écran de sommeil', onChange: (e) => { lire(e.target.files && e.target.files[0]); e.target.value = '' }, style: { display: 'none' } })),
+    etat.phase === 'erreur' ? React.createElement('div', { role: 'alert', style: { fontSize: 12, color: C.warn, marginTop: 6, lineHeight: 1.45 } }, etat.message) : null)
+}
+
 // ── Saisie d'une nuit : assistant en 5 étapes ──
 function NightTab({ db, store, date, onDone }) {
   const log = db.sleepLog || {}
@@ -171,6 +255,19 @@ function NightTab({ db, store, date, onDone }) {
   const poulsValide = /^\d{2,3}$/.test(pouls) && Number(pouls) >= 30 && Number(pouls) <= 120 ? Number(pouls) : null
   const normalePouls = normaleDuPouls({ sleepLog: log }, date).normale
   const [step, setStep] = useState(0)
+  // Ce qu'une capture a apporté et qui ne se saisit pas à la main : phases,
+  // score de l'application, heures exactes à côté de la durée, FC et VFC.
+  const [capture, setCapture] = useState(null)
+  function appliquerCapture(r) {
+    if (r.heures != null) { setHours(r.heures); setMode('duree') } else setMode('heures')
+    if (r.coucher) setCoucher(r.coucher)
+    if (r.lever) setLever(r.lever)
+    if (r.reveils != null) setAwakenings(Math.min(3, r.reveils))
+    const q = qualiteDuScore(r.score)
+    if (q && !quality) setQuality(q)
+    setCapture(r)
+    annoncer('Capture lue : ' + resumeCapture(r).slice(0, 2).map(([lab, v]) => lab.toLowerCase() + ' ' + v).join(', '))
+  }
 
   const hLabel = libelleDuree(hours)
   const STEPS = ['Durée', 'Réveils', 'Qualité', 'Au réveil', 'La veille']
@@ -180,14 +277,37 @@ function NightTab({ db, store, date, onDone }) {
     const rt = db.sleepRoutine || null
     // Les autres champs d'une nuit (source d'import, routine du moment…)
     // sont gardés : on complète la nuit, on ne la remplace pas.
-    store.set({ sleepLog: { ...cur, [date]: { ...(cur[date] || {}), hours, quality: quality || null, awakenings: awakenings || 0,
+    // Les heures ne sont gardées que si elles ont servi : une durée saisie
+    // à la main ne doit pas cohabiter avec des heures qui la contredisent.
+    // Celles d'une capture accompagnent sa durée : l'écart entre les deux,
+    // c'est le temps passé éveillé, que l'application a mesuré.
+    const heuresCapture = mode === 'duree' && capture && capture.heures != null && capture.coucher && capture.lever
+    const phases = capture && Object.values(capture.phases).some((v) => v != null) ? capture.phases : null
+    const nuit = { ...(cur[date] || {}), hours, quality: quality || null, awakenings: awakenings || 0,
       reveil: { energie: energie || null, sensations }, facteurs, pouls: poulsValide,
-      // Les heures ne sont gardées que si elles ont servi : une durée saisie
-      // à la main ne doit pas cohabiter avec des heures qui la contredisent.
-      coucher: mode === 'heures' ? coucher : null, lever: mode === 'heures' ? lever : null, endormissement: mode === 'heures' ? endormissement : null,
-      routineBed: rt && rt.enabled ? rt.bedtime : null, routineWake: rt && rt.enabled ? rt.wake : null, savedAt: Date.now() } } })
+      coucher: mode === 'heures' ? coucher : heuresCapture ? capture.coucher : null,
+      lever: mode === 'heures' ? lever : heuresCapture ? capture.lever : null,
+      endormissement: mode === 'heures' ? endormissement : null,
+      routineBed: rt && rt.enabled ? rt.bedtime : null, routineWake: rt && rt.enabled ? rt.wake : null, savedAt: Date.now() }
+    if (capture) Object.assign(nuit, { capture: true, ...(phases ? { phases } : {}), ...(capture.score != null ? { scoreApp: capture.score } : {}), ...(capture.lit != null ? { litMinutes: capture.lit } : {}) })
+    store.set((sx) => {
+      const patch = { sleepLog: { ...((sx && sx.sleepLog) || cur), [date]: nuit } }
+      // FC au repos et VFC lues : elles rejoignent les mesures du jour, sans
+      // écraser celles d'un import Santé.
+      if (capture && (capture.fcRepos != null || capture.vfc != null)) {
+        const vit = (sx && sx.vitalsLog) || db.vitalsLog || {}
+        const j = { ...(vit[date] || {}) }
+        if (capture.fcRepos != null && j.restingHr == null) j.restingHr = capture.fcRepos
+        if (capture.vfc != null && j.hrv == null) j.hrv = capture.vfc
+        patch.vitalsLog = { ...vit, [date]: j }
+      }
+      return patch
+    })
     // La nuit du jour donne la forme du jour : on la dit tout de suite.
-    const forme = date === isoToday() ? formeDb(db, date, { ...cur, [date]: { hours, quality: quality || null, reveil: { energie: energie || null, sensations }, pouls: poulsValide } }) : null
+    // FC et VFC lues sur une capture comptent dès l'annonce de la forme.
+    const vitaux = capture && (capture.fcRepos != null || capture.vfc != null)
+      ? { ...(db.vitalsLog || {}), [date]: { restingHr: capture.fcRepos, hrv: capture.vfc, ...((db.vitalsLog || {})[date] || {}) } } : db.vitalsLog
+    const forme = date === isoToday() ? formeDb({ ...db, vitalsLog: vitaux }, date, { ...cur, [date]: { hours, quality: quality || null, reveil: { energie: energie || null, sensations }, pouls: poulsValide } }) : null
     annoncer(forme ? `Nuit enregistrée · forme du jour ${forme.score}/100 · ${forme.verdict.split(' :')[0].toLowerCase()}` : libelleNuit(date) + ' enregistrée')
     onDone()
   }
@@ -291,6 +411,7 @@ function NightTab({ db, store, date, onDone }) {
 
   return React.createElement('div', null,
     dejaRenseignee ? React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, marginBottom: 14, paddingLeft: 10, borderLeft: `3px solid ${SLEEP_COL}` } }, 'Nuit déjà renseignée : tu la modifies.') : null,
+    React.createElement(ImportCapture, { key: date, date, onAppliquer: appliquerCapture }),
     progress,
     React.createElement('div', { style: { minHeight: 150, display: 'flex', flexDirection: 'column', justifyContent: 'center' } }, panes[step]),
     React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 26 } },
@@ -447,6 +568,36 @@ function BlocReveil({ log }) {
     r.energieMoy != null ? React.createElement(AnaRow, { label: 'Énergie moyenne', value: String(r.energieMoy).replace('.', ',') + ' / 5', color: r.energieMoy < 2.5 ? C.warn : C.ink, hint: ENERGIES[Math.min(4, Math.max(0, Math.round(r.energieMoy) - 1))] + ' en moyenne, sur ' + r.nuits + ' réveil' + (r.nuits > 1 ? 's' : '') + ' notés.' }) : null,
     r.frequentes.length ? React.createElement(AnaRow, { label: 'Sensations les plus fréquentes', value: '', hint: r.frequentes.slice(0, 4).map((f) => f.lab + ' (' + f.n + ')').join(' · ') }) : null,
     r.alertes.map((t, i) => React.createElement('div', { key: i, style: { fontSize: 12.5, color: C.ink, lineHeight: 1.5, marginTop: 10, paddingLeft: 10, borderLeft: `3px solid ${C.warn}` } }, t)))
+}
+
+// Phases lues sur les captures (ou un import) : moyennes sur 14 jours, en
+// part du sommeil, avec les repères chez l'adulte. Les montres estiment
+// les phases avec une marge d'erreur importante : la tendance compte, pas
+// une nuit isolée.
+const REPERES_PHASES = { profond: [13, 23], paradoxal: [20, 25] }
+function BlocPhases({ log }) {
+  const nuits = []
+  for (let k = 0; k < 14; k++) {
+    const e = log[decaler(isoToday(), -k)]
+    if (e && e.phases && Number(e.hours) > 0) nuits.push(e)
+  }
+  if (nuits.length < 3) return null
+  const lignes = []
+  for (const [k, lab] of NOMS_PHASES) {
+    const avec = nuits.filter((e) => Number.isFinite(Number(e.phases[k])) && e.phases[k] != null)
+    if (avec.length < 3) continue
+    const min = avec.reduce((a, e) => a + Number(e.phases[k]), 0) / avec.length
+    const part = Math.round(avec.reduce((a, e) => a + Number(e.phases[k]) / (Number(e.hours) * 60), 0) / avec.length * 100)
+    const rep = REPERES_PHASES[k]
+    const hors = rep && (part < rep[0] || part > rep[1])
+    lignes.push(React.createElement(AnaRow, { key: k, label: lab, value: libelleDuree(min / 60) + (k !== 'eveille' ? ' · ' + part + ' %' : ''), color: hors ? C.warn : C.ink,
+      hint: rep ? `Repère chez l’adulte : ${rep[0]} à ${rep[1]} % du sommeil.` + (hors ? (part < rep[0] ? ' En dessous : la dette et l’alcool réduisent d’abord cette phase.' : ' Au-dessus : souvent un rebond après des nuits courtes.') : '') : null }))
+  }
+  if (!lignes.length) return null
+  return React.createElement('div', { style: { padding: '14px 16px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}` } },
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 2 } }, 'Phases (' + nuits.length + ' nuits mesurées)', React.createElement(Aide, { terme: 'phases' })),
+    lignes,
+    React.createElement('div', { style: { fontSize: 11, color: C.ink3, lineHeight: 1.45, marginTop: 6 } }, 'Moyennes sur 14 jours, lues sur tes captures ou ton import. Une montre estime les phases avec une marge d’erreur : regarde la tendance, pas une nuit.'))
 }
 
 // Heures de coucher et de lever, quand elles sont saisies : leur
@@ -625,6 +776,7 @@ function HistoryTab({ db, store, onEdit }) {
         React.createElement('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', color: C.ink } }, avgQ != null ? String(Math.round(avgQ * 10) / 10).replace('.', ',') + ' / 5' : '—'))),
     React.createElement(AnalysisBlock, { ana }),
     React.createElement(BlocReveil, { log }),
+    React.createElement(BlocPhases, { log }),
     React.createElement(BlocCoeur, { db }),
     React.createElement(BlocFormeSeances, { db }),
     React.createElement(BlocInfluences, { log }),
@@ -633,7 +785,7 @@ function HistoryTab({ db, store, onEdit }) {
     React.createElement('div', { style: { maxHeight: 280, overflowY: 'auto' } },
       recent.map((d) => {
         const e = log[d]; const h = e.hours; const hLab = libelleDuree(h); const aw = e.awakenings || 0
-        const reveil = resumeNuit(e)
+        const reveil = [resumeNuit(e), e.phases && e.phases.profond != null ? 'profond ' + libelleDuree(e.phases.profond / 60) : null, e.capture ? 'capture' : null].filter(Boolean).join(' · ')
         // Toucher une nuit l'ouvre pour la corriger.
         return React.createElement('button', { key: d, onClick: () => onEdit(d), 'aria-label': 'Modifier la ' + libelleNuit(d).toLowerCase(), style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', padding: '11px 2px', background: 'none', border: 'none', borderBottom: `1px solid ${C.line}`, cursor: 'pointer', color: C.ink } },
           React.createElement('div', { style: { flex: 1, minWidth: 0 } },

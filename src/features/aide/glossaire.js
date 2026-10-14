@@ -80,6 +80,11 @@ export const GLOSSAIRE = {
     texte: 'Ton horloge interne : plutôt du matin, intermédiaire ou du soir. Il se lit au milieu de ta nuit les jours sans réveil imposé (le week-end), corrigé du sommeil que tu y rattrapes. Il ne se change guère, mais il dit à quelle heure ton corps performe le mieux : vers midi pour un profil du matin, en soirée pour un profil du soir.',
     conseil: 'Plus il y a de week-ends saisis avec coucher et lever, plus l’estimation est juste.',
   },
+  phases: {
+    titre: 'Phases du sommeil',
+    texte: 'Une nuit enchaîne quatre ou cinq cycles d’environ 90 minutes : sommeil léger, profond (la récupération physique, l’hormone de croissance), paradoxal (la mémoire, l’apprentissage des gestes) et de courts éveils. Le profond domine en début de nuit, le paradoxal en fin de nuit : écourter la fin de nuit rogne surtout le paradoxal.',
+    conseil: 'Les montres et bagues estiment les phases d’après le pouls et les mouvements, avec une marge d’erreur importante : fie-toi à la tendance sur plusieurs nuits.',
+  },
   efficacite: {
     titre: 'Efficacité du sommeil',
     texte: 'La part du temps passé au lit à dormir vraiment. 85 % et plus : bon. En dessous, trop de temps éveillé au lit (endormissement long, réveils) : se coucher un peu plus tard, quand le sommeil vient, aide souvent plus que se coucher tôt.',

@@ -32,3 +32,27 @@ export async function lireImage(image, { logger } = {}) {
     ...(typeof logger === 'function' ? { logger } : {}),
   })
 }
+
+// Un lecteur gardé ouvert pour lire la même image plusieurs fois, avec des
+// réglages différents, sans recharger le moteur. Lecture « par blocs »
+// d'abord (le réglage par défaut, qui garde les rangées), puis au besoin
+// « texte épars » (psm 11), qui attrape les chiffres isolés — un score en
+// gros caractères fins — au prix de la mise en page.
+export async function ouvrirLecteur({ logger } = {}) {
+  const { default: Tesseract } = await import('tesseract.js')
+  const dossier = dossierOcr()
+  const worker = await Tesseract.createWorker('fra+eng', 1, {
+    workerPath: dossier + 'worker.min.js',
+    corePath: dossier,
+    langPath: dossier,
+    workerBlobURL: false,
+    ...(typeof logger === 'function' ? { logger } : {}),
+  })
+  return {
+    async lire(image, { psm } = {}) {
+      await worker.setParameters({ tessedit_pageseg_mode: String(psm || 6) })
+      return worker.recognize(image)
+    },
+    fermer: () => worker.terminate(),
+  }
+}
