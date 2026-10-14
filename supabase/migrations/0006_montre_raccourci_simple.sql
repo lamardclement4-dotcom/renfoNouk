@@ -26,8 +26,13 @@ as $$
   end
 $$;
 
-create or replace function deposer_nuit_montre(jeton text, debuts jsonb, fins jsonb, valeurs jsonb)
-returns jsonb
+-- Réponse en clair (texte), affichée par le raccourci dans une
+-- notification : une phrase de confirmation, ou ce qui ne va pas et quoi
+-- faire. Les refus de deposer_mesures_montre() sont rattrapés ici pour
+-- devenir lisibles sur l'iPhone, plutôt qu'un message JSON technique.
+drop function if exists deposer_nuit_montre(text, jsonb, jsonb, jsonb);
+create function deposer_nuit_montre(jeton text, debuts jsonb, fins jsonb, valeurs jsonb)
+returns text
 language plpgsql
 security definer
 set search_path = public, pg_temp
@@ -39,8 +44,8 @@ declare
   n int := least(coalesce(array_length(a, 1), 0), coalesce(array_length(b, 1), 0), coalesce(array_length(v, 1), 0), 500);
   lignes text := '';
 begin
-  if n = 0 then
-    raise exception 'aucun échantillon de sommeil' using errcode = '22023';
+  if n = 0 or (n = 1 and coalesce(trim(a[1]), '') = '') then
+    return 'Renfo : aucune nuit trouvée dans Santé sur les dernières 24 h. Vérifie que ta montre a enregistré ton sommeil (app Santé › Sommeil).';
   end if;
   for i in 1..n loop
     -- Un « ; » ou un saut de ligne dans une valeur casserait la ligne.
@@ -49,7 +54,17 @@ begin
       || translate(trim(b[i]), E';\n', ',,') || ';'
       || translate(trim(v[i]), E';\n', ',,') || E'\n';
   end loop;
-  return deposer_mesures_montre(jeton, lignes);
+  begin
+    perform deposer_mesures_montre(jeton, lignes);
+  exception when others then
+    return case
+      when sqlerrm like 'clé inconnue%' then 'Renfo : clé refusée. Sur le site Renfo : Profil › Apple Watch › Remplacer ma clé, puis réinstalle le raccourci et colle la nouvelle clé.'
+      when sqlerrm like 'clé invalide%' then 'Renfo : clé absente ou incomplète. Réinstalle le raccourci et colle la clé en entier.'
+      when sqlerrm like 'trop de dépôts%' then 'Renfo : trop d’envois cette heure-ci. Réessaie dans une heure.'
+      else 'Renfo : envoi refusé (' || sqlerrm || ').'
+    end;
+  end;
+  return 'Nuit envoyée à Renfo (' || n || ' segment' || case when n > 1 then 's' else '' end || ' de sommeil). Ouvre Renfo pour la voir.';
 end;
 $$;
 

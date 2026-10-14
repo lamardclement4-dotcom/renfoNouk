@@ -4,7 +4,7 @@
 Renfo est un site, pas une app : le raccourci vit dans l'app Raccourcis
 d'Apple, sous un nom qui dit ce qu'il fait plutôt que « Renfo ».
 
-Le raccourci tient en trois actions, pour que la mise en place se résume à
+Le raccourci tient en quatre actions, pour que la mise en place se résume à
 « installer, coller sa clé » :
 
   1. Texte : la clé personnelle, demandée à l'installation (question
@@ -13,7 +13,9 @@ Le raccourci tient en trois actions, pour que la mise en place se résume à
      début dans le dernier jour ;
   3. Obtenir le contenu de l'URL : POST vers deposer_nuit_montre
      (migration 0006), corps JSON = la clé et trois listes tirées des
-     échantillons (dates de début, dates de fin, valeurs).
+     échantillons (dates de début, dates de fin, valeurs) ;
+  4. Afficher une notification : la réponse du serveur, en clair
+     (« Nuit envoyée à Renfo… » ou ce qui ne va pas et quoi faire).
 
 Pas de boucle ni d'assemblage de texte : c'est le serveur qui remet les
 listes en lignes. La clé publique de l'app (anon) va dans l'adresse, ce
@@ -142,6 +144,11 @@ def construire():
             WFHTTPMethod="POST",
             WFHTTPBodyType="JSON",
             ShowHeaders=False,
+            # Réponse du serveur en texte simple (une phrase), pas en JSON.
+            WFHTTPHeaders={
+                "Value": {"WFDictionaryFieldValueItems": [champ("Accept", texte("text/plain"))]},
+                "WFSerializationType": "WFDictionaryFieldValue",
+            },
             WFJSONValues={
                 "Value": {
                     "WFDictionaryFieldValueItems": [
@@ -153,6 +160,15 @@ def construire():
                 },
                 "WFSerializationType": "WFDictionaryFieldValue",
             },
+        ),
+        # 4. La réponse du serveur, en clair : « Nuit envoyée à Renfo… », ou
+        # ce qui ne va pas et quoi faire (clé refusée, aucune nuit…).
+        action(
+            "is.workflow.actions.notification",
+            UUID=uid("notification"),
+            WFNotificationActionTitle=texte("Renfo"),
+            WFNotificationActionBody=texte(sortie("envoi", "Contents of URL")),
+            WFNotificationActionSound=False,
         ),
     ]
     return {

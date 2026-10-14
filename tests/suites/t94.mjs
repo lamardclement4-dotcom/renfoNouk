@@ -79,7 +79,7 @@ a(await empreinteCle('abc') === 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9
 // ─── Migration ───
 const sql = readFileSync(new URL('../../supabase/migrations/0005_montre.sql', import.meta.url), 'utf8')
 const sql6 = readFileSync(new URL('../../supabase/migrations/0006_montre_raccourci_simple.sql', import.meta.url), 'utf8')
-a(/return deposer_mesures_montre\(jeton, lignes\)/.test(sql6) && /security definer\s+set search_path = public, pg_temp/.test(sql6) && /revoke all on function liste_montre\(jsonb\) from public/.test(sql6) && /grant execute on function deposer_nuit_montre\(text, jsonb, jsonb, jsonb\) to anon, authenticated/.test(sql6), '0006 : passe par la porte de 0005 (memes controles), utilitaire ferme')
+a(/perform deposer_mesures_montre\(jeton, lignes\)/.test(sql6) && /returns text/.test(sql6) && /Nuit envoyée à Renfo/.test(sql6) && /clé refusée/.test(sql6) && /security definer\s+set search_path = public, pg_temp/.test(sql6) && /revoke all on function liste_montre\(jsonb\) from public/.test(sql6) && /grant execute on function deposer_nuit_montre\(text, jsonb, jsonb, jsonb\) to anon, authenticated/.test(sql6), '0006 : passe par la porte de 0005 (memes controles), utilitaire ferme')
 a(/alter table jetons_montre enable row level security/.test(sql) && /alter table depots_montre enable row level security/.test(sql), 'RLS sur les deux tables')
 a(/security definer\s+set search_path = public, pg_temp/.test(sql), 'fonction security definer au search_path fige (cf. 0004)')
 a(/revoke all on function deposer_mesures_montre\(text, text\) from public;/.test(sql) && /grant execute on function deposer_mesures_montre\(text, text\) to anon, authenticated;/.test(sql), 'seule la fonction est ouverte au role anonyme')
