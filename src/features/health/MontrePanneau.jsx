@@ -20,6 +20,7 @@ const RACCOURCI = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'racc
 // Les deux raccourcis à lancer depuis la montre (construire_raccourcis_montre.py).
 const RACCOURCI_SEANCE = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'raccourci/' + encodeURIComponent('Noter ma séance') + '.shortcut'
 const RACCOURCI_EAU = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'raccourci/' + encodeURIComponent('J’ai bu') + '.shortcut'
+const RACCOURCI_JOURNEE = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'raccourci/' + encodeURIComponent('Ma journée') + '.shortcut'
 
 
 function quand(iso) {
@@ -130,7 +131,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
     // État
     React.createElement('div', { style: { ...bloc, marginTop: 14, borderLeft: `3px solid ${etat.configuree ? C.success : etat.erreur ? C.warn : C.line}` } },
       etat.chargement ? React.createElement('div', { style: { fontSize: 13, color: C.ink3 } }, 'Vérification…')
-        : etat.erreur === 'migration' ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Le serveur n’est pas encore prêt : les migrations 0005 à 0011 (dossier supabase/migrations) doivent être appliquées dans Supabase (éditeur SQL), une seule fois, dans l’ordre.')
+        : etat.erreur === 'migration' ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Le serveur n’est pas encore prêt : les migrations 0005 à 0012 (dossier supabase/migrations) doivent être appliquées dans Supabase (éditeur SQL), une seule fois, dans l’ordre.')
           : etat.erreur ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Serveur injoignable pour l’instant. Réessaie avec du réseau.')
             : React.createElement('div', null,
               React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink } }, etat.configuree ? 'Clé active' : 'Pas encore reliée'),
@@ -240,25 +241,26 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
       titre('Étape 6 · Depuis ta montre (facultatif)'),
       React.createElement('div', { style: bloc },
         React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginBottom: 8 } },
-          'Deux raccourcis à lancer au poignet, sans sortir l’iPhone : « Noter ma séance » (sport, durée, effort ressenti : elle compte dans ta charge) et « J’ai bu » (un verre, une gourde…). Ils arrivent dans le calendrier et dans Hydratation à la prochaine ouverture de ce site.'),
-        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } },
-          React.createElement('a', { href: RACCOURCI_SEANCE, target: '_blank', rel: 'noopener', style: { display: 'block', textAlign: 'center', padding: '10px 8px', border: `1.5px solid ${COL}`, color: COL, fontSize: 13, fontWeight: 700, textDecoration: 'none' } }, 'Noter ma séance'),
-          React.createElement('a', { href: RACCOURCI_EAU, target: '_blank', rel: 'noopener', style: { display: 'block', textAlign: 'center', padding: '10px 8px', border: `1.5px solid ${COL}`, color: COL, fontSize: 13, fontWeight: 700, textDecoration: 'none' } }, 'J’ai bu')),
+          'Trois raccourcis à lancer au poignet, sans sortir l’iPhone : « Ma journée » affiche ta forme, ta séance prévue, ton eau et ton heure de coucher ; « Noter ma séance » (sport, durée, effort ressenti : elle compte dans ta charge) et « J’ai bu » (un verre, une gourde…) arrivent dans le calendrier et dans Hydratation à la prochaine ouverture de ce site.'),
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 } },
+          React.createElement('a', { href: RACCOURCI_JOURNEE, target: '_blank', rel: 'noopener', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '10px 6px', border: `1.5px solid ${COL}`, color: COL, fontSize: 13, fontWeight: 700, textDecoration: 'none' } }, 'Ma journée'),
+          React.createElement('a', { href: RACCOURCI_SEANCE, target: '_blank', rel: 'noopener', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '10px 6px', border: `1.5px solid ${COL}`, color: COL, fontSize: 13, fontWeight: 700, textDecoration: 'none' } }, 'Noter ma séance'),
+          React.createElement('a', { href: RACCOURCI_EAU, target: '_blank', rel: 'noopener', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '10px 6px', border: `1.5px solid ${COL}`, color: COL, fontSize: 13, fontWeight: 700, textDecoration: 'none' } }, 'J’ai bu')),
         React.createElement(Liste, { items: [
           'Copie ta clé (étape 1, « Copier »). C’est la même que pour « Envoyer ma nuit ».',
-          'Touche « Noter ma séance » ci-dessus, puis installe-le comme à l’étape 2 et colle la clé. Pareil pour « J’ai bu ».',
+          'Touche « Ma journée » ci-dessus, puis installe-le comme à l’étape 2 et colle la clé. Pareil pour « Noter ma séance » et « J’ai bu ».',
           'Pour qu’ils s’affichent sur la montre : app Raccourcis de l’iPhone › touche les trois points (•••) de la tuile du raccourci › touche son nom en haut puis « Détails » (ou le « i ») › active « Afficher sur l’Apple Watch ».',
-          'Sur la montre : ouvre l’app Raccourcis et touche « Noter ma séance » après ta séance, ou « J’ai bu ».',
+          'Sur la montre : ouvre l’app Raccourcis et touche « Ma journée » le matin, « Noter ma séance » après ta séance, « J’ai bu » quand tu bois.',
           'Plus rapide : sur le cadran, appui long › « Modifier » › une complication › « Raccourcis » › choisis le raccourci. Un toucher sur le cadran le lance.',
         ] }),
-        React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'La montre a besoin du réseau (iPhone à proximité ou Wi-Fi). Une séance notée à la montre fait aussi disparaître la proposition « Montre : 46 min d’exercice » de l’accueil.')),
+        React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'La montre a besoin du réseau (iPhone à proximité ou Wi-Fi). « Ma journée » lit ce que ce site a préparé à sa dernière ouverture (et l’eau notée depuis la montre) : ouvre-le une fois par jour. Une séance notée à la montre fait aussi disparaître la proposition « Montre : 46 min d’exercice » de l’accueil.')),
       React.createElement('details', { style: { marginTop: 14, fontSize: 12.5, color: C.ink2 } },
         React.createElement('summary', { style: { cursor: 'pointer', color: COL, fontWeight: 700 } }, 'Ça ne marche pas ?'),
         React.createElement('div', { style: { ...bloc, marginTop: 8 } },
           React.createElement(Liste, { items: [
             'Notification « clé refusée » ou « clé absente » : refais l’étape 1 (« Remplacer ma clé »), supprime « Envoyer ma nuit » dans Raccourcis (appui long › Supprimer), puis refais l’étape 2.',
             'Notification « aucune donnée trouvée » ou « aucune nuit trouvée » : ta montre n’a rien enregistré sur les dernières 24 h. Vérifie dans l’app Santé › Sommeil, porte la montre la nuit (suivi du sommeil activé), puis relance le raccourci.',
-            'Notification « Le serveur de Renfo n’a pas pu recevoir ta nuit » : le serveur n’est pas encore à jour (migrations 0005 à 0011 dans Supabase, à appliquer par l’administrateur). Un message en anglais vient d’une ancienne version du raccourci : réinstalle-le (étape 2).',
+            'Notification « Le serveur de Renfo n’a pas pu recevoir ta nuit » : le serveur n’est pas encore à jour (migrations 0005 à 0012 dans Supabase, à appliquer par l’administrateur). Un message en anglais vient d’une ancienne version du raccourci : réinstalle-le (étape 2).',
             'Aucune notification : Réglages › Notifications › Raccourcis › active « Autoriser les notifications ». L’envoi a peut-être quand même eu lieu : recharge cette page.',
             'Santé refusé par erreur, ou une mesure manque : Réglages › Santé › Accès aux données et appareils › Raccourcis › active Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque, Fréquence respiratoire, Saturation en oxygène, Minutes d’exercice, et pour la suite température au poignet, VO2 max, récupération cardiaque, FC à la marche, poids et pleine conscience.',
             'Pas d’oxygène dans Santé › Cœur : vérifie que la montre le mesure (app Watch de l’iPhone › Oxygène sanguin › mesures activées, y compris en arrière-plan pendant le sommeil) et que tu as bien la version 5 ou 6 du raccourci. Les mesures arrivent avec l’envoi du matin.',

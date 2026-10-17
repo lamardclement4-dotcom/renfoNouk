@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Raccourcis à lancer depuis l'Apple Watch : « Noter ma séance » et
-« J'ai bu ».
+"""Raccourcis à lancer depuis l'Apple Watch : « Noter ma séance »,
+« J'ai bu » et « Ma journée » (lecture du point du jour, migration 0012).
 
 Ils n'utilisent que des actions qui marchent sur la montre (liste, choix
 dans une liste, demande d'un nombre, texte, Obtenir le contenu de l'URL,
@@ -156,6 +156,46 @@ def eau(url, anon):
     return enveloppe("J’ai bu", actions, 59782, 946986751)
 
 
+def journee(url, anon):
+    """Lit le point du jour préparé par le site (lire_journee_montre,
+    migration 0012) et l'affiche : forme, séance, eau, coucher."""
+    actions = [
+        action("is.workflow.actions.comment", WFCommentActionText="Affiche ta journée Renfo : forme du jour, séance prévue, eau bue face à ta cible, heure du coucher. Marche sur l’Apple Watch."),
+        action("is.workflow.actions.gettext", UUID=uid("cle"), WFTextActionText="colle-ta-cle-renfo"),
+        action(
+            "is.workflow.actions.downloadurl",
+            UUID=uid("depot"),
+            WFURL=f"{url}/rest/v1/rpc/lire_journee_montre?apikey={anon}",
+            WFHTTPMethod="POST",
+            WFHTTPBodyType="JSON",
+            ShowHeaders=False,
+            # Réponse en texte simple (domaine « text/plain »).
+            WFHTTPHeaders={
+                "Value": {"WFDictionaryFieldValueItems": [champ("Accept", texte("text/plain"))]},
+                "WFSerializationType": "WFDictionaryFieldValue",
+            },
+            WFJSONValues={
+                "Value": {"WFDictionaryFieldValueItems": [champ("jeton", texte(sortie("cle", "Text")))]},
+                "WFSerializationType": "WFDictionaryFieldValue",
+            },
+        ),
+        action("is.workflow.actions.comment", WFCommentActionText="Si le serveur répond par une erreur technique (en anglais), afficher un message en français."),
+        action(
+            "is.workflow.actions.conditional",
+            GroupingIdentifier=uid("si-erreur"),
+            WFControlFlowMode=0,
+            WFCondition=99,
+            WFConditionalActionString='"code"',
+            WFInput={"Type": "Variable", "Variable": {"Value": sortie("depot", "Contents of URL"), "WFSerializationType": "WFTextTokenAttachment"}},
+        ),
+        action("is.workflow.actions.showresult", UUID=uid("resultat-erreur"), Text=texte("Renfo ne répond pas encore à « Ma journée » (serveur pas à jour : migration 0012). Sur l’iPhone : site Renfo › Profil › Apple Watch.")),
+        action("is.workflow.actions.conditional", GroupingIdentifier=uid("si-erreur"), WFControlFlowMode=1),
+        action("is.workflow.actions.showresult", UUID=uid("resultat"), Text=texte(sortie("depot", "Contents of URL"))),
+        action("is.workflow.actions.conditional", GroupingIdentifier=uid("si-erreur"), WFControlFlowMode=2),
+    ]
+    return enveloppe("Ma journée", actions, 59782, 946986751)
+
+
 def signer(flux, destination):
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(suffix=".shortcut") as brut:
@@ -176,7 +216,7 @@ def main():
     p.add_argument("--signer", action="store_true", help="signer et publier dans public/raccourci/")
     a = p.parse_args()
     url, anon = lire_env()
-    for flux, fichier in ((seance(url, anon), "Noter-ma-seance"), (eau(url, anon), "J-ai-bu")):
+    for flux, fichier in ((seance(url, anon), "Noter-ma-seance"), (eau(url, anon), "J-ai-bu"), (journee(url, anon), "Ma-journee")):
         source = ICI / f"{fichier}.plist"
         source.write_bytes(plistlib.dumps(flux, fmt=plistlib.FMT_XML, sort_keys=False))
         print("source :", source.relative_to(RACINE))

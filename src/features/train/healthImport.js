@@ -132,6 +132,15 @@ export function sportOfWorkout(type) {
 
 export function parseLine(line) {
   const l = String(line || '')
+  // Exports récents (iOS 16 et après) : distance, calories et fréquence
+  // cardiaque d'une séance sont dans des lignes WorkoutStatistics, sous
+  // la ligne Workout. À tester avant « <Workout », qu'elles contiennent.
+  if (l.indexOf('<WorkoutStatistics') !== -1) {
+    const type = attr(l, 'type')
+    if (!type) return null
+    return { kind: 'stat', type, sum: num(attr(l, 'sum')), average: num(attr(l, 'average')), maximum: num(attr(l, 'maximum')), unit: attr(l, 'unit') }
+  }
+  if (l.indexOf('</Workout>') !== -1) return { kind: 'finSeance' }
   if (l.indexOf('<Record') !== -1) {
     const type = attr(l, 'type')
     if (!type) return null
@@ -146,7 +155,7 @@ export function parseLine(line) {
     const type = attr(l, 'workoutActivityType')
     if (!type) return null
     return {
-      kind: 'workout', type,
+      kind: 'workout', type, ferme: /\/>\s*$/.test(l),
       start: attr(l, 'startDate'), end: attr(l, 'endDate'),
       duration: num(attr(l, 'duration')), durationUnit: attr(l, 'durationUnit'),
       distance: num(attr(l, 'totalDistance')), distanceUnit: attr(l, 'totalDistanceUnit'),
@@ -269,9 +278,28 @@ export function createHealthReader() {
     map.get(key).push(v)
   }
 
+  // La séance en cours de lecture, pour y accrocher ses WorkoutStatistics.
+  let courant = null
   function line(raw) {
     const r = parseLine(raw)
     if (!r) return
+    if (r.kind === 'finSeance') { courant = null; return }
+    if (r.kind === 'stat') {
+      if (!courant) return
+      const t = r.type
+      if (t === 'HKQuantityTypeIdentifierHeartRate') {
+        if (r.average != null && r.average >= 40 && r.average <= 230) courant.fc = Math.round(r.average)
+        if (r.maximum != null && r.maximum >= 60 && r.maximum <= 240) courant.fcMax = Math.round(r.maximum)
+      } else if (t.indexOf('HKQuantityTypeIdentifierDistance') === 0 && r.sum != null && courant.km == null) {
+        const u = String(r.unit || 'km').toLowerCase()
+        const km = u === 'm' ? r.sum / 1000 : u === 'mi' ? r.sum * 1.609344 : u === 'yd' ? r.sum * 0.0009144 : r.sum
+        courant.km = Math.round(km * 100) / 100
+      } else if (t === 'HKQuantityTypeIdentifierActiveEnergyBurned' && r.sum != null && courant.calories == null) {
+        const u = String(r.unit || 'kcal').toLowerCase()
+        courant.calories = Math.round(u === 'kj' ? r.sum / 4.184 : r.sum)
+      }
+      return
+    }
     seen++
     if (r.kind === 'workout') {
       const day = dayOf(r.start)
@@ -283,14 +311,16 @@ export function createHealthReader() {
         const u = String(r.durationUnit || 'min').toLowerCase()
         secs = u === 'min' ? secs * 60 : u === 'h' ? secs * 3600 : secs
       }
-      workouts.push({
+      const w = {
         date: day, time: String(r.start || '').slice(11, 16),
         sport: sportOfWorkout(r.type), appleType: r.type,
         km: km == null ? null : Math.round(km * 100) / 100,
         seconds: secs == null ? null : Math.round(secs),
         calories: r.energy == null ? null : Math.round(r.energy),
         source: r.source,
-      })
+      }
+      workouts.push(w)
+      courant = r.ferme ? null : w
       return
     }
     if (r.type === SLEEP_TYPE) {
@@ -620,6 +650,10 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
       data.temps = h > 0 ? `${h}:${p(m)}:${p(w.seconds % 60)}` : `${m}:${p(w.seconds % 60)}`
     }
     if (w.calories != null) data.calories = w.calories
+    // FC de la séance (exports récents) : sa zone et son intensité dans la
+    // charge, comme une FC notée à la main.
+    if (w.fc != null) data.fc = w.fc
+    if (w.fcMax != null) data.fc_max = w.fcMax
     const mins = w.seconds != null ? Math.round(w.seconds / 60) : null
     sessions.push({
       id: 'sante_' + stamp + '_' + i,
