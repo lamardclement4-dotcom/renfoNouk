@@ -1,6 +1,6 @@
 // Intensite reelle d une seance, et echauffement compose.
 import { sessionIntensity, sessionLoad, rpeFromHr, maxHeartRate, TYPE_RPE,
-  LOW_INTENSITY_SPORTS, HR_MAX_FALLBACK_AGE, NEUTRAL_RPE } from '../../src/features/train/plannerIntel.js'
+  LOW_INTENSITY_SPORTS, fcMaxAge, fcMaxDe, profilCardio, NEUTRAL_RPE } from '../../src/features/train/plannerIntel.js'
 import { buildWarmup, splitMinutes, generalFor, mobilityMovesFor, GENERAL_WARMUP } from '../../src/features/train/drillsData.js'
 import { EX } from '../../src/features/train/trainData.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
@@ -20,7 +20,7 @@ a(/ressenti d.effort not[ée] [àa] 8/.test(parRpe.why), 'et la provenance est d
 
 const parFc = sessionIntensity(S('1 h', { fc: 165 }), { profile: { age: 30 } })
 a(parFc.source === 'fc', 'a defaut, la frequence cardiaque')
-a(parFc.rpe >= 7, `165 bpm pour une maximale estimee a ${HR_MAX_FALLBACK_AGE - 30} : effort eleve (${parFc.rpe})`)
+a(parFc.rpe >= 7, `165 bpm pour une maximale estimee a ${fcMaxAge(30)} : effort eleve (${parFc.rpe})`)
 a(/estim[ée]e depuis l.[âa]ge/.test(parFc.why), 'et l estimation grossiere est signalee, pas cachee')
 const parFcDeclaree = sessionIntensity(S('1 h', { fc: 150, fc_max: 200 }), { profile: { age: 30 } })
 a(/s[ée]ance/.test(parFcDeclaree.why), 'une maximale declaree sur la seance prime sur l estimation')
@@ -50,6 +50,21 @@ a(rpeFromHr(55) === 2 && rpeFromHr(65) === 4 && rpeFromHr(75) === 5.5, 'zones ba
 a(rpeFromHr(85) === 7 && rpeFromHr(90) === 8 && rpeFromHr(95) === 9, 'zones hautes')
 a(rpeFromHr(0) === null && rpeFromHr(null) === null, 'pourcentage absent -> null')
 a(maxHeartRate(S('1 h', {}), {}) === null, 'sans age ni declaration -> aucune maximale inventee')
+
+// ─── une seule FC max pour tout le site (charge, zones, espace Cœur) ───
+a(fcMaxAge(30) === 187 && fcMaxAge(50) === 173, 'Tanaka : 208 - 0,7 x age')
+a(maxHeartRate(S('1 h', { fc_max: 170 }), { age: 30 }).source === 'estimée depuis l’âge',
+  'un pic de seance sous l estimation n est pas pris pour la maximale')
+a(maxHeartRate(S('1 h', { fc_max: 160 }), { fcMax: 195, age: 30 }).value === 195, 'la FC max saisie passe avant le pic de la seance')
+const hist = (fcm, date) => ({ id: date, date, sport: 'course', statut: 'realise', duree: '1 h', data: { fc: 150, fc_max: fcm } })
+const dbF = { profilePhys: { age: 30 }, planningSessions: [hist(192, '2026-08-01'), hist(175, '2026-08-10'), hist(199, '2025-01-01')] }
+const fm = fcMaxDe(dbF, '2026-08-20')
+a(fm.valeur === 192 && fm.source === 'seances', `la plus haute vue sur un an (${fm.valeur}), pas celle d il y a 19 mois`)
+a(fcMaxDe({ profilePhys: { age: 30 }, planningSessions: [hist(180, '2026-08-01')] }, '2026-08-20').source === 'age', 'pic vu sous l estimation -> l age, avec le pic garde')
+a(fcMaxDe({ profilePhys: { age: 30, fcMax: 201 }, planningSessions: [hist(192, '2026-08-01')] }, '2026-08-20').source === 'saisie', 'la saisie prime')
+const pc = profilCardio(dbF, '2026-08-20')
+const it = sessionIntensity(S('1 h', { fc: 150, fc_max: 175 }), { profile: pc })
+a(it.why.includes('la plus haute de tes séances') && it.why.includes('78 %'), `la charge lit la meme FC max que Coeur : ${it.why}`)
 
 // ─── echauffement compose ───
 a(splitMinutes(0).general === 0, 'aucune duree -> aucune repartition')

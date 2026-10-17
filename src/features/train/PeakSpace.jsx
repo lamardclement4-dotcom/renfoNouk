@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { C, Icon } from '../health/kit'
+import { C, Icon, isoToday } from '../health/kit'
+import { resumeCoeur } from '../health/coeurIntel'
 import { SPORTS } from './trainData'
 import { peakReadiness } from './renfoIntel'
 // `computePeakPlan` et les profils d'effort vivent dans `peakIntel.js` : ce
@@ -514,6 +515,11 @@ function SignalsBlock(db, plan) {
     var lastDate = tests.map(function(t){ return t.date; }).sort().slice(-1)[0];
     rows.push({ label: 'Tests physiques', value: tests.length, sub: 'dernier test le ' + fmtDate(lastDate) });
   }
+  // Le cœur avant l'objectif : FC au repos qui baisse = forme qui monte ;
+  // signaux hors normale = récupération à protéger (espace Cœur).
+  var coeur = resumeCoeur(db, isoToday());
+  if (coeur.m30 != null) rows.push({ label: 'FC au repos', value: String(coeur.m30).replace('.', ',') + ' bpm', sub: coeur.pente != null ? (coeur.pente > 0 ? '+' : '') + String(coeur.pente).replace('.', ',') + ' bpm par mois sur 3 mois' : 'moyenne des 30 derniers jours' });
+  if (coeur.niveau === 'surveiller' || coeur.niveau === 'incomplete') rows.push({ label: 'Récupération (cœur)', value: coeur.niveau === 'incomplete' ? 'incomplète' : 'à surveiller', sub: coeur.alertes[0] || '' });
   var cycleEnabled = false; // intégration cycle non portée (cycleInfo n'est pas partagé hors du module Cycle)
   if (!rows.length) return null;
   return React.createElement('div', { style: { marginBottom: 18 } },

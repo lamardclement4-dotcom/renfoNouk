@@ -141,17 +141,61 @@ export const LOW_INTENSITY_SPORTS = {
   yoga: 3, marche: 3, petanque: 2, golf: 3, plongee: 3, equitation: 4, danse: 5,
 }
 
-export const HR_MAX_FALLBACK_AGE = 220
+// ─── FC max : une seule pour tout le site ───
+// La charge des séances, les zones d'entraînement et l'espace Cœur lisent
+// la même :
+//   1. celle saisie (espace Cœur ou profil) ;
+//   2. sinon la plus haute relevée en séance sur un an, dès qu'elle atteint
+//      l'estimation par l'âge — un pic vu est un plancher sûr ;
+//   3. sinon l'âge, par la formule de Tanaka (208 − 0,7 × âge) : 220 − âge
+//      sous-estime la FC max des sportifs après 40 ans. ±10 battements
+//      selon les personnes, et c'est dit.
+export const fcMaxAge = (age) => Math.round(208 - 0.7 * age)
+
+export function fcMaxDe(db, iso) {
+  const p = (db && db.profilePhys) || {}
+  const saisie = num(p.fcMax || p.fc_max)
+  if (saisie != null && saisie >= 130 && saisie <= 230) return { valeur: Math.round(saisie), source: 'saisie' }
+  const ref = iso || todayISO()
+  const debut = shiftISO(ref, -365)
+  let vue = 0
+  for (const s of asList(db && db.planningSessions)) {
+    if (s.statut !== 'realise' || typeof s.date !== 'string' || s.date < debut || s.date > ref) continue
+    const x = num(s.data && s.data.fc_max)
+    if (x != null && x >= 150 && x <= 230 && x > vue) vue = Math.round(x)
+  }
+  const age = num(p.age)
+  const estimee = age != null && age >= 10 && age <= 100 ? fcMaxAge(age) : null
+  if (vue && (estimee == null || vue >= estimee)) return { valeur: vue, source: 'seances', estimee }
+  if (estimee != null) return { valeur: estimee, source: 'age', vue: vue || null }
+  return null
+}
+
+// Le profil tel que le lit le calcul de charge : avec la FC max retenue,
+// pour qu'une séance et les zones de l'espace Cœur parlent de la même.
+export function profilCardio(db, iso) {
+  const p = (db && db.profilePhys) || null
+  const m = fcMaxDe(db, iso)
+  return m ? { ...(p || {}), fcMaxRetenue: m } : p
+}
+
+const SOURCE_MAX = { saisie: 'profil', seances: 'la plus haute de tes séances', age: 'estimée depuis l’âge' }
 
 export function maxHeartRate(s, profile) {
-  const declared = num(s && s.data && s.data.fc_max)
-  if (declared && declared > 120) return { value: declared, source: 'séance' }
-  const fromProfile = num(profile && (profile.fcMax || profile.fc_max))
+  const p = profile || {}
+  const pic = num(s && s.data && s.data.fc_max)
+  const r = p.fcMaxRetenue
+  if (r && r.valeur > 120) {
+    // Le pic de la séance dépasse l'estimation : c'est lui le plancher.
+    if (r.source !== 'saisie' && pic != null && pic > r.valeur) return { value: pic, source: 'séance' }
+    return { value: r.valeur, source: SOURCE_MAX[r.source] }
+  }
+  const fromProfile = num(p.fcMax || p.fc_max)
   if (fromProfile && fromProfile > 120) return { value: fromProfile, source: 'profil' }
-  const age = num(profile && profile.age)
-  // 220 moins l'âge est une formule grossière — ±10 battements selon les
-  // individus. Elle sert de dernier recours, et c'est dit.
-  if (age && age > 0) return { value: HR_MAX_FALLBACK_AGE - age, source: 'estimée depuis l’âge' }
+  const age = num(p.age)
+  const estimee = age && age > 0 ? fcMaxAge(age) : null
+  if (pic && pic > 120 && (estimee == null || pic >= estimee)) return { value: pic, source: 'séance' }
+  if (estimee != null) return { value: estimee, source: 'estimée depuis l’âge' }
   return null
 }
 
@@ -270,7 +314,7 @@ export function projectedLoad(db, { weekOf, today } = {}) {
   // `loadMultiplier` lit `.factor` sur cet objet : lui passer le seul nombre
   // de jours ferait taire l'atténuation sans rien signaler.
   const acclimation = heatAcclimation(weather, new Date(ref + 'T12:00:00'))
-  const win = { weather, acclimation, profile: (db && db.profilePhys) || null }
+  const win = { weather, acclimation, profile: profilCardio(db, ref) }
   const acute = loadInWindow(sessions, { from: acuteFrom, to: end, includePlanned: true, ...win })
   const chronicTotal = loadInWindow(sessions, { from: chronicFrom, to: end, includePlanned: true, ...win })
   const chronicWeek = chronicTotal / 4

@@ -4,6 +4,7 @@ import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
 import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
 import { formeDb, coucherDuSoir, reglagesSeance } from '../health/formeContexte'
+import { bilanCoeur } from '../health/coeurIntel'
 import { montreReliee, retourDeMontre } from '../health/montreDrapeau'
 import { libelleDuree } from '../health/sommeilForme'
 import { decaler } from '../health/sommeilReveil'
@@ -234,7 +235,7 @@ const listeStyle = { background: C.surface, border: `1px solid ${C.line}`, paddi
 // Rappels : prochaine séance planifiée, résumé nutrition/hydratation du
 // jour, routines, charge ACWR (si assez d'historique et pas déjà signalée
 // par OverloadAlert).
-function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil }) {
+function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil, onCoeur }) {
   const iso = isoToday()
   const pillarList = intelPillars(db, iso)
   const nutPillar = pillarList.find((p) => p.id === 'nutrition')
@@ -260,7 +261,11 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil }) {
   const hier = decaler(iso, -1)
   const exoHier = Math.round(Number(((db.vitalsLog || {})[hier] || {}).exoMin) || 0)
   const seanceHier = (Array.isArray(db.planningSessions) ? db.planningSessions : []).some((x) => x && x.statut === 'realise' && x.date === hier)
+  // FC au repos, VFC ou respiration hors de ta normale : le bilan de
+  // l'espace Cœur, dit dès l'accueil.
+  const coeur = onCoeur ? bilanCoeur(db, iso) : null
   const rappels = [
+    coeur && (coeur.niveau === 'incomplete' || coeur.niveau === 'surveiller') && Ligne('heart', coeur.niveau === 'incomplete' ? 'var(--c-danger)' : C.warn, coeur.niveau === 'incomplete' ? 'Cœur : récupération incomplète' : 'Cœur : à surveiller', coeur.alertes.join(' '), onCoeur, 'coeur'),
     exoHier >= 20 && !seanceHier && Ligne('bolt', C.warn, `La montre a compté ${exoHier} min d’exercice hier`, 'Aucune séance notée ce jour-là : ajoute-la pour que ta charge soit juste', onPlanner, 'exo'),
     soir && Ligne('moon', MODULE_TINTS.sommeil, 'Ce soir : au lit vers ' + soir.coucher, `Pour dormir ${libelleDuree(soir.besoin)} avant ton lever de ${soir.lever}${soir.bonus ? `, dont ${soir.bonus} min pour la dette` : ''}`, onSommeil, 'soir'),
     // La nuit se saisit le matin ou elle s'oublie : tant qu'elle manque, on
@@ -451,7 +456,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     h(MondayRetroCard, { db, onOpen: () => setTile('planner') }),
     h(OverloadAlert, { db, onPrevention: () => setHealthTile('prevention') }),
     h('div', { style: { marginTop: 22 } }, h(HealthScoreCard, { db, onAction: handleAction })),
-    h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition'), onRoutines: () => setTile('routines'), onSommeil: () => setHealthTile('sommeil') }),
+    h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition'), onRoutines: () => setTile('routines'), onSommeil: () => setHealthTile('sommeil'), onCoeur: () => setHealthTile('coeur') }),
     h('div', { style: { marginTop: 22 } }, h(PeakHomeCard, { db, onPeak: () => setTile('peak') })),
     mobilityCta)
 

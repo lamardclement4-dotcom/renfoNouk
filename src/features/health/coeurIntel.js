@@ -13,8 +13,10 @@
 // Rien ici ne touche au réseau ni au DOM.
 // ============================================================
 import { decaler } from './sommeilReveil'
-import { dureeToMins } from '../train/renfoIntel'
 import { SPORTS } from '../train/trainData'
+import { fcMaxDe, dureeToMins } from '../train/plannerIntel'
+import { testHistory } from '../physical-tests/testsIntel'
+import { TESTS_DEF } from '../physical-tests/testsData'
 
 const nombre = (x, lo, hi) => {
   if (x == null || x === '') return null
@@ -112,21 +114,11 @@ export function zoneVfc(db, iso) {
 }
 
 // ─── FC max et zones d'entraînement ───
-// FC max : celle que tu as saisie, sinon la plus haute relevée en séance
-// sur un an, sinon estimée depuis l'âge (Tanaka : 208 − 0,7 × âge, plus
-// juste que 220 − âge chez les sportifs).
+// La même FC max que le calcul de charge des séances (plannerIntel) :
+// saisie, sinon la plus haute vue en séance sur un an si elle atteint
+// l'estimation par l'âge, sinon l'âge (Tanaka : 208 − 0,7 × âge).
 export function fcMax(db, iso) {
-  const p = (db && db.profilePhys) || {}
-  const saisie = nombre(p.fcMax, 130, 230)
-  if (saisie) return { valeur: Math.round(saisie), source: 'saisie' }
-  const debut = decaler(iso, -365)
-  const vues = (Array.isArray(db && db.planningSessions) ? db.planningSessions : [])
-    .filter((s) => s && s.statut === 'realise' && typeof s.date === 'string' && s.date >= debut)
-    .map((s) => nombre(s.data && s.data.fc_max, 150, 230)).filter((x) => x != null)
-  if (vues.length) return { valeur: Math.round(Math.max(...vues)), source: 'seances' }
-  const age = nombre(p.age, 10, 100)
-  if (age) return { valeur: Math.round(208 - 0.7 * age), source: 'age' }
-  return null
+  return fcMaxDe(db, iso)
 }
 export const NOM_SOURCE_MAX = { saisie: 'saisie', seances: 'la plus haute de tes séances', age: 'estimée depuis ton âge' }
 
@@ -160,6 +152,31 @@ export function vo2Estime(max, repos) {
   return v >= 20 && v <= 90 ? v : null
 }
 
+// VO2max mesurée par le dernier test de Cooper (Tests physiques) : plus
+// juste que l'estimation par la FC, elle passe devant quand elle existe.
+const COOPER = TESTS_DEF.find((d) => d.id === 'cooper')
+export function vo2Test(db) {
+  const h = testHistory(db, 'cooper')
+  if (!h.length || !COOPER) return null
+  const der = h[h.length - 1]
+  const v = COOPER.vo2max(der.value)
+  return v >= 20 && v <= 90 ? { valeur: v, date: der.date, distance: der.value } : null
+}
+
+// Zone et part de la FC max d'une FC donnée (saisie de séance).
+export function zoneDeFc(db, iso, fc) {
+  const f = nombre(fc, 60, 220)
+  if (f == null) return null
+  const max = fcMax(db, iso)
+  if (!max) return null
+  const t = tendanceRepos(db, iso)
+  const repos = t && (t.m30 != null ? t.m30 : t.derniere && t.derniere.v)
+  const zones = repos ? zonesKarvonen(max.valeur, repos) : null
+  const z = zoneDe(f, zones)
+  const pct = Math.round(f / max.valeur * 100)
+  return { fc: Math.round(f), pct, max: max.valeur, source: max.source, zone: z, lab: z ? ZONES[z - 1].lab : z === 0 ? 'sous la zone 1' : null }
+}
+
 // ─── FC des séances ───
 const nomSport = (id) => { const s = SPORTS.find((x) => x.id === id); return s ? s.label : 'Séance' }
 export function seancesFc(db, iso, n = 8, zones = null, max = null) {
@@ -191,5 +208,28 @@ export function bilanCoeur(db, iso) {
     verdict: niveau === 'incomplete' ? 'Récupération incomplète : séance facile ou repos, et surveille un début de maladie.'
       : niveau === 'surveiller' ? 'À surveiller : un signal sort de ta normale.'
         : niveau === 'bonne' ? 'Récupération bonne : tes signaux sont dans ta normale.' : null,
+  }
+}
+
+// ─── Résumé pour le reste du site ───
+// Accueil, Progrès et la tuile Santé lisent ce résumé : les mêmes
+// chiffres que l'espace Cœur, jamais recalculés à part.
+export function resumeCoeur(db, iso) {
+  const t = tendanceRepos(db, iso)
+  const der = t && t.derniere
+  const b = bilanCoeur(db, iso)
+  const max = fcMax(db, iso)
+  const repos = t && (t.m30 != null ? t.m30 : der && der.v)
+  const test = vo2Test(db)
+  const estime = max && repos ? vo2Estime(max.valeur, repos) : null
+  return {
+    repos: der && der.k <= 1 ? der.v : null,
+    source: t ? t.source : null,
+    m30: t ? t.m30 : null,
+    pente: t ? t.pente : null,
+    niveau: b.niveau, verdict: b.verdict, alertes: b.alertes,
+    vfc: zoneVfc(db, iso),
+    fcMax: max,
+    vo2: test ? { valeur: test.valeur, source: 'test', date: test.date } : estime ? { valeur: estime, source: 'estime' } : null,
   }
 }

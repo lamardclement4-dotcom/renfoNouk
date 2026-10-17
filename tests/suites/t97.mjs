@@ -1,6 +1,6 @@
 // Coeur : FC au repos (tendance, semaine), VFC (zone), FC max, zones de
 // Karvonen, VO2max estimee, FC des seances, bilan.
-import { serie, sourceRepos, tendanceRepos, zoneVfc, fcMax, zonesKarvonen, zoneDe, vo2Estime, seancesFc, bilanCoeur } from '../../src/features/health/coeurIntel.js'
+import { serie, sourceRepos, tendanceRepos, zoneVfc, fcMax, zonesKarvonen, zoneDe, vo2Estime, vo2Test, zoneDeFc, resumeCoeur, seancesFc, bilanCoeur } from '../../src/features/health/coeurIntel.js'
 import { decaler } from '../../src/features/health/sommeilReveil.js'
 const a = (c, m) => { if (!c) throw new Error('FAIL: ' + m); console.log('OK:', m) }
 const J = '2026-10-17'
@@ -56,4 +56,17 @@ const bilan = bilanCoeur({ vitalsLog: Object.fromEntries(Object.entries(vit2).ma
 a(bilan.niveau === 'incomplete' && bilan.alertes.length >= 2, 'FC haute et VFC basse : recuperation incomplete (' + bilan.alertes.join(' | ') + ')')
 a(bilanCoeur(db, J).niveau === 'bonne', 'tendance qui baisse, rien d anormal : bonne')
 a(bilanCoeur({}, J).niveau === null, 'sans mesure : pas de bilan')
+
+// Integration : VO2max du test de Cooper, zone d une FC saisie, resume
+const avecTest = { ...db, physTests: [{ testId: 'cooper', date: '2026-05-01', value: 2400 }, { testId: 'cooper', date: '2026-09-01', value: 2800 }] }
+const vt = vo2Test(avecTest)
+a(vt.valeur === 51 && vt.date === '2026-09-01' && vt.distance === 2800, 'VO2max mesuree par le dernier Cooper : (2800 - 504,9) / 44,73 = 51')
+a(vo2Test(db) === null, 'sans test : rien')
+const zf = zoneDeFc(db, J, '150')
+a(zf.max === 187 && zf.source === 'age' && zf.pct === 80 && zf.zone >= 3, `FC saisie en seance : ${zf.fc} bpm, ${zf.pct} % de 187, zone ${zf.zone} (${zf.lab})`)
+a(zoneDeFc(db, J, '') === null && zoneDeFc({}, J, 150) === null, 'pas de FC ou pas de FC max : rien')
+const rc = resumeCoeur(avecTest, J)
+a(rc.repos === 54 && rc.source === 'sante' && rc.pente < 0 && rc.niveau === 'bonne', 'resume : FC du jour, source, tendance, bilan')
+a(rc.vo2.source === 'test' && rc.vo2.valeur === 51 && resumeCoeur(db, J).vo2.source === 'estime', 'le test passe devant l estimation')
+a(resumeCoeur({}, J).repos === null && resumeCoeur({}, J).vo2 === null, 'sans donnees : resume vide')
 console.log('\nALL PASS')

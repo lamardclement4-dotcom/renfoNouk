@@ -22,7 +22,7 @@ import { sessionLoad, sessionRpe, isHard, dureeToMins, mondayISO, dowOf } from '
 import { sportAnalysis, practisedSports, fmtValue } from './genericIntel'
 import { sleepAnalysis } from '../health/sleepIntel'
 import { nutriAnalysis, dayEntries, dayTotals } from '../nutrition/nutriIntel'
-import { monotony, ACWR_SWEET_LOW, ACWR_SWEET_HIGH, NEUTRAL_RPE, HARD_RPE, sessionIntensity } from './plannerIntel'
+import { monotony, ACWR_SWEET_LOW, ACWR_SWEET_HIGH, NEUTRAL_RPE, HARD_RPE, sessionIntensity, profilCardio } from './plannerIntel'
 import { effectiveTemp, loadMultiplier } from './weatherIntel'
 import { plausibleHours, neededHours, BASE_NEED } from '../health/sleepIntel'
 import { targetForDate, forDay } from '../nutrition/macroTargets'
@@ -65,7 +65,7 @@ export function weekBounds(weekOf) {
 export function weekDays(db, { weekOf, today } = {}) {
   // Le profil sert à déduire l'intensité d'une séance dont le ressenti
   // manque : sans lui, la fréquence cardiaque ne dit rien.
-  const opts = { profile: (db && db.profilePhys) || null }
+  const opts = { profile: profilCardio(db, today) }
   const { monday, sunday } = weekBounds(weekOf || today)
   const sessions = (asList(db && db.planningSessions))
     .filter((s) => s && s.date && s.date >= monday && s.date <= sunday)
@@ -242,7 +242,7 @@ export function context(db, { weekOf, today } = {}) {
 const fr = (v) => String(v).replace('.', ',')
 
 export function dayDetail(db, week, sportMeta) {
-  const opts = { profile: (db && db.profilePhys) || null }
+  const opts = { profile: profilCardio(db) }
   const sleepLog = (db && db.sleepLog) || {}
   const weather = (db && db.weatherLog) || {}
   const vitals = (db && db.vitalsLog) || {}
@@ -926,12 +926,13 @@ export function retroAnalysis(db, { weekOf, today, sportMeta } = {}) {
   const ref = today || todayISO()
   const week = weekDays(db, { weekOf: weekOf || ref, today: ref })
   const cmp = compare(db, { weekOf: weekOf || ref, today: ref })
-  const sports = bySport(week, sportMeta, { profile: (db && db.profilePhys) || null })
+  const cardio = { profile: profilCardio(db, ref) }
+  const sports = bySport(week, sportMeta, cardio)
   const cons = consistency(week)
   const fit = planFit(week, { today: ref })
   const ctx = context(db, { weekOf: weekOf || ref, today: ref })
   const hi = highlights(db, { weekOf: weekOf || ref, today: ref })
-  const top = toughest(week, sportMeta, { profile: (db && db.profilePhys) || null })
+  const top = toughest(week, sportMeta, cardio)
   const detail = dayDetail(db, week, sportMeta)
   const dims = dimensions(db, { weekOf: weekOf || ref, today: ref })
   const shape = weekShape(week)

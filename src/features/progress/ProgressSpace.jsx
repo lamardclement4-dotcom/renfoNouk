@@ -19,6 +19,7 @@ const SleepSpace = lazy(() => import('../health/Sleep'))
 const HealthHome = lazy(() => import('../health/HealthHome'))
 const WeightSpace = lazy(() => import('../profil/WeightSpace'))
 import { weightAnalysis } from '../profil/weightIntel'
+import { resumeCoeur } from '../health/coeurIntel'
 
 // Pilliers/recos renvoient soit un id pilier générique (hydration, load…)
 // soit déjà l'id d'espace Santé en français (hydratation, sommeil…) — le
@@ -464,6 +465,24 @@ export default function ProgressSpace({ userId, onClose }) {
           h('span', null, t)))) : null)
   }
 
+  // ── Cœur ── les chiffres de l'espace Cœur (Santé), en quatre cases.
+  const coeur = resumeCoeur(db, isoToday())
+  let coeurBlock = null
+  if (coeur.m30 != null || coeur.vfc || coeur.vo2) {
+    const frv = (x) => String(x).replace('.', ',')
+    const caseCoeur = (big, unit, lab, sub, col) => h('div', { style: { background: C.surface, padding: '12px 10px', border: `1px solid ${C.line}`, borderTop: `3px solid ${col || 'var(--c-danger)'}` } },
+      h('div', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, big == null ? '—' : frv(big), big != null && unit ? h('span', { style: { fontSize: 11.5, fontWeight: 600, color: C.ink3, marginLeft: 3 } }, unit) : null),
+      h('div', { style: { fontSize: 11, color: C.ink2, marginTop: 5, fontWeight: 700 } }, lab),
+      h('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 2, lineHeight: 1.3 } }, sub))
+    coeurBlock = h('div', null,
+      sectionTitle('Cœur', h('button', { onClick: () => setHealthTile('coeur'), style: { fontSize: 13, fontWeight: 600, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Voir tout')),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 } },
+        caseCoeur(coeur.m30, 'bpm', 'FC au repos · 30 j', coeur.pente != null ? `${coeur.pente > 0 ? '+' : ''}${frv(coeur.pente)} bpm/mois${coeur.pente <= -1 ? ', ton cœur s’entraîne' : ''}` : 'tendance après un mois', coeur.pente != null && coeur.pente >= 1 ? C.warn : null),
+        caseCoeur(coeur.vfc && coeur.vfc.normale != null ? coeur.vfc.normale : null, 'ms', 'VFC · 30 j', coeur.vfc && coeur.vfc.statut ? (coeur.vfc.statut === 'sous' ? 'semaine sous ta zone' : coeur.vfc.statut === 'dessus' ? 'semaine au-dessus' : 'semaine dans ta zone') : 'zone après 10 mesures', coeur.vfc && coeur.vfc.statut === 'sous' ? C.warn : null),
+        caseCoeur(coeur.vo2 ? coeur.vo2.valeur : null, '', 'VO2max', coeur.vo2 ? (coeur.vo2.source === 'test' ? 'test de Cooper' : 'estimée par la FC') : 'test de Cooper ou FC'),
+        caseCoeur(coeur.fcMax ? coeur.fcMax.valeur : null, 'bpm', 'FC max', coeur.fcMax ? { saisie: 'saisie', seances: 'vue en séance', age: 'estimée par l’âge' }[coeur.fcMax.source] : 'à saisir dans Cœur')))
+  }
+
   // ── Tests physiques ──
   const TC = 'var(--ch4)'
   const allTests = db.physTests || []
@@ -760,6 +779,6 @@ export default function ProgressSpace({ userId, onClose }) {
         h('div', { style: { fontFamily: C.mono, fontSize: 21, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, s.big),
         h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 5, fontWeight: 600 } }, s.lab)))),
 
-    todayBlock, goalsBlock, trainBlock, recordsBlock, muscuBlock, testsBlock, mobBlock, mobEvoBlock, progBlock, suppBlock,
+    todayBlock, goalsBlock, trainBlock, recordsBlock, muscuBlock, testsBlock, coeurBlock, mobBlock, mobEvoBlock, progBlock, suppBlock,
     h('div', { style: { height: 8 } }))
 }

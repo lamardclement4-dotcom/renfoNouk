@@ -3,6 +3,7 @@ import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, isoToday } from './kit'
 import { PHASES } from './cycleData'
 import { libelleDuree } from './sommeilForme'
+import { resumeCoeur } from './coeurIntel'
 
 // Les sept sous-espaces ne s'ouvrent que sur une tuile pressée. Chargés
 // d'avance, ils pesaient tous sur l'ouverture de « Santé » : la table
@@ -28,6 +29,9 @@ const CookbookSpace = lazy(() => import('../nutrition/CookbookSpace'))
 export default function HealthHome({ userId, onClose, initialSpace, embedded }) {
   const { db, loading } = useNutritionStore(userId)
   const [space, setSpace] = useState(initialSpace || null)
+  // Cœur ouvert depuis l'historique de Sommeil : le fermer y ramène.
+  const [depuis, setDepuis] = useState(null)
+  const [ongletSommeil, setOngletSommeil] = useState(null)
 
   // Quand l'écran est ouvert en profondeur depuis ailleurs (une
   // recommandation, l'accueil, la progression), fermer doit ramener à
@@ -37,8 +41,8 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
 
   if (space === 'nutrition') return React.createElement(NutritionSpace, { userId, onClose: backToHub })
   if (space === 'hydratation') return React.createElement(HydrationSpace, { userId, onClose: backToHub })
-  if (space === 'sommeil') return React.createElement(SleepSpace, { userId, onClose: backToHub })
-  if (space === 'coeur') return React.createElement(CoeurSpace, { userId, onClose: backToHub })
+  if (space === 'sommeil') return React.createElement(SleepSpace, { userId, onClose: backToHub, initialTab: ongletSommeil, onCoeur: () => { setDepuis('sommeil'); setOngletSommeil('history'); setSpace('coeur') } })
+  if (space === 'coeur') return React.createElement(CoeurSpace, { userId, onClose: depuis ? () => { setSpace(depuis); setDepuis(null) } : backToHub })
   if (space === 'prevention') return React.createElement(PreventionSpace, { userId, onClose: backToHub })
   if (space === 'cycle') return React.createElement(CycleSpace, { userId, onClose: backToHub })
   if (space === 'esprit') return React.createElement(BreathingSpace, { userId, onClose: backToHub })
@@ -51,14 +55,9 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
 
   const todayKey = isoToday()
   const sleepToday = (db.sleepLog || {})[todayKey]
-  // Dernière FC au repos connue (montre, sinon pouls saisi), sur 2 jours.
-  const reposJour = (() => {
-    for (const d of [todayKey, (() => { const x = new Date(); x.setDate(x.getDate() - 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0') })()]) {
-      const v = Number(((db.vitalsLog || {})[d] || {}).restingHr) || Number(((db.sleepLog || {})[d] || {}).pouls)
-      if (v >= 30 && v <= 120) return Math.round(v)
-    }
-    return null
-  })()
+  // FC au repos du jour (ou d'hier) et bilan : les chiffres de l'espace Cœur.
+  const coeur = resumeCoeur(db, todayKey)
+  const coeurSub = [coeur.repos ? `${coeur.repos} bpm au repos` : null, coeur.niveau === 'incomplete' ? 'récup. incomplète' : coeur.niveau === 'surveiller' ? 'à surveiller' : null].filter(Boolean).join(' · ') || 'FC, VFC, zones'
   const cyclePhaseLabel = db.cycle && db.cycle.enabled && db.cycle.startDate
     ? (() => {
         try {
@@ -77,7 +76,7 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
     { ic: 'apple', tint: MODULE_TINTS.nutrition, lab: 'Nutrition', sub: 'Repas et calories', on: 'nutrition' },
     { ic: 'drop', tint: MODULE_TINTS.hydratation, lab: 'Hydratation', sub: 'Ce que tu bois', on: 'hydratation' },
     { ic: 'moon', tint: MODULE_TINTS.sommeil, lab: 'Sommeil', sub: sleepToday ? `${libelleDuree(Number(sleepToday.hours))} cette nuit` : 'Saisir ta nuit', on: 'sommeil' },
-    { ic: 'heart', tint: MODULE_TINTS.coeur, lab: 'Cœur', sub: reposJour ? `${reposJour} bpm au repos` : 'FC, VFC, zones', on: 'coeur' },
+    { ic: 'heart', tint: MODULE_TINTS.coeur, lab: 'Cœur', sub: coeurSub, on: 'coeur' },
     { ic: 'shield', tint: MODULE_TINTS.prevention, lab: 'Prévention', sub: 'Risque de blessure', on: 'prevention' },
     { ic: 'moon', tint: MODULE_TINTS.cycle, lab: 'Cycle', sub: cyclePhaseLabel, on: 'cycle' },
     { ic: 'wave', tint: MODULE_TINTS.esprit, lab: 'Esprit', sub: 'Respiration · mental', on: 'esprit' },
@@ -101,7 +100,7 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
       el('h1', { style: { fontFamily: C.display, fontSize: 34, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: .95, margin: 0 } }, 'Santé'),
       el('p', { style: { fontSize: 13.5, color: C.ink2, margin: '6px 0 18px' } }, 'Nutrition, sommeil, prévention et bien-être'),
       el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
-        tiles.map((t, i) => el('button', { key: i, onClick: () => setSpace(t.on),
+        tiles.map((t, i) => el('button', { key: i, onClick: () => { setOngletSommeil(null); setSpace(t.on) },
           style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: 16, borderRadius: C.radius, background: C.surface, border: `1px solid ${C.line}`, boxShadow: 'none', cursor: 'pointer' } },
           el('div', { style: { width: 42, height: 42, borderRadius: 0, background: 'transparent', border: `1.5px solid ${t.tint}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 } },
             el(Icon, { name: t.ic, size: 21, color: t.tint })),

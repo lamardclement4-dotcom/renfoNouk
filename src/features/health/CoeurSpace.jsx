@@ -6,7 +6,7 @@ import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, FlowSpace, isoToday, Aide } from './kit'
 import { annoncer } from '../../annonces'
-import { serie, tendanceRepos, zoneVfc, fcMax, zonesKarvonen, vo2Estime, seancesFc, bilanCoeur, NOM_SOURCE, NOM_SOURCE_MAX } from './coeurIntel'
+import { serie, tendanceRepos, zoneVfc, fcMax, zonesKarvonen, vo2Estime, vo2Test, seancesFc, bilanCoeur, NOM_SOURCE, NOM_SOURCE_MAX } from './coeurIntel'
 
 const COL = MODULE_TINTS.coeur
 const fr = (x) => String(x).replace('.', ',')
@@ -62,6 +62,7 @@ export default function CoeurSpace({ userId, onClose }) {
   const repos = t && (t.m30 != null ? t.m30 : t.derniere && t.derniere.v)
   const zones = max && repos ? zonesKarvonen(max.valeur, repos) : null
   const vo2 = max && repos ? vo2Estime(max.valeur, repos) : null
+  const cooper = vo2Test(db)
   const seances = seancesFc(db, iso, 8, zones, max && max.valeur)
   const p = db.profilePhys || {}
   const poulsJour = ((db.sleepLog || {})[iso] || {}).pouls
@@ -128,15 +129,19 @@ export default function CoeurSpace({ userId, onClose }) {
             React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: C.ink } }, z.lab),
             React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, lineHeight: 1.35 } }, z.but)),
           React.createElement('span', { style: { fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: C.ink, flex: '0 0 auto' } }, z.min + '–' + z.max)))),
-      max.source === 'age' ? React.createElement('div', { style: { fontSize: 11.5, color: C.warn, marginTop: 6, lineHeight: 1.45 } }, 'FC max estimée depuis l’âge (± 10 bpm selon les personnes) : saisis la tienne si tu la connais, tes zones seront plus justes.') : null)
+      max.source === 'age' ? React.createElement('div', { style: { fontSize: 11.5, color: C.warn, marginTop: 6, lineHeight: 1.45 } }, 'FC max estimée depuis l’âge (± 10 bpm selon les personnes)' + (max.vue ? `, ta plus haute en séance est ${max.vue} bpm` : '') + ' : saisis la tienne si tu la connais, tes zones seront plus justes.') : null,
+      React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'La même FC max sert au calcul de charge de tes séances, et ta zone s’affiche quand tu notes ta FC moyenne dans le calendrier.'))
       : React.createElement('div', { style: { ...bloc, fontSize: 12.5, color: C.ink3, lineHeight: 1.5 } }, !max ? 'Il faut ta FC max (ou ton âge) : saisis-la ci-dessus.' : 'Il faut ta FC au repos : relie ta montre ou saisis ton pouls au réveil quelques matins.'),
 
     // ── VO2max ──
-    vo2 ? React.createElement(React.Fragment, null,
-      titre('VO2max estimée', 'vo2max'),
+    // Le test de Cooper mesure ; la FC estime. Le test passe devant.
+    cooper || vo2 ? React.createElement(React.Fragment, null,
+      titre(cooper ? 'VO2max' : 'VO2max estimée', 'vo2max'),
       React.createElement('div', { style: { ...bloc, display: 'flex', alignItems: 'baseline', gap: 10 } },
-        React.createElement('span', { style: { fontFamily: C.mono, fontSize: 24, fontWeight: 600, color: COL } }, vo2),
-        React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.45 } }, 'ml/kg/min, d’après ta FC max et ta FC au repos (méthode de Uth). Une indication à ± 15 % : elle monte quand ta FC au repos baisse.'))) : null,
+        React.createElement('span', { style: { fontFamily: C.mono, fontSize: 24, fontWeight: 600, color: COL } }, cooper ? cooper.valeur : vo2),
+        React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.45 } }, cooper
+          ? `ml/kg/min, mesurée par ton test de Cooper du ${cooper.date.split('-').reverse().join('/')} (${cooper.distance} m en 12 min).` + (vo2 ? ` L’estimation par ta FC donne ${vo2}.` : '')
+          : 'ml/kg/min, d’après ta FC max et ta FC au repos (méthode de Uth). Une indication à ± 15 % : elle monte quand ta FC au repos baisse. Le test de Cooper (Entraîner › Tests physiques) la mesure.'))) : null,
 
     // ── Séances ──
     titre('FC de tes séances'),

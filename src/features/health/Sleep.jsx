@@ -636,7 +636,7 @@ function BlocHoraires({ db }) {
 
 // Le cœur sur quatre semaines : dernière mesure, normale, jours qui s'en
 // écartaient, et la courbe avec la normale en pointillé.
-function BlocCoeur({ db }) {
+function BlocCoeur({ db, onCoeur }) {
   const iso = isoToday()
   const log = db.sleepLog || {}, vit = db.vitalsLog || {}
   const mesures = [
@@ -678,7 +678,10 @@ function BlocCoeur({ db }) {
   return React.createElement('div', { style: { padding: '14px 16px', marginBottom: 18, background: C.surface, border: `1px solid ${C.line}` } },
     React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 2 } }, 'Cœur au réveil (4 semaines)'),
     blocs,
-    React.createElement('div', { style: { fontSize: 11, color: C.ink3, lineHeight: 1.45, marginTop: 4 } }, 'Pointillé : ta normale. Carré orange : jour nettement hors de ta normale, souvent une récupération incomplète.'))
+    React.createElement('div', { style: { fontSize: 11, color: C.ink3, lineHeight: 1.45, marginTop: 4 } }, 'Pointillé : ta normale. Carré orange : jour nettement hors de ta normale, souvent une récupération incomplète.'),
+    onCoeur ? React.createElement('button', { type: 'button', onClick: onCoeur, style: { display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '9px 0 0', marginTop: 8, background: 'none', border: 'none', borderTop: `1px solid ${C.line}`, color: C.ink2, fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } },
+      React.createElement('span', { style: { flex: 1 } }, 'Espace Cœur : tendance sur 3 mois, zone de VFC, zones d’entraînement'),
+      React.createElement('span', { style: { fontFamily: C.mono, color: C.ink3 } }, '→')) : null)
 }
 
 // La note a-t-elle du sens pour toi ? Le ressenti des séances selon la
@@ -709,7 +712,7 @@ function BlocInfluences({ log }) {
       : React.createElement('div', { style: { fontSize: 12.5, color: C.ink3, lineHeight: 1.5 } }, 'Pas encore assez de nuits pour conclure : il faut qu’un même facteur soit noté au moins trois soirs, et absent au moins trois autres. Continue de noter la veille.'))
 }
 
-function HistoryTab({ db, store, onEdit }) {
+function HistoryTab({ db, store, onEdit, onCoeur }) {
   const log = db.sleepLog || {}
   const dates = Object.keys(log).filter((d) => log[d] && log[d].hours).sort().reverse()
   const recent = dates.slice(0, 14)
@@ -792,7 +795,7 @@ function HistoryTab({ db, store, onEdit }) {
     React.createElement(AnalysisBlock, { ana }),
     React.createElement(BlocReveil, { log }),
     React.createElement(BlocPhases, { log }),
-    React.createElement(BlocCoeur, { db }),
+    React.createElement(BlocCoeur, { db, onCoeur }),
     React.createElement(BlocFormeSeances, { db }),
     React.createElement(BlocInfluences, { log }),
     React.createElement(BlocHoraires, { db }),
@@ -813,9 +816,9 @@ function HistoryTab({ db, store, onEdit }) {
     React.createElement('button', { onClick: () => store.annulable('Historique du sommeil effacé', () => store.set({ sleepLog: {} })), style: { width: '100%', marginTop: 16, padding: 11, borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 700, border: `1.5px solid ${C.line}`, background: 'transparent', color: C.ink3, cursor: 'pointer' } }, 'Effacer l’historique'))
 }
 
-export default function SleepSpace({ userId, onClose }) {
+export default function SleepSpace({ userId, onClose, onCoeur, initialTab }) {
   const { db, store, loading } = useNutritionStore(userId)
-  const [tab, setTab] = useState('night')
+  const [tab, setTab] = useState(initialTab || 'night')
   // Nuit en cours de saisie (date du réveil) : aujourd'hui par défaut, ou
   // une nuit passée choisie dans la liste ou depuis l'historique.
   const [nuit, setNuit] = useState(isoToday())
@@ -847,5 +850,5 @@ export default function SleepSpace({ userId, onClose }) {
     tab === 'night' && !express && React.createElement(ChoixNuit, { log: db.sleepLog || {}, date: nuit, onChange: setNuit, onExpress: () => setExpress(true) }),
     tab === 'night' && !express && React.createElement(NightTab, { key: nuit, db, store, date: nuit, onDone: () => { setNuit(isoToday()); setTab('history') } }),
     tab === 'routine' && React.createElement(RoutineTab, { db, store }),
-    tab === 'history' && React.createElement(HistoryTab, { db, store, onEdit: editer }))
+    tab === 'history' && React.createElement(HistoryTab, { db, store, onEdit: editer, onCoeur }))
 }

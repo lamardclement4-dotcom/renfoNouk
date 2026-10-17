@@ -10,6 +10,7 @@ import { EVENTS as SPRINT_EVENTS, STARTS as SPRINT_STARTS, parseSprintTime, wind
 import { estimate1RM, suggestLoad } from './muscuIntel'
 import { dureeToMins, projectedAcwr, consecutiveDaysBefore, taperSuggestedMins } from './renfoIntel'
 import { computePeakPlan } from './peakIntel'
+import { zoneDeFc } from '../health/coeurIntel'
 
 const MUSCU_SPORTS = ['muscu', 'crossfit', 'callisthenie', 'gym', 'halterophilie']
 
@@ -542,6 +543,18 @@ function GenericSportFields({ sportId, data, setData }) {
       : null)
 }
 
+// FC moyenne notée : sa zone et sa part de la FC max, avec la même FC max
+// et les mêmes zones que l'espace Cœur (Santé).
+function ZoneFcLigne({ db, date, fc }) {
+  const z = zoneDeFc(db, date, fc)
+  if (!z) return null
+  return React.createElement('div', { role: 'status', style: { display: 'flex', alignItems: 'baseline', gap: 8, margin: '-6px 0 16px', padding: '8px 11px', border: `1px solid ${C.line}`, borderLeft: '3px solid var(--c-danger)', background: C.surface, fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } },
+    z.zone ? React.createElement('span', { style: { fontFamily: C.mono, fontWeight: 700, color: 'var(--c-danger)', flex: '0 0 auto' } }, 'Z' + z.zone) : null,
+    React.createElement('span', null,
+      `${z.fc} bpm : ${z.pct} % de ta FC max (${z.max})` + (z.zone ? ` · ${z.lab}` : z.zone === 0 ? ' · sous la zone 1' : ''),
+      z.source === 'age' ? React.createElement('span', { style: { color: C.ink3 } }, ' · FC max estimée par l’âge') : null))
+}
+
 function ExerciseSetRow({ exIdx, setIdx, set, onUpdate, onRemove }) {
   const mode = set.mode || 'reps'
   return React.createElement('div', { style: { marginBottom: 10 } },
@@ -980,6 +993,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
       sport === 'escalade' && React.createElement(EscaladeFields, { data, setData }),
       sport && MUSCU_SPORTS.includes(sport) && React.createElement(MuscuFields, { sport, exercises, setExercises, exerciseHistory }),
       sport && !MUSCU_SPORTS.includes(sport) && sport !== 'course' && sport !== 'sprint' && sport !== 'trail' && sport !== 'perche' && sport !== 'escalade' && React.createElement(GenericSportFields, { sportId: sport, data, setData }),
+      sport && React.createElement(ZoneFcLigne, { db, date, fc: data.fc }),
 
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Notes'),
       React.createElement('textarea', { value: notes, onChange: (e) => setNotes(e.target.value), placeholder: 'Objectifs, commentaires…', rows: 3, style: { width: '100%', padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14, outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: C.font, marginBottom: 18 } }),
