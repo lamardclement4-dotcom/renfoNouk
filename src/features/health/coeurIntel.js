@@ -35,6 +35,10 @@ const lecteurs = {
   resp: (db) => (d) => nombre(((db && db.vitalsLog) || {})[d] && db.vitalsLog[d].resp, 4, 60),
   spo2: (db) => (d) => nombre(((db && db.vitalsLog) || {})[d] && db.vitalsLog[d].spo2, 70, 100),
   spo2Saisi: (db) => (d) => nombre(((db && db.sleepLog) || {})[d] && db.sleepLog[d].spo2, 70, 100),
+  temp: (db) => (d) => nombre(((db && db.vitalsLog) || {})[d] && db.vitalsLog[d].temp, 30, 42),
+  vo2: (db) => (d) => nombre(((db && db.vitalsLog) || {})[d] && db.vitalsLog[d].vo2, 10, 90),
+  hrr: (db) => (d) => nombre(((db && db.vitalsLog) || {})[d] && db.vitalsLog[d].hrr, 3, 90),
+  marche: (db) => (d) => nombre(((db && db.vitalsLog) || {})[d] && db.vitalsLog[d].marche, 40, 160),
 }
 
 // Les valeurs des `jours` derniers jours, du plus ancien au plus récent.
@@ -154,6 +158,106 @@ export function oxygene(db, iso) {
   return { source, points: pts, derniere: der, normale, m7, nuitsBasses, ecart, statut, texte, marques: pts.filter(basse).map((x) => x.k) }
 }
 
+// ─── Température au poignet, la nuit ───
+// La montre la mesure pendant le sommeil. Seul l'écart à TA normale a du
+// sens (la valeur absolue dépend du poignet et de la chambre) : +0,5 °C
+// accompagne souvent une infection qui commence, l'alcool, un repas
+// tardif ou une chambre chaude ; +1 °C ressemble à de la fièvre. Après
+// l'ovulation, la température monte aussi de 0,2 à 0,4 °C : voir Cycle.
+const arrondi2 = (x) => Math.round(x * 100) / 100
+const signe = (x) => (x > 0 ? '+' : x < 0 ? '−' : '') + fr(Math.abs(x))
+export function temperature(db, iso) {
+  const pts = serie(db, iso, 'temp', 60)
+  if (!pts.length) return null
+  const der = pts[pts.length - 1]
+  const avant = pts.filter((x) => x.k > der.k && x.k <= der.k + 28).map((x) => x.v)
+  const normale = avant.length >= 5 ? arrondi2(moyenne(avant)) : null
+  const ecart = normale != null ? arrondi2(der.v - normale) : null
+  const recente = der.k <= 1
+  const statut = ecart == null || !recente ? 'normal' : ecart >= 1 ? 'fievre' : ecart >= 0.5 ? 'haute' : ecart <= -0.5 ? 'basse' : 'normal'
+  const texte = normale == null ? `Ta normale se dessine après 5 nuits (${avant.length + 1} pour l’instant).`
+    : statut === 'fievre' ? `${signe(ecart)} °C sur ta normale cette nuit : ça ressemble à de la fièvre. Pas d’intensité ; prends ta température si tu te sens mal.`
+      : statut === 'haute' ? `${signe(ecart)} °C sur ta normale cette nuit : souvent un rhume qui commence, l’alcool, un repas tardif ou une chambre chaude. Regarde demain.`
+        : statut === 'basse' ? `${signe(ecart)} °C sous ta normale : chambre plus fraîche, ou montre plus lâche.`
+          : `Dans ta normale (${signe(ecart)} °C).`
+  return { points: pts.filter((x) => x.k < 30), derniere: der, normale, ecart, statut, texte }
+}
+
+// ─── Cycle : la hausse thermique ───
+// Après l'ovulation, la température de nuit monte de 0,2 à 0,4 °C et y
+// reste jusqu'aux règles. Règle des « trois au-dessus de six » : trois
+// nuits de suite au-dessus de la plus haute des six d'avant, la troisième
+// d'au moins 0,1 °C (mesure au poignet, plus bruitée qu'un thermomètre).
+// Elle confirme l'ovulation après coup ; elle ne la prévoit pas.
+export function hausseThermique(db, debutCycle, iso) {
+  if (!debutCycle || !/^\d{4}-\d{2}-\d{2}$/.test(debutCycle) || debutCycle > iso) return null
+  const vit = (db && db.vitalsLog) || {}
+  const nuits = []
+  for (let d = debutCycle, n = 0; d <= iso && n < 70; d = decaler(d, 1), n++) {
+    const v = nombre(vit[d] && vit[d].temp, 30, 42)
+    if (v != null) nuits.push({ iso: d, v })
+  }
+  if (!nuits.length) return null
+  for (let i = 6; i + 2 < nuits.length; i++) {
+    const ligne = Math.max(...nuits.slice(i - 6, i).map((x) => x.v))
+    if (nuits[i].v > ligne && nuits[i + 1].v > ligne && nuits[i + 2].v >= ligne + 0.1) {
+      const ecart = arrondi2(moyenne(nuits.slice(i).map((x) => x.v)) - moyenne(nuits.slice(0, i).map((x) => x.v)))
+      return { nuits: nuits.length, hausse: nuits[i].iso, ovulation: decaler(nuits[i].iso, -1), ligne: arrondi2(ligne), ecart }
+    }
+  }
+  return { nuits: nuits.length, hausse: null }
+}
+
+// ─── VO2max de la montre (forme cardio) ───
+// Estimée par la montre pendant les marches, courses et randonnées en
+// extérieur : plus juste que l'estimation par la FC de repos, moins qu'un
+// test. Classée avec les mêmes normes que le test de Cooper (âge, sexe).
+const COOPER_DEF = () => TESTS_DEF.find((d) => d.id === 'cooper')
+export function niveauVo2(vo2, db) {
+  const p = (db && db.profilePhys) || {}
+  const age = nombre(p.age, 10, 100)
+  const def = COOPER_DEF()
+  if (!(vo2 > 0) || !age || !p.sexe || !def || !def.interpret) return null
+  return def.interpret(vo2 * 44.73 + 504.9, p.sexe, age).level
+}
+export function vo2Montre(db, iso) {
+  const pts = serie(db, iso, 'vo2', 180)
+  if (!pts.length) return null
+  const der = pts[pts.length - 1]
+  const recent = pts.filter((x) => x.k < 30).map((x) => x.v), ancien = pts.filter((x) => x.k >= 60 && x.k < 120).map((x) => x.v)
+  const evolution = recent.length && ancien.length ? arrondi1(moyenne(recent) - moyenne(ancien)) : null
+  return { valeur: der.v, date: der.iso, k: der.k, points: pts, evolution }
+}
+
+// ─── Récupération cardiaque à 1 min ───
+// La baisse de FC dans la minute qui suit la fin d'une séance (montre,
+// séances enregistrées). Plus elle est grande, mieux le cœur récupère :
+// sous 12 bpm, c'est lent (repère des tests d'effort, Cole 1999) ; au-delà
+// de 25, très bon. Plus lente que d'habitude : fatigue.
+export function recuperation(db, iso) {
+  const pts = serie(db, iso, 'hrr', 90)
+  if (!pts.length) return null
+  const der = pts[pts.length - 1]
+  const avant = pts.slice(0, -1).map((x) => x.v)
+  const normale = avant.length >= 3 ? Math.round(moyenne(avant)) : null
+  const niveau = der.v >= 25 ? 'très bonne' : der.v >= 18 ? 'bonne' : der.v >= 12 ? 'correcte' : 'lente'
+  const lente = normale != null && der.k <= 2 && der.v <= normale - 8
+  const texte = `${Math.round(der.v)} bpm de moins en une minute après ta dernière séance : récupération ${niveau}.`
+    + (lente ? ` C’est ${Math.round(normale - der.v)} de moins que d’habitude (${normale}) : fatigue qui s’accumule ?` : normale != null ? ` Ta normale : ${normale}.` : '')
+  return { points: pts, derniere: der, normale, niveau, lente, texte }
+}
+
+// ─── FC moyenne à la marche ───
+// Une marche tranquille sollicite peu le cœur : sa FC baisse quand
+// l'endurance progresse, comme la FC de repos.
+export function fcMarche(db, iso) {
+  const pts = serie(db, iso, 'marche', 120)
+  if (!pts.length) return null
+  const der = pts[pts.length - 1]
+  const r = pts.filter((x) => x.k < 30).map((x) => x.v), a = pts.filter((x) => x.k >= 60 && x.k < 120).map((x) => x.v)
+  return { points: pts, derniere: der, m30: r.length ? Math.round(moyenne(r)) : null, evolution: r.length >= 5 && a.length >= 5 ? arrondi1(moyenne(r) - moyenne(a)) : null }
+}
+
 // ─── FC max et zones d'entraînement ───
 // La même FC max que le calcul de charge des séances (plannerIntel) :
 // saisie, sinon la plus haute vue en séance sur un an si elle atteint
@@ -243,11 +347,15 @@ export function bilanCoeur(db, iso) {
     const der = respS[respS.length - 1], avant = respS.slice(0, -1).map((x) => x.v)
     if (der.k <= 1 && avant.length >= 5 && der.v - moyenne(avant) >= 3) alertes.push(`Respiration la nuit à ${fr(der.v)}/min, au-dessus de ta normale.`)
   }
+  const tp = temperature(db, iso)
+  if (tp && (tp.statut === 'fievre' || tp.statut === 'haute')) alertes.push(`Température de nuit ${signe(tp.ecart)} °C sur ta normale.`)
+  const rc = recuperation(db, iso)
+  if (rc && rc.lente) alertes.push(`Récupération après ta séance : ${Math.round(rc.derniere.v)} bpm en une minute, ${Math.round(rc.normale - rc.derniere.v)} de moins que d’habitude.`)
   const o2 = oxygene(db, iso)
   if (o2 && o2.statut === 'repete') alertes.push(`Oxygène : ${o2.nuitsBasses} nuits avec des chutes sur 14 jours.`)
   else if (o2 && o2.statut === 'bas') alertes.push(`Oxygène la nuit à ${fr(o2.derniere.v)} %, bas.`)
   else if (o2 && o2.statut === 'baisse') alertes.push(`Oxygène la nuit à ${fr(o2.derniere.v)} %, ${fr(o2.ecart)} points sous ta normale.`)
-  const niveau = alertes.length >= 2 ? 'incomplete' : alertes.length === 1 ? 'surveiller' : (t || v || o2) ? 'bonne' : null
+  const niveau = alertes.length >= 2 ? 'incomplete' : alertes.length === 1 ? 'surveiller' : (t || v || o2 || tp) ? 'bonne' : null
   return {
     niveau, alertes,
     verdict: niveau === 'incomplete' ? 'Récupération incomplète : séance facile ou repos, et surveille un début de maladie.'
@@ -266,7 +374,15 @@ export function resumeCoeur(db, iso) {
   const max = fcMax(db, iso)
   const repos = t && (t.m30 != null ? t.m30 : der && der.v)
   const test = vo2Test(db)
+  const montre = vo2Montre(db, iso)
   const estime = max && repos ? vo2Estime(max.valeur, repos) : null
+  // Le test s'il a moins de six mois, sinon la montre (moins de deux mois),
+  // sinon l'estimation par la FC.
+  const testRecent = test && (Date.parse(iso) - Date.parse(test.date)) / 864e5 <= 183
+  const vo2 = testRecent ? { valeur: test.valeur, source: 'test', date: test.date }
+    : montre && montre.k <= 60 ? { valeur: montre.valeur, source: 'montre', date: montre.date }
+      : test ? { valeur: test.valeur, source: 'test', date: test.date }
+        : estime ? { valeur: estime, source: 'estime' } : null
   return {
     repos: der && der.k <= 1 ? der.v : null,
     source: t ? t.source : null,
@@ -277,6 +393,9 @@ export function resumeCoeur(db, iso) {
     o2: oxygene(db, iso),
     resp: (() => { const r = serie(db, iso, 'resp', 30); return r.length >= 5 ? arrondi1(moyenne(r.map((x) => x.v))) : null })(),
     fcMax: max,
-    vo2: test ? { valeur: test.valeur, source: 'test', date: test.date } : estime ? { valeur: estime, source: 'estime' } : null,
+    vo2: vo2 ? { ...vo2, niveau: niveauVo2(vo2.valeur, db) } : null,
+    temp: temperature(db, iso),
+    recup: recuperation(db, iso),
+    marche: fcMarche(db, iso),
   }
 }

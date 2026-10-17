@@ -3,6 +3,8 @@ import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, SecLab, NoteBox } from './kit'
 import { PHASES, PHASE_ORDER, INTENSITE } from './cycleData'
 import { cycleAnalysis, cycleInfo, periodStarts, PMS_WINDOW_DAYS } from './cycleIntel'
+import { hausseThermique } from './coeurIntel'
+import { decaler } from './sommeilReveil'
 
 const CYC = MODULE_TINTS.cycle
 
@@ -45,7 +47,26 @@ const FLUX = ['Léger', 'Normal', 'Abondant', 'Très abondant']
 const HUMEURS = ['😢 Pas bien', '😕 Tendue', '😐 Neutre', '🙂 Bien', '😄 Super']
 const SYMPTOMES = ['Crampes', 'Ballonnements', 'Seins sensibles', 'Maux de tête', 'Fatigue', 'Acné', 'Nausées', 'Lombalgies', 'Rétention eau']
 
-function TodayTab({ cycle, store }) {
+// Température au poignet (Apple Watch) : la hausse qui suit l'ovulation,
+// lue sur les nuits du cycle en cours.
+function BlocTemperature({ db, cycle }) {
+  const starts = periodStarts(cycle)
+  const debut = starts.length ? starts[starts.length - 1] : cycle.startDate
+  const auj = isoDate(new Date())
+  const h = hausseThermique(db, debut, auj)
+  if (!h) return null
+  const jm = (iso) => iso.split('-').reverse().slice(0, 2).join('/')
+  const texte = h.hausse
+    ? `Hausse de température depuis le ${jm(h.hausse)} (${h.ecart > 0 ? '+' : ''}${String(h.ecart).replace('.', ',')} °C) : l’ovulation a probablement eu lieu vers le ${jm(h.ovulation)}. La phase lutéale dure en général 12 à 14 jours : règles attendues vers le ${jm(decaler(h.ovulation, 13))}, à deux jours près.`
+    : h.nuits < 9 ? `${h.nuits} nuit${h.nuits > 1 ? 's' : ''} mesurée${h.nuits > 1 ? 's' : ''} depuis tes règles : il en faut au moins 9 pour lire une hausse.`
+      : `${h.nuits} nuits mesurées depuis tes règles : pas encore de hausse nette. Elle confirme l’ovulation après coup (trois nuits au-dessus des six d’avant).`
+  return React.createElement('div', { style: { padding: '12px 14px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${CYC}` } },
+    React.createElement('div', { style: { fontFamily: C.display, fontSize: 13.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 4 } }, 'Température la nuit (montre)'),
+    React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, texte),
+    React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Mesurée au poignet pendant le sommeil. Un rhume, l’alcool ou une chambre chaude la font aussi monter. Ce n’est pas une méthode de contraception.'))
+}
+
+function TodayTab({ cycle, store, db }) {
   const info = cycleInfo(cycle)
   const ph = PHASES[info.phase]
   const it = INTENSITE[info.phase]
@@ -147,7 +168,8 @@ function TodayTab({ cycle, store }) {
             return React.createElement('button', { key: s, onClick: () => { const cur = tTod.symptoms || []; setTrack({ symptoms: on ? cur.filter((x) => x !== s) : [...cur, s] }) }, style: { padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: '1.5px solid ' + (on ? CYC : C.line), background: on ? CYC : C.surface, color: on ? 'var(--c-on-fill)' : C.ink2 } }, s)
           })))),
 
-    ph.spm_tips && React.createElement(NoteBox, { tint: ph.tint }, ph.spm_tips))
+    ph.spm_tips && React.createElement(NoteBox, { tint: ph.tint }, ph.spm_tips),
+    db ? React.createElement(BlocTemperature, { db, cycle }) : null)
 }
 
 function PhasesTab() {
@@ -304,7 +326,7 @@ export default function CycleSpace({ userId, onClose }) {
 
   return React.createElement(FlowSpace, { bg: 'sante', title: 'Cycle', onClose, tint: CYC, action: React.createElement('button', { onClick: () => setSetupOpen(true), style: { fontSize: 12.5, fontWeight: 700, color: CYC, background: 'none', border: 'none', cursor: 'pointer' } }, 'Dates') },
     React.createElement(SegTabs, { tint: CYC, value: tab, onChange: setTab, tabs: [{ id: 'today', lab: 'Aujourd’hui' }, { id: 'analyse', lab: 'Analyse' }, { id: 'phases', lab: 'Phases' }] }),
-    tab === 'today' && React.createElement(TodayTab, { cycle, store }),
+    tab === 'today' && React.createElement(TodayTab, { cycle, store, db }),
     tab === 'analyse' && React.createElement(AnalyseTab, { cycle }),
     tab === 'phases' && React.createElement(PhasesTab, null),
     setupOpen && React.createElement(CycleSetup, { cycle, onSave: saveCycle, onClose: () => setSetupOpen(false) }))

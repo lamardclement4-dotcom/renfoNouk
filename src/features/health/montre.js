@@ -15,11 +15,17 @@
 //   resp;<date>;<valeur>             (respirations par minute, la nuit)
 //   exo;<début>;<fin>;<minutes>      (minutes d'exercice de la montre)
 //   spo2;<date>;<valeur>             (saturation en oxygène, 97 ou 0,97)
+//   temp;<date>;<valeur>             (température au poignet la nuit, °C)
+//   vo2;<date>;<valeur>              (VO2max de la montre, ml/kg/min)
+//   hrr;<date>;<valeur>              (récupération cardiaque à 1 min, bpm)
+//   marche;<date>;<valeur>           (FC moyenne à la marche, bpm)
+//   poids;<date>;<valeur>[;<unité>]  (kg, ou lb)
+//   zen;<début>;<fin>                (séance de pleine conscience)
 // Les dates arrivent au format ISO 8601 si on l'a choisi dans le
 // Raccourci, sinon au format affiché par l'iPhone (« 14 oct. 2026 à
 // 23:14 ») : les deux sont lus. Rien ici ne touche au réseau.
 // ============================================================
-import { createHealthReader, SLEEP_TYPE, RESTING_HR_TYPE, HRV_TYPE, RESP_TYPE, EXO_TYPE, SPO2_TYPE, spo2Pct } from '../train/healthImport'
+import { createHealthReader, SLEEP_TYPE, RESTING_HR_TYPE, HRV_TYPE, RESP_TYPE, EXO_TYPE, SPO2_TYPE, TEMP_TYPE, VO2_TYPE, HRR_TYPE, MARCHE_TYPE, POIDS_TYPE, ZEN_TYPE, spo2Pct, tempC, poidsKg } from '../train/healthImport'
 
 const sansAccents = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
 const p2 = (n) => String(n).padStart(2, '0')
@@ -111,8 +117,21 @@ export function lireDepot(texte) {
       const d = dateRaccourci(champs[1]), v = nombre(champs[champs.length - 1])
       if (d && v != null && v >= 4 && v <= 60) xml = `<Record type="${RESP_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
     } else if (/^(exo|exercice)$/.test(type) && champs.length >= 4) {
-      const d = dateRaccourci(champs[1]), v = nombre(champs[champs.length - 1])
-      if (d && v != null && v >= 0 && v <= 600) xml = `<Record type="${EXO_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
+      const d = dateRaccourci(champs[1]), f = dateRaccourci(champs[2]) || d, v = nombre(champs[champs.length - 1])
+      if (d && v != null && v >= 0 && v <= 600) xml = `<Record type="${EXO_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(f)}"/>`
+    } else if (/^(temp|temperature)$/.test(type) && champs.length >= 3) {
+      const d = dateRaccourci(champs[1]), v = tempC(nombre(champs[2]))
+      if (d && v != null) xml = `<Record type="${TEMP_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
+    } else if (/^(vo2|hrr|marche)$/.test(type) && champs.length >= 3) {
+      const d = dateRaccourci(champs[1]), v = nombre(champs[2])
+      const t = type === 'vo2' ? VO2_TYPE : type === 'hrr' ? HRR_TYPE : MARCHE_TYPE
+      if (d && v != null) xml = `<Record type="${t}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
+    } else if (/^(poids|weight)$/.test(type) && champs.length >= 3) {
+      const d = dateRaccourci(champs[1]), unite = champs[3] || champs[2], kg = poidsKg(nombre(champs[2]), unite)
+      if (d && kg != null) xml = `<Record type="${POIDS_TYPE}" unit="kg" value="${kg}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
+    } else if (/^(zen|pleine conscience|mindful)$/.test(type) && champs.length >= 3) {
+      const a = dateRaccourci(champs[1]), b = dateRaccourci(champs[2])
+      if (a && b) xml = `<Record type="${ZEN_TYPE}" startDate="${echapper(a)}" endDate="${echapper(b)}"/>`
     } else if (/^(spo2|o2|oxygene|saturation)$/.test(type) && champs.length >= 3) {
       const d = dateRaccourci(champs[1]), v = spo2Pct(nombre(champs[champs.length - 1]))
       if (d && v != null && v >= 70) xml = `<Record type="${SPO2_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`

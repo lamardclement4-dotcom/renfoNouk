@@ -799,6 +799,9 @@ function DrillFields({ sport, data, setData }) {
 }
 
 function SessionForm({ activeSports, initial, initialDate, exerciseHistory, pastSessions, db, onSave, onDelete, onClose }) {
+  // Une séance existante (avec id) se modifie ; un brouillon sans id (la
+  // séance proposée par la montre) est une nouvelle séance pré-remplie.
+  const edition = !!(initial && initial.id)
   // Zones raides du dernier test : elles orientent la partie mobilité de
   // l'échauffement vers ce qui en a besoin.
   const stiffZones = ((db && db.mobility && Array.isArray(db.mobility.zones)) ? db.mobility.zones : [])
@@ -824,7 +827,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
   // de tout re-remplir à chaque fois pour un sport qu'on refait
   // régulièrement. Pour la muscu, voir muscuSuggestions ci-dessous à la
   // place — un seul "dernière séance" mélangerait jambes et haut du corps.
-  const lastOfSport = !initial && sport && !isMuscu && !reuseDismissed
+  const lastOfSport = !edition && sport && !isMuscu && !reuseDismissed
     ? (pastSessions || []).filter((s) => s.sport === sport && s.id !== initial?.id)
       .sort((a, b) => (b.statut === 'realise') - (a.statut === 'realise') || b.date.localeCompare(a.date))[0]
     : null
@@ -842,7 +845,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
   // proposer une séance jambes, pas la dernière muscu peu importe le type.
   // La charge de chaque exercice est reprise depuis exerciseHistory (la
   // plus à jour), pas depuis la vieille séance recopiée qui peut dater.
-  const muscuSuggestions = !initial && isMuscu && !reuseDismissed
+  const muscuSuggestions = !edition && isMuscu && !reuseDismissed
     ? (() => {
       const candidates = (pastSessions || []).filter((s) => s.sport === sport && s.id !== initial?.id && s.exercises && s.exercises.length)
         .sort((a, b) => (b.statut === 'realise') - (a.statut === 'realise') || b.date.localeCompare(a.date))
@@ -876,7 +879,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
   // sans rien créer si ce jour-là a déjà une séance de ce sport.
   const nextWeekDate = date ? isoDate(new Date(new Date(date + 'T00:00:00').getTime() + 7 * 86400000)) : null
   const nextWeekTaken = !!(nextWeekDate && (pastSessions || []).some((s) => s.sport === sport && s.date === nextWeekDate))
-  const showRepeatOption = !initial && sport && nextWeekDate && !nextWeekTaken
+  const showRepeatOption = !edition && sport && nextWeekDate && !nextWeekTaken
 
   // Analyse de charge : croise la durée de LA séance en cours de création
   // avec la charge réelle (ACWR), l'enchaînement de jours consécutifs sans
@@ -935,7 +938,7 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
   return React.createElement('div', { onClick: onClose, style: { position: 'fixed', inset: 0, background: 'rgba(20,16,12,.45)', zIndex: 70, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn .2s ease' } },
     React.createElement('div', { onClick: (e) => e.stopPropagation(), style: { width: '100%', maxWidth: 460, margin: '0 auto', background: C.surface, borderRadius: 0, padding: '18px 22px calc(24px + env(safe-area-inset-bottom))', maxHeight: '88vh', overflowY: 'auto', animation: 'sheetUp .3s ease' } },
       React.createElement('div', { style: { width: 38, height: 4, borderRadius: 'var(--r-pill)', background: C.line, margin: '0 auto 16px' } }),
-      React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center', marginBottom: 18 } }, initial ? 'Modifier la séance' : 'Nouvelle séance'),
+      React.createElement('div', { style: { fontFamily: C.display, fontSize: 21, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, textAlign: 'center', marginBottom: 18 } }, edition ? 'Modifier la séance' : 'Nouvelle séance'),
 
       React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Sport'),
       React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 16 } },
@@ -1016,13 +1019,13 @@ function SessionForm({ activeSports, initial, initialDate, exerciseHistory, past
 
       React.createElement('button', { disabled: !canSave, onClick: handleSave, style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', width: '100%', padding: 15, borderRadius: 'var(--r-pill)', background: canSave ? C.primary : C.surface2, color: canSave ? 'var(--c-on-fill)' : C.ink3, border: 'none', cursor: canSave ? 'pointer' : 'default' } }, '⚡ Enregistrer'),
 
-      initial && React.createElement('div', { style: { marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` } },
+      edition && React.createElement('div', { style: { marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` } },
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 15.2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: C.ink3, marginBottom: 8 } }, 'Dupliquer vers un autre jour'),
         React.createElement('div', { style: { display: 'flex', gap: 8 } },
           React.createElement('input', { type: 'date', value: dupDate, onChange: (e) => setDupDate(e.target.value), style: { flex: 1, padding: '11px 12px', borderRadius: C.radiusSm, border: `1.5px solid ${C.line}`, background: C.bg, color: C.ink, fontSize: 14.5, fontWeight: 600, outline: 'none', boxSizing: 'border-box' } }),
           React.createElement('button', { disabled: !dupDate, onClick: handleDuplicate, style: { flex: '0 0 auto', padding: '11px 16px', borderRadius: C.radiusSm, background: dupDate ? C.surface : C.surface2, border: `1.5px solid ${dupDate ? C.primary : C.line}`, color: dupDate ? C.primary : C.ink3, fontSize: 13.5, fontWeight: 700, cursor: dupDate ? 'pointer' : 'default' } }, '📋 Copier'))),
 
-      initial && React.createElement('button', { onClick: () => onDelete(initial.id), style: { width: '100%', marginTop: 10, padding: 13, borderRadius: 'var(--r-pill)', background: 'transparent', border: `1px solid ${C.line}`, color: 'var(--c-danger)', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, '🗑 Supprimer cette séance')))
+      edition && React.createElement('button', { onClick: () => onDelete(initial.id), style: { width: '100%', marginTop: 10, padding: 13, borderRadius: 'var(--r-pill)', background: 'transparent', border: `1px solid ${C.line}`, color: 'var(--c-danger)', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, '🗑 Supprimer cette séance')))
 }
 
 // ── Bilan de la semaine planifiée ──
@@ -1085,10 +1088,12 @@ function WeekBrief({ db, weekOf }) {
 // (ce terrain de lecture guidée est déjà couvert par le Lecteur de
 // séance) — l'allure est recalculée à l'affichage à la place.
 // ============================================================
-export default function PlannerSpace({ db, store, onClose }) {
+export default function PlannerSpace({ db, store, onClose, brouillon }) {
   const [view, setView] = useState('day')
   const [date, setDate] = useState(new Date())
-  const [form, setForm] = useState(null) // null | 'new' | session object
+  // Un brouillon (séance repérée par la montre) ouvre le formulaire tout de
+  // suite, date, heure et durée remplies.
+  const [form, setForm] = useState(brouillon || null) // null | 'new' | session object | brouillon
   const [newDate, setNewDate] = useState(null)
 
   const sessions = db.planningSessions || []

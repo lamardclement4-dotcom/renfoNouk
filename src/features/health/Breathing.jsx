@@ -281,6 +281,19 @@ export default function BreathingSpace({ userId, onClose }) {
   }
 
   const TABS = [{ id: 'breathing', lab: 'Respiration', ic: 'wave' }, { id: 'mental', lab: 'Préparation mentale', ic: 'target' }]
+  // Pleine conscience enregistrée par la montre (app Pleine conscience,
+  // Respirer), arrivée avec le raccourci : la semaine, à côté de tes séances.
+  const zen = (() => {
+    const vit = db.vitalsLog || {}
+    let min = 0, n = 0
+    const t = new Date()
+    for (let k = 0; k < 7; k++) {
+      const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() - k)
+      const e = vit[d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')]
+      if (e && Number(e.zenMin) > 0) { min += Number(e.zenMin); n += Number(e.zenN) || 1 }
+    }
+    return min ? { min, n } : null
+  })()
   return React.createElement(FlowSpace, { bg: 'sante', title: 'Esprit & performance', onClose, tint: BR },
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, margin: '10px 0 18px' } },
       TABS.map((it) => {
@@ -288,6 +301,9 @@ export default function BreathingSpace({ userId, onClose }) {
         return React.createElement('button', { key: it.id, onClick: () => setTab(it.id), style: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 13px', borderRadius: 0, border: '1.5px solid ' + (active ? BR : C.line), background: C.surface, color: active ? BR : C.ink, fontWeight: 700, fontSize: 13.5, textAlign: 'left', cursor: 'pointer' } },
           React.createElement('span', { style: { width: 30, height: 30, borderRadius: 0, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? BR : 'transparent', border: `1.5px solid ${BR}`, color: active ? 'var(--c-on-fill)' : BR } }, React.createElement(Icon, { name: it.ic, size: 16 })), it.lab)
       })),
+    zen ? React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 10, padding: '10px 13px', marginBottom: 16, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${BR}` } },
+      React.createElement('span', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, color: BR } }, zen.min + ' min'),
+      React.createElement('span', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.45 } }, `de pleine conscience sur 7 jours avec ta montre (${zen.n} séance${zen.n > 1 ? 's' : ''}).`)) : null,
     tab === 'mental'
       ? React.createElement(MentalTab, { db, store })
       : React.createElement(BreathingTab, { proto, setProto, mins, setMins, db, onStart: () => setInSession(true) }))

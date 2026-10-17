@@ -97,7 +97,12 @@ export function signauxCorps(db, iso) {
   const o2 = (d) => { const e = vit[d]; const n = e && e.spo2 != null && e.spo2 !== '' ? Number(e.spo2) : NaN; return Number.isFinite(n) && n >= 70 && n <= 100 ? Math.round(n * 10) / 10 : null }
   const avantO2 = serieAvant(iso, o2)
   const spo2 = o2(iso) != null ? { valeur: o2(iso), normale: moyenneOuNull(avantO2), mesures: avantO2.length, bas: Number((vit[iso] || {}).spo2Bas) || 0 } : null
-  return { pouls, vfc, resp, spo2 }
+  // Température au poignet la nuit (montre) : l'écart à ta normale.
+  const tp = (d) => { const e = vit[d]; const n = e && e.temp != null && e.temp !== '' ? Number(e.temp) : NaN; return Number.isFinite(n) && n >= 30 && n <= 42 ? Math.round(n * 100) / 100 : null }
+  const avantTemp = serieAvant(iso, tp)
+  // Normale au centième, comme dans l'espace Cœur : l'écart se lit à 0,05 °C près.
+  const temp = tp(iso) != null ? { valeur: tp(iso), normale: avantTemp.length >= 5 ? Math.round(avantTemp.reduce((x, y) => x + y, 0) / avantTemp.length * 100) / 100 : null, mesures: avantTemp.length } : null
+  return { pouls, vfc, resp, spo2, temp }
 }
 
 export function formeContexte(db, iso) {

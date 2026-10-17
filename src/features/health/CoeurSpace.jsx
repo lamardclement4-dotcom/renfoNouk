@@ -6,7 +6,7 @@ import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, FlowSpace, isoToday, Aide } from './kit'
 import { annoncer } from '../../annonces'
-import { serie, tendanceRepos, zoneVfc, oxygene, fcMax, zonesKarvonen, vo2Estime, vo2Test, seancesFc, bilanCoeur, NOM_SOURCE, NOM_SOURCE_MAX } from './coeurIntel'
+import { serie, tendanceRepos, zoneVfc, oxygene, temperature, vo2Montre, niveauVo2, recuperation, fcMarche, fcMax, zonesKarvonen, vo2Estime, vo2Test, seancesFc, bilanCoeur, NOM_SOURCE, NOM_SOURCE_MAX } from './coeurIntel'
 
 const COL = MODULE_TINTS.coeur
 const fr = (x) => String(x).replace('.', ',')
@@ -58,6 +58,10 @@ export default function CoeurSpace({ userId, onClose }) {
   const t = tendanceRepos(db, iso)
   const v = zoneVfc(db, iso)
   const o2 = oxygene(db, iso)
+  const tp = temperature(db, iso)
+  const rc = recuperation(db, iso)
+  const fm = fcMarche(db, iso)
+  const vMontre = vo2Montre(db, iso)
   const resp = serie(db, iso, 'resp', 30)
   const b = bilanCoeur(db, iso)
   const max = fcMax(db, iso)
@@ -94,7 +98,9 @@ export default function CoeurSpace({ userId, onClose }) {
       React.createElement(Mesure, { lab: t ? (t.source === 'sante' ? 'FC au repos' : 'Pouls au réveil') : 'FC au repos', aide: 'pouls', valeur: t && t.derniere ? t.derniere.v : null, unite: 'bpm', couleur: t && t.derniere && t.m30 != null && t.derniere.v - t.m30 >= 7 ? C.warn : COL, sous: t && t.m30 != null ? 'normale ' + fr(t.m30) : t ? 'normale après 7 mesures' : 'aucune mesure' }),
       React.createElement(Mesure, { lab: 'VFC (7 j)', aide: 'vfc', valeur: v && v.m7 != null ? v.m7 : (v && v.points.length ? dernier(v.points).v : null), unite: 'ms', couleur: v && v.statut === 'sous' ? C.warn : COL, sous: v && v.bas != null ? 'zone ' + fr(v.bas) + '–' + fr(v.haut) : v ? 'zone après 10 mesures' : 'aucune mesure' }),
       React.createElement(Mesure, { lab: 'Respiration', aide: 'respiration', valeur: rDer ? rDer.v : null, unite: '/min', couleur: COL, sous: rDer ? (rDer.k === 0 ? 'cette nuit' : 'il y a ' + rDer.k + ' j') : 'aucune mesure' }),
-      React.createElement(Mesure, { lab: o2 && o2.source === 'saisie' ? 'Oxygène (saisi)' : 'Oxygène la nuit', aide: 'spo2', valeur: o2 ? o2.derniere.v : null, unite: '%', couleur: o2 && o2.statut !== 'normal' ? C.warn : COL, sous: o2 ? (o2.normale != null ? 'normale ' + fr(o2.normale) : o2.derniere.k === 0 ? 'cette nuit' : 'il y a ' + o2.derniere.k + ' j') : 'aucune mesure' })),
+      React.createElement(Mesure, { lab: o2 && o2.source === 'saisie' ? 'Oxygène (saisi)' : 'Oxygène la nuit', aide: 'spo2', valeur: o2 ? o2.derniere.v : null, unite: '%', couleur: o2 && o2.statut !== 'normal' ? C.warn : COL, sous: o2 ? (o2.normale != null ? 'normale ' + fr(o2.normale) : o2.derniere.k === 0 ? 'cette nuit' : 'il y a ' + o2.derniere.k + ' j') : 'aucune mesure' }),
+      React.createElement(Mesure, { lab: 'Température nuit', aide: 'tempPoignet', valeur: tp && tp.ecart != null ? (tp.ecart > 0 ? '+' : '') + fr(tp.ecart) : tp ? tp.derniere.v : null, unite: '°C', couleur: tp && tp.statut !== 'normal' && tp.statut !== 'basse' ? C.warn : COL, sous: tp ? (tp.ecart != null ? 'écart à ta normale' : 'normale après 5 nuits') : 'aucune mesure' }),
+      React.createElement(Mesure, { lab: 'Récup. 1 min', aide: 'recupFc', valeur: rc ? Math.round(rc.derniere.v) : null, unite: 'bpm', couleur: rc && rc.lente ? C.warn : COL, sous: rc ? (rc.derniere.k === 0 ? 'aujourd’hui' : 'il y a ' + rc.derniere.k + ' j') + (rc.normale != null ? ' · normale ' + rc.normale : '') : 'après une séance' })),
     b.verdict ? React.createElement('div', { style: { ...bloc, marginTop: 8, borderLeft: `3px solid ${COULEUR[b.niveau] || C.line}` } },
       React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: COULEUR[b.niveau] || C.ink } }, b.verdict),
       b.alertes.map((a, i) => React.createElement('div', { key: i, style: { fontSize: 12, color: C.ink2, marginTop: 4, lineHeight: 1.45 } }, '• ' + a))) : null,
@@ -116,6 +122,7 @@ export default function CoeurSpace({ userId, onClose }) {
       React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5 } },
         (t.m7 != null ? `Semaine : ${fr(t.m7)} bpm` : '') + (t.m30 != null ? ` · mois : ${fr(t.m30)} bpm` : '') + (t.pente != null ? ` · ${t.pente > 0 ? '+' : ''}${fr(t.pente)} bpm/mois` : '')),
       t.texte ? React.createElement('div', { style: { fontSize: 12.5, color: C.ink, lineHeight: 1.5, marginTop: 6 } }, t.texte) : null,
+      fm ? React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginTop: 6 } }, `FC à la marche : ${fm.m30 != null ? fm.m30 + ' bpm sur 30 jours' : Math.round(fm.derniere.v) + ' bpm'}` + (fm.evolution != null ? ` (${fm.evolution > 0 ? '+' : ''}${fr(fm.evolution)} en deux mois${fm.evolution <= -2 ? ' : ton endurance progresse' : ''})` : '') + '.', React.createElement(Aide, { terme: 'fcMarche' })) : null,
       React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6 } }, 'Pointillé : ta moyenne du mois. La tendance apparaît après 15 mesures étalées sur un mois.'))
       : React.createElement('div', { style: { ...bloc, fontSize: 12.5, color: C.ink3 } }, 'Aucune mesure encore : relie ta montre (Profil › Apple Watch) ou saisis ton pouls au réveil ci-dessus.'),
 
@@ -141,6 +148,22 @@ export default function CoeurSpace({ userId, onClose }) {
       React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, (o2.source === 'montre' ? 'Pointillé : ta moyenne ; carré orange : nuit avec des chutes. ' : '') + 'Mesurée au poignet : la montre peut se tromper de 2 points, et un bracelet desserré fait chuter la mesure. Ce n’est pas un examen médical.'))
       : React.createElement('div', { style: { ...bloc, fontSize: 12.5, color: C.ink3, lineHeight: 1.5 } }, 'Aucune mesure encore. Sur l’iPhone : app Watch › Oxygène sanguin, active les mesures (et celles en arrière-plan pendant le sommeil). Puis mets à jour le raccourci « Envoyer ma nuit » (Profil › Apple Watch, version 5). Ou saisis une mesure ponctuelle ci-dessus.'),
 
+    // ── Température au poignet ──
+    tp ? React.createElement(React.Fragment, null,
+      titre('Température la nuit (30 nuits)', 'tempPoignet'),
+      React.createElement('div', { style: bloc },
+        React.createElement(Courbe, { points: tp.points, jours: 30, normale: tp.normale, unite: '°C' }),
+        React.createElement('div', { style: { fontSize: 12.5, color: tp.statut === 'fievre' || tp.statut === 'haute' ? C.warn : C.ink, lineHeight: 1.5 } }, tp.texte),
+        React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Mesurée au poignet pendant le sommeil : seul l’écart à ta normale compte. Après l’ovulation, elle monte de 0,2 à 0,4 °C (voir Santé › Cycle).'))) : null,
+
+    // ── Récupération après l'effort ──
+    rc ? React.createElement(React.Fragment, null,
+      titre('Récupération après l’effort', 'recupFc'),
+      React.createElement('div', { style: bloc },
+        React.createElement(Courbe, { points: rc.points, jours: 90, normale: rc.normale, unite: 'bpm' }),
+        React.createElement('div', { style: { fontSize: 12.5, color: rc.lente ? C.warn : C.ink, lineHeight: 1.5 } }, rc.texte),
+        React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Mesurée par la montre à la fin des séances enregistrées (app Exercice). Elle monte quand ton endurance progresse.'))) : null,
+
     // ── Zones ──
     titre('Tes zones d’entraînement', 'zonesFc'),
     zones ? React.createElement('div', { style: bloc },
@@ -157,14 +180,30 @@ export default function CoeurSpace({ userId, onClose }) {
       : React.createElement('div', { style: { ...bloc, fontSize: 12.5, color: C.ink3, lineHeight: 1.5 } }, !max ? 'Il faut ta FC max (ou ton âge) : saisis-la ci-dessus.' : 'Il faut ta FC au repos : relie ta montre ou saisis ton pouls au réveil quelques matins.'),
 
     // ── VO2max ──
-    // Le test de Cooper mesure ; la FC estime. Le test passe devant.
-    cooper || vo2 ? React.createElement(React.Fragment, null,
-      titre(cooper ? 'VO2max' : 'VO2max estimée', 'vo2max'),
-      React.createElement('div', { style: { ...bloc, display: 'flex', alignItems: 'baseline', gap: 10 } },
-        React.createElement('span', { style: { fontFamily: C.mono, fontSize: 24, fontWeight: 600, color: COL } }, cooper ? cooper.valeur : vo2),
-        React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.45 } }, cooper
-          ? `ml/kg/min, mesurée par ton test de Cooper du ${cooper.date.split('-').reverse().join('/')} (${cooper.distance} m en 12 min).` + (vo2 ? ` L’estimation par ta FC donne ${vo2}.` : '')
-          : 'ml/kg/min, d’après ta FC max et ta FC au repos (méthode de Uth). Une indication à ± 15 % : elle monte quand ta FC au repos baisse. Le test de Cooper (Entraîner › Tests physiques) la mesure.'))) : null,
+    // Trois mesures possibles, de la plus juste à la plus indirecte : le
+    // test de Cooper, la montre (forme cardio), l'estimation par la FC.
+    cooper || vMontre || vo2 ? (() => {
+      const lignes = [
+        cooper ? { lab: 'Test de Cooper', court: 'test de Cooper', v: cooper.valeur, sous: `${cooper.distance} m en 12 min, le ${cooper.date.split('-').reverse().join('/')}` } : null,
+        vMontre ? { lab: 'Montre (forme cardio)', court: 'montre (forme cardio)', v: vMontre.valeur, sous: `le ${vMontre.date.split('-').reverse().join('/')}` + (vMontre.evolution != null ? ` · ${vMontre.evolution > 0 ? '+' : ''}${fr(vMontre.evolution)} en deux mois` : '') } : null,
+        vo2 ? { lab: 'Estimation par ta FC', court: 'estimation par ta FC', v: vo2, sous: 'FC max / FC au repos (Uth), ± 15 %' } : null,
+      ].filter(Boolean)
+      const ref = lignes[0]
+      const niv = niveauVo2(ref.v, db)
+      return React.createElement(React.Fragment, null,
+        titre('VO2max', 'vo2max'),
+        React.createElement('div', { style: bloc },
+          React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 10 } },
+            React.createElement('span', { style: { fontFamily: C.mono, fontSize: 24, fontWeight: 600, color: COL } }, fr(ref.v)),
+            React.createElement('span', { style: { fontSize: 12, color: C.ink2, lineHeight: 1.45 } }, 'ml/kg/min · ' + ref.court + (niv ? ` · niveau « ${niv} » pour ton âge` : ''))),
+          lignes.length > 1 ? React.createElement('div', { className: 'liste', style: { marginTop: 6 } },
+            lignes.map((l) => React.createElement('div', { key: l.lab, style: { display: 'flex', alignItems: 'baseline', gap: 8, padding: '6px 0' } },
+              React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                React.createElement('div', { style: { fontSize: 12.5, fontWeight: 600, color: C.ink } }, l.lab),
+                React.createElement('div', { style: { fontSize: 11, color: C.ink3 } }, l.sous)),
+              React.createElement('span', { style: { fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: C.ink } }, fr(l.v))))) : React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4 } }, ref.sous),
+          !cooper ? React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Le test de Cooper (Entraîner › Tests physiques) la mesure mieux. La montre l’estime pendant tes marches et courses en extérieur.') : null))
+    })() : null,
 
     // ── Séances ──
     titre('FC de tes séances'),

@@ -281,6 +281,14 @@ export function formeDuJour(log, aujourdhui, contexte = 0) {
     }
   }
 
+  const tp = sig.temp
+  if (tp && tp.valeur != null && tp.normale != null) {
+    const d = Math.round((tp.valeur - tp.normale) * 100) / 100
+    const pts = d >= 1 ? -8 : d >= 0.5 ? -4 : 0
+    if (d >= 1) coeurFatigue = true
+    ajustements.push({ id: 'temp', lab: 'Température la nuit', pts, texte: `${d > 0 ? '+' : d < 0 ? '−' : ''}${fr(Math.abs(d))} °C sur ta normale${d >= 0.5 ? ' : infection qui commence, alcool, repas tardif ou chambre chaude' : ''}` })
+  }
+
   const total = parts.reduce((a, x) => a + x.pts, 0) + ajustements.reduce((a, x) => a + x.pts, 0)
   const score = Math.max(0, Math.min(100, total))
   const malade = r.sensations.includes('malade')

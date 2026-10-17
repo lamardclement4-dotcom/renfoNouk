@@ -122,12 +122,12 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
   return React.createElement('div', null,
     React.createElement('button', { type: 'button', onClick: onRetour, style: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 0 10px', background: 'none', border: 'none', color: COL, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' } }, '← ' + retour),
     React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } },
-      'Chaque matin, un raccourci de l’app Raccourcis (celle d’Apple, déjà sur ton iPhone) lit dans Santé ta nuit (durée, heures, phases), puis ta fréquence cardiaque au repos, ta variabilité cardiaque, ta respiration et ton oxygène sanguin la nuit, et tes minutes d’exercice, et les envoie à ce site. Elles comptent dans ta forme du jour et dans Santé › Cœur. Rien à installer depuis l’App Store. Quatre étapes, une seule fois.'),
+      'Chaque matin, un raccourci de l’app Raccourcis (celle d’Apple, déjà sur ton iPhone) lit dans Santé ta nuit (durée, heures, phases), puis ta fréquence cardiaque au repos, ta variabilité cardiaque, ta respiration, ton oxygène sanguin et ta température au poignet la nuit, tes minutes d’exercice, ta VO2max, ta récupération cardiaque après les séances, ta FC à la marche, tes pesées et tes séances de pleine conscience, et les envoie à ce site. Elles comptent dans ta forme du jour, dans Santé › Cœur, Cycle, Esprit et Poids, et l’accueil te propose les séances que la montre a repérées. Rien à installer depuis l’App Store. Quatre étapes, une seule fois.'),
 
     // État
     React.createElement('div', { style: { ...bloc, marginTop: 14, borderLeft: `3px solid ${etat.configuree ? C.success : etat.erreur ? C.warn : C.line}` } },
       etat.chargement ? React.createElement('div', { style: { fontSize: 13, color: C.ink3 } }, 'Vérification…')
-        : etat.erreur === 'migration' ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Le serveur n’est pas encore prêt : les migrations 0005 à 0010 (dossier supabase/migrations) doivent être appliquées dans Supabase (éditeur SQL), une seule fois, dans l’ordre.')
+        : etat.erreur === 'migration' ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Le serveur n’est pas encore prêt : les migrations 0005 à 0011 (dossier supabase/migrations) doivent être appliquées dans Supabase (éditeur SQL), une seule fois, dans l’ordre.')
           : etat.erreur ? React.createElement('div', { style: { fontSize: 13, color: C.ink, lineHeight: 1.5 } }, 'Serveur injoignable pour l’instant. Réessaie avec du réseau.')
             : React.createElement('div', null,
               React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink } }, etat.configuree ? 'Clé active' : 'Pas encore reliée'),
@@ -144,14 +144,14 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
         'fais tout sur ton iPhone, avec ce site ouvert dans Safari. Compte 5 minutes. Il te faut une Apple Watch qui enregistre ton sommeil (app Santé › Sommeil).'),
 
       etat.configuree ? React.createElement('details', { style: { marginTop: 10, fontSize: 12.5, color: C.ink2 } },
-        React.createElement('summary', { style: { cursor: 'pointer', color: COL, fontWeight: 700 } }, 'Tu as déjà installé « Envoyer ma nuit » ? Mettre à jour (version 5, avec l’oxygène)'),
+        React.createElement('summary', { style: { cursor: 'pointer', color: COL, fontWeight: 700 } }, 'Tu as déjà installé « Envoyer ma nuit » ? Mettre à jour (version 6, tout ce que la montre mesure)'),
         React.createElement('div', { style: { ...bloc, marginTop: 8 } },
           React.createElement(Liste, { items: [
-            'La version 5 envoie la nuit d’abord, puis FC au repos, VFC, respiration, oxygène sanguin et minutes d’exercice. Si ta clé s’affiche à l’étape 1 (« gardée sur cet appareil »), touche « Copier » ; sinon, il en faut une nouvelle.',
+            'La version 6 envoie la nuit d’abord, puis FC au repos, VFC, respiration, oxygène et minutes d’exercice, et enfin température au poignet, VO2max, récupération cardiaque, FC à la marche, poids et pleine conscience. Si ta clé s’affiche à l’étape 1 (« gardée sur cet appareil »), touche « Copier » ; sinon, il en faut une nouvelle.',
             'Sur la montre, l’oxygène doit être mesuré : app Watch de l’iPhone › Oxygène sanguin › active les mesures, y compris en arrière-plan pendant le sommeil.',
             'Pas de clé affichée à l’étape 1 : touche « Remplacer ma clé », puis « Oui, remplacer ma clé ». La nouvelle clé est copiée (et gardée sur cet appareil pour la prochaine fois).',
             'Étape 2 : installe le raccourci. Si Raccourcis propose « Remplacer » ou « Garder les deux », choisis « Remplacer ». Colle la clé.',
-            'Étape 3 : lance-le une fois et touche « Tout activer » sur l’écran Santé (la nouvelle mesure, « Saturation en oxygène », y apparaît).',
+            'Étape 3 : lance-le une fois et touche « Tout activer » sur l’écran Santé (les nouvelles mesures y apparaissent : saturation en oxygène, température au poignet, VO2 max, récupération cardiaque, FC à la marche, poids, pleine conscience).',
             'Vérifie l’automatisation : app Raccourcis › onglet « Automatisation » › touche ton automatisation du réveil. Elle doit lancer « Envoyer ma nuit » ; sinon, touche l’action et choisis-le à nouveau.',
           ] }))) : null,
 
@@ -191,7 +191,7 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
       React.createElement('div', { style: bloc },
         React.createElement(Liste, { items: [
           'Dans l’app Raccourcis, onglet « Raccourcis » en bas, touche la tuile « Envoyer ma nuit ».',
-          'Écran « Accès à Santé » : touche « Tout activer » (Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque, Fréquence respiratoire, Saturation en oxygène, Minutes d’exercice), puis « Autoriser ». Il peut s’afficher deux fois : une pour la nuit, une pour les autres mesures.',
+          'Écran « Accès à Santé » : touche « Tout activer » (Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque, Fréquence respiratoire, Saturation en oxygène, Minutes d’exercice, et les autres mesures de la liste), puis « Autoriser ». Il peut s’afficher deux fois : une pour la nuit, une pour les autres mesures.',
           'Message « Autoriser “Envoyer ma nuit” à envoyer des éléments à ' + HOTE + ' ? » : touche « Toujours autoriser ».',
           'Si l’iPhone demande d’autoriser les notifications de Raccourcis : « Autoriser ».',
           'Une notification « Renfo » s’affiche et se termine par « Données envoyées : nuit. » (les autres mesures partent juste après, sans notification). Si elle dit autre chose, suis ce qu’elle indique (voir aussi « Ça ne marche pas ? » plus bas).',
@@ -240,10 +240,11 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
           React.createElement(Liste, { items: [
             'Notification « clé refusée » ou « clé absente » : refais l’étape 1 (« Remplacer ma clé »), supprime « Envoyer ma nuit » dans Raccourcis (appui long › Supprimer), puis refais l’étape 2.',
             'Notification « aucune donnée trouvée » ou « aucune nuit trouvée » : ta montre n’a rien enregistré sur les dernières 24 h. Vérifie dans l’app Santé › Sommeil, porte la montre la nuit (suivi du sommeil activé), puis relance le raccourci.',
-            'Notification « Le serveur de Renfo n’a pas pu recevoir ta nuit » : le serveur n’est pas encore à jour (migrations 0005 à 0010 dans Supabase, à appliquer par l’administrateur). Un message en anglais vient d’une ancienne version du raccourci : réinstalle-le (étape 2).',
+            'Notification « Le serveur de Renfo n’a pas pu recevoir ta nuit » : le serveur n’est pas encore à jour (migrations 0005 à 0011 dans Supabase, à appliquer par l’administrateur). Un message en anglais vient d’une ancienne version du raccourci : réinstalle-le (étape 2).',
             'Aucune notification : Réglages › Notifications › Raccourcis › active « Autoriser les notifications ». L’envoi a peut-être quand même eu lieu : recharge cette page.',
-            'Santé refusé par erreur, ou une mesure manque : Réglages › Santé › Accès aux données et appareils › Raccourcis › active Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque, Fréquence respiratoire, Saturation en oxygène et Minutes d’exercice.',
-            'Pas d’oxygène dans Santé › Cœur : vérifie que la montre le mesure (app Watch de l’iPhone › Oxygène sanguin › mesures activées, y compris en arrière-plan pendant le sommeil) et que tu as bien la version 5 du raccourci. Les mesures arrivent avec l’envoi du matin.',
+            'Santé refusé par erreur, ou une mesure manque : Réglages › Santé › Accès aux données et appareils › Raccourcis › active Sommeil, Fréquence cardiaque au repos, Variabilité de la fréquence cardiaque, Fréquence respiratoire, Saturation en oxygène, Minutes d’exercice, et pour la suite température au poignet, VO2 max, récupération cardiaque, FC à la marche, poids et pleine conscience.',
+            'Pas d’oxygène dans Santé › Cœur : vérifie que la montre le mesure (app Watch de l’iPhone › Oxygène sanguin › mesures activées, y compris en arrière-plan pendant le sommeil) et que tu as bien la version 5 ou 6 du raccourci. Les mesures arrivent avec l’envoi du matin.',
+            'Pas de température, de VO2max ou de récupération : la montre les mesure seulement si c’est réglé (température : suivi du sommeil ; VO2max : marches et courses en extérieur ; récupération : séances enregistrées dans l’app Exercice). Elles arrivent avec le troisième envoi, sans notification.',
             'Le téléchargement rouvre ce site au lieu du fichier : recharge la page une fois, puis réessaie l’étape 2.',
           ] }))),
 

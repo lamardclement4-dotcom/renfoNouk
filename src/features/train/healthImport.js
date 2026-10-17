@@ -55,6 +55,29 @@ export const HRV_TYPE = 'HKQuantityTypeIdentifierHeartRateVariabilitySDNN'
 export const RESP_TYPE = 'HKQuantityTypeIdentifierRespiratoryRate'
 export const EXO_TYPE = 'HKQuantityTypeIdentifierAppleExerciseTime'
 export const SPO2_TYPE = 'HKQuantityTypeIdentifierOxygenSaturation'
+// Le reste de ce que la montre mesure et que Raccourcis sait lire.
+export const TEMP_TYPE = 'HKQuantityTypeIdentifierAppleSleepingWristTemperature'
+export const VO2_TYPE = 'HKQuantityTypeIdentifierVO2Max'
+export const HRR_TYPE = 'HKQuantityTypeIdentifierHeartRateRecoveryOneMinute'
+export const MARCHE_TYPE = 'HKQuantityTypeIdentifierWalkingHeartRateAverage'
+export const POIDS_TYPE = 'HKQuantityTypeIdentifierBodyMass'
+export const ZEN_TYPE = 'HKCategoryTypeIdentifierMindfulSession'
+
+// Température au poignet pendant le sommeil, en °C (un iPhone réglé en
+// °F l'écrit en °F : convertie).
+export function tempC(v) {
+  const n = num(v)
+  if (n == null) return null
+  const c = n > 45 ? (n - 32) * 5 / 9 : n
+  return c >= 30 && c <= 42 ? Math.round(c * 100) / 100 : null
+}
+// Poids en kg (« lb » converti).
+export function poidsKg(v, unite) {
+  const n = num(v)
+  if (n == null) return null
+  const kg = /lb|livre/i.test(String(unite || '')) ? n * 0.45359237 : n
+  return kg >= 25 && kg <= 300 ? Math.round(kg * 10) / 10 : null
+}
 
 // Saturation en oxygène (Apple Watch, mesures en arrière-plan) : seules
 // comptent celles de la nuit, de 19 h à midi, rangées au jour du réveil.
@@ -66,6 +89,7 @@ export function spo2Pct(v) {
   const p = n > 0 && n <= 1 ? n * 100 : n
   return p >= 50 && p <= 100 ? Math.round(p * 10) / 10 : null
 }
+export function jourDeNuit(stamp) { return nuitSpo2(stamp) }
 export function nuitSpo2(stamp) {
   const d = dayOf(stamp), h = heureOf(stamp)
   if (!d || !h) return null
@@ -230,6 +254,13 @@ export function createHealthReader() {
   const resp = new Map()          // fréquence respiratoire (nuit), par jour
   const exo = new Map()           // minutes d'exercice (montre), par jour
   const spo2 = new Map()          // saturation en oxygène (nuit), par jour du réveil
+  const temp = new Map()          // température au poignet (nuit), par jour du réveil
+  const vo2 = new Map()           // VO2max de la montre (forme cardio)
+  const hrr = new Map()           // récupération cardiaque à 1 min, après une séance
+  const marche = new Map()        // FC moyenne à la marche
+  const poids = new Map()         // jour -> { t, kg } (la dernière pesée du jour)
+  const zen = new Map()           // minutes de pleine conscience
+  const exoSeg = new Map()        // minutes d'exercice, segments horodatés
   const workouts = []
   let seen = 0
 
@@ -298,6 +329,35 @@ export function createHealthReader() {
       const v = num(r.value)
       if (day && v != null) push(hrv, day, v)
     }
+    if (r.type === TEMP_TYPE) {
+      const day = jourDeNuit(r.start)
+      const v = tempC(r.value)
+      if (day && v != null) push(temp, day, v)
+      return
+    }
+    if (r.type === VO2_TYPE || r.type === HRR_TYPE || r.type === MARCHE_TYPE) {
+      const day = dayOf(r.start)
+      const v = num(r.value)
+      const [m, lo, hi] = r.type === VO2_TYPE ? [vo2, 10, 90] : r.type === HRR_TYPE ? [hrr, 3, 90] : [marche, 40, 160]
+      if (day && v != null && v >= lo && v <= hi) push(m, day, v)
+      return
+    }
+    if (r.type === POIDS_TYPE) {
+      const day = dayOf(r.start)
+      const kg = poidsKg(r.value, r.unit)
+      const t = msOf(r.start) || 0
+      if (day && kg != null && (!poids.has(day) || t >= poids.get(day).t)) poids.set(day, { t, kg })
+      return
+    }
+    if (r.type === ZEN_TYPE) {
+      const a = msOf(r.start), b = msOf(r.end), day = dayOf(r.start)
+      if (day && a != null && b != null && b > a && b - a <= 4 * 3600000) push(zen, day, (b - a) / 60000)
+      return
+    }
+    if (r.type === EXO_TYPE) {
+      const a = msOf(r.start), b = msOf(r.end), day = dayOf(r.start)
+      if (day && a != null && b != null && b >= a) push(exoSeg, day, { a, b: Math.max(b, a + 60000), ha: heureOf(r.start), hb: heureOf(r.end) })
+    }
     if (r.type === SPO2_TYPE) {
       const day = nuitSpo2(r.start)
       const v = spo2Pct(r.value)
@@ -349,8 +409,30 @@ export function createHealthReader() {
       o2.spo2Min[d] = Math.min(...list)
       o2.spo2Bas[d] = list.filter((x) => x < 90).length
     }
+    const moy = (m, dec) => {
+      const out = {}
+      for (const [d, list] of m) out[d] = Math.round(list.reduce((a, b) => a + b, 0) / list.length * dec) / dec
+      return out
+    }
+    // Blocs d'exercice : minutes de la montre séparées de moins de 5
+    // minutes, gardés dès 10 minutes. Ils proposent la séance à noter.
+    const exoBlocs = {}
+    for (const [d, segs] of exoSeg) {
+      const tri = segs.slice().sort((x, y) => x.a - y.a)
+      const blocs = []
+      for (const g of tri) {
+        const der = blocs[blocs.length - 1]
+        if (der && g.a - der.b <= 5 * 60000) { if (g.b > der.b) { der.b = g.b; der.hb = g.hb } } else blocs.push({ ...g })
+      }
+      const garde = blocs.map((x) => ({ debut: x.ha, fin: x.hb, min: Math.round((x.b - x.a) / 60000) })).filter((x) => x.min >= 10 && x.debut)
+      if (garde.length) exoBlocs[d] = garde
+    }
     return {
       ...o2,
+      temp: moy(temp, 100), vo2: moy(vo2, 10), hrr: moy(hrr, 1), hrrN: compte(hrr), marche: moy(marche, 1),
+      poids: Object.fromEntries([...poids].map(([d, x]) => [d, x.kg])),
+      zenMin: Object.fromEntries([...zen].map(([d, l]) => [d, Math.round(l.reduce((a, b) => a + b, 0))])), zenN: compte(zen),
+      exoBlocs,
       sleep, steps: sum(steps), restingHr: avg(restingHr), hrv: avg(hrv),
       restingHrN: compte(restingHr), hrvN: compte(hrv),
       resp: avg(resp), respN: compte(resp), exoMin: sum(exo),
@@ -454,7 +536,7 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
 
   const vitalsLog = { ...prevVitals }
   let vitalsAdded = 0
-  const days = new Set(['steps', 'restingHr', 'hrv', 'resp', 'exoMin', 'spo2'].flatMap((k) => Object.keys(result[k] || {})))
+  const days = new Set(['steps', 'restingHr', 'hrv', 'resp', 'exoMin', 'spo2', 'temp', 'vo2', 'hrr', 'marche', 'zenMin', 'exoBlocs'].flatMap((k) => Object.keys(result[k] || {})))
   for (const d of days) {
     const entry = { ...(prevVitals[d] || {}) }
     let touched = false
@@ -475,6 +557,29 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
       if (n != null) entry[cle + 'N'] = n
       touched = true
     }
+    // Une valeur par jour (température de la nuit, VO2max, FC de marche) :
+    // la plus récente reçue.
+    for (const cle of ['temp', 'vo2', 'marche']) {
+      const val = result[cle] && result[cle][d]
+      if (val != null && entry[cle] !== val) { entry[cle] = val; touched = true }
+    }
+    // Récupération cardiaque et pleine conscience : plusieurs par jour, un
+    // envoi qui en voit autant ou plus remplace.
+    for (const cle of ['hrr', 'zenMin']) {
+      const val = result[cle] && result[cle][d], nk = cle === 'hrr' ? 'hrrN' : 'zenN', n = result[nk] && result[nk][d]
+      if (val == null) continue
+      if (!(entry[cle] == null || (entry[nk] != null && n != null && n >= entry[nk]))) continue
+      if (entry[cle] === val && entry[nk] === n) continue
+      entry[cle] = val
+      if (n != null) entry[nk] = n
+      touched = true
+    }
+    // Blocs d'exercice : remplacés par une liste qui couvre autant ou plus.
+    const blocs = result.exoBlocs && result.exoBlocs[d]
+    if (blocs) {
+      const tot = (l) => (Array.isArray(l) ? l.reduce((a, x) => a + (x.min || 0), 0) : -1)
+      if (tot(blocs) >= tot(entry.exoBlocs) && JSON.stringify(blocs) !== JSON.stringify(entry.exoBlocs)) { entry.exoBlocs = blocs; touched = true }
+    }
     // Oxygène : les quatre chiffres de la nuit vont ensemble.
     const o2 = result.spo2 && result.spo2[d], o2n = result.spo2N && result.spo2N[d]
     if (o2 != null && plusComplet('spo2', o2n) && !(entry.spo2 === o2 && entry.spo2N === o2n)) {
@@ -486,6 +591,17 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
     }
     if (touched) { vitalsLog[d] = entry; vitalsAdded++ }
   }
+
+  // Pesées (balance connectée, saisie dans Santé) : ajoutées aux jours
+  // sans pesée dans Renfo ; une pesée notée ici n'est jamais remplacée.
+  const prevPoids = Array.isArray(db && db.weightLog) ? db.weightLog.filter((e) => e && e.date) : []
+  const datesPoids = new Set(prevPoids.map((e) => e.date))
+  const nouvellesPesees = Object.entries(result.poids || {}).filter(([d]) => !datesPoids.has(d)).map(([d, kg]) => ({ date: d, kg, source }))
+  const weightLog = nouvellesPesees.length ? [...prevPoids, ...nouvellesPesees].sort((x, y) => x.date.localeCompare(y.date)).slice(-1000) : null
+  // La pesée la plus récente fait le poids du profil (hydratation,
+  // compléments, charges) : comme une pesée notée dans Poids.
+  const derniere = weightLog && weightLog[weightLog.length - 1]
+  const profilePhys = derniere && nouvellesPesees.includes(derniere) ? { ...((db && db.profilePhys) || {}), poids: derniere.kg } : null
 
   const stamp = now || Date.now()
   const sessions = prevSessions.slice()
@@ -515,10 +631,10 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
   })
 
   return {
-    patch: { sleepLog, vitalsLog, planningSessions: sessions },
+    patch: { sleepLog, vitalsLog, planningSessions: sessions, ...(weightLog ? { weightLog } : {}), ...(profilePhys ? { profilePhys } : {}) },
     summary: {
       sleepAdded, sleepKept, sleepFromBed, sleepTimes, sleepUpdated,
-      vitalsAdded,
+      vitalsAdded, weightAdded: nouvellesPesees.length,
       addedSessions, skippedSessions, unknownSport,
       records: result.seen,
     },

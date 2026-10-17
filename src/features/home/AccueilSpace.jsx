@@ -235,7 +235,7 @@ const listeStyle = { background: C.surface, border: `1px solid ${C.line}`, paddi
 // Rappels : prochaine séance planifiée, résumé nutrition/hydratation du
 // jour, routines, charge ACWR (si assez d'historique et pas déjà signalée
 // par OverloadAlert).
-function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil, onCoeur }) {
+function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil, onCoeur, onSeance }) {
   const iso = isoToday()
   const pillarList = intelPillars(db, iso)
   const nutPillar = pillarList.find((p) => p.id === 'nutrition')
@@ -264,9 +264,22 @@ function TodayInsights({ db, onPlanner, onNutrition, onRoutines, onSommeil, onCo
   // FC au repos, VFC ou respiration hors de ta normale : le bilan de
   // l'espace Cœur, dit dès l'accueil.
   const coeur = onCoeur ? bilanCoeur(db, iso) : null
+  // Blocs d'exercice comptés par la montre (aujourd'hui, hier) sans séance
+  // notée autour de la même heure : la séance est proposée, déjà remplie.
+  const enMin = (hh) => (typeof hh === 'string' && /^\d{2}:\d{2}/.test(hh) ? Number(hh.slice(0, 2)) * 60 + Number(hh.slice(3, 5)) : null)
+  const blocsLibres = (jour) => {
+    const blocs = ((db.vitalsLog || {})[jour] || {}).exoBlocs
+    if (!Array.isArray(blocs) || !blocs.length) return []
+    const faites = (Array.isArray(db.planningSessions) ? db.planningSessions : []).filter((x) => x && x.statut === 'realise' && x.date === jour)
+    const libres = blocs.filter((b) => !faites.some((x) => enMin(x.heure) != null && Math.abs(enMin(x.heure) - enMin(b.debut)) <= 60))
+    // Une séance notée sans heure couvre le plus long bloc restant.
+    return libres.slice().sort((a, b) => b.min - a.min).slice(faites.filter((x) => enMin(x.heure) == null).length)
+  }
+  const proposees = onSeance ? [[iso, 'aujourd’hui'], [hier, 'hier']].flatMap(([jour, quand]) => blocsLibres(jour).slice(0, 2).map((b) => ({ jour, quand, ...b }))) : []
   const rappels = [
+    ...proposees.map((b) => Ligne('bolt', C.warn, `Montre : ${b.min} min d’exercice ${b.quand} (${b.debut}–${b.fin})`, 'Aucune séance notée à cette heure : touche pour l’ajouter, date, heure et durée remplies', () => onSeance({ date: b.jour, heure: b.debut, duree: b.min + ' min', statut: 'realise', data: {} }), 'exo-' + b.jour + b.debut)),
     coeur && (coeur.niveau === 'incomplete' || coeur.niveau === 'surveiller') && Ligne('heart', coeur.niveau === 'incomplete' ? 'var(--c-danger)' : C.warn, coeur.niveau === 'incomplete' ? 'Cœur : récupération incomplète' : 'Cœur : à surveiller', coeur.alertes.join(' '), onCoeur, 'coeur'),
-    exoHier >= 20 && !seanceHier && Ligne('bolt', C.warn, `La montre a compté ${exoHier} min d’exercice hier`, 'Aucune séance notée ce jour-là : ajoute-la pour que ta charge soit juste', onPlanner, 'exo'),
+    !proposees.length && !(((db.vitalsLog || {})[hier] || {}).exoBlocs) && exoHier >= 20 && !seanceHier && Ligne('bolt', C.warn, `La montre a compté ${exoHier} min d’exercice hier`, 'Aucune séance notée ce jour-là : ajoute-la pour que ta charge soit juste', onPlanner, 'exo'),
     soir && Ligne('moon', MODULE_TINTS.sommeil, 'Ce soir : au lit vers ' + soir.coucher, `Pour dormir ${libelleDuree(soir.besoin)} avant ton lever de ${soir.lever}${soir.bonus ? `, dont ${soir.bonus} min pour la dette` : ''}`, onSommeil, 'soir'),
     // La nuit se saisit le matin ou elle s'oublie : tant qu'elle manque, on
     // la rappelle — elle fait la forme du jour.
@@ -312,6 +325,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     import('../health/montreSync').then((m) => (retour ? m.releverMontre(store, { force: true }).finally(() => m.preparerRappels(db, { force: true })) : m.releverEnFond(store, db))).catch(() => {})
   }, [loading, userId]) // eslint-disable-line react-hooks/exhaustive-deps
   const [tile, setTile] = useState(null)
+  const [brouillon, setBrouillon] = useState(null)
   const [openId, setOpenId] = useState(null)
   const [healthTile, setHealthTile] = useState(null)
 
@@ -319,7 +333,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     return h('div', { style: { position: 'fixed', inset: 0, background: C.bg, zIndex: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.ink3, fontFamily: C.mono, fontSize: 12, textTransform: 'uppercase' } }, 'Chargement...')
   }
 
-  if (tile) return h(TrainSpace, { userId, initialTile: tile, embedded: true, onClose: () => setTile(null) })
+  if (tile) return h(TrainSpace, { userId, initialTile: tile, embedded: true, brouillonSeance: tile === 'planner' ? brouillon : null, onClose: () => { setTile(null); setBrouillon(null) } })
   if (openId) return h(TrainSpace, { userId, initialOpenId: openId, embedded: true, onClose: () => setOpenId(null) })
   if (healthTile) return h(HealthHome, { userId, initialSpace: healthTile, embedded: true, onClose: () => setHealthTile(null) })
 
@@ -456,7 +470,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     h(MondayRetroCard, { db, onOpen: () => setTile('planner') }),
     h(OverloadAlert, { db, onPrevention: () => setHealthTile('prevention') }),
     h('div', { style: { marginTop: 22 } }, h(HealthScoreCard, { db, onAction: handleAction })),
-    h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition'), onRoutines: () => setTile('routines'), onSommeil: () => setHealthTile('sommeil'), onCoeur: () => setHealthTile('coeur') }),
+    h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition'), onRoutines: () => setTile('routines'), onSommeil: () => setHealthTile('sommeil'), onCoeur: () => setHealthTile('coeur'), onSeance: (b) => { setBrouillon(b); setTile('planner') } }),
     h('div', { style: { marginTop: 22 } }, h(PeakHomeCard, { db, onPeak: () => setTile('peak') })),
     mobilityCta)
 

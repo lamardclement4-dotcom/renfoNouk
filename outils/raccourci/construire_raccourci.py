@@ -133,6 +133,7 @@ def construire():
     url, anon = lire_env()
     adresse = f"{url}/rest/v1/rpc/deposer_nuit_montre?apikey={anon}"
     adresse_signaux = f"{url}/rest/v1/rpc/deposer_signaux_montre?apikey={anon}"
+    adresse_activite = f"{url}/rest/v1/rpc/deposer_activite_montre?apikey={anon}"
 
     def envoi(nom, url_rpc, champs):
         return action(
@@ -162,8 +163,10 @@ def construire():
         action(
             "is.workflow.actions.comment",
             WFCommentActionText="Envoie au site Renfo ta dernière nuit, puis ta fréquence cardiaque au repos, ta "
-            "variabilité cardiaque, ta respiration et ton oxygène sanguin la nuit, et tes minutes d’exercice "
-            "(Apple Watch, via Santé). Rien d’autre n’est lu. La notification rapporte aussi le rappel du moment.",
+            "variabilité cardiaque, ta respiration et ton oxygène sanguin la nuit, tes minutes d’exercice, et enfin "
+            "ta température au poignet la nuit, ta VO2max, ta récupération cardiaque, ta FC à la marche, tes pesées "
+            "et tes séances de pleine conscience (Apple Watch, via Santé). Rien d’autre n’est lu. La notification "
+            "rapporte aussi le rappel du moment.",
         ),
         # 1. La clé, posée à l'installation (question d'import).
         action("is.workflow.actions.gettext", UUID=uid("cle"), WFTextActionText="colle-ta-cle-renfo"),
@@ -231,6 +234,30 @@ def construire():
             champ("exo", liste("exo", "Value")),
             champ("spo2_dates", liste("spo2", "Start Date")),
             champ("spo2", liste("spo2", "Value")),
+        ]),
+        # 11–17. Le reste, dans un troisième envoi (migration 0011) : si une
+        # de ces recherches manque sur un iPhone, la nuit et les signaux sont
+        # déjà partis. Libellés de la même table de types de Raccourcis.
+        recherche_sante("temp", "Sleep Wrist Temperature", 1),
+        recherche_sante("vo2", "VO2 Max", 10),
+        recherche_sante("hrr", "Heart Rate Recovery, 1 min", 7),
+        recherche_sante("marche", "Walking Heart Rate Average", 3),
+        recherche_sante("poids", "Weight", 7),
+        recherche_sante("zen", "Mindful Session", 2),
+        envoi("activite", adresse_activite, [
+            champ("temp_dates", liste("temp", "Start Date")),
+            champ("temp", liste("temp", "Value")),
+            champ("vo2_dates", liste("vo2", "Start Date")),
+            champ("vo2", liste("vo2", "Value")),
+            champ("hrr_dates", liste("hrr", "Start Date")),
+            champ("hrr", liste("hrr", "Value")),
+            champ("marche_dates", liste("marche", "Start Date")),
+            champ("marche", liste("marche", "Value")),
+            champ("poids_dates", liste("poids", "Start Date")),
+            champ("poids", liste("poids", "Value")),
+            champ("poids_unites", liste("poids", "Unit")),
+            champ("zen_debuts", liste("zen", "Start Date")),
+            champ("zen_fins", liste("zen", "End Date")),
         ]),
     ]
     return {

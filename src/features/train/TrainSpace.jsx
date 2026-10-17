@@ -28,7 +28,7 @@ import HealthHome from '../health/HealthHome'
 // et l'ouverture/lecture d'une séance (Detail/Player), pour rester
 // un module autonome comme HealthHome.
 // ============================================================
-export default function TrainSpace({ userId, onClose, initialTile, initialOpenId, embedded }) {
+export default function TrainSpace({ userId, onClose, initialTile, initialOpenId, embedded, brouillonSeance }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [tile, setTile] = useState(initialTile || null)
   const [openId, setOpenId] = useState(initialOpenId || null)
@@ -116,7 +116,7 @@ export default function TrainSpace({ userId, onClose, initialTile, initialOpenId
   if (tile === 'coach') return React.createElement(CoachSpace, { db, onClose: backToHub, onAction: handleCoachAction })
   if (tile === 'peak') return React.createElement(PeakSpace, { db, store, onClose: backToHub, onMobility: () => setTile('mobility'), onProgram: () => setTile('program'), onRecovery: () => setTile('recovery'), onTests: () => setTile('tests'), onNutrition: () => setHealthTile('nutrition'), onCycle: () => setHealthTile('cycle') })
   if (tile === 'tests') return React.createElement(PhysicalTestsSpace, { userId, onClose: backToHub })
-  if (tile === 'planner') return React.createElement(PlannerSpace, { db, store, onClose: backToHub })
+  if (tile === 'planner') return React.createElement(PlannerSpace, { db, store, onClose: backToHub, brouillon: tile === initialTile ? brouillonSeance : null })
   if (tile === 'weather') return React.createElement(WeatherSpace, { db, store, onClose: backToHub })
   // Une routine est jouable comme une séance : le lecteur la reçoit par le
   // même chemin, il n'a rien à savoir de plus.
