@@ -169,6 +169,7 @@ export const MODULE_TINTS = {
   cycle: 'var(--m-cycle)',
   esprit: 'var(--m-mind)',
   complements: 'var(--c-warn)',
+  coeur: 'var(--c-danger)',
   danger: 'var(--c-danger)',
 }
 

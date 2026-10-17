@@ -85,6 +85,15 @@ export const GLOSSAIRE = {
     texte: 'Le nombre de respirations par minute pendant ton sommeil, mesuré par la montre. Il varie peu d’une nuit à l’autre : 3 de plus que ta normale, surtout avec un pouls plus haut ou une VFC plus basse, annonce souvent une infection un ou deux jours avant les symptômes.',
     conseil: 'Ta normale se calcule après 5 nuits mesurées, sur les 4 dernières semaines.',
   },
+  zonesFc: {
+    titre: 'Zones d’entraînement',
+    texte: 'Cinq plages de fréquence cardiaque, de la récupération (Z1) à l’effort maximal (Z5). Elles sont calculées sur ta réserve cardiaque — FC max moins FC au repos (méthode de Karvonen) — donc sur ton cœur à toi, pas sur une moyenne. L’essentiel de l’endurance se construit en Z2 ; Z4 et Z5 se dosent.',
+    conseil: 'Saisis ta FC max si tu la connais : estimée depuis l’âge, elle peut se tromper de 10 battements.',
+  },
+  vo2max: {
+    titre: 'VO2max',
+    texte: 'Le volume maximal d’oxygène que ton corps utilise par minute et par kilo : le moteur de l’endurance. Ici, une estimation tirée de ta FC max et de ta FC au repos (Uth et al., 2004), à ± 15 %. Un test d’effort, ou le test de Cooper dans Renfo, la mesure mieux.',
+  },
   phases: {
     titre: 'Phases du sommeil',
     texte: 'Une nuit enchaîne quatre ou cinq cycles d’environ 90 minutes : sommeil léger, profond (la récupération physique, l’hormone de croissance), paradoxal (la mémoire, l’apprentissage des gestes) et de courts éveils. Le profond domine en début de nuit, le paradoxal en fin de nuit : écourter la fin de nuit rogne surtout le paradoxal.',

@@ -11,6 +11,7 @@ import { libelleDuree } from './sommeilForme'
 const NutritionSpace = lazy(() => import('../nutrition/Nutrition'))
 const HydrationSpace = lazy(() => import('../hydration/Hydration'))
 const SleepSpace = lazy(() => import('./Sleep'))
+const CoeurSpace = lazy(() => import('./CoeurSpace'))
 const PreventionSpace = lazy(() => import('./Prevention'))
 const CycleSpace = lazy(() => import('./Cycle'))
 const BreathingSpace = lazy(() => import('./Breathing'))
@@ -37,6 +38,7 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
   if (space === 'nutrition') return React.createElement(NutritionSpace, { userId, onClose: backToHub })
   if (space === 'hydratation') return React.createElement(HydrationSpace, { userId, onClose: backToHub })
   if (space === 'sommeil') return React.createElement(SleepSpace, { userId, onClose: backToHub })
+  if (space === 'coeur') return React.createElement(CoeurSpace, { userId, onClose: backToHub })
   if (space === 'prevention') return React.createElement(PreventionSpace, { userId, onClose: backToHub })
   if (space === 'cycle') return React.createElement(CycleSpace, { userId, onClose: backToHub })
   if (space === 'esprit') return React.createElement(BreathingSpace, { userId, onClose: backToHub })
@@ -49,6 +51,14 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
 
   const todayKey = isoToday()
   const sleepToday = (db.sleepLog || {})[todayKey]
+  // Dernière FC au repos connue (montre, sinon pouls saisi), sur 2 jours.
+  const reposJour = (() => {
+    for (const d of [todayKey, (() => { const x = new Date(); x.setDate(x.getDate() - 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0') })()]) {
+      const v = Number(((db.vitalsLog || {})[d] || {}).restingHr) || Number(((db.sleepLog || {})[d] || {}).pouls)
+      if (v >= 30 && v <= 120) return Math.round(v)
+    }
+    return null
+  })()
   const cyclePhaseLabel = db.cycle && db.cycle.enabled && db.cycle.startDate
     ? (() => {
         try {
@@ -67,6 +77,7 @@ export default function HealthHome({ userId, onClose, initialSpace, embedded }) 
     { ic: 'apple', tint: MODULE_TINTS.nutrition, lab: 'Nutrition', sub: 'Repas et calories', on: 'nutrition' },
     { ic: 'drop', tint: MODULE_TINTS.hydratation, lab: 'Hydratation', sub: 'Ce que tu bois', on: 'hydratation' },
     { ic: 'moon', tint: MODULE_TINTS.sommeil, lab: 'Sommeil', sub: sleepToday ? `${libelleDuree(Number(sleepToday.hours))} cette nuit` : 'Saisir ta nuit', on: 'sommeil' },
+    { ic: 'heart', tint: MODULE_TINTS.coeur, lab: 'Cœur', sub: reposJour ? `${reposJour} bpm au repos` : 'FC, VFC, zones', on: 'coeur' },
     { ic: 'shield', tint: MODULE_TINTS.prevention, lab: 'Prévention', sub: 'Risque de blessure', on: 'prevention' },
     { ic: 'moon', tint: MODULE_TINTS.cycle, lab: 'Cycle', sub: cyclePhaseLabel, on: 'cycle' },
     { ic: 'wave', tint: MODULE_TINTS.esprit, lab: 'Esprit', sub: 'Respiration · mental', on: 'esprit' },
