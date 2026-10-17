@@ -468,7 +468,7 @@ export default function ProgressSpace({ userId, onClose }) {
   // ── Cœur ── les chiffres de l'espace Cœur (Santé), en quatre cases.
   const coeur = resumeCoeur(db, isoToday())
   let coeurBlock = null
-  if (coeur.m30 != null || coeur.vfc || coeur.vo2) {
+  if (coeur.m30 != null || coeur.vfc || coeur.vo2 || coeur.o2) {
     const frv = (x) => String(x).replace('.', ',')
     const caseCoeur = (big, unit, lab, sub, col) => h('div', { style: { background: C.surface, padding: '12px 10px', border: `1px solid ${C.line}`, borderTop: `3px solid ${col || 'var(--c-danger)'}` } },
       h('div', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, big == null ? '—' : frv(big), big != null && unit ? h('span', { style: { fontSize: 11.5, fontWeight: 600, color: C.ink3, marginLeft: 3 } }, unit) : null),
@@ -480,7 +480,9 @@ export default function ProgressSpace({ userId, onClose }) {
         caseCoeur(coeur.m30, 'bpm', 'FC au repos · 30 j', coeur.pente != null ? `${coeur.pente > 0 ? '+' : ''}${frv(coeur.pente)} bpm/mois${coeur.pente <= -1 ? ', ton cœur s’entraîne' : ''}` : 'tendance après un mois', coeur.pente != null && coeur.pente >= 1 ? C.warn : null),
         caseCoeur(coeur.vfc && coeur.vfc.normale != null ? coeur.vfc.normale : null, 'ms', 'VFC · 30 j', coeur.vfc && coeur.vfc.statut ? (coeur.vfc.statut === 'sous' ? 'semaine sous ta zone' : coeur.vfc.statut === 'dessus' ? 'semaine au-dessus' : 'semaine dans ta zone') : 'zone après 10 mesures', coeur.vfc && coeur.vfc.statut === 'sous' ? C.warn : null),
         caseCoeur(coeur.vo2 ? coeur.vo2.valeur : null, '', 'VO2max', coeur.vo2 ? (coeur.vo2.source === 'test' ? 'test de Cooper' : 'estimée par la FC') : 'test de Cooper ou FC'),
-        caseCoeur(coeur.fcMax ? coeur.fcMax.valeur : null, 'bpm', 'FC max', coeur.fcMax ? { saisie: 'saisie', seances: 'vue en séance', age: 'estimée par l’âge' }[coeur.fcMax.source] : 'à saisir dans Cœur')))
+        caseCoeur(coeur.fcMax ? coeur.fcMax.valeur : null, 'bpm', 'FC max', coeur.fcMax ? { saisie: 'saisie', seances: 'vue en séance', age: 'estimée par l’âge' }[coeur.fcMax.source] : 'à saisir dans Cœur'),
+        caseCoeur(coeur.o2 ? (coeur.o2.normale != null ? coeur.o2.normale : coeur.o2.derniere.v) : null, '%', coeur.o2 && coeur.o2.source === 'saisie' ? 'Oxygène · saisi' : 'Oxygène · nuits', coeur.o2 ? ({ repete: `${coeur.o2.nuitsBasses} nuits avec des chutes`, bas: 'dernière nuit basse', baisse: 'dernière nuit sous ta normale' }[coeur.o2.statut] || (coeur.o2.normale != null ? 'moyenne sur 30 j' : 'dernière mesure')) : 'montre ou saisie', coeur.o2 && coeur.o2.statut !== 'normal' ? C.warn : null),
+        caseCoeur(coeur.resp, '/min', 'Respiration · nuits', coeur.resp != null ? 'moyenne sur 30 j' : 'mesurée par la montre')))
   }
 
   // ── Tests physiques ──

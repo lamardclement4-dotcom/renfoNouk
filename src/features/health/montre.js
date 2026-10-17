@@ -14,11 +14,12 @@
 //   vfc;<date>;<valeur>              (ms)
 //   resp;<date>;<valeur>             (respirations par minute, la nuit)
 //   exo;<début>;<fin>;<minutes>      (minutes d'exercice de la montre)
+//   spo2;<date>;<valeur>             (saturation en oxygène, 97 ou 0,97)
 // Les dates arrivent au format ISO 8601 si on l'a choisi dans le
 // Raccourci, sinon au format affiché par l'iPhone (« 14 oct. 2026 à
 // 23:14 ») : les deux sont lus. Rien ici ne touche au réseau.
 // ============================================================
-import { createHealthReader, SLEEP_TYPE, RESTING_HR_TYPE, HRV_TYPE, RESP_TYPE, EXO_TYPE } from '../train/healthImport'
+import { createHealthReader, SLEEP_TYPE, RESTING_HR_TYPE, HRV_TYPE, RESP_TYPE, EXO_TYPE, SPO2_TYPE, spo2Pct } from '../train/healthImport'
 
 const sansAccents = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
 const p2 = (n) => String(n).padStart(2, '0')
@@ -112,6 +113,9 @@ export function lireDepot(texte) {
     } else if (/^(exo|exercice)$/.test(type) && champs.length >= 4) {
       const d = dateRaccourci(champs[1]), v = nombre(champs[champs.length - 1])
       if (d && v != null && v >= 0 && v <= 600) xml = `<Record type="${EXO_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
+    } else if (/^(spo2|o2|oxygene|saturation)$/.test(type) && champs.length >= 3) {
+      const d = dateRaccourci(champs[1]), v = spo2Pct(nombre(champs[champs.length - 1]))
+      if (d && v != null && v >= 70) xml = `<Record type="${SPO2_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
     } else if (/^(vfc|hrv)$/.test(type) && champs.length >= 3) {
       const d = dateRaccourci(champs[1]), v = nombre(champs[champs.length - 1])
       if (d && v != null && v >= 3 && v <= 400) xml = `<Record type="${HRV_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`

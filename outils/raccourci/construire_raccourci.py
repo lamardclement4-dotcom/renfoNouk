@@ -162,8 +162,8 @@ def construire():
         action(
             "is.workflow.actions.comment",
             WFCommentActionText="Envoie au site Renfo ta dernière nuit, puis ta fréquence cardiaque au repos, ta "
-            "variabilité cardiaque, ta respiration la nuit et tes minutes d’exercice (Apple Watch, via Santé). "
-            "Rien d’autre n’est lu. La notification rapporte aussi le rappel du moment.",
+            "variabilité cardiaque, ta respiration et ton oxygène sanguin la nuit, et tes minutes d’exercice "
+            "(Apple Watch, via Santé). Rien d’autre n’est lu. La notification rapporte aussi le rappel du moment.",
         ),
         # 1. La clé, posée à l'installation (question d'import).
         action("is.workflow.actions.gettext", UUID=uid("cle"), WFTextActionText="colle-ta-cle-renfo"),
@@ -209,12 +209,15 @@ def construire():
             WFNotificationActionSound=False,
         ),
         action("is.workflow.actions.conditional", GroupingIdentifier=uid("si-erreur"), WFControlFlowMode=2),
-        # 5–9. Les signaux, en silence : FC au repos (deux jours, la valeur
-        # du jour se calcule en journée), VFC et respiration de la nuit,
-        # minutes d'exercice (deux jours : la veille entière).
+        # 5–10. Les signaux, en silence : FC au repos (deux jours, la valeur
+        # du jour se calcule en journée), VFC, respiration et oxygène de la
+        # nuit (« Oxygen Saturation », même table de types que les autres,
+        # migration 0010), minutes d'exercice (deux jours : la veille
+        # entière).
         recherche_sante("fc", "Resting Heart Rate", 2),
         recherche_sante("vfc", "Heart Rate Variability", 1),
         recherche_sante("resp", "Respiratory Rate", 1),
+        recherche_sante("spo2", "Oxygen Saturation", 1),
         recherche_sante("exo", "Exercise Minutes", 2),
         envoi("signaux", adresse_signaux, [
             champ("fc_dates", liste("fc", "Start Date")),
@@ -226,6 +229,8 @@ def construire():
             champ("exo_debuts", liste("exo", "Start Date")),
             champ("exo_fins", liste("exo", "End Date")),
             champ("exo", liste("exo", "Value")),
+            champ("spo2_dates", liste("spo2", "Start Date")),
+            champ("spo2", liste("spo2", "Value")),
         ]),
     ]
     return {

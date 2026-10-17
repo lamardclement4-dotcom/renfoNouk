@@ -85,6 +85,11 @@ export const GLOSSAIRE = {
     texte: 'Le nombre de respirations par minute pendant ton sommeil, mesuré par la montre. Il varie peu d’une nuit à l’autre : 3 de plus que ta normale, surtout avec un pouls plus haut ou une VFC plus basse, annonce souvent une infection un ou deux jours avant les symptômes.',
     conseil: 'Ta normale se calcule après 5 nuits mesurées, sur les 4 dernières semaines.',
   },
+  spo2: {
+    titre: 'Oxygène sanguin',
+    texte: 'La part de l’hémoglobine qui transporte de l’oxygène (saturation, SpO2). La montre la mesure à la lumière, au poignet, en arrière-plan pendant le sommeil. Au niveau de la mer, elle reste entre 95 et 100 % chez une personne en bonne santé. Deux points sous ta normale accompagnent souvent un rhume qui commence, le nez bouché, l’alcool de la veille ou l’altitude ; des chutes sous 90 % qui se répètent la nuit valent un avis médical (apnée du sommeil).',
+    conseil: 'La montre peut se tromper de 2 points et un bracelet desserré fait chuter la mesure : regarde la moyenne de la nuit et la répétition, pas une mesure isolée. Ce n’est pas un examen médical.',
+  },
   zonesFc: {
     titre: 'Zones d’entraînement',
     texte: 'Cinq plages de fréquence cardiaque, de la récupération (Z1) à l’effort maximal (Z5). Elles sont calculées sur ta réserve cardiaque — FC max moins FC au repos (méthode de Karvonen) — donc sur ton cœur à toi, pas sur une moyenne. L’essentiel de l’endurance se construit en Z2 ; Z4 et Z5 se dosent.',

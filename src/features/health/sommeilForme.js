@@ -266,6 +266,21 @@ export function formeDuJour(log, aujourdhui, contexte = 0) {
     }
   }
 
+  const o2 = sig.spo2
+  if (o2 && o2.valeur != null) {
+    const lab = 'Oxygène la nuit'
+    const sous90 = o2.bas >= 2 ? ` · ${o2.bas} mesures sous 90 %` : ''
+    if (o2.normale == null) {
+      const pts = o2.valeur < 92 ? -6 : 0
+      ajustements.push({ id: 'spo2', lab, pts, texte: `${fr(o2.valeur)} %${sous90} · ta normale se dessine après 5 nuits${o2.mesures ? ` (${o2.mesures} pour l’instant)` : ''}` })
+    } else {
+      const d = Math.round((o2.normale - o2.valeur) * 10) / 10
+      const pts = o2.valeur < 92 || d >= 3 ? -6 : d >= 2 || o2.bas >= 3 ? -3 : 0
+      if (pts <= -6) coeurFatigue = true
+      ajustements.push({ id: 'spo2', lab, pts, texte: `${fr(o2.valeur)} %, ${d > 0 ? fr(d) + ' point' + (d >= 2 ? 's' : '') + ' sous' : d < 0 ? fr(-d) + ' au-dessus de' : 'égal à'} ta normale (${fr(Math.round(o2.normale * 10) / 10)} %)${sous90}` })
+    }
+  }
+
   const total = parts.reduce((a, x) => a + x.pts, 0) + ajustements.reduce((a, x) => a + x.pts, 0)
   const score = Math.max(0, Math.min(100, total))
   const malade = r.sensations.includes('malade')

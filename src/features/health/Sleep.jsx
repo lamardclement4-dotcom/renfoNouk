@@ -644,31 +644,33 @@ function BlocCoeur({ db, onCoeur }) {
     { id: 'repos', lab: 'FC de repos (Santé)', unite: 'bpm', terme: 'pouls', lire: (d) => vit[d] && vit[d].restingHr, lo: 30, hi: 120, haut: true },
     { id: 'vfc', lab: 'Variabilité cardiaque', unite: 'ms', terme: 'vfc', lire: (d) => vit[d] && vit[d].hrv, lo: 5, hi: 300, haut: false },
     { id: 'resp', lab: 'Respiration la nuit', unite: '/min', terme: 'respiration', lire: (d) => vit[d] && vit[d].resp, lo: 4, hi: 60, haut: true, seuil: 3 },
+    { id: 'spo2', lab: 'Oxygène la nuit', unite: '%', terme: 'spo2', lire: (d) => vit[d] && vit[d].spo2, lo: 70, hi: 100, haut: false, baisse: 2 },
   ]
   const blocs = []
   for (const m of mesures) {
     const pts = []
     for (let k = 27; k >= 0; k--) {
       const d = decaler(iso, -k), x = Number(m.lire(d))
-      if (m.lire(d) != null && Number.isFinite(x) && x >= m.lo && x <= m.hi) pts.push({ k, x: Math.round(x) })
+      // L'oxygène se lit au dixième : 94,4 n'est pas 94.
+      if (m.lire(d) != null && Number.isFinite(x) && x >= m.lo && x <= m.hi) pts.push({ k, x: m.baisse ? Math.round(x * 10) / 10 : Math.round(x) })
     }
     if (!pts.length) continue
     const der = pts[pts.length - 1], avant = pts.slice(0, -1)
     const normale = avant.length >= 5 ? avant.reduce((a, p) => a + p.x, 0) / avant.length : null
-    const ecart = (x) => (normale == null ? false : m.haut ? x - normale >= (m.seuil || 7) : x / normale <= 0.85)
+    const ecart = (x) => (normale == null ? false : m.baisse ? normale - x >= m.baisse : m.haut ? x - normale >= (m.seuil || 7) : x / normale <= 0.85)
     const horsNormale = normale == null ? 0 : pts.filter((p) => p.k < 14 && ecart(p.x)).length
     const quand = der.k === 0 ? 'aujourd’hui' : der.k === 1 ? 'hier' : 'il y a ' + der.k + ' jours'
     const hint = normale == null
       ? `Dernière mesure : ${quand}. Ta normale se dessine après 5 mesures (encore ${5 - avant.length}).`
-      : `Dernière mesure : ${quand}. Normale : ${Math.round(normale)} ${m.unite} sur ${avant.length} mesures.`
-        + (horsNormale ? ` ${horsNormale} jour${horsNormale > 1 ? 's' : ''} ${m.id === 'resp' ? 'à 3 respirations ou plus au-dessus' : m.haut ? 'à 7 battements ou plus au-dessus' : 'à 15 % ou plus sous'} ces deux dernières semaines.` : ' Aucun écart marqué ces deux dernières semaines.')
+      : `Dernière mesure : ${quand}. Normale : ${m.baisse ? String(Math.round(normale * 10) / 10).replace('.', ',') : Math.round(normale)} ${m.unite} sur ${avant.length} ${m.baisse ? 'nuits' : 'mesures'}.`
+        + (horsNormale ? ` ${horsNormale} jour${horsNormale > 1 ? 's' : ''} ${m.id === 'resp' ? 'à 3 respirations ou plus au-dessus' : m.baisse ? `à ${m.baisse} points ou plus sous` : m.haut ? 'à 7 battements ou plus au-dessus' : 'à 15 % ou plus sous'} ces deux dernières semaines.` : ' Aucun écart marqué ces deux dernières semaines.')
     const W = 280, H = 34
     const xs = pts.map((p) => p.x).concat(normale != null ? [normale] : [])
     const lo = Math.min(...xs) - 2, hi = Math.max(...xs) + 2
     const y = (v) => H - 3 - ((v - lo) / (hi - lo)) * (H - 6)
     const x = (k) => ((27 - k) / 27) * W
     blocs.push(React.createElement('div', { key: m.id },
-      React.createElement(AnaRow, { label: React.createElement(React.Fragment, null, m.lab, React.createElement(Aide, { terme: m.terme })), value: der.x + ' ' + m.unite, color: ecart(der.x) ? C.warn : C.ink, hint }),
+      React.createElement(AnaRow, { label: React.createElement(React.Fragment, null, m.lab, React.createElement(Aide, { terme: m.terme })), value: String(der.x).replace('.', ',') + ' ' + m.unite, color: ecart(der.x) ? C.warn : C.ink, hint }),
       pts.length >= 2 ? React.createElement('svg', { width: '100%', height: H, viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none', role: 'img', 'aria-label': m.lab + ' sur 4 semaines', style: { display: 'block', margin: '4px 0 6px' } },
         normale != null ? React.createElement('line', { x1: 0, x2: W, y1: y(normale), y2: y(normale), style: { stroke: C.ink3, strokeWidth: 1, strokeDasharray: '3 3' } }) : null,
         React.createElement('polyline', { points: pts.map((p) => x(p.k) + ',' + y(p.x)).join(' '), style: { fill: 'none', stroke: SLEEP_COL, strokeWidth: 1.5 } }),

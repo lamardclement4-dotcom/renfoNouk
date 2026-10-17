@@ -54,6 +54,27 @@ export const RESTING_HR_TYPE = 'HKQuantityTypeIdentifierRestingHeartRate'
 export const HRV_TYPE = 'HKQuantityTypeIdentifierHeartRateVariabilitySDNN'
 export const RESP_TYPE = 'HKQuantityTypeIdentifierRespiratoryRate'
 export const EXO_TYPE = 'HKQuantityTypeIdentifierAppleExerciseTime'
+export const SPO2_TYPE = 'HKQuantityTypeIdentifierOxygenSaturation'
+
+// Saturation en oxygène (Apple Watch, mesures en arrière-plan) : seules
+// comptent celles de la nuit, de 19 h à midi, rangées au jour du réveil.
+// L'export Santé l'écrit en fraction (0.97), Raccourcis souvent en
+// pourcentage (97) : les deux sont lus.
+export function spo2Pct(v) {
+  const n = num(v)
+  if (n == null) return null
+  const p = n > 0 && n <= 1 ? n * 100 : n
+  return p >= 50 && p <= 100 ? Math.round(p * 10) / 10 : null
+}
+export function nuitSpo2(stamp) {
+  const d = dayOf(stamp), h = heureOf(stamp)
+  if (!d || !h) return null
+  const hh = Number(h.slice(0, 2))
+  if (hh >= 12 && hh < 19) return null
+  if (hh < 12) return d
+  const [y, m, j] = d.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, j + 1)).toISOString().slice(0, 10)
+}
 
 // Les séances Apple portent un type long ; on ne garde que le suffixe.
 export const WORKOUT_SPORTS = [
@@ -208,6 +229,7 @@ export function createHealthReader() {
   const hrv = new Map()
   const resp = new Map()          // fréquence respiratoire (nuit), par jour
   const exo = new Map()           // minutes d'exercice (montre), par jour
+  const spo2 = new Map()          // saturation en oxygène (nuit), par jour du réveil
   const workouts = []
   let seen = 0
 
@@ -276,6 +298,12 @@ export function createHealthReader() {
       const v = num(r.value)
       if (day && v != null) push(hrv, day, v)
     }
+    if (r.type === SPO2_TYPE) {
+      const day = nuitSpo2(r.start)
+      const v = spo2Pct(r.value)
+      if (day && v != null) push(spo2, day, v)
+      return
+    }
     if (r.type === RESP_TYPE || r.type === EXO_TYPE) {
       const day = dayOf(r.start)
       const v = num(r.value)
@@ -312,7 +340,17 @@ export function createHealthReader() {
       for (const [d, list] of m) out[d] = list.length
       return out
     }
+    // Oxygène de la nuit : moyenne au dixième, plus basse mesure, et nombre
+    // de mesures sous 90 % (une seule peut venir d'un bracelet mal serré).
+    const o2 = { spo2: {}, spo2N: {}, spo2Min: {}, spo2Bas: {} }
+    for (const [d, list] of spo2) {
+      o2.spo2[d] = Math.round(list.reduce((a, b) => a + b, 0) / list.length * 10) / 10
+      o2.spo2N[d] = list.length
+      o2.spo2Min[d] = Math.min(...list)
+      o2.spo2Bas[d] = list.filter((x) => x < 90).length
+    }
     return {
+      ...o2,
       sleep, steps: sum(steps), restingHr: avg(restingHr), hrv: avg(hrv),
       restingHrN: compte(restingHr), hrvN: compte(hrv),
       resp: avg(resp), respN: compte(resp), exoMin: sum(exo),
@@ -416,7 +454,7 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
 
   const vitalsLog = { ...prevVitals }
   let vitalsAdded = 0
-  const days = new Set(['steps', 'restingHr', 'hrv', 'resp', 'exoMin'].flatMap((k) => Object.keys(result[k] || {})))
+  const days = new Set(['steps', 'restingHr', 'hrv', 'resp', 'exoMin', 'spo2'].flatMap((k) => Object.keys(result[k] || {})))
   for (const d of days) {
     const entry = { ...(prevVitals[d] || {}) }
     let touched = false
@@ -435,6 +473,15 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
       if (entry[cle] === val && entry[cle + 'N'] === n) continue
       entry[cle] = val
       if (n != null) entry[cle + 'N'] = n
+      touched = true
+    }
+    // Oxygène : les quatre chiffres de la nuit vont ensemble.
+    const o2 = result.spo2 && result.spo2[d], o2n = result.spo2N && result.spo2N[d]
+    if (o2 != null && plusComplet('spo2', o2n) && !(entry.spo2 === o2 && entry.spo2N === o2n)) {
+      entry.spo2 = o2
+      entry.spo2N = o2n
+      entry.spo2Min = result.spo2Min[d]
+      entry.spo2Bas = result.spo2Bas[d]
       touched = true
     }
     if (touched) { vitalsLog[d] = entry; vitalsAdded++ }

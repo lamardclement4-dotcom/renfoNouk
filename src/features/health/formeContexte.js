@@ -91,7 +91,13 @@ export function signauxCorps(db, iso) {
   const rr = (d) => dansBornes(vit[d] && vit[d].resp, 4, 60)
   const avantResp = serieAvant(iso, rr)
   const resp = rr(iso) != null ? { valeur: rr(iso), normale: moyenneOuNull(avantResp), mesures: avantResp.length } : null
-  return { pouls, vfc, resp }
+  // Oxygène de la nuit (montre), au dixième : une baisse de deux points
+  // sous ta normale accompagne souvent un rhume qui commence, le nez
+  // bouché, l'alcool de la veille ou l'altitude.
+  const o2 = (d) => { const e = vit[d]; const n = e && e.spo2 != null && e.spo2 !== '' ? Number(e.spo2) : NaN; return Number.isFinite(n) && n >= 70 && n <= 100 ? Math.round(n * 10) / 10 : null }
+  const avantO2 = serieAvant(iso, o2)
+  const spo2 = o2(iso) != null ? { valeur: o2(iso), normale: moyenneOuNull(avantO2), mesures: avantO2.length, bas: Number((vit[iso] || {}).spo2Bas) || 0 } : null
+  return { pouls, vfc, resp, spo2 }
 }
 
 export function formeContexte(db, iso) {

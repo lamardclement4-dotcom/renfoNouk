@@ -33,6 +33,8 @@ const lecteurs = {
   reveil: (db) => (d) => nombre(((db && db.sleepLog) || {})[d] && db.sleepLog[d].pouls, 30, 120),
   vfc: (db) => (d) => nombre(((db && db.vitalsLog) || {})[d] && db.vitalsLog[d].hrv, 5, 300),
   resp: (db) => (d) => nombre(((db && db.vitalsLog) || {})[d] && db.vitalsLog[d].resp, 4, 60),
+  spo2: (db) => (d) => nombre(((db && db.vitalsLog) || {})[d] && db.vitalsLog[d].spo2, 70, 100),
+  spo2Saisi: (db) => (d) => nombre(((db && db.sleepLog) || {})[d] && db.sleepLog[d].spo2, 70, 100),
 }
 
 // Les valeurs des `jours` derniers jours, du plus ancien au plus récent.
@@ -111,6 +113,45 @@ export function zoneVfc(db, iso) {
       : statut === 'dessus' ? `Semaine au-dessus de ta zone habituelle (${fr(m7)} ms) : bonne récupération.`
         : statut === 'dans' ? `Semaine dans ta zone habituelle (${fr(bas)}–${fr(haut)} ms).` : null,
   }
+}
+
+// ─── Oxygène sanguin ───
+// La montre mesure la saturation en oxygène en arrière-plan pendant le
+// sommeil. Chez une personne en bonne santé, au niveau de la mer, elle
+// reste entre 95 et 100 % ; la montre peut se tromper de 2 points, et un
+// bracelet desserré fait chuter une mesure. Ce qui compte : ta moyenne de
+// la nuit face à ta normale, et des chutes qui se répètent.
+// Les mesures ponctuelles saisies (app Oxygène sanguin, en journée) ne se
+// mêlent pas aux moyennes de nuit.
+export function oxygene(db, iso) {
+  const vit = (db && db.vitalsLog) || {}
+  const nuits = serie(db, iso, 'spo2', 30).map((x) => {
+    const e = vit[x.iso] || {}
+    return { ...x, min: nombre(e.spo2Min, 50, 100), bas: Number(e.spo2Bas) || 0, n: Number(e.spo2N) || null }
+  })
+  const saisies = serie(db, iso, 'spo2Saisi', 30)
+  if (!nuits.length && !saisies.length) return null
+  const source = nuits.length >= saisies.length ? 'montre' : 'saisie'
+  const pts = source === 'montre' ? nuits : saisies
+  const der = pts[pts.length - 1]
+  const avant = pts.slice(0, -1).map((x) => x.v)
+  const normale = avant.length >= 5 ? arrondi1(moyenne(avant)) : null
+  const s7 = pts.filter((x) => x.k < 7)
+  const m7 = s7.length >= 3 ? arrondi1(moyenne(s7.map((x) => x.v))) : null
+  // Nuit « basse » : au moins deux mesures sous 90 %, ou une moyenne sous
+  // 92 %. Une seule mesure basse peut venir du bracelet.
+  const basse = (x) => source === 'montre' && (x.bas >= 2 || x.v < 92)
+  const nuitsBasses = pts.filter((x) => x.k < 14 && basse(x)).length
+  const recente = der.k <= 1
+  const ecart = normale != null && recente ? arrondi1(normale - der.v) : null
+  const statut = nuitsBasses >= 3 ? 'repete' : recente && der.v < 92 ? 'bas' : ecart != null && ecart >= 2 ? 'baisse' : 'normal'
+  const texte = statut === 'repete'
+    ? `${nuitsBasses} nuits sur 14 avec des chutes d’oxygène (plusieurs mesures sous 90 % ou une moyenne sous 92 %). Si tu ronfles, te réveilles fatigué ou essoufflé, parles-en à un médecin : des chutes répétées la nuit peuvent venir d’une apnée du sommeil. La montre ne pose pas de diagnostic.`
+    : statut === 'bas' ? `${fr(der.v)} % ${source === 'montre' ? 'en moyenne cette nuit' : 'à ta dernière mesure'} : bas. Vérifie le bracelet (serré, un doigt au-dessus de l’os du poignet) et refais une mesure au calme. En altitude, c’est normal ; sinon, si ça se répète ou avec un essoufflement, consulte.`
+      : statut === 'baisse' ? `${fr(der.v)} % cette nuit, ${fr(ecart)} points sous ta normale (${fr(normale)} %) : souvent un rhume qui commence, le nez bouché, l’alcool de la veille ou l’altitude. Regarde demain si ça revient.`
+        : normale != null ? `Dans ta normale (${fr(normale)} %). La nuit, 95 à 100 % est l’habitude.`
+          : `Ta normale se dessine après 5 ${source === 'montre' ? 'nuits' : 'mesures'} (${avant.length + 1} pour l’instant). La nuit, 95 à 100 % est l’habitude.`
+  return { source, points: pts, derniere: der, normale, m7, nuitsBasses, ecart, statut, texte, marques: pts.filter(basse).map((x) => x.k) }
 }
 
 // ─── FC max et zones d'entraînement ───
@@ -202,7 +243,11 @@ export function bilanCoeur(db, iso) {
     const der = respS[respS.length - 1], avant = respS.slice(0, -1).map((x) => x.v)
     if (der.k <= 1 && avant.length >= 5 && der.v - moyenne(avant) >= 3) alertes.push(`Respiration la nuit à ${fr(der.v)}/min, au-dessus de ta normale.`)
   }
-  const niveau = alertes.length >= 2 ? 'incomplete' : alertes.length === 1 ? 'surveiller' : (t || v) ? 'bonne' : null
+  const o2 = oxygene(db, iso)
+  if (o2 && o2.statut === 'repete') alertes.push(`Oxygène : ${o2.nuitsBasses} nuits avec des chutes sur 14 jours.`)
+  else if (o2 && o2.statut === 'bas') alertes.push(`Oxygène la nuit à ${fr(o2.derniere.v)} %, bas.`)
+  else if (o2 && o2.statut === 'baisse') alertes.push(`Oxygène la nuit à ${fr(o2.derniere.v)} %, ${fr(o2.ecart)} points sous ta normale.`)
+  const niveau = alertes.length >= 2 ? 'incomplete' : alertes.length === 1 ? 'surveiller' : (t || v || o2) ? 'bonne' : null
   return {
     niveau, alertes,
     verdict: niveau === 'incomplete' ? 'Récupération incomplète : séance facile ou repos, et surveille un début de maladie.'
@@ -229,6 +274,8 @@ export function resumeCoeur(db, iso) {
     pente: t ? t.pente : null,
     niveau: b.niveau, verdict: b.verdict, alertes: b.alertes,
     vfc: zoneVfc(db, iso),
+    o2: oxygene(db, iso),
+    resp: (() => { const r = serie(db, iso, 'resp', 30); return r.length >= 5 ? arrondi1(moyenne(r.map((x) => x.v))) : null })(),
     fcMax: max,
     vo2: test ? { valeur: test.valeur, source: 'test', date: test.date } : estime ? { valeur: estime, source: 'estime' } : null,
   }

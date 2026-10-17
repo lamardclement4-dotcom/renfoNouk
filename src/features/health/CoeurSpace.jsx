@@ -6,7 +6,7 @@ import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, FlowSpace, isoToday, Aide } from './kit'
 import { annoncer } from '../../annonces'
-import { serie, tendanceRepos, zoneVfc, fcMax, zonesKarvonen, vo2Estime, vo2Test, seancesFc, bilanCoeur, NOM_SOURCE, NOM_SOURCE_MAX } from './coeurIntel'
+import { serie, tendanceRepos, zoneVfc, oxygene, fcMax, zonesKarvonen, vo2Estime, vo2Test, seancesFc, bilanCoeur, NOM_SOURCE, NOM_SOURCE_MAX } from './coeurIntel'
 
 const COL = MODULE_TINTS.coeur
 const fr = (x) => String(x).replace('.', ',')
@@ -21,9 +21,9 @@ function Mesure({ lab, valeur, unite, sous, couleur, aide }) {
     React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 4, lineHeight: 1.3 } }, sous || ' '))
 }
 
-// Courbe sur `jours` jours : points reliés, normale en pointillé, et deux
-// bornes de zone en tirets si fournies.
-function Courbe({ points, jours, normale, bas, haut, unite }) {
+// Courbe sur `jours` jours : points reliés, normale en pointillé, deux
+// bornes de zone en tirets si fournies, et des jours marqués en orange.
+function Courbe({ points, jours, normale, bas, haut, unite, marques }) {
   if (!points || points.length < 2) return React.createElement('div', { style: { fontSize: 12, color: C.ink3, padding: '6px 0' } }, 'Pas encore assez de mesures pour une courbe.')
   const W = 300, H = 70
   const vals = points.map((p) => p.v).concat([normale, bas, haut].filter((x) => x != null))
@@ -36,6 +36,7 @@ function Courbe({ points, jours, normale, bas, haut, unite }) {
     bas != null ? ligne(bas, '1 4', 'b') : null,
     haut != null ? ligne(haut, '1 4', 'h') : null,
     React.createElement('polyline', { points: points.map((p) => x(p.k) + ',' + y(p.v)).join(' '), style: { fill: 'none', stroke: COL, strokeWidth: 1.5 } }),
+    (marques || []).map((k) => { const p = points.find((q) => q.k === k); return p ? React.createElement('rect', { key: 'm' + k, x: x(k) - 2.5, y: y(p.v) - 2.5, width: 5, height: 5, style: { fill: C.warn } }) : null }),
     (() => { const d = points[points.length - 1]; return React.createElement('rect', { x: x(d.k) - 3, y: y(d.v) - 3, width: 6, height: 6, style: { fill: COL } }) })())
 }
 
@@ -56,6 +57,7 @@ export default function CoeurSpace({ userId, onClose }) {
   const iso = isoToday()
   const t = tendanceRepos(db, iso)
   const v = zoneVfc(db, iso)
+  const o2 = oxygene(db, iso)
   const resp = serie(db, iso, 'resp', 30)
   const b = bilanCoeur(db, iso)
   const max = fcMax(db, iso)
@@ -66,10 +68,15 @@ export default function CoeurSpace({ userId, onClose }) {
   const seances = seancesFc(db, iso, 8, zones, max && max.valeur)
   const p = db.profilePhys || {}
   const poulsJour = ((db.sleepLog || {})[iso] || {}).pouls
+  const o2Jour = ((db.sleepLog || {})[iso] || {}).spo2
 
   const enregistrerPouls = (n) => {
     store.set((sx) => { const log = (sx && sx.sleepLog) || {}; return { sleepLog: { ...log, [iso]: { ...(log[iso] || {}), pouls: n } } } })
     annoncer('Pouls au réveil enregistré : ' + n + ' bpm')
+  }
+  const enregistrerO2 = (n) => {
+    store.set((sx) => { const log = (sx && sx.sleepLog) || {}; return { sleepLog: { ...log, [iso]: { ...(log[iso] || {}), spo2: n } } } })
+    annoncer('Oxygène enregistré : ' + n + ' %')
   }
   const enregistrerProfil = (cle, n, msg) => {
     store.set((sx) => ({ profilePhys: { ...((sx && sx.profilePhys) || {}), [cle]: n } }))
@@ -79,14 +86,15 @@ export default function CoeurSpace({ userId, onClose }) {
   const rDer = dernier(resp)
 
   return React.createElement(FlowSpace, { bg: 'sante', title: 'Cœur', onClose, tint: COL },
-    React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } }, 'Ta fréquence cardiaque, de la récupération du matin aux zones d’entraînement. Les mesures viennent de ta montre (Profil › Apple Watch) ou de ce que tu saisis ici.'),
+    React.createElement('div', { style: { fontSize: 13.5, color: C.ink2, lineHeight: 1.55 } }, 'Ta fréquence cardiaque et ton oxygène sanguin, de la récupération du matin aux zones d’entraînement. Les mesures viennent de ta montre (Profil › Apple Watch) ou de ce que tu saisis ici.'),
 
     // ── Bilan du jour ──
     titre('Aujourd’hui'),
-    React.createElement('div', { style: { display: 'flex', gap: 6 } },
+    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 } },
       React.createElement(Mesure, { lab: t ? (t.source === 'sante' ? 'FC au repos' : 'Pouls au réveil') : 'FC au repos', aide: 'pouls', valeur: t && t.derniere ? t.derniere.v : null, unite: 'bpm', couleur: t && t.derniere && t.m30 != null && t.derniere.v - t.m30 >= 7 ? C.warn : COL, sous: t && t.m30 != null ? 'normale ' + fr(t.m30) : t ? 'normale après 7 mesures' : 'aucune mesure' }),
       React.createElement(Mesure, { lab: 'VFC (7 j)', aide: 'vfc', valeur: v && v.m7 != null ? v.m7 : (v && v.points.length ? dernier(v.points).v : null), unite: 'ms', couleur: v && v.statut === 'sous' ? C.warn : COL, sous: v && v.bas != null ? 'zone ' + fr(v.bas) + '–' + fr(v.haut) : v ? 'zone après 10 mesures' : 'aucune mesure' }),
-      React.createElement(Mesure, { lab: 'Respiration', aide: 'respiration', valeur: rDer ? rDer.v : null, unite: '/min', couleur: COL, sous: rDer ? (rDer.k === 0 ? 'cette nuit' : 'il y a ' + rDer.k + ' j') : 'aucune mesure' })),
+      React.createElement(Mesure, { lab: 'Respiration', aide: 'respiration', valeur: rDer ? rDer.v : null, unite: '/min', couleur: COL, sous: rDer ? (rDer.k === 0 ? 'cette nuit' : 'il y a ' + rDer.k + ' j') : 'aucune mesure' }),
+      React.createElement(Mesure, { lab: o2 && o2.source === 'saisie' ? 'Oxygène (saisi)' : 'Oxygène la nuit', aide: 'spo2', valeur: o2 ? o2.derniere.v : null, unite: '%', couleur: o2 && o2.statut !== 'normal' ? C.warn : COL, sous: o2 ? (o2.normale != null ? 'normale ' + fr(o2.normale) : o2.derniere.k === 0 ? 'cette nuit' : 'il y a ' + o2.derniere.k + ' j') : 'aucune mesure' })),
     b.verdict ? React.createElement('div', { style: { ...bloc, marginTop: 8, borderLeft: `3px solid ${COULEUR[b.niveau] || C.line}` } },
       React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: COULEUR[b.niveau] || C.ink } }, b.verdict),
       b.alertes.map((a, i) => React.createElement('div', { key: i, style: { fontSize: 12, color: C.ink2, marginTop: 4, lineHeight: 1.45 } }, '• ' + a))) : null,
@@ -96,8 +104,9 @@ export default function CoeurSpace({ userId, onClose }) {
     React.createElement('div', { style: { ...bloc, paddingTop: 2, paddingBottom: 2 } },
       React.createElement(Champ, { key: 'p' + (poulsJour || ''), lab: 'Pouls au réveil, aujourd’hui', aide: 'pouls', valeur: poulsJour, unite: 'bpm', min: 30, max: 120, onValider: enregistrerPouls }),
       React.createElement(Champ, { key: 'm' + (p.fcMax || ''), lab: 'FC max (si tu la connais)', valeur: p.fcMax, unite: 'bpm', placeholder: max ? String(max.valeur) : '—', min: 130, max: 230, onValider: (n) => enregistrerProfil('fcMax', n, 'FC max enregistrée : ' + n + ' bpm') }),
+      React.createElement(Champ, { key: 'o' + (o2Jour || ''), lab: 'Oxygène, mesure ponctuelle', aide: 'spo2', valeur: o2Jour, unite: '%', min: 70, max: 100, onValider: enregistrerO2 }),
       !(Number(p.age) > 0) ? React.createElement(Champ, { key: 'age', lab: 'Ton âge (pour estimer la FC max)', unite: 'ans', min: 10, max: 99, onValider: (n) => enregistrerProfil('age', n, 'Âge enregistré') }) : null),
-    React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Pouls au réveil : une minute au poignet, encore allongé, avant de te lever. FC max : la plus haute vue en fin d’effort très dur, ou celle d’un test.'),
+    React.createElement('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Pouls au réveil : une minute au poignet, encore allongé, avant de te lever. Oxygène : app Oxygène sanguin de la montre, assis, bras posé, 15 secondes sans bouger. FC max : la plus haute vue en fin d’effort très dur, ou celle d’un test.'),
 
     // ── FC au repos ──
     titre('FC au repos (3 mois)', 'pouls'),
@@ -117,6 +126,20 @@ export default function CoeurSpace({ userId, onClose }) {
       React.createElement('div', { style: { fontSize: 12.5, color: v.statut === 'sous' ? C.warn : C.ink, lineHeight: 1.5 } }, v.texte || `Ta zone habituelle se dessine après 10 mesures (${v.mesures} pour l’instant).`),
       React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6 } }, 'Pointillé : ta moyenne ; tirets : ta zone habituelle. La VFC varie beaucoup d’un jour à l’autre : regarde la semaine.'))
       : React.createElement('div', { style: { ...bloc, fontSize: 12.5, color: C.ink3 } }, 'Mesurée par la montre pendant la nuit : elle arrive avec le raccourci « Envoyer ma nuit ».'),
+
+    // ── Oxygène sanguin ──
+    titre(o2 && o2.source === 'saisie' ? 'Oxygène sanguin (30 jours)' : 'Oxygène sanguin (30 nuits)', 'spo2'),
+    o2 ? React.createElement('div', { style: bloc },
+      React.createElement(Courbe, { points: o2.points, jours: 30, normale: o2.normale, unite: '%', marques: o2.marques }),
+      o2.source === 'montre' ? React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5 } },
+        (o2.derniere.k === 0 ? 'Cette nuit' : o2.derniere.k === 1 ? 'La nuit d’avant' : 'Dernière nuit mesurée') + ` : moyenne ${fr(o2.derniere.v)} %`
+          + (o2.derniere.min != null ? `, plus basse ${fr(o2.derniere.min)} %` : '')
+          + `, ${o2.derniere.bas || 0} mesure${o2.derniere.bas > 1 ? 's' : ''} sous 90 %`
+          + (o2.derniere.n ? ` (${o2.derniere.n} mesure${o2.derniere.n > 1 ? 's' : ''})` : '') + '.'
+          + (o2.m7 != null ? ` Semaine : ${fr(o2.m7)} %.` : '')) : null,
+      React.createElement('div', { style: { fontSize: 12.5, color: o2.statut === 'normal' ? C.ink : C.warn, lineHeight: 1.5, marginTop: 6 } }, o2.texte),
+      React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, (o2.source === 'montre' ? 'Pointillé : ta moyenne ; carré orange : nuit avec des chutes. ' : '') + 'Mesurée au poignet : la montre peut se tromper de 2 points, et un bracelet desserré fait chuter la mesure. Ce n’est pas un examen médical.'))
+      : React.createElement('div', { style: { ...bloc, fontSize: 12.5, color: C.ink3, lineHeight: 1.5 } }, 'Aucune mesure encore. Sur l’iPhone : app Watch › Oxygène sanguin, active les mesures (et celles en arrière-plan pendant le sommeil). Puis mets à jour le raccourci « Envoyer ma nuit » (Profil › Apple Watch, version 5). Ou saisis une mesure ponctuelle ci-dessus.'),
 
     // ── Zones ──
     titre('Tes zones d’entraînement', 'zonesFc'),
