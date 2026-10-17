@@ -49,7 +49,15 @@ export async function releverMontre(store, { force = false, silencieux = false }
   store.set((sx) => {
     const r = toPatch(res, sx || {}, { source: 'montre' })
     summary = r.summary
-    return { sleepLog: r.patch.sleepLog, vitalsLog: r.patch.vitalsLog, ...(r.patch.weightLog ? { weightLog: r.patch.weightLog } : {}), ...(r.patch.profilePhys ? { profilePhys: r.patch.profilePhys } : {}) }
+    return {
+      sleepLog: r.patch.sleepLog, vitalsLog: r.patch.vitalsLog,
+      ...(r.patch.weightLog ? { weightLog: r.patch.weightLog } : {}),
+      ...(r.patch.profilePhys ? { profilePhys: r.patch.profilePhys } : {}),
+      // Séances et eau notées depuis la montre : seulement s'il y en a, et
+      // seulement les jours touchés pour l'eau.
+      ...(r.summary.seancesMontre ? { planningSessions: r.patch.planningSessions } : {}),
+      ...(r.patch.hydroLog ? { hydroLog: r.patch.hydroLog } : {}),
+    }
   })
   if (!summary) return { erreur: 'ecriture' }
   await supabase.from('depots_montre').delete().in('id', data.map((d) => d.id))

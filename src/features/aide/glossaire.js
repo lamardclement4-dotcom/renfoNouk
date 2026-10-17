@@ -90,6 +90,11 @@ export const GLOSSAIRE = {
     texte: 'La part de l’hémoglobine qui transporte de l’oxygène (saturation, SpO2). La montre la mesure à la lumière, au poignet, en arrière-plan pendant le sommeil. Au niveau de la mer, elle reste entre 95 et 100 % chez une personne en bonne santé. Deux points sous ta normale accompagnent souvent un rhume qui commence, le nez bouché, l’alcool de la veille ou l’altitude ; des chutes sous 90 % qui se répètent la nuit valent un avis médical (apnée du sommeil).',
     conseil: 'La montre peut se tromper de 2 points et un bracelet desserré fait chuter la mesure : regarde la moyenne de la nuit et la répétition, pas une mesure isolée. Ce n’est pas un examen médical.',
   },
+  signesVitaux: {
+    titre: 'Signes vitaux de la nuit',
+    texte: 'Ce que la montre mesure pendant ton sommeil — FC au repos, VFC, respiration, oxygène, température — et la durée de ta nuit, chacun face à TA plage habituelle : la plupart de tes 28 dernières nuits (du 10e au 90e centile). Un signe isolé hors plage dit rarement quelque chose ; plusieurs ensemble accompagnent souvent un début de maladie, l’alcool, le décalage horaire ou l’altitude.',
+    conseil: 'La plage se dessine après 7 nuits mesurées.',
+  },
   tempPoignet: {
     titre: 'Température au poignet',
     texte: 'La montre mesure la température de ta peau au poignet pendant le sommeil. Sa valeur dépend du poignet et de la chambre : seul l’écart à ta normale compte. +0,5 °C accompagne souvent une infection qui commence, l’alcool, un repas tardif ou une chambre chaude ; +1 °C ressemble à de la fièvre. Après l’ovulation, elle monte de 0,2 à 0,4 °C jusqu’aux règles.',

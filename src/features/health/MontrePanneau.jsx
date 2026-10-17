@@ -17,6 +17,9 @@ const CLE_PUBLIQUE = (import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY)
 // Le raccourci tout prêt, signé, publié avec le site (outils/raccourci).
 const HOTE = (() => { try { return new URL(URL_DEPOT).host || 'le serveur de Renfo' } catch { return 'le serveur de Renfo' } })()
 const RACCOURCI = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'raccourci/' + encodeURIComponent('Envoyer ma nuit') + '.shortcut'
+// Les deux raccourcis à lancer depuis la montre (construire_raccourcis_montre.py).
+const RACCOURCI_SEANCE = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'raccourci/' + encodeURIComponent('Noter ma séance') + '.shortcut'
+const RACCOURCI_EAU = ((import.meta.env && import.meta.env.BASE_URL) || '/') + 'raccourci/' + encodeURIComponent('J’ai bu') + '.shortcut'
 
 
 function quand(iso) {
@@ -234,6 +237,21 @@ export default function MontrePanneau({ userId, store, onRetour, retour = 'Retou
         ] }),
         React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'Chaque envoi affiche une notification « Renfo », sans son. Ce site range aussi ce qui est arrivé à chaque ouverture (au plus toutes les 10 minutes), ou quand tu touches « Relever maintenant ».')),
 
+      titre('Étape 6 · Depuis ta montre (facultatif)'),
+      React.createElement('div', { style: bloc },
+        React.createElement('div', { style: { fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginBottom: 8 } },
+          'Deux raccourcis à lancer au poignet, sans sortir l’iPhone : « Noter ma séance » (sport, durée, effort ressenti : elle compte dans ta charge) et « J’ai bu » (un verre, une gourde…). Ils arrivent dans le calendrier et dans Hydratation à la prochaine ouverture de ce site.'),
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } },
+          React.createElement('a', { href: RACCOURCI_SEANCE, target: '_blank', rel: 'noopener', style: { display: 'block', textAlign: 'center', padding: '10px 8px', border: `1.5px solid ${COL}`, color: COL, fontSize: 13, fontWeight: 700, textDecoration: 'none' } }, 'Noter ma séance'),
+          React.createElement('a', { href: RACCOURCI_EAU, target: '_blank', rel: 'noopener', style: { display: 'block', textAlign: 'center', padding: '10px 8px', border: `1.5px solid ${COL}`, color: COL, fontSize: 13, fontWeight: 700, textDecoration: 'none' } }, 'J’ai bu')),
+        React.createElement(Liste, { items: [
+          'Copie ta clé (étape 1, « Copier »). C’est la même que pour « Envoyer ma nuit ».',
+          'Touche « Noter ma séance » ci-dessus, puis installe-le comme à l’étape 2 et colle la clé. Pareil pour « J’ai bu ».',
+          'Pour qu’ils s’affichent sur la montre : app Raccourcis de l’iPhone › touche les trois points (•••) de la tuile du raccourci › touche son nom en haut puis « Détails » (ou le « i ») › active « Afficher sur l’Apple Watch ».',
+          'Sur la montre : ouvre l’app Raccourcis et touche « Noter ma séance » après ta séance, ou « J’ai bu ».',
+          'Plus rapide : sur le cadran, appui long › « Modifier » › une complication › « Raccourcis » › choisis le raccourci. Un toucher sur le cadran le lance.',
+        ] }),
+        React.createElement('div', { style: { fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.45 } }, 'La montre a besoin du réseau (iPhone à proximité ou Wi-Fi). Une séance notée à la montre fait aussi disparaître la proposition « Montre : 46 min d’exercice » de l’accueil.')),
       React.createElement('details', { style: { marginTop: 14, fontSize: 12.5, color: C.ink2 } },
         React.createElement('summary', { style: { cursor: 'pointer', color: COL, fontWeight: 700 } }, 'Ça ne marche pas ?'),
         React.createElement('div', { style: { ...bloc, marginTop: 8 } },

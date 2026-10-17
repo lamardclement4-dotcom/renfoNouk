@@ -258,6 +258,52 @@ export function fcMarche(db, iso) {
   return { points: pts, derniere: der, m30: r.length ? Math.round(moyenne(r)) : null, evolution: r.length >= 5 && a.length >= 5 ? arrondi1(moyenne(r) - moyenne(a)) : null }
 }
 
+// ─── Signes vitaux de la nuit ───
+// Comme l'app Signes vitaux de la montre : chaque signe face à TA plage
+// habituelle (du 10e au 90e centile des 28 nuits d'avant, dès 7 nuits).
+// Un écart minimal évite de signaler un bruit de mesure. Deux signes hors
+// plage la même nuit : souvent un début de maladie, l'alcool, le décalage
+// horaire ou l'altitude.
+const SIGNES = [
+  { id: 'pouls', lab: 'FC au repos', nom: 'FC au repos', sens: ['plus haute', 'plus basse'], unite: 'bpm', dec: 0, ecartMin: 2, lire: (db) => lecteurs.sante(db) },
+  { id: 'vfc', lab: 'VFC', nom: 'VFC', sens: ['plus haute', 'plus basse'], unite: 'ms', dec: 0, ecartMin: 5, lire: (db) => lecteurs.vfc(db) },
+  { id: 'resp', lab: 'Respiration', nom: 'respiration', sens: ['plus rapide', 'plus lente'], unite: '/min', dec: 1, ecartMin: 0.5, lire: (db) => lecteurs.resp(db) },
+  { id: 'spo2', lab: 'Oxygène', nom: 'oxygène', sens: ['plus haut', 'plus bas'], unite: '%', dec: 1, ecartMin: 1, lire: (db) => lecteurs.spo2(db) },
+  { id: 'temp', lab: 'Température', nom: 'température', sens: ['plus haute', 'plus basse'], unite: '°C', dec: 2, ecartMin: 0.2, lire: (db) => lecteurs.temp(db) },
+  { id: 'sommeil', lab: 'Sommeil', nom: 'sommeil', sens: ['plus long', 'plus court'], unite: 'h', dec: 1, ecartMin: 0.5, lire: (db) => (d) => nombre(((db && db.sleepLog) || {})[d] && db.sleepLog[d].hours, 1, 16) },
+]
+const centile = (tri, p) => {
+  const i = (tri.length - 1) * p, a = Math.floor(i), b = Math.ceil(i)
+  return tri[a] + (tri[b] - tri[a]) * (i - a)
+}
+export function signesVitaux(db, iso) {
+  const lignes = []
+  for (const sg of SIGNES) {
+    const lire = sg.lire(db)
+    const valeur = lire(iso)
+    const avant = []
+    for (let k = 1; k <= 28; k++) { const x = lire(decaler(iso, -k)); if (x != null) avant.push(x) }
+    if (valeur == null && avant.length < 7) continue
+    const r = (x) => Math.round(x * 10 ** sg.dec) / 10 ** sg.dec
+    let bas = null, haut = null, hors = null
+    if (avant.length >= 7) {
+      const tri = avant.slice().sort((x, y) => x - y)
+      bas = r(centile(tri, 0.1)); haut = r(centile(tri, 0.9))
+      if (valeur != null && valeur > haut && valeur - haut >= sg.ecartMin) hors = 'haut'
+      else if (valeur != null && valeur < bas && bas - valeur >= sg.ecartMin) hors = 'bas'
+    }
+    lignes.push({ id: sg.id, lab: sg.lab, nom: sg.nom, sens: sg.sens, unite: sg.unite, valeur: valeur == null ? null : r(valeur), bas, haut, hors, mesures: avant.length })
+  }
+  if (!lignes.length) return null
+  const horsPlage = lignes.filter((l) => l.hors)
+  const nom = (l) => l.nom + ' ' + (l.hors === 'haut' ? l.sens[0] : l.sens[1])
+  const texte = horsPlage.length >= 2
+    ? `${horsPlage.length} signes hors de ta plage habituelle cette nuit (${horsPlage.map(nom).join(', ')}) : souvent un début de maladie, l’alcool, le décalage horaire ou l’altitude. Repos ou séance facile, et surveille comment tu te sens.`
+    : horsPlage.length === 1 ? `Un signe hors de ta plage cette nuit (${nom(horsPlage[0])}). Seul, il dit rarement quelque chose : c’est quand plusieurs sortent ensemble qu’il faut lever le pied.`
+      : lignes.some((l) => l.valeur != null && l.bas != null) ? 'Tous tes signes de la nuit sont dans ta plage habituelle.' : 'Ta plage habituelle se dessine après 7 nuits mesurées.'
+  return { lignes, horsPlage: horsPlage.length, texte }
+}
+
 // ─── FC max et zones d'entraînement ───
 // La même FC max que le calcul de charge des séances (plannerIntel) :
 // saisie, sinon la plus haute vue en séance sur un an si elle atteint
@@ -355,6 +401,8 @@ export function bilanCoeur(db, iso) {
   if (o2 && o2.statut === 'repete') alertes.push(`Oxygène : ${o2.nuitsBasses} nuits avec des chutes sur 14 jours.`)
   else if (o2 && o2.statut === 'bas') alertes.push(`Oxygène la nuit à ${fr(o2.derniere.v)} %, bas.`)
   else if (o2 && o2.statut === 'baisse') alertes.push(`Oxygène la nuit à ${fr(o2.derniere.v)} %, ${fr(o2.ecart)} points sous ta normale.`)
+  const sv = signesVitaux(db, iso)
+  if (sv && sv.horsPlage >= 2 && alertes.length < 2) alertes.push(`${sv.horsPlage} signes vitaux hors de ta plage habituelle cette nuit.`)
   const niveau = alertes.length >= 2 ? 'incomplete' : alertes.length === 1 ? 'surveiller' : (t || v || o2 || tp) ? 'bonne' : null
   return {
     niveau, alertes,

@@ -630,11 +630,37 @@ export function toPatch(result, db, { now, source = 'sante' } = {}) {
     addedSessions++
   })
 
+  // Saisies faites sur la montre : « Noter ma séance » devient une séance
+  // réalisée (avec son effort, qui compte dans la charge), « J'ai bu » une
+  // boisson du jour. Un même dépôt relu ne double rien.
+  const enMin = (h) => (typeof h === 'string' && /^\d{2}:\d{2}/.test(h) ? Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5)) : null)
+  let seancesMontre = 0
+  for (const x of result.seancesMontre || []) {
+    const doublon = sessions.some((s) => s && s.date === x.date && s.sport === x.sport && enMin(s.heure) != null && Math.abs(enMin(s.heure) - enMin(x.heure)) <= 15)
+    if (doublon) continue
+    sessions.push({
+      id: 'montre_' + x.date.replace(/-/g, '') + x.heure.replace(':', '') + '_' + x.sport,
+      date: x.date, heure: x.heure, sport: x.sport, duree: x.min + ' min',
+      statut: 'realise', ressenti: null, notes: null, data: x.rpe ? { rpe: x.rpe } : {}, exercises: [], source: 'montre',
+    })
+    seancesMontre++
+  }
+  const hydroLog = {}
+  let eauMontre = 0
+  for (const x of result.eauMontre || []) {
+    const id = 'montre-' + x.date + '-' + x.heure + '-' + x.ml
+    const jour = hydroLog[x.date] || (Array.isArray(((db && db.hydroLog) || {})[x.date]) ? db.hydroLog[x.date] : [])
+    if (jour.some((e) => e && e.id === id)) continue
+    const ts = Date.parse(x.date + 'T' + x.heure + ':00') || 0
+    hydroLog[x.date] = [...jour, { id, ts, n: 'Eau (montre)', cat: 'eaux', factor: 1, kcal: 0, prot: 0, carb: 0, fat: 0, alc: 0, abv: 0, ml: x.ml, caf: 0, sugar: 0 }]
+    eauMontre += x.ml
+  }
+
   return {
-    patch: { sleepLog, vitalsLog, planningSessions: sessions, ...(weightLog ? { weightLog } : {}), ...(profilePhys ? { profilePhys } : {}) },
+    patch: { sleepLog, vitalsLog, planningSessions: sessions, ...(weightLog ? { weightLog } : {}), ...(profilePhys ? { profilePhys } : {}), ...(Object.keys(hydroLog).length ? { hydroLog } : {}) },
     summary: {
       sleepAdded, sleepKept, sleepFromBed, sleepTimes, sleepUpdated,
-      vitalsAdded, weightAdded: nouvellesPesees.length,
+      vitalsAdded, weightAdded: nouvellesPesees.length, seancesMontre, eauMontre,
       addedSessions, skippedSessions, unknownSport,
       records: result.seen,
     },

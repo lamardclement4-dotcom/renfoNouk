@@ -6,7 +6,7 @@ import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { C, MODULE_TINTS, FlowSpace, isoToday, Aide } from './kit'
 import { annoncer } from '../../annonces'
-import { serie, tendanceRepos, zoneVfc, oxygene, temperature, vo2Montre, niveauVo2, recuperation, fcMarche, fcMax, zonesKarvonen, vo2Estime, vo2Test, seancesFc, bilanCoeur, NOM_SOURCE, NOM_SOURCE_MAX } from './coeurIntel'
+import { serie, tendanceRepos, zoneVfc, oxygene, temperature, signesVitaux, vo2Montre, niveauVo2, recuperation, fcMarche, fcMax, zonesKarvonen, vo2Estime, vo2Test, seancesFc, bilanCoeur, NOM_SOURCE, NOM_SOURCE_MAX } from './coeurIntel'
 
 const COL = MODULE_TINTS.coeur
 const fr = (x) => String(x).replace('.', ',')
@@ -40,6 +40,25 @@ function Courbe({ points, jours, normale, bas, haut, unite, marques }) {
     (() => { const d = points[points.length - 1]; return React.createElement('rect', { x: x(d.k) - 3, y: y(d.v) - 3, width: 6, height: 6, style: { fill: COL } }) })())
 }
 
+// Une ligne de signe vital : ta plage habituelle (bande), la valeur de la
+// nuit (carré), orange hors plage.
+function Signe({ l }) {
+  const vals = [l.bas, l.haut, l.valeur].filter((x) => x != null)
+  const lo = Math.min(...vals), hi = Math.max(...vals)
+  const marge = (hi - lo) * 0.25 || 1
+  const a = lo - marge, b = hi + marge
+  const pos = (x) => ((x - a) / (b - a)) * 100
+  // Neutre dans la plage : le rouge du module ferait croire à une alerte.
+  const col = l.hors ? C.warn : C.ink
+  return React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '92px 1fr 64px', alignItems: 'center', gap: 8, padding: '7px 0' } },
+    React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: C.ink2 } }, l.lab),
+    React.createElement('div', { 'aria-hidden': true, style: { position: 'relative', height: 14 } },
+      React.createElement('div', { style: { position: 'absolute', left: 0, right: 0, top: 6, height: 2, background: C.line } }),
+      l.bas != null ? React.createElement('div', { style: { position: 'absolute', left: pos(l.bas) + '%', width: Math.max(pos(l.haut) - pos(l.bas), 1) + '%', top: 3, height: 8, background: C.surface2, border: `1px solid ${C.ink3}` } }) : null,
+      l.valeur != null ? React.createElement('div', { style: { position: 'absolute', left: `calc(${pos(l.valeur)}% - 5px)`, top: 2, width: 10, height: 10, background: col } }) : null),
+    React.createElement('span', { style: { fontFamily: C.mono, fontSize: 12.5, fontWeight: 600, color: l.hors ? C.warn : C.ink, textAlign: 'right' } }, l.valeur == null ? '—' : fr(l.valeur) + (l.unite === '/min' ? '' : ' ') + l.unite))
+}
+
 function Champ({ lab, valeur, unite, placeholder, onValider, aide, min, max }) {
   const [v, setV] = useState(valeur != null ? String(valeur) : '')
   const n = Number(v)
@@ -59,6 +78,7 @@ export default function CoeurSpace({ userId, onClose }) {
   const v = zoneVfc(db, iso)
   const o2 = oxygene(db, iso)
   const tp = temperature(db, iso)
+  const sv = signesVitaux(db, iso)
   const rc = recuperation(db, iso)
   const fm = fcMarche(db, iso)
   const vMontre = vo2Montre(db, iso)
@@ -104,6 +124,14 @@ export default function CoeurSpace({ userId, onClose }) {
     b.verdict ? React.createElement('div', { style: { ...bloc, marginTop: 8, borderLeft: `3px solid ${COULEUR[b.niveau] || C.line}` } },
       React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: COULEUR[b.niveau] || C.ink } }, b.verdict),
       b.alertes.map((a, i) => React.createElement('div', { key: i, style: { fontSize: 12, color: C.ink2, marginTop: 4, lineHeight: 1.45 } }, '• ' + a))) : null,
+
+    // ── Signes vitaux de la nuit ──
+    sv ? React.createElement(React.Fragment, null,
+      titre('Signes vitaux de la nuit', 'signesVitaux'),
+      React.createElement('div', { style: { ...bloc, borderLeft: `3px solid ${sv.horsPlage >= 2 ? C.warn : C.line}` } },
+        React.createElement('div', { className: 'liste' }, sv.lignes.map((l) => React.createElement(Signe, { key: l.id, l }))),
+        React.createElement('div', { style: { fontSize: 12.5, color: sv.horsPlage >= 2 ? C.warn : C.ink, lineHeight: 1.5, marginTop: 6 } }, sv.texte),
+        React.createElement('div', { style: { fontSize: 11, color: C.ink3, marginTop: 6, lineHeight: 1.45 } }, 'Bande : ta plage habituelle (la plupart de tes 28 dernières nuits). Carré : cette nuit, orange s’il sort de ta plage.'))) : null,
 
     // ── Saisie directe ──
     titre('Saisir'),

@@ -21,6 +21,8 @@
 //   marche;<date>;<valeur>           (FC moyenne à la marche, bpm)
 //   poids;<date>;<valeur>[;<unité>]  (kg, ou lb)
 //   zen;<début>;<fin>                (séance de pleine conscience)
+//   seance;<fin>;<sport>;<minutes>;<effort>   (raccourci « Noter ma séance », depuis la montre)
+//   eau;<date>;<quantité>            (raccourci « J'ai bu » : « 500 ml », « 1 L »)
 // Les dates arrivent au format ISO 8601 si on l'a choisi dans le
 // Raccourci, sinon au format affiché par l'iPhone (« 14 oct. 2026 à
 // 23:14 ») : les deux sont lus. Rien ici ne touche au réseau.
@@ -95,12 +97,35 @@ export function valeurSommeil(raw) {
 const echapper = (s) => String(s).replace(/[<>"&]/g, '')
 const nombre = (raw) => { const m = /(\d+(?:[.,]\d+)?)/.exec(String(raw || '')); return m ? Number(m[1].replace(',', '.')) : null }
 
+// Sport choisi sur la montre (« Course », « Vélo »…) → identifiant du
+// calendrier. Les libellés sont ceux du raccourci « Noter ma séance ».
+const SPORT_MONTRE = { course: 'course', velo: 'velo', natation: 'natation', musculation: 'muscu', marche: 'marche', trail: 'trail', 'cross-training': 'crossfit', yoga: 'yoga', football: 'football', 'tennis / padel': 'raquette', 'sports de combat': 'combat', escalade: 'escalade' }
+export function sportMontre(lab) {
+  const k = sansAccents(lab).toLowerCase().trim()
+  return SPORT_MONTRE[k] || null
+}
+// « 500 ml (une gourde) », « 1 L », « 0,75 l » → millilitres.
+export function quantiteMl(raw) {
+  const s = sansAccents(raw).toLowerCase()
+  const n = nombre(s)
+  if (n == null) return null
+  const ml = /\d\s*(cl)\b/.test(s) ? n * 10 : /\d\s*l\b/.test(s) && !/ml/.test(s) ? n * 1000 : n
+  return ml >= 50 && ml <= 3000 ? Math.round(ml) : null
+}
+const ajouterMinutes = (stamp, min) => {
+  const t = Date.parse(String(stamp).replace(' ', 'T').replace(/ ([+-]\d{2})(\d{2})$/, '$1:$2'))
+  if (!Number.isFinite(t)) return null
+  const d = new Date(t + min * 60000)
+  return { date: d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()), heure: p2(d.getHours()) + ':' + p2(d.getMinutes()) }
+}
+
 // Le texte d'un ou plusieurs dépôts → le résultat d'un import Santé
 // (sommeil par nuit avec phases et heures, FC au repos, VFC), plus le
 // compte des lignes écartées.
 export function lireDepot(texte) {
   const lecteur = createHealthReader()
   let lues = 0, ecartees = 0
+  const seances = [], eau = []
   for (const brute of String(texte || '').split(/\r?\n/)) {
     const ligne = brute.trim()
     if (!ligne) continue
@@ -139,9 +164,22 @@ export function lireDepot(texte) {
       const d = dateRaccourci(champs[1]), v = nombre(champs[champs.length - 1])
       if (d && v != null && v >= 3 && v <= 400) xml = `<Record type="${HRV_TYPE}" value="${v}" startDate="${echapper(d)}" endDate="${echapper(d)}"/>`
     }
+    // Saisies faites sur la montre : pas des mesures Santé, rangées à part.
+    if (/^(seance|séance)$/.test(type) && champs.length >= 5) {
+      const fin = dateRaccourci(champs[1]), sport = sportMontre(champs[2]), min = nombre(champs[3]), rpe = nombre(champs[4])
+      const debut = fin && min != null && min >= 1 && min <= 600 ? ajouterMinutes(fin, -min) : null
+      if (debut && sport) { seances.push({ ...debut, sport, min: Math.round(min), rpe: rpe >= 1 && rpe <= 10 ? Math.round(rpe) : null }); lues++ } else ecartees++
+      continue
+    }
+    if (type === 'eau' && champs.length >= 3) {
+      const d = dateRaccourci(champs[1]), ml = quantiteMl(champs.slice(2).join(' '))
+      const quand = d ? ajouterMinutes(d, 0) : null
+      if (quand && ml) { eau.push({ ...quand, ml }); lues++ } else ecartees++
+      continue
+    }
     if (xml) { lecteur.line(xml); lues++ } else ecartees++
   }
-  return { ...lecteur.result(), lues, ecartees }
+  return { ...lecteur.result(), seancesMontre: seances, eauMontre: eau, lues, ecartees }
 }
 
 // ─── Clé personnelle ───
@@ -167,5 +205,8 @@ export function resumeReleve(summary) {
   if (summary.sleepTimes) morceaux.push(summary.sleepTimes + ' complétée' + (summary.sleepTimes > 1 ? 's' : ''))
   if (summary.sleepUpdated) morceaux.push(summary.sleepUpdated + ' nuit' + (summary.sleepUpdated > 1 ? 's' : '') + ' mise' + (summary.sleepUpdated > 1 ? 's' : '') + ' à jour')
   if (summary.vitalsAdded) morceaux.push('signaux de ' + summary.vitalsAdded + ' jour' + (summary.vitalsAdded > 1 ? 's' : ''))
+  if (summary.seancesMontre) morceaux.push(summary.seancesMontre + ' séance' + (summary.seancesMontre > 1 ? 's' : '') + ' notée' + (summary.seancesMontre > 1 ? 's' : ''))
+  if (summary.eauMontre) morceaux.push(String(Math.round(summary.eauMontre / 100) / 10).replace('.', ',') + ' L d’eau')
+  if (summary.weightAdded) morceaux.push(summary.weightAdded + ' pesée' + (summary.weightAdded > 1 ? 's' : ''))
   return morceaux.length ? 'Montre : ' + morceaux.join(', ') : null
 }
