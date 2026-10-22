@@ -1,5 +1,6 @@
 import React, { useState, lazy } from 'react'
-import { C, Icon, Ring, FlowSpace, isoToday, SegPills, Aide } from '../health/kit'
+import { C, Icon, FlowSpace, isoToday, SegPills, Aide, Score, Jauge, useModeAnim } from '../health/kit'
+import { xpRenfo, BAREME, LIBELLES } from '../home/xpIntel'
 import { muscuAnalysis, groupVerdict, exerciseProgress, SERIES_LOW, SERIES_HIGH } from '../train/muscuIntel'
 import { testsAnalysis } from '../physical-tests/testsIntel'
 import { retroAnalysis, proposalToSessions, proposalStatus } from '../train/retroIntel'
@@ -102,6 +103,14 @@ function iconBadge(name, color) {
     h(Icon, { name, size: 23, color }))
 }
 
+// Badge de progression arcade : le chiffre au-dessus, une petite jauge à
+// crans dessous (à la place des anciens cadrans ronds).
+function badgeJauge(p, texte, couleur, anim, largeur = 52) {
+  return h('div', { style: { width: largeur, flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 5 } },
+    h('div', { style: { fontFamily: C.mono, fontSize: 13, fontWeight: 600, color: couleur, textAlign: 'center', whiteSpace: 'nowrap' } }, texte),
+    h(Jauge, { valeur: p, crans: 8, hauteur: 7, couleur, anim }))
+}
+
 function tile(opts) {
   return h(opts.onClick ? 'button' : 'div', {
     onClick: opts.onClick,
@@ -125,6 +134,7 @@ export default function ProgressSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [flow, setFlow] = useState(null)
   const [healthTile, setHealthTile] = useState(null)
+  const anim = useModeAnim('progres')
   const [weekOffset, setWeekOffset] = useState(0)
   // Profondeur de la courbe de tendance, en semaines.
   const [trendRange, setTrendRange] = useState(8)
@@ -206,8 +216,7 @@ export default function ProgressSpace({ userId, onClose }) {
       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 } },
         h('span', { style: { fontSize: 12.5, fontWeight: 700, color: C.ink3 } }, label),
         h('span', { style: { fontSize: 12.5, fontWeight: 700, color } }, target > 0 ? `${val}/${target}` : `${val}`, h('span', { style: { fontSize: 10.5, color: C.ink3, marginLeft: 2 } }, unit))),
-      h('div', { style: { height: 7, borderRadius: 'var(--r-pill)', background: C.surface2, overflow: 'hidden' } },
-        h('div', { style: { height: '100%', width: pct + '%', borderRadius: 'var(--r-pill)', background: color, transition: 'width .4s ease' } })),
+      h(Jauge, { valeur: target > 0 ? val / target : 0, crans: 12, hauteur: 8, couleur: color, anim, label }),
       extra ? h('div', { style: { fontSize: 11, color: C.ink3, marginTop: 4 } }, extra) : null)
   }
   let todayBlock = null
@@ -226,6 +235,7 @@ export default function ProgressSpace({ userId, onClose }) {
   const goalsDone = goals.filter((g) => g.done).length
   const goalsBlock = goals.length > 0 ? h('div', null,
     sectionTitle('Mes objectifs', h('span', { style: { fontSize: 13.5, color: C.ink3, fontWeight: 600 } }, `${goalsDone}/${goals.length}`)),
+    h(Jauge, { valeur: goalsDone / goals.length, crans: Math.min(20, Math.max(goals.length, 1)), hauteur: 10, couleur: C.primary, anim, label: goalsDone + ' objectifs atteints sur ' + goals.length, style: { marginBottom: 10 } }),
     h('div', { style: { background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, overflow: 'hidden' } },
       goals.map((g, i) => h('button', {
         key: g.id, onClick: () => store.updateGoal(g.id, { done: !g.done }),
@@ -245,8 +255,7 @@ export default function ProgressSpace({ userId, onClose }) {
       left: iconBadge('target', C.primary),
       title: mob ? `Score mobilité : ${mob.score}/100` : 'Test de mobilité',
       sub: mob ? (mob.level || 'Refaire le test') : '9 questions · génère ton profil',
-      right: mob ? h(Ring, { size: 44, stroke: 6, progress: Math.min(1, mob.score / 100), color: C.primary, track: C.surface2 },
-        h('div', { style: { fontFamily: C.font, fontSize: 12, fontWeight: 700, color: C.primary } }, mob.score)) : undefined,
+      right: mob ? badgeJauge(mob.score / 100, h(Score, { valeur: mob.score, anim }), C.primary, anim) : undefined,
     }),
     weakZones.length > 0 ? h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 7, margin: '2px 2px 10px' } },
       h('span', { style: { fontSize: 12.5, color: C.ink3, fontWeight: 600, alignSelf: 'center' } }, 'À travailler :'),
@@ -316,8 +325,7 @@ export default function ProgressSpace({ userId, onClose }) {
         left: iconBadge('route', C.carb),
         title: `${done}/${sess.length} séances réalisées`,
         sub: db.program.weak && db.program.weak.length ? `Cible : ${db.program.weak.join(', ')}` : 'Programme personnalisé',
-        right: h(Ring, { size: 44, stroke: 6, progress: pct / 100, color: C.carb, track: C.surface2 },
-          h('div', { style: { fontFamily: C.font, fontSize: 11, fontWeight: 700, color: C.carb } }, pct + '%')),
+        right: badgeJauge(pct / 100, h(React.Fragment, null, h(Score, { valeur: pct, anim }), '%'), C.carb, anim),
       }))
   }
 
@@ -330,8 +338,7 @@ export default function ProgressSpace({ userId, onClose }) {
     suppBlock = h('div', null,
       sectionTitle('Compléments', h('span', { style: { fontSize: 12, color: C.ink3, fontWeight: 600 } }, 'hors score santé')),
       tile({
-        left: h(Ring, { size: 46, stroke: 6, progress: pct / 100, color: C.carb, track: C.surface2 },
-          h('div', { style: { fontFamily: C.font, fontSize: 13, fontWeight: 700, color: C.carb } }, taken.length + '/' + plan.length)),
+        left: badgeJauge(pct / 100, taken.length + '/' + plan.length, C.carb, anim),
         title: "Pris aujourd'hui",
         sub: pct === 100 ? 'Plan du jour complété' : "Suivi d'observance",
       }))
@@ -471,7 +478,7 @@ export default function ProgressSpace({ userId, onClose }) {
   if (coeur.m30 != null || coeur.vfc || coeur.vo2 || coeur.o2) {
     const frv = (x) => String(x).replace('.', ',')
     const caseCoeur = (big, unit, lab, sub, col) => h('div', { style: { background: C.surface, padding: '12px 10px', border: `1px solid ${C.line}`, borderTop: `3px solid ${col || 'var(--c-danger)'}` } },
-      h('div', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, big == null ? '—' : frv(big), big != null && unit ? h('span', { style: { fontSize: 11.5, fontWeight: 600, color: C.ink3, marginLeft: 3 } }, unit) : null),
+      h('div', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, big == null ? '—' : h(Score, { valeur: big, rendu: (x) => frv(Number.isInteger(big) ? Math.round(x) : x.toFixed(1)), anim }), big != null && unit ? h('span', { style: { fontSize: 11.5, fontWeight: 600, color: C.ink3, marginLeft: 3 } }, unit) : null),
       h('div', { style: { fontSize: 11, color: C.ink2, marginTop: 5, fontWeight: 700 } }, lab),
       h('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 2, lineHeight: 1.3 } }, sub))
     coeurBlock = h('div', null,
@@ -504,8 +511,7 @@ export default function ProgressSpace({ userId, onClose }) {
     testsBlock = h('div', null,
       sectionTitle('Tests physiques', h('button', { onClick: () => setFlow('tests'), style: { fontSize: 13, fontWeight: 600, color: C.primary, background: 'none', border: 'none', cursor: 'pointer' } }, 'Voir tout')),
       tAna.profile ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, background: C.surface, border: `1px solid ${C.line}`, borderRadius: C.radiusSm, padding: '15px 16px', marginBottom: 10 } },
-        h(Ring, { size: 62, stroke: 7, progress: tAna.profile.score / 100, color: TC },
-          h('span', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', color: TC } }, tAna.profile.score)),
+        badgeJauge(tAna.profile.score / 100, h(Score, { valeur: tAna.profile.score, anim }), TC, anim, 64),
         h('div', { style: { flex: 1, minWidth: 0 } },
           h('div', { style: { fontSize: 13.5, fontWeight: 700, color: C.ink } }, 'Profil physique'),
           h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 3, lineHeight: 1.45 } },
@@ -549,16 +555,35 @@ export default function ProgressSpace({ userId, onClose }) {
     // sur la ligne du sélecteur de semaine.
     h('div', { style: { position: 'relative', minHeight: 150, padding: 22, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${C.primary}`, marginBottom: 18, boxShadow: 'none' } },
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 18 } },
-        h(Ring, { size: 92, stroke: 9, progress: Math.min(1, streak / 14), color: C.primary, track: C.surface2 },
-          h(Icon, { name: 'flame', size: 30, color: C.primary })),
-        h('div', null,
-          h('div', { style: { fontFamily: C.mono, fontSize: 34, fontWeight: 600, letterSpacing: '-.03em', color: C.primary, lineHeight: 1 } }, streak),
+        h('div', { style: { width: 52, height: 52, flex: '0 0 auto', border: `1.5px solid ${C.primary}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          h(Icon, { name: 'flame', size: 28, color: C.primary })),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontFamily: C.mono, fontSize: 34, fontWeight: 600, letterSpacing: '-.03em', color: C.primary, lineHeight: 1 } }, h(Score, { valeur: streak, anim })),
           h('div', { style: { color: C.ink2, fontSize: 15, fontWeight: 600 } }, 'jours de suite 🔥'),
-          h('div', { style: { color: C.ink3, fontSize: 13, marginTop: 2 } }, 'Record : ', db.record, ' jours')))),
+          h('div', { style: { color: C.ink3, fontSize: 13, marginTop: 2 } }, 'Record : ', db.record, ' jours'))),
+      // Deux semaines de suite remplissent la jauge.
+      h(Jauge, { valeur: streak / 14, crans: 14, hauteur: 10, couleur: C.primary, anim, label: streak + ' jours de suite sur 14', style: { marginTop: 14 } })),
+
+    // Niveau : l'XP gagnée par tes vraies séances, nuits, eau, objectifs et
+    // records (recalculée, jamais stockée).
+    (() => {
+      const xp = xpRenfo(db)
+      return h('div', { style: { padding: '16px 18px', background: C.surface, border: `1px solid ${C.line}`, borderTop: `3px solid ${C.trace}`, marginBottom: 18 } },
+        h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 } },
+          h('span', { style: { fontFamily: C.pixel, fontSize: 16, color: C.trace } }, 'LV ', h(Score, { valeur: xp.niveau, anim })),
+          h('span', { style: { fontFamily: C.mono, fontSize: 12, color: C.ink2 } }, h(Score, { valeur: xp.total, rendu: (x) => String(Math.round(x)), anim }), ' XP au total')),
+        h(Jauge, { valeur: xp.dansNiveau / xp.palier, crans: 20, hauteur: 12, couleur: C.trace, anim, label: xp.dansNiveau + ' XP sur ' + xp.palier, style: { marginTop: 10 } }),
+        h('div', { style: { fontFamily: C.mono, fontSize: 10.5, color: C.ink3, marginTop: 6 } }, `${xp.dansNiveau}/${xp.palier} XP · niveau ${xp.niveau + 1} dans ${xp.palier - xp.dansNiveau} XP`),
+        h('div', { className: 'liste', style: { marginTop: 10, borderTop: `1px solid ${C.line}` } },
+          Object.keys(BAREME).map((k) => h('div', { key: k, style: { display: 'flex', alignItems: 'baseline', gap: 8, padding: '6px 0', fontSize: 12.5 } },
+            h('span', { style: { flex: 1, color: C.ink2 } }, LIBELLES[k].charAt(0).toUpperCase() + LIBELLES[k].slice(1)),
+            h('span', { style: { fontFamily: C.mono, color: C.ink3, fontSize: 11.5 } }, xp.detail[k] + ' × ' + BAREME[k]),
+            h('span', { style: { fontFamily: C.mono, fontWeight: 600, color: C.ink, minWidth: 56, textAlign: 'right' } }, '+' + xp.detail[k] * BAREME[k])))))
+    })(),
 
     h(WeightCard, { db, onOpen: () => setFlow('weight') }),
     h(PeakHomeCard, { db, onPeak: () => setFlow('peak') }),
-    h(HealthScoreCard, { db, onAction: handleAction }),
+    h(HealthScoreCard, { db, onAction: handleAction, anim }),
 
     h('div', { style: { background: C.surface, borderRadius: C.radiusSm, border: `1px solid ${C.line}`, padding: 20, marginBottom: 14 } },
       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 } },

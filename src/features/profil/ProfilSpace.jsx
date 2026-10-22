@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { supabase } from '../../lib'
 import { C, Icon, FlowSpace, THEMES, THEME_KEY, applyTheme, normalizeTheme, PALETTES, PALETTE_KEY, applyPalette, normalizePalette } from '../health/kit'
+import { sonsActifs, reglerSons, jouer } from '../home/sons8bits'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { inferUserLevel, trainingTotals } from '../train/renfoIntel'
 import { SPORTS } from '../train/trainData'
@@ -155,6 +156,15 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
       setPalette(choix)
     }
   }, [db.palette])
+  // Sons 8 bits des moments forts : propres à cet appareil, coupés par défaut.
+  const [sons, setSons] = useState(() => sonsActifs())
+  function basculerSons() {
+    const v = !sons
+    reglerSons(v)
+    setSons(v)
+    // Le toucher autorise le son sur iPhone : on fait entendre l'air tout de suite.
+    if (v) jouer('seance', { forcer: true })
+  }
   function changePalette(id) {
     const applied = applyPalette(id)
     localStorage.setItem(PALETTE_KEY, applied)
@@ -327,6 +337,13 @@ export default function ProfilSpace({ userId, profile, refreshProfile, signOut, 
             h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4 } }, p.hint)),
           on ? h(Icon, { name: 'check', size: 16, color: C.primary }) : null)
       })),
+
+    SecTitle('Sons'),
+    h('button', { type: 'button', role: 'switch', 'aria-checked': sons, onClick: basculerSons, style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '12px 12px', background: C.surface, border: `1px solid ${C.line}`, borderLeft: `4px solid ${sons ? C.primary : 'transparent'}`, color: C.ink, cursor: 'pointer' } },
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        h('div', { style: { fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em', lineHeight: 1 } }, 'Sons 8 bits'),
+        h('div', { style: { fontSize: 11.5, color: C.ink3, marginTop: 4, lineHeight: 1.4 } }, 'Un petit air de borne d’arcade pour les moments forts : séance enregistrée, record, niveau gagné. Respecte le mode silencieux de l’iPhone.')),
+      h('span', { style: { fontFamily: C.pixel, fontSize: 10, color: sons ? C.primary : C.ink3, flex: '0 0 auto' } }, sons ? 'ON' : 'OFF')),
 
     SecTitle('Mes données'),
     // La sauvegarde qu'on garde soi-même : tout le profil et toutes les

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy } from 'react'
-import { C, Icon, Ring, MODULE_TINTS, isoToday, Aide } from '../health/kit'
+import { C, Icon, MODULE_TINTS, isoToday, Aide, Score, Jauge, useModeAnim } from '../health/kit'
+import { xpRenfo } from './xpIntel'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
 import { routinesToday, kindOf } from '../train/routines'
 import { pillars as intelPillars, acwrRisk, dureeToMins, trainingTotals, mondayRetro, hydroDay, hydricTargetMl, nutritionDay } from '../train/renfoIntel'
@@ -148,17 +149,26 @@ function TraceChart({ trace }) {
     }))
 }
 
-// Cadran d'un relevé du jour : l'aiguille monte jusqu'à la valeur.
-function Cadran({ label, value, unit, progress, sub, color, onClick }) {
-  return h('button', { onClick, style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'none', border: 'none', padding: '2px 0', cursor: 'pointer', color: C.ink } },
-    h(Ring, { size: 98, stroke: 6, progress, color, track: C.surface2 },
-      h('div', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1, marginTop: 8, whiteSpace: 'nowrap' } }, value),
-      unit ? h('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3, marginTop: 4 } }, unit) : null),
-    h('div', { style: { fontFamily: C.display, fontSize: 14.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', marginTop: -6 } }, label),
-    h('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3, marginTop: 3, textAlign: 'center' } }, sub))
+// Relevé du jour en jauge d'énergie : les cases s'allument jusqu'à la
+// valeur, le chiffre roule comme un score.
+function Releve({ label, valeur, rendu, unit, progress, sub, color, onClick, anim }) {
+  return h('button', { onClick, style: { display: 'grid', gridTemplateColumns: '84px 1fr auto', alignItems: 'center', columnGap: 10, width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: `1px solid ${C.line}`, padding: '10px 0 9px', cursor: 'pointer', color: C.ink } },
+    h('span', { style: { fontFamily: C.display, fontSize: 14.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em' } }, label),
+    h(Jauge, { valeur: progress, couleur: color, hauteur: 12, anim, label: label + ' : ' + Math.round(Math.min(1, progress || 0) * 100) + ' % de la cible' }),
+    h('span', { style: { fontFamily: C.mono, fontSize: 15, fontWeight: 600, letterSpacing: '-.03em', whiteSpace: 'nowrap', textAlign: 'right', minWidth: 58 } },
+      valeur == null ? '—' : h(Score, { valeur, rendu, anim }),
+      unit ? h('span', { style: { fontSize: 10, color: C.ink3, marginLeft: 3 } }, unit) : null),
+    h('span', { style: { gridColumn: '2 / 4', fontFamily: C.mono, fontSize: 9.5, color: C.ink3, marginTop: 5 } }, sub))
 }
 
-// Une séance à faire, sur une étiquette posée sur le papier.
+// Niveau, façon borne : LV, jauge d'XP, points dans le niveau.
+function Niveau({ xp, anim }) {
+  return h('div', { style: { display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', columnGap: 10, marginTop: 12 } },
+    h('span', { style: { fontFamily: C.pixel, fontSize: 11, color: C.trace, letterSpacing: 0 } }, 'LV ', h(Score, { valeur: xp.niveau, anim })),
+    h(Jauge, { valeur: xp.dansNiveau / xp.palier, crans: 20, hauteur: 8, couleur: C.trace, anim, label: 'Niveau ' + xp.niveau + ' : ' + xp.dansNiveau + ' XP sur ' + xp.palier }),
+    h('span', { style: { fontFamily: C.mono, fontSize: 10, color: C.ink3, whiteSpace: 'nowrap' } }, h(Score, { valeur: xp.dansNiveau, anim }), '/' + xp.palier + ' XP'))
+}
+
 function LigneSeance({ eyebrow, title, meta, tint = C.trace, onClick }) {
   return h('button', { onClick, style: { display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '13px 14px', background: C.surface, border: `1px solid ${C.line}`, borderTop: `2px solid ${C.ink}`, cursor: 'pointer', color: C.ink, marginBottom: 10 } },
     h('div', { style: { flex: 1, minWidth: 0 } },
@@ -326,6 +336,8 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   }, [loading, userId]) // eslint-disable-line react-hooks/exhaustive-deps
   const [tile, setTile] = useState(null)
   const [brouillon, setBrouillon] = useState(null)
+  // Mise en scène complète à la première ouverture du jour, courte ensuite.
+  const anim = useModeAnim('accueil')
   const [openId, setOpenId] = useState(null)
   const [healthTile, setHealthTile] = useState(null)
 
@@ -375,7 +387,8 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
       h('span', { style: { fontFamily: C.mono, fontSize: 10.5, color: C.ink2, textTransform: 'uppercase' } }, repereDate)),
     h('div', { style: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 } },
       h('h1', { style: { fontFamily: C.display, fontSize: 34, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em', lineHeight: .92, margin: 0, color: C.ink } }, greeting, firstName ? ', ' + firstName : ''),
-      h('button', { onClick: onProfil, 'aria-label': 'Profil', style: { width: 40, height: 40, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.ink}`, color: C.ink, fontFamily: C.display, fontWeight: 800, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } }, initial)))
+      h('button', { onClick: onProfil, 'aria-label': 'Profil', style: { width: 40, height: 40, flex: '0 0 auto', background: 'transparent', border: `1.5px solid ${C.ink}`, color: C.ink, fontFamily: C.display, fontWeight: 800, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } }, initial)),
+    h(Niveau, { xp: xpRenfo(db), anim }))
 
   // ─── la courbe de la semaine ───
   const trace = weekTrace(db, { today: iso })
@@ -395,13 +408,13 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     { big: totalMins, lab: 'min cette semaine' },
     { big: doneCount, lab: 'séances faites' },
   ].map((s, i) => h('button', { key: i, onClick: () => setTile('planner'), style: { textAlign: 'left', background: 'none', border: 'none', borderLeft: i ? `1px solid ${C.line}` : 'none', padding: '11px 10px 10px', cursor: 'pointer', color: C.ink } },
-    h('div', { style: { fontFamily: C.mono, fontSize: 20, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, s.big),
+    h('div', { style: { fontFamily: C.mono, fontSize: 20, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1 } }, h(Score, { valeur: s.big, anim })),
     h('div', { style: { fontFamily: C.mono, fontSize: 9.5, color: C.ink3, textTransform: 'uppercase', marginTop: 6, lineHeight: 1.3 } }, s.lab)))
 
   const charge = h('section', { 'aria-label': 'Charge des 7 derniers jours' },
     Titre('Charge des 7 derniers jours', null, 'charge'),
     h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
-      h('span', { style: { fontFamily: C.mono, fontSize: 40, fontWeight: 600, letterSpacing: '-.04em', lineHeight: 1 } }, milliers(trace.acute)),
+      h('span', { style: { fontFamily: C.mono, fontSize: 40, fontWeight: 600, letterSpacing: '-.04em', lineHeight: 1 } }, h(Score, { valeur: trace.acute, rendu: milliers, anim })),
       h('span', { style: { fontFamily: C.mono, fontSize: 12, color: C.ink3 } }, 'points de charge')),
     h('div', { style: { fontSize: 13, color: C.ink2, marginTop: 7, lineHeight: 1.4 } }, lecture),
     h('div', { style: { marginTop: 12 } }, h(TraceChart, { trace })),
@@ -427,10 +440,10 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
 
   const cadrans = h('section', { 'aria-label': 'Relevés du jour' },
     Titre('Relevés du jour', null, 'cadrans'),
-    h('div', { style: { display: 'flex', gap: 6 } },
-      h(Cadran, { label: 'Sommeil', value: dormi ? heures(dormi) : '—', progress: cibleSommeil ? dormi / cibleSommeil : 0, color: MODULE_TINTS.sommeil, sub: !dormi ? 'à saisir' : dormi >= cibleSommeil ? 'cible atteinte' : 'cible ' + heures(cibleSommeil), onClick: () => setHealthTile('sommeil') }),
-      h(Cadran, { label: 'Eau', value: litres(eau), unit: 'L', progress: eau / cibleEau, color: MODULE_TINTS.hydratation, sub: eau >= cibleEau ? 'cible atteinte' : 'reste ' + litres(cibleEau - eau) + ' L', onClick: () => setHealthTile('hydratation') }),
-      h(Cadran, { label: 'Protéines', value: String(Math.round(prot)), unit: 'g', progress: cibleProt ? prot / cibleProt : 0, color: C.protein, sub: !cibleProt ? 'fixer un objectif' : prot >= cibleProt ? 'cible atteinte' : 'reste ' + Math.round(cibleProt - prot) + ' g', onClick: () => setHealthTile('nutrition') })))
+    h('div', { style: { borderTop: `1px solid ${C.ink}` } },
+      h(Releve, { anim, label: 'Sommeil', valeur: dormi || null, rendu: heures, progress: cibleSommeil ? dormi / cibleSommeil : 0, color: MODULE_TINTS.sommeil, sub: !dormi ? 'à saisir' : dormi >= cibleSommeil ? 'cible atteinte' : 'cible ' + heures(cibleSommeil), onClick: () => setHealthTile('sommeil') }),
+      h(Releve, { anim, label: 'Eau', valeur: eau / 1000, rendu: (x) => litres(x * 1000), unit: 'L', progress: eau / cibleEau, color: MODULE_TINTS.hydratation, sub: eau >= cibleEau ? 'cible atteinte' : 'reste ' + litres(cibleEau - eau) + ' L sur ' + litres(cibleEau) + ' L', onClick: () => setHealthTile('hydratation') }),
+      h(Releve, { anim, label: 'Protéines', valeur: Math.round(prot), unit: 'g', progress: cibleProt ? prot / cibleProt : 0, color: C.protein, sub: !cibleProt ? 'fixer un objectif' : prot >= cibleProt ? 'cible atteinte' : 'reste ' + Math.round(cibleProt - prot) + ' g', onClick: () => setHealthTile('nutrition') })))
 
   // ─── séance à faire, avec la forme du jour au-dessus ───
   const forme = formeDb(db, iso)
@@ -450,7 +463,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
   const aFaire = h('section', { 'aria-label': 'Séance à faire' },
     Titre('À faire'),
     forme ? h('button', { onClick: () => setHealthTile('sommeil'), style: { display: 'flex', alignItems: 'baseline', gap: 10, width: '100%', textAlign: 'left', padding: '0 0 12px', background: 'none', border: 'none', cursor: 'pointer', color: C.ink } },
-      h('span', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', color: COULEUR_FORME[forme.niveau] } }, forme.score),
+      h('span', { style: { fontFamily: C.mono, fontSize: 18, fontWeight: 600, letterSpacing: '-.03em', color: COULEUR_FORME[forme.niveau] } }, h(Score, { valeur: forme.score, anim })),
       h('span', { style: { fontSize: 13, color: C.ink2, lineHeight: 1.4 } }, h('strong', { style: { color: C.ink } }, 'Forme du jour'), h(Aide, { terme: 'forme' }), ' — ', forme.verdict,
         h('span', { style: { display: 'block', fontSize: 12, color: C.ink3, marginTop: 2 } }, forme.consigne))) : null,
     seanceDuJour && seanceDuJour.reglage && seanceDuJour.reglage.type === 'alleger' ? h('div', { style: { fontSize: 12, color: C.ink3, margin: '-4px 0 10px', paddingLeft: 10, borderLeft: `3px solid ${C.line}` } },
@@ -469,7 +482,7 @@ export default function AccueilSpace({ userId, profile, onProfil }) {
     aFaire,
     h(MondayRetroCard, { db, onOpen: () => setTile('planner') }),
     h(OverloadAlert, { db, onPrevention: () => setHealthTile('prevention') }),
-    h('div', { style: { marginTop: 22 } }, h(HealthScoreCard, { db, onAction: handleAction })),
+    h('div', { style: { marginTop: 22 } }, h(HealthScoreCard, { db, onAction: handleAction, anim })),
     h(TodayInsights, { db, onPlanner: () => setTile('planner'), onNutrition: () => setHealthTile('nutrition'), onRoutines: () => setTile('routines'), onSommeil: () => setHealthTile('sommeil'), onCoeur: () => setHealthTile('coeur'), onSeance: (b) => { setBrouillon(b); setTile('planner') } }),
     h('div', { style: { marginTop: 22 } }, h(PeakHomeCard, { db, onPeak: () => setTile('peak') })),
     mobilityCta)

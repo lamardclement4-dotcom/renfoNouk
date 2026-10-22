@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, SecLab, NoteBox } from './kit'
+import { C, MODULE_TINTS, Icon, FlowSpace, SegTabs, SecLab, NoteBox, Jauge, useModeAnim } from './kit'
 import { PHASES, PHASE_ORDER, INTENSITE } from './cycleData'
 import { cycleAnalysis, cycleInfo, periodStarts, PMS_WINDOW_DAYS } from './cycleIntel'
 import { hausseThermique } from './coeurIntel'
@@ -10,16 +10,6 @@ const CYC = MODULE_TINTS.cycle
 
 function isoDate(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
-}
-
-function Ring({ size = 80, stroke = 8, progress, color, track, children }) {
-  const r = (size - stroke) / 2
-  const circ = 2 * Math.PI * r
-  return React.createElement('div', { style: { position: 'relative', width: size, height: size, flex: '0 0 auto' } },
-    React.createElement('svg', { width: size, height: size, viewBox: `0 0 ${size} ${size}` },
-      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', strokeWidth: stroke, style: { stroke: track } }),
-      React.createElement('circle', { cx: size / 2, cy: size / 2, r, fill: 'none', strokeWidth: stroke, strokeDasharray: circ, strokeDashoffset: circ * (1 - Math.max(0, Math.min(1, progress))), strokeLinecap: 'round', transform: `rotate(-90 ${size / 2} ${size / 2})`, style: { stroke: color } })),
-    React.createElement('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, children))
 }
 
 // ── Configuration des dates (si le cycle n'est pas encore réglé) ──
@@ -67,6 +57,7 @@ function BlocTemperature({ db, cycle }) {
 }
 
 function TodayTab({ cycle, store, db }) {
+  const anim = useModeAnim('cycle')
   const info = cycleInfo(cycle)
   const ph = PHASES[info.phase]
   const it = INTENSITE[info.phase]
@@ -108,12 +99,14 @@ function TodayTab({ cycle, store, db }) {
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
     React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${ph.tint}` } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 14 } },
-        React.createElement(Ring, { size: 80, stroke: 8, progress: info.day / info.len, color: ph.tint, track: C.surface2 }, React.createElement(Icon, { name: ph.icon, size: 26, color: ph.tint })),
+        React.createElement('div', { style: { width: 64, height: 64, flex: '0 0 auto', border: `1.5px solid ${ph.tint}`, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, React.createElement(Icon, { name: ph.icon, size: 26, color: ph.tint })),
         React.createElement('div', null,
           React.createElement('div', { style: { fontFamily: C.display, fontSize: 14.6, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', opacity: .85 } }, 'Jour ' + info.day + ' / ' + info.len),
           React.createElement('div', { style: { fontFamily: C.display, fontSize: 27, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.05 } }, 'Phase ' + ph.label.toLowerCase()),
           React.createElement('div', { style: { fontSize: 13, opacity: .9, marginTop: 2 } }, ph.energy),
           React.createElement('div', { style: { fontSize: 11.5, opacity: .8, marginTop: 4 } }, '⚡ Effort ' + it.rpe + ' · pouls ' + it.fc))),
+      // Une case par jour du cycle : elles s'allument jusqu'à aujourd'hui.
+      React.createElement(Jauge, { valeur: info.day / info.len, crans: Math.max(1, Math.min(45, info.len)), hauteur: 10, couleur: ph.tint, anim, label: 'Jour ' + info.day + ' sur ' + info.len, style: { marginTop: 14 } }),
       React.createElement('div', { style: { marginTop: 14, fontSize: 13.5, lineHeight: 1.5, opacity: .95 } }, ph.advice)),
 
     React.createElement('div', { style: { padding: '12px 14px', borderRadius: C.radiusSm, background: C.surface, border: `1px solid ${C.line}`, borderLeft: `3px solid ${ph.tint}` } },

@@ -14,6 +14,8 @@ import '@fontsource/instrument-sans/latin-400'
 import '@fontsource/instrument-sans/latin-500'
 import '@fontsource/instrument-sans/latin-600'
 import '@fontsource/instrument-sans/latin-700'
+// Police pixel 8 bits : chiffres qui roulent et bandeaux des moments forts.
+import '@fontsource/press-start-2p/latin-400'
 import './index.css'
 import App from './App.jsx'
 import { applyTheme, THEME_KEY, applyPalette, PALETTE_KEY } from './features/health/kit'

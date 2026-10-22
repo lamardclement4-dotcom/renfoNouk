@@ -22,6 +22,8 @@ const AccueilSpace = lazy(() => accueilEnCours.catch(() => chargerAccueil()))
 // avant d'afficher la moindre chose, même pour un coup d'œil à l'accueil.
 // Sur un téléphone en 4G, c'est cette attente-là qu'on sent.
 const HealthHome = lazy(() => import('./features/health/HealthHome'))
+// Moments forts (bandeaux arcade, XP) : chargé à part, il ne retarde pas l'accueil.
+const MomentsForts = lazy(() => import('./features/home/MomentsForts'))
 const TrainSpace = lazy(() => import('./features/train/TrainSpace'))
 const ProgressSpace = lazy(() => import('./features/progress/ProgressSpace'))
 const ProfilSpace = lazy(() => import('./features/profil/ProfilSpace'))
@@ -787,6 +789,7 @@ function Home({ profile, signOut, refreshProfile }) {
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <Annonces />
+      <Suspense fallback={null}><MomentsForts userId={userId} /></Suspense>
       <SyncBanner sync={sync} onRetry={retrySync} loadError={loadError} onRetryLoad={retryLoad} horsLigne={horsLigne} conflits={conflits} onConflitsVus={effacerConflits} />
       {/* Une seule frontière d'attente, posée ici : elle couvre aussi les
           écrans que ces espaces ouvrent à leur tour (Entraîner depuis

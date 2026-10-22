@@ -1,5 +1,5 @@
 import React from 'react'
-import { C, Icon, Aide } from '../health/kit'
+import { C, Icon, Aide, Score, Jauge } from '../health/kit'
 import { globalScore, recommendations } from '../train/renfoIntel'
 import { computePeakPlan } from '../train/peakIntel'
 
@@ -21,7 +21,7 @@ const RECO_COLOR = { alert: C.danger, warn: C.warn, info: C.primary }
 // l'appelant (Accueil, Progrès) de le router vers sa propre navigation.
 const PILLAR_ACTION = { hydration: 'hydration', nutrition: 'nutrition', sleep: 'sleep', load: 'load', mobility: 'mobility', prevention: 'prevention' }
 
-export function HealthScoreCard({ db, onAction }) {
+export function HealthScoreCard({ db, onAction, anim = 'court' }) {
   const result = globalScore(db)
   const recos = recommendations(db)
   if (result.active === 0) return null
@@ -35,11 +35,9 @@ export function HealthScoreCard({ db, onAction }) {
     h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 } },
       h('div', null,
         h('div', { style: { fontFamily: C.display, fontSize: 15, fontWeight: 800, color: C.ink2, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 } }, 'Score santé sportive', h(Aide, { terme: 'scoreSante' })),
-        h('div', { style: { fontSize: 32, fontWeight: 900, fontFamily: C.font, color: scoreColor, lineHeight: 1 } }, score, h('span', { style: { fontSize: 16, fontWeight: 600, marginLeft: 2 } }, '/100'))),
-      h('svg', { width: 52, height: 52, viewBox: '0 0 52 52' },
-        h('circle', { cx: 26, cy: 26, r: 22, fill: 'none', strokeWidth: 5, style: { stroke: C.surface2 } }),
-        h('circle', { cx: 26, cy: 26, r: 22, fill: 'none', strokeWidth: 5, strokeDasharray: `${Math.round(2 * Math.PI * 22 * score / 100)} ${Math.round(2 * Math.PI * 22)}`, strokeLinecap: 'round', transform: 'rotate(-90 26 26)', style: { stroke: scoreColor, transition: 'stroke-dasharray .5s ease' } }),
-        h('text', { x: 26, y: 30, textAnchor: 'middle', fontSize: 13, fontWeight: 800, style: { fill: scoreColor } }, score))),
+        h('div', { style: { fontSize: 32, fontWeight: 600, fontFamily: C.mono, letterSpacing: '-.03em', color: scoreColor, lineHeight: 1 } }, h(Score, { valeur: score, anim }), h('span', { style: { fontSize: 16, fontWeight: 600, marginLeft: 2 } }, '/100')))),
+    // Jauge d'énergie du score : dix cases, une par tranche de 10 points.
+    h(Jauge, { valeur: score / 100, crans: 10, hauteur: 12, couleur: scoreColor, anim, label: 'Score santé : ' + score + ' sur 100', style: { marginBottom: 14 } }),
 
     h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6, marginBottom: topRecos.length ? 14 : 0 } },
       result.pillars.map((p) => {
@@ -53,8 +51,9 @@ export function HealthScoreCard({ db, onAction }) {
           'aria-label': (PILLAR_NOM[p.id] || p.label || p.id) + ' : ' + (active ? p.score + ' sur 100' : 'pas encore de donnée'),
           style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: onAction ? 'pointer' : 'default', minWidth: 0 },
         },
-          h('div', { style: { width: '100%', height: 36, borderRadius: 0, background: C.surface2, position: 'relative', overflow: 'hidden', border: isSleep ? `1px solid color-mix(in srgb, var(--ch4) 30%, ${C.line})` : 'none' } },
-            h('div', { style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: pct + '%', background: active ? `color-mix(in srgb, ${col} 80%, transparent)` : C.surface2, borderRadius: 0, transition: 'height .4s ease' } }),
+          // Chaque pilier : une jauge verticale à crans, qui monte case par case.
+          h('div', { style: { position: 'relative', width: '100%', height: 36 } },
+            h(Jauge, { valeur: pct / 100, crans: 6, vertical: true, couleur: col, anim, style: { width: '100%', height: 36 } }),
             isSleep && !active && h('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: 'var(--ch4)', fontWeight: 700 } }, '+')),
           h(Icon, { name: PILLAR_IC[p.id] || 'target', size: 13, color: isSleep && !active ? 'var(--ch4)' : (active ? col : C.ink3) }),
           h('div', { style: { fontSize: 10, fontWeight: 700, color: isSleep && !active ? 'var(--ch4)' : (active ? col : C.ink3) } }, active ? p.score : (isSleep ? 'Saisir' : '—')),

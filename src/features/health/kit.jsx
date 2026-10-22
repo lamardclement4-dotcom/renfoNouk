@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { ecouterAnnonces, fermerAnnonce } from '../../annonces'
 import { definition } from '../aide/glossaire'
 
@@ -46,6 +46,9 @@ export const C = {
   display: 'var(--f-display)',
   // Chiffres et étiquettes de mesure, à chasse fixe.
   mono: 'var(--f-mono)',
+  // Police pixel 8 bits : seulement pendant qu'un chiffre roule et dans
+  // les bandeaux des moments forts.
+  pixel: 'var(--f-pixel)',
   // Pas d'ombres : un instrument se lit à plat.
   shadowSm: 'none',
   shadow: 'none',
@@ -698,4 +701,104 @@ function PanneauAide({ def, onClose }) {
       React.createElement('p', { style: { fontSize: 14.5, lineHeight: 1.55, color: C.ink, margin: '12px 0 0' } }, def.texte),
       def.conseil ? React.createElement('p', { style: { fontSize: 13.5, lineHeight: 1.5, color: C.ink2, margin: '10px 0 0', paddingLeft: 10, borderLeft: `3px solid ${C.primary}` } }, def.conseil) : null,
       React.createElement('button', { ref: bouton, onClick: onClose, style: { width: '100%', marginTop: 18, padding: 13, border: 'none', background: C.primary, color: C.onFill, fontFamily: C.display, fontSize: 17, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', cursor: 'pointer' } }, 'Compris')))
+}
+
+
+// ============================================================
+// Arcade 8 bits : le mode d'animation d'un écran, les chiffres qui roulent
+// comme un score, les jauges d'énergie à crans.
+// ============================================================
+
+// À la première ouverture d'un écran dans la journée, la mise en scène
+// complète ; ensuite une version courte ; rien si le téléphone demande
+// moins d'animations. Un écran appelle useModeAnim une fois et passe le
+// mode à ses Score et Jauge.
+const mouvementReduit = () => {
+  try { return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false }
+}
+export function modeAnim(ecran, jour = isoToday()) {
+  if (mouvementReduit()) return 'aucun'
+  const cle = 'renfo:anim:' + ecran
+  try {
+    if (localStorage.getItem(cle) === jour) return 'court'
+    localStorage.setItem(cle, jour)
+  } catch { return 'court' }
+  return 'long'
+}
+export function useModeAnim(ecran) {
+  const [mode] = useState(() => modeAnim(ecran))
+  return mode
+}
+
+const DUREE_SCORE = { long: 640, court: 260, aucun: 0 }
+// Un chiffre qui roule jusqu'à sa valeur, par crans, avec des zéros devant
+// et en police pixel pendant qu'il roule, puis figé en chasse fixe avec un
+// double clignotement. `rendu` met en forme la valeur (virgule, unité…) ;
+// quand la valeur change ensuite (un verre d'eau), il roule de l'ancienne
+// à la nouvelle.
+export function Score({ valeur, rendu = (x) => String(Math.round(x)), anim = 'court', style }) {
+  const v = Number(valeur)
+  const ok = Number.isFinite(v)
+  const duree = DUREE_SCORE[anim] || 0
+  const peutRouler = ok && duree > 0 && typeof requestAnimationFrame === 'function'
+  const [etat, setEtat] = useState(() => ({ de: peutRouler ? 0 : v, a: v, t: peutRouler ? 0 : 1, fige: false }))
+  useEffect(() => {
+    if (!ok || v === etat.a) return
+    const cur = etat.de + (etat.a - etat.de) * etat.t
+    setEtat({ de: peutRouler ? cur : v, a: v, t: peutRouler ? 0 : 1, fige: false })
+  }, [v]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!peutRouler || etat.t >= 1) return
+    let id, debut = null
+    const pas = (now) => {
+      if (debut == null) debut = now
+      const x = Math.min(1, (now - debut) / duree)
+      // Par crans, comme un compteur : douze paliers sur la durée.
+      const t = x >= 1 ? 1 : Math.floor(x * 12) / 12
+      setEtat((e) => ({ ...e, t, fige: x >= 1 }))
+      if (x < 1) id = requestAnimationFrame(pas)
+    }
+    id = requestAnimationFrame(pas)
+    return () => cancelAnimationFrame(id)
+  }, [etat.de, etat.a]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!ok) return React.createElement('span', { style }, rendu(valeur))
+  const roule = etat.t < 1
+  const cur = etat.de + (etat.a - etat.de) * etat.t
+  let texte = rendu(roule ? cur : v)
+  if (roule && /^\d+$/.test(texte)) texte = texte.padStart(Math.min(6, Math.max(3, String(rendu(v)).length + 2)), '0')
+  return React.createElement('span', {
+    className: !roule && etat.fige ? 'score-fige' : undefined,
+    'aria-label': String(rendu(v)),
+    style: roule ? { fontFamily: C.pixel, fontSize: '.78em', letterSpacing: 0, ...style } : style,
+  }, texte)
+}
+
+// Jauge d'énergie : une rangée de cases qui s'allument une à une, comme la
+// barre de vie d'un jeu de combat. `valeur` de 0 à 1 (au-delà : toutes
+// pleines, la dernière clignote). Case allumée = couleur pleine, case
+// éteinte = fond de piste ; angles vifs, pas de fondu.
+export function Jauge({ valeur = 0, crans = 10, couleur = C.primary, hauteur = 12, anim = 'court', vertical = false, label, style }) {
+  const v = Number(valeur) || 0
+  const p = Math.max(0, Math.min(1, v))
+  const pleins = v > 0 ? Math.max(1, Math.round(p * crans)) : 0
+  const pasMs = anim === 'long' ? 55 : anim === 'court' ? 16 : 0
+  const cases = []
+  for (let i = 0; i < crans; i++) {
+    const allume = i < pleins
+    cases.push(React.createElement('span', {
+      key: i,
+      className: allume && pasMs ? 'cran-allume' : undefined,
+      style: {
+        flex: 1, minWidth: 0, minHeight: 0,
+        background: allume ? couleur : C.surface2,
+        border: allume ? 'none' : `1px solid ${C.line}`,
+        animationDelay: allume && pasMs ? (i * pasMs) + 'ms' : undefined,
+        ...(allume && v > 1 && i === crans - 1 ? { animation: 'bandeauClignote .5s steps(1, end) 3' } : {}),
+      },
+    }))
+  }
+  return React.createElement('div', {
+    role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(p * 100), 'aria-label': label,
+    style: { display: 'flex', flexDirection: vertical ? 'column-reverse' : 'row', gap: 2, height: vertical ? '100%' : hauteur, width: vertical ? hauteur : '100%', ...style },
+  }, cases)
 }

@@ -3,7 +3,7 @@ import { FOODS, COURSE_REF, DIAG_QUESTIONS, PILIERS } from './nutritionData'
 import { buildConseils } from './diagEngine'
 import { nutriAnalysis } from './nutriIntel'
 import { useNutritionStore } from './useNutritionStore'
-import { Icon, C } from '../health/kit'
+import { Icon, C, Jauge } from '../health/kit'
 import { coherence, views, outOfRange, forDay, buildPlan, suggest, kcalFromMacros, targetForDate, ACTIVITY, GOALS, DAY_TYPES } from './macroTargets'
 import { macroDeepAnalysis } from './macroIntel'
 import { familyBreakdown, familyAdvice } from './foodFamilies'
@@ -103,8 +103,7 @@ function Bar({ lab, val, target, unit, tint }) {
       React.createElement('span', { style: { fontSize: 13, fontWeight: 700 } }, lab),
       React.createElement('span', { style: { fontSize: 12.5, color: INK2 } },
         React.createElement('strong', { style: { color: INK } }, Math.round(val)), target ? ' / ' + target : '', ' ', unit, target > 0 ? ' · ' + Math.round(pct * 100) + '%' : '')),
-    React.createElement('div', { style: { height: 8, borderRadius: 'var(--r-pill)', background: SURFACE2, overflow: 'hidden' } },
-      React.createElement('div', { style: { height: '100%', width: pct * 100 + '%', background: over ? 'var(--c-danger)' : tint, borderRadius: 'var(--r-pill)', transition: 'width .3s ease' } })))
+    React.createElement(Jauge, { valeur: target > 0 ? val / target : 0, crans: 12, hauteur: 9, couleur: over ? 'var(--c-danger)' : tint, label: lab + (target > 0 ? ' : ' + Math.round(pct * 100) + ' %' : '') }))
 }
 function chipBtn(active) {
   return { padding: '8px 13px', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 600, border: '1.5px solid ' + (active ? NUTRI : 'var(--c-line)'), background: SURFACE, color: active ? NUTRI : INK2, cursor: 'pointer' }
@@ -287,8 +286,7 @@ export function MacrosTab({ body, setBody, db, store }) {
         deep.pacing.threshold ? `. Le seuil qui déclenche la synthèse est d’environ ${String(deep.pacing.threshold).replace('.', ',')} g par prise.` : '.'),
       deep.pacing.items.map((m, i2) => React.createElement('div', { key: m.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: i2 ? `1px solid ${LINE}` : 'none' } },
         React.createElement('span', { style: { width: 108, fontSize: 13, fontWeight: 600, flex: '0 0 auto' } }, m.label),
-        React.createElement('div', { style: { flex: 1, height: 7, borderRadius: 'var(--r-pill)', background: SURFACE2, overflow: 'hidden' } },
-          React.createElement('div', { style: { height: '100%', width: Math.min(100, m.pct) + '%', borderRadius: 'var(--r-pill)', background: deep.pacing.threshold && m.mean >= deep.pacing.threshold ? C.success : NUTRI } })),
+        React.createElement(Jauge, { valeur: m.pct / 100, crans: 10, hauteur: 8, couleur: deep.pacing.threshold && m.mean >= deep.pacing.threshold ? C.success : NUTRI, label: m.label, style: { flex: 1, width: 'auto' } }),
         React.createElement('span', { style: { width: 76, textAlign: 'right', fontSize: 12.5, fontWeight: 700, flex: '0 0 auto' } },
           String(m.mean).replace('.', ','), ' g'))),
       deep.pacing.text ? React.createElement('div', { style: { fontSize: 12, color: INK2, marginTop: 10, lineHeight: 1.5 } }, deep.pacing.text) : null) : null,
@@ -1255,8 +1253,7 @@ function DiagTab({ db, store, onGoToJournal }) {
         React.createElement('span', null, 'Question ' + step + ' / ' + TOTAL),
         pilier && React.createElement('span', { style: { color: pilier.col, fontWeight: 700 } }, pilier.label),
         React.createElement('span', null, pct + '%')),
-      React.createElement('div', { style: { height: 5, background: LINE, borderRadius: 'var(--r-pill)', overflow: 'hidden' } },
-        React.createElement('div', { style: { height: '100%', borderRadius: 'var(--r-pill)', background: NUTRI, width: pct + '%', transition: 'width .35s ease' } })))
+      React.createElement(Jauge, { valeur: pct / 100, crans: TOTAL, hauteur: 6, couleur: NUTRI, label: 'Question ' + step + ' sur ' + TOTAL }))
   }
   function OptBtn({ opt, selected, onSelect }) {
     return React.createElement('button', {

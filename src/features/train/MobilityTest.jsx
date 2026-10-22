@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, Ring } from '../health/kit'
+import { C, Icon, Score, Jauge } from '../health/kit'
 import { ZONES, ZONE_ORDER } from './trainData'
 import { generateProgram } from './generateProgram'
 
@@ -78,9 +78,11 @@ export default function MobilityTest({ store, onClose, onProgram }) {
 
     step >= n && React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' } },
       React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 8 } },
-        React.createElement(Ring, { size: 150, stroke: 12, progress: pct / 100, color: C.primary },
-          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 29, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1, color: C.primary } }, pct),
-          React.createElement('div', { style: { fontSize: 12, color: C.ink3, fontWeight: 600 } }, '/ 100')),
+        // Le score du test roule comme un score d'arcade, la jauge se remplit
+        // case par case.
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 44, fontWeight: 600, letterSpacing: '-.03em', lineHeight: 1, color: C.primary } }, React.createElement(Score, { valeur: pct, anim: 'long' }),
+          React.createElement('span', { style: { fontSize: 14, color: C.ink3, fontWeight: 600, marginLeft: 4 } }, '/ 100')),
+        React.createElement(Jauge, { valeur: pct / 100, crans: 10, hauteur: 14, couleur: C.primary, anim: 'long', label: 'Score mobilité : ' + pct + ' sur 100', style: { width: 220, marginTop: 12 } }),
         React.createElement('h2', { style: { fontFamily: C.display, fontSize: 24, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1, marginTop: 16 } }, level)),
 
       React.createElement('div', { style: { marginTop: 22, display: 'flex', flexDirection: 'column', gap: 11 } },

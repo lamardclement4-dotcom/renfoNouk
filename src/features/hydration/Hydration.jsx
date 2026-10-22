@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { Icon, C } from '../health/kit'
+import { Icon, C, Score, Jauge, useModeAnim } from '../health/kit'
 import { DRINK_CATEGORIES, scaleDrink, searchDrinks } from '../nutrition/drinksData'
 import { hydroAnalysis, CAF_HALF_LIFE_H } from './hydroIntel'
 
@@ -80,30 +80,21 @@ function Alert({ type, children }) {
     children)
 }
 
-function MiniRing({ pct, color, ic }) {
-  const R = 30, circ = 2 * Math.PI * R
-  const p = Math.max(0, Math.min(1, pct))
-  const off = circ * (1 - p)
-  return React.createElement('div', { style: { position: 'relative', width: 72, height: 72, flexShrink: 0 } },
-    React.createElement('svg', { viewBox: '0 0 72 72', width: 72, height: 72 },
-      React.createElement('circle', { cx: 36, cy: 36, r: R, fill: 'none', stroke: `color-mix(in srgb, ${color} 15%, ${LINE})`, strokeWidth: 7 }),
-      React.createElement('circle', { cx: 36, cy: 36, r: R, fill: 'none', stroke: color, strokeWidth: 7, strokeDasharray: circ, strokeDashoffset: off, strokeLinecap: 'round', transform: 'rotate(-90 36 36)', style: { transition: 'stroke-dashoffset .5s ease' } })),
-    React.createElement('div', { style: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } },
-      React.createElement(Icon, { name: ic, size: 20, color })))
-}
-
-function Dashboard({ totals: t, limits: lim }) {
+function Dashboard({ totals: t, limits: lim, anim }) {
   const cards = [
-    { ic: 'drop', col: COL_EAU, lab: 'Eau', val: (t.ml / 1000).toFixed(2), unit: 'L', sub: 'Obj. ' + (lim.water / 1000).toFixed(1) + ' L', pct: t.ml / lim.water, flag: t.ml >= lim.water ? 'ok' : null },
-    { ic: 'cup', col: COL_CAF, lab: 'Caféine', val: String(Math.round(t.mg)), unit: 'mg', sub: 'Limite ' + lim.caffeine + ' mg', pct: t.mg / lim.caffeine, flag: t.mg > lim.caffeine ? 'over' : null },
-    { ic: 'drop', col: COL_SUC, lab: 'Sucres', val: String(Math.round(t.sugar)), unit: 'g', sub: 'OMS < ' + lim.sugar + ' g', pct: t.sugar / lim.sugar, flag: t.sugar > lim.sugar ? 'over' : null },
+    { ic: 'drop', col: COL_EAU, lab: 'Eau', n: t.ml / 1000, rendu: (x) => x.toFixed(2), unit: 'L', sub: 'Obj. ' + (lim.water / 1000).toFixed(1) + ' L', pct: t.ml / lim.water, flag: t.ml >= lim.water ? 'ok' : null },
+    { ic: 'cup', col: COL_CAF, lab: 'Caféine', n: Math.round(t.mg), unit: 'mg', sub: 'Limite ' + lim.caffeine + ' mg', pct: t.mg / lim.caffeine, flag: t.mg > lim.caffeine ? 'over' : null },
+    { ic: 'drop', col: COL_SUC, lab: 'Sucres', n: Math.round(t.sugar), unit: 'g', sub: 'OMS < ' + lim.sugar + ' g', pct: t.sugar / lim.sugar, flag: t.sugar > lim.sugar ? 'over' : null },
   ]
   return React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 6 } },
     cards.map((c, i) => {
       const border = c.flag === 'over' ? `color-mix(in srgb, ${c.col} 55%, ${LINE})` : LINE
       return React.createElement('div', { key: i, style: { background: SURFACE, border: `1px solid ${border}`, borderRadius: RADIUS_SM, padding: '12px 8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 } },
-        React.createElement(MiniRing, { pct: c.pct, color: c.col, ic: c.ic }),
-        React.createElement('div', { style: { fontSize: 18, fontWeight: 900, color: c.col, lineHeight: 1 } }, c.val, React.createElement('span', { style: { fontSize: 11, fontWeight: 700, marginLeft: 2 } }, c.unit)),
+        React.createElement(Icon, { name: c.ic, size: 20, color: c.col }),
+        // Jauge à crans : la cible (ou la limite) remplit les huit cases ;
+        // au-delà, la dernière clignote.
+        React.createElement(Jauge, { valeur: c.pct, crans: 8, hauteur: 10, couleur: c.col, anim, label: c.lab + ' : ' + Math.round(c.pct * 100) + ' %' }),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 17, fontWeight: 600, letterSpacing: '-.03em', color: c.col, lineHeight: 1 } }, React.createElement(Score, { valeur: c.n, rendu: c.rendu, anim }), React.createElement('span', { style: { fontSize: 11, fontWeight: 700, marginLeft: 2 } }, c.unit)),
         React.createElement('div', { style: { fontFamily: C.display, fontSize: 12.8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.07em', color: INK3 } }, c.lab),
         React.createElement('div', { style: { fontSize: 10.5, color: c.flag === 'over' ? c.col : INK3, fontWeight: c.flag === 'over' ? 700 : 500 } }, c.sub))
     }))
@@ -124,7 +115,7 @@ function CustomDrinkForm({ onSave, onCancel }) {
     React.createElement('button', { onClick: onCancel, style: { width: '100%', marginTop: 8, padding: 10, borderRadius: 'var(--r-pill)', border: `1.5px solid ${LINE}`, background: 'transparent', color: INK2, fontWeight: 700, fontSize: 13, cursor: 'pointer' } }, 'Annuler'))
 }
 
-function TodayTab({ db, store }) {
+function TodayTab({ db, store, anim }) {
   const poids = Number((db.profilePhys || {}).poids) || 70
   const limits = { water: Math.round(poids * 35), caffeine: 400, sugar: 50 }
 
@@ -170,7 +161,7 @@ function TodayTab({ db, store }) {
 
   return React.createElement('div', null,
     React.createElement('div', { style: ST.secLab }, "Aujourd'hui"),
-    React.createElement(Dashboard, { totals, limits }),
+    React.createElement(Dashboard, { totals, limits, anim }),
 
     totals.mg > limits.caffeine && React.createElement(Alert, { type: 'danger' }, 'Caféine au-delà de la limite EFSA (' + limits.caffeine + ' mg).'),
     totals.sugar > limits.sugar && React.createElement(Alert, { type: 'warn' }, 'Sucres au-delà du repère OMS (' + limits.sugar + ' g).'),
@@ -385,6 +376,7 @@ function TrendsTab({ db, store }) {
 export default function HydrationSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
   const [tab, setTab] = useState('today')
+  const anim = useModeAnim('hydratation')
 
   if (loading) {
     return React.createElement('div', { style: { minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: INK3, fontFamily: FONT } }, 'Chargement...')
@@ -408,6 +400,6 @@ export default function HydrationSpace({ userId, onClose }) {
           React.createElement(Icon, { name: t.ic, size: 14, color: isActive ? 'var(--c-on-fill)' : INK3 }), t.lab)
       })),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '4px 16px 32px' } },
-      tab === 'today' && React.createElement(TodayTab, { db, store }),
+      tab === 'today' && React.createElement(TodayTab, { db, store, anim }),
       tab === 'trends' && React.createElement(TrendsTab, { db, store })))
 }

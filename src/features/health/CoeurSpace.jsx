@@ -4,7 +4,7 @@
 // ============================================================
 import React, { useState } from 'react'
 import { useNutritionStore } from '../nutrition/useNutritionStore'
-import { C, MODULE_TINTS, FlowSpace, isoToday, Aide } from './kit'
+import { C, MODULE_TINTS, FlowSpace, isoToday, Aide, Score, useModeAnim } from './kit'
 import { annoncer } from '../../annonces'
 import { serie, tendanceRepos, zoneVfc, oxygene, temperature, signesVitaux, vo2Montre, niveauVo2, recuperation, fcMarche, fcMax, zonesKarvonen, vo2Estime, vo2Test, seancesFc, bilanCoeur, NOM_SOURCE, NOM_SOURCE_MAX } from './coeurIntel'
 
@@ -14,10 +14,13 @@ const titre = (t, aide) => React.createElement('div', { style: { fontFamily: C.d
 const bloc = { padding: '12px 14px', background: C.surface, border: `1px solid ${C.line}` }
 const COULEUR = { bonne: C.success, surveiller: C.warn, incomplete: C.danger }
 
-function Mesure({ lab, valeur, unite, sous, couleur, aide }) {
+// Décimales d'un nombre affiché (49,3 → 1), pour qu'il roule au même format.
+const decimales = (x) => { const m = /\.(\d+)$/.exec(String(x)); return m ? m[1].length : 0 }
+
+function Mesure({ lab, valeur, unite, sous, couleur, aide, anim }) {
   return React.createElement('div', { style: { flex: 1, minWidth: 0, padding: '10px 10px 9px', border: `1px solid ${C.line}`, borderTop: `3px solid ${couleur || C.line}`, background: C.surface } },
     React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.ink3, lineHeight: 1.2 } }, lab, aide ? React.createElement(Aide, { terme: aide }) : null),
-    React.createElement('div', { style: { fontFamily: C.mono, fontSize: 20, fontWeight: 600, color: C.ink, marginTop: 4, lineHeight: 1 } }, valeur == null ? '—' : fr(valeur), valeur == null ? null : React.createElement('span', { style: { fontSize: 11, color: C.ink3, marginLeft: 3 } }, unite)),
+    React.createElement('div', { style: { fontFamily: C.mono, fontSize: 20, fontWeight: 600, color: C.ink, marginTop: 4, lineHeight: 1 } }, valeur == null ? '—' : typeof valeur === 'number' ? React.createElement(Score, { valeur, rendu: (x) => fr(x.toFixed(decimales(valeur))), anim }) : fr(valeur), valeur == null ? null : React.createElement('span', { style: { fontSize: 11, color: C.ink3, marginLeft: 3 } }, unite)),
     React.createElement('div', { style: { fontSize: 10.5, color: C.ink3, marginTop: 4, lineHeight: 1.3 } }, sous || ' '))
 }
 
@@ -72,6 +75,7 @@ function Champ({ lab, valeur, unite, placeholder, onValider, aide, min, max }) {
 
 export default function CoeurSpace({ userId, onClose }) {
   const { db, store, loading } = useNutritionStore(userId)
+  const anim = useModeAnim('coeur')
   if (loading) return React.createElement(FlowSpace, { bg: 'sante', title: 'Cœur', onClose, tint: COL }, React.createElement('div', { style: { padding: 40, textAlign: 'center', color: C.ink3 } }, 'Chargement...'))
   const iso = isoToday()
   const t = tendanceRepos(db, iso)
@@ -115,12 +119,12 @@ export default function CoeurSpace({ userId, onClose }) {
     // ── Bilan du jour ──
     titre('Aujourd’hui'),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 } },
-      React.createElement(Mesure, { lab: t ? (t.source === 'sante' ? 'FC au repos' : 'Pouls au réveil') : 'FC au repos', aide: 'pouls', valeur: t && t.derniere ? t.derniere.v : null, unite: 'bpm', couleur: t && t.derniere && t.m30 != null && t.derniere.v - t.m30 >= 7 ? C.warn : COL, sous: t && t.m30 != null ? 'normale ' + fr(t.m30) : t ? 'normale après 7 mesures' : 'aucune mesure' }),
-      React.createElement(Mesure, { lab: 'VFC (7 j)', aide: 'vfc', valeur: v && v.m7 != null ? v.m7 : (v && v.points.length ? dernier(v.points).v : null), unite: 'ms', couleur: v && v.statut === 'sous' ? C.warn : COL, sous: v && v.bas != null ? 'zone ' + fr(v.bas) + '–' + fr(v.haut) : v ? 'zone après 10 mesures' : 'aucune mesure' }),
-      React.createElement(Mesure, { lab: 'Respiration', aide: 'respiration', valeur: rDer ? rDer.v : null, unite: '/min', couleur: COL, sous: rDer ? (rDer.k === 0 ? 'cette nuit' : 'il y a ' + rDer.k + ' j') : 'aucune mesure' }),
-      React.createElement(Mesure, { lab: o2 && o2.source === 'saisie' ? 'Oxygène (saisi)' : 'Oxygène la nuit', aide: 'spo2', valeur: o2 ? o2.derniere.v : null, unite: '%', couleur: o2 && o2.statut !== 'normal' ? C.warn : COL, sous: o2 ? (o2.normale != null ? 'normale ' + fr(o2.normale) : o2.derniere.k === 0 ? 'cette nuit' : 'il y a ' + o2.derniere.k + ' j') : 'aucune mesure' }),
-      React.createElement(Mesure, { lab: 'Température nuit', aide: 'tempPoignet', valeur: tp && tp.ecart != null ? (tp.ecart > 0 ? '+' : '') + fr(tp.ecart) : tp ? tp.derniere.v : null, unite: '°C', couleur: tp && tp.statut !== 'normal' && tp.statut !== 'basse' ? C.warn : COL, sous: tp ? (tp.ecart != null ? 'écart à ta normale' : 'normale après 5 nuits') : 'aucune mesure' }),
-      React.createElement(Mesure, { lab: 'Récup. 1 min', aide: 'recupFc', valeur: rc ? Math.round(rc.derniere.v) : null, unite: 'bpm', couleur: rc && rc.lente ? C.warn : COL, sous: rc ? (rc.derniere.k === 0 ? 'aujourd’hui' : 'il y a ' + rc.derniere.k + ' j') + (rc.normale != null ? ' · normale ' + rc.normale : '') : 'après une séance' })),
+      React.createElement(Mesure, { anim, lab: t ? (t.source === 'sante' ? 'FC au repos' : 'Pouls au réveil') : 'FC au repos', aide: 'pouls', valeur: t && t.derniere ? t.derniere.v : null, unite: 'bpm', couleur: t && t.derniere && t.m30 != null && t.derniere.v - t.m30 >= 7 ? C.warn : COL, sous: t && t.m30 != null ? 'normale ' + fr(t.m30) : t ? 'normale après 7 mesures' : 'aucune mesure' }),
+      React.createElement(Mesure, { anim, lab: 'VFC (7 j)', aide: 'vfc', valeur: v && v.m7 != null ? v.m7 : (v && v.points.length ? dernier(v.points).v : null), unite: 'ms', couleur: v && v.statut === 'sous' ? C.warn : COL, sous: v && v.bas != null ? 'zone ' + fr(v.bas) + '–' + fr(v.haut) : v ? 'zone après 10 mesures' : 'aucune mesure' }),
+      React.createElement(Mesure, { anim, lab: 'Respiration', aide: 'respiration', valeur: rDer ? rDer.v : null, unite: '/min', couleur: COL, sous: rDer ? (rDer.k === 0 ? 'cette nuit' : 'il y a ' + rDer.k + ' j') : 'aucune mesure' }),
+      React.createElement(Mesure, { anim, lab: o2 && o2.source === 'saisie' ? 'Oxygène (saisi)' : 'Oxygène la nuit', aide: 'spo2', valeur: o2 ? o2.derniere.v : null, unite: '%', couleur: o2 && o2.statut !== 'normal' ? C.warn : COL, sous: o2 ? (o2.normale != null ? 'normale ' + fr(o2.normale) : o2.derniere.k === 0 ? 'cette nuit' : 'il y a ' + o2.derniere.k + ' j') : 'aucune mesure' }),
+      React.createElement(Mesure, { anim, lab: 'Température nuit', aide: 'tempPoignet', valeur: tp && tp.ecart != null ? (tp.ecart > 0 ? '+' : '') + fr(tp.ecart) : tp ? tp.derniere.v : null, unite: '°C', couleur: tp && tp.statut !== 'normal' && tp.statut !== 'basse' ? C.warn : COL, sous: tp ? (tp.ecart != null ? 'écart à ta normale' : 'normale après 5 nuits') : 'aucune mesure' }),
+      React.createElement(Mesure, { anim, lab: 'Récup. 1 min', aide: 'recupFc', valeur: rc ? Math.round(rc.derniere.v) : null, unite: 'bpm', couleur: rc && rc.lente ? C.warn : COL, sous: rc ? (rc.derniere.k === 0 ? 'aujourd’hui' : 'il y a ' + rc.derniere.k + ' j') + (rc.normale != null ? ' · normale ' + rc.normale : '') : 'après une séance' })),
     b.verdict ? React.createElement('div', { style: { ...bloc, marginTop: 8, borderLeft: `3px solid ${COULEUR[b.niveau] || C.line}` } },
       React.createElement('div', { style: { fontSize: 13.5, fontWeight: 700, color: COULEUR[b.niveau] || C.ink } }, b.verdict),
       b.alertes.map((a, i) => React.createElement('div', { key: i, style: { fontSize: 12, color: C.ink2, marginTop: 4, lineHeight: 1.45 } }, '• ' + a))) : null,

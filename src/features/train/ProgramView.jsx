@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { C, Icon, FlowSpace, Ring } from '../health/kit'
+import { C, Icon, FlowSpace, Score, Jauge, useModeAnim } from '../health/kit'
 import { CATS, SPORTS, ZONES, getSession } from './trainData'
 import { RENFO_GOALS, RENFO_GOAL_ORDER } from './generateProgram'
 
@@ -32,6 +32,7 @@ function Card({ s, idx, tagText, done, onToggle, onOpen }) {
 export default function ProgramView({ db, store, onClose, onOpenSession, onMobility }) {
   const [sheet, setSheet] = useState(false)
   const [sheetGoal, setSheetGoal] = useState(false)
+  const anim = useModeAnim('programme')
   const prog = db.program
 
   if (!prog) {
@@ -70,11 +71,12 @@ export default function ProgramView({ db, store, onClose, onOpenSession, onMobil
   },
     React.createElement('div', { style: { padding: 20, borderRadius: C.radius, background: C.surface, color: C.ink, border: `1px solid ${C.line}`, borderTop: `3px solid ${C.primary}`, marginBottom: 18 } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 16 } },
-        React.createElement(Ring, { size: 74, stroke: 8, progress: pct / 100, color: C.primary, track: C.surface2 },
-          React.createElement('div', { style: { fontFamily: C.mono, fontSize: 16, fontWeight: 600, letterSpacing: '-.03em', color: C.primary } }, pct, '%')),
+        React.createElement('div', { style: { fontFamily: C.mono, fontSize: 26, fontWeight: 600, letterSpacing: '-.03em', color: C.primary, flex: '0 0 auto', minWidth: 64 } }, React.createElement(Score, { valeur: pct, anim }), '%'),
         React.createElement('div', null,
           React.createElement('div', { style: { fontFamily: C.display, fontSize: 20, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em', lineHeight: 1.1 } }, 'Programme mobilité'),
-          React.createElement('div', { style: { fontSize: 13, opacity: 0.9, marginTop: 4 } }, doneCount, '/', total, ' séances · score mobilité ', prog.score, '/100')))),
+          React.createElement('div', { style: { fontSize: 13, opacity: 0.9, marginTop: 4 } }, doneCount, '/', total, ' séances · score mobilité ', prog.score, '/100'))),
+      // Une case par séance du programme : elles s'allument une à une.
+      React.createElement(Jauge, { valeur: total ? doneCount / total : 0, crans: Math.max(1, Math.min(24, total)), hauteur: 12, couleur: C.primary, anim, label: doneCount + ' séances faites sur ' + total, style: { marginTop: 14 } })),
 
     React.createElement('p', { style: { color: C.ink2, fontSize: 14, lineHeight: 1.5, margin: '0 2px 16px' } }, 'Construit à partir de ton test. On commence par tes zones les plus raides — ',
       React.createElement('strong', { style: { color: C.ink } }, prog.weak.map((id) => (ZONES[id] ? ZONES[id].label : id).toLowerCase()).join(', ')), '.'),
